@@ -1,35 +1,32 @@
 unknowns:
   - id: U-MIG-001
     question: AI电影系统.md 尚未完成全文迁移
-    impact: 不能把 GitHub AI电影系统声明为当前唯一文字权威
-    safe_default: 继续读取 File Library 当前 canonical
-    next_action: 完整导出并逐段迁移、回读核验
+    impact: 不能把 GitHub AI电影系统声明为当前唯一导演方法权威
+    safe_default: 每次导演先读 GitHub PROJECT_INDEX，再按 effective_source 读取 File Library 当前 `AI电影系统.md`
+    next_action: 获取完整 canonical 内容，合并 CALC/CLCS 与持续成长架构后迁移并回读核验
     status: open
 
   - id: U-MIG-002
     question: AI电影项目记忆.md 尚未完成全文迁移
-    impact: 项目长期事实不能只依靠 GitHub
-    safe_default: 继续读取 File Library 当前 canonical
+    impact: 部分项目长期事实仍需从 File Library 读取
+    safe_default: 按 PROJECT_INDEX 继续读取 File Library 当前 canonical
     next_action: 完整导出并逐段迁移、回读核验
     status: open
 
   - id: U-MIG-003
-    question: 当前改编剧本.md 尚未拿到完整当前稿
-    impact: 直接依据摘要重建会静默丢剧情
-    safe_default: File Library 当前改编剧本继续拥有权威
-    next_action: 找到完整文件并迁移
-    status: open
+    question: 当前改编剧本.md 是否已获得完整当前改编层并合并最新确认修改
+    resolution: 已读取 File Library 当前改编剧本全文；在 GitHub 固定路径迁移，并合并 2026-08-11 菲奥奈巡查/插队事件与凯姆高位搜索确认段；已 FETCH VERIFY。
+    status: resolved
 
   - id: U-MIG-004
-    question: CURRENT_v5 视觉资产表与旧视觉资产登记库需要字段对账
-    impact: active/alternate/pending/missing 与默认指针可能冲突
-    safe_default: 不在对账前删除或覆盖旧记录
-    next_action: 建立字段映射并核对资产总数、状态和默认指针
-    status: open
+    question: CURRENT_v5 视觉资产表迁移后的历史字段是否需要进一步审计
+    resolution: 当前正式视觉状态、默认指针和钟楼左右新资产已进入 GitHub `视觉资产登记库.md` 并回读验证；后续正式写回只走 GitHub。
+    residual_risk: 旧 Excel 的非关键备注或历史迁移字段可能尚未逐单元格 100% 复刻；它们继续作为 Library 迁移快照保留，需要时按证据回查，不参与当前默认资产裁决。
+    status: partially_resolved
 
   - id: U-SCENE-001
-    question: 场景与空间设定库.md、场景资产库.md、00_项目地图文件.md 的最终职责边界需在迁移时统一
-    impact: 可能形成新的双权威
-    safe_default: 空间拓扑继续以 00_项目地图文件.md 为最高空间真相
-    next_action: 迁移时保留地图为拓扑SSOT，场景库只承载节点细节和媒体关系
+    question: 场景与空间设定库.md 的局部场景职责尚未完成迁移
+    resolution_so_far: `00_项目地图文件.md` 已在 GitHub 成为空间拓扑、方向、高低差、上下层、路线的唯一主档；角色库、资产库和连续性均已绑定该职责。
+    remaining: 迁移每个场景的材质、建筑风格、局部功能、光线/天气基线与 Asset ID 关系，避免与地图重复。
+    safe_default: 所有方向/拓扑问题先以 GitHub 地图为准；局部材质信息仍从 File Library 场景库读取。
     status: open
