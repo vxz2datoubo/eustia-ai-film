@@ -1,0 +1,23 @@
+authority_order:
+  - user_current_explicit_instruction
+  - project_index
+  - canonical_current_screenplay_and_assets
+  - canonical_continuity
+  - canonical_domain_docs
+  - primary_evidence
+  - approved_external_research
+  - project_memory
+  - chat_memory
+  - model_prior
+
+reject_as_active:
+  - "AI电影化系统总纲_v*.md"
+  - "AI电影化系统总纲.md"
+  - "*_更新补丁.md"
+
+rules:
+  file_self_declared_active_cannot_override_project_index: true
+  search_rank_cannot_define_authority: true
+  modified_time_cannot_define_authority: true
+  legacy_may_be_used_for_migration_evidence_only: true
+  migration_cutover_requires_fetch_verify: true
