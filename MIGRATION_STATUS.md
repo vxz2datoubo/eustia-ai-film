@@ -23,6 +23,7 @@
 |---|---|---|---|
 | PROJECT_INDEX.yaml | verified | GitHub | Source Authority Registry；每次导演前必读 |
 | 项目入口.md | verified | GitHub | GitHub-first 架构和每轮 P0 已回读核验 |
+| 当前改编剧本.md | verified | GitHub | 已读取旧 canonical 全文，并合并 8/11 凯姆攀爬 + 菲奥奈巡查/插队事件 |
 | 角色与表演设定库.md | verified | GitHub | 已绑定最新 Asset ID，并合并菲奥奈当前职责/CALC行为状态 |
 | 00_项目地图文件.md | verified | GitHub | 已纠正钟楼/关所关系、主街南北轴与桥东西轴 |
 | 视觉资产登记库.md | verified | GitHub | 已从 CURRENT_v5 对账迁移视觉资产，并正式登记钟楼左右侧视图 |
@@ -57,9 +58,8 @@
 
 | 文件 | 状态 | 当前有效来源 | 原因 |
 |---|---|---|---|
-| AI电影系统.md | pending_full_export | File Library | 文件很长；必须拿到完整 canonical 再迁移，不能从截断摘要重建 |
-| AI电影项目记忆.md | pending_full_export | File Library | 文件很长；必须完整迁移后切换 |
-| 当前改编剧本.md | pending_full_export | File Library | 必须拿到完整当前稿，不依据摘要重建 |
+| AI电影系统.md | pending_full_export | File Library | 文件约 41.5KB；当前接口读取会截断，不能从摘要重建后冒充完整迁移 |
+| AI电影项目记忆.md | pending_full_export | File Library | 文件较长；必须完整迁移后切换 |
 | 场景与空间设定库.md | pending_reconcile | File Library | 地图权威已切 GitHub；仍需迁移各场景节点材质/功能/资产关系，避免和地图重复 |
 
 ## 完成定义
@@ -78,4 +78,4 @@
 
 `PARTIAL_CUTOVER / SAFE_MIXED_SOURCE`
 
-导演任务现在把 GitHub 作为**第一入口、路由权威、角色权威、空间地图权威、视觉资产文字权威、连续性权威和学习权威**。遇到尚未迁移的 AI电影系统、项目记忆、当前剧本、场景设定库时，仍按 `PROJECT_INDEX.yaml` 去 File Library 读取当前 canonical，直到对应文件验证迁移完成。
+导演任务现在把 GitHub 作为**第一入口、路由权威、当前改编剧本权威、角色权威、空间地图权威、视觉资产文字权威、连续性权威和学习权威**。目前只剩 AI电影系统、AI电影项目记忆和局部场景设定库仍按 `PROJECT_INDEX.yaml` 从 File Library 读取，直到完整验证迁移完成。
