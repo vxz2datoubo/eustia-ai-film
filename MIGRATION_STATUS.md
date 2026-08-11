@@ -23,8 +23,9 @@
 |---|---|---|---|
 | PROJECT_INDEX.yaml | verified | GitHub | Source Authority Registry；每次导演前必读 |
 | 项目入口.md | verified | GitHub | GitHub-first 架构和每轮 P0 已回读核验 |
+| 视觉资产登记库.md | verified | GitHub | 已从 CURRENT_v5 对账迁移视觉资产，并正式登记钟楼左右侧视图 |
 | 反馈反推与系统反哺引擎.md | verified | GitHub | 已加入 EDCM、成熟度、Final-Delta 和正式写回事务 |
-| 连续性与当前生产状态.md | verified | GitHub | 已合并 2026-08-11 菲奥奈巡查+插队事件最新锁定 |
+| 连续性与当前生产状态.md | verified | GitHub | 已合并菲奥奈巡查+插队事件，并绑定 GitHub 资产库 |
 | 官方资料与证据索引.md | verified | GitHub | 已迁移证据等级并记录 CALC 研究来源边界 |
 | source_authority.yaml | verified | GitHub | 旧主档拒绝规则 |
 | read_sets.yaml | verified | GitHub | 每任务最小必要读取集合 |
@@ -34,6 +35,13 @@
 | director_regression_cases.yaml | verified | GitHub | 首批 Golden Cases |
 | UNKNOWN_REGISTRY.yaml | verified | GitHub | 未知项与安全默认 |
 
+## 本轮资产迁移结果
+
+- `SCN-CHURCH-BELLTOWER-LEFT-001`：**active / 左视职责默认**，File ID `file_000000005ef481fd986ebe6946d669f5`。
+- `SCN-CHURCH-BELLTOWER-RIGHT-001`：**active / 右视职责默认**，File ID `file_00000000d40881fdbf84fc376df37d00`。
+- 钟楼正面继续由 `SCN-CHURCH-BELLTOWER-SOUTH-001` 承担，不被左右视图覆盖。
+- File Library 的 `秽翼AI电影资产总表_CURRENT_v5.xlsx` 从现在起作为迁移前快照/对账证据保留；后续视觉资产状态与默认指针写 GitHub `视觉资产登记库.md`。
+
 ## 尚未切换
 
 | 文件 | 状态 | 当前有效来源 | 原因 |
@@ -41,9 +49,8 @@
 | AI电影系统.md | pending_full_export | File Library | 文件很长；必须拿到完整 canonical 再迁移，不能从截断摘要重建 |
 | AI电影项目记忆.md | pending_full_export | File Library | 文件很长；必须完整迁移后切换 |
 | 当前改编剧本.md | pending_full_export | File Library | 必须拿到完整当前稿，不依据摘要重建 |
-| 角色与表演设定库.md | pending_reconcile | File Library | 文字主体可迁，但默认视觉指针需先和 CURRENT_v5 对账 |
+| 角色与表演设定库.md | pending_reconcile | File Library | 文字主体可迁，但需把旧默认视觉指针切到新 GitHub Asset ID |
 | 场景与空间设定库 / 场景资产库 | pending_reconcile | File Library | 必须统一职责，避免新双权威 |
-| 视觉资产登记 | pending_reconcile | File Library + CURRENT_v5 | 先对账 CURRENT_v5 后迁移；钟楼左右图待正式入库 |
 | 00_项目地图文件.md | pending_full_export | File Library | 保留空间拓扑唯一主档职责，需完整迁移 |
 
 ## 完成定义
@@ -62,4 +69,4 @@
 
 `PARTIAL_CUTOVER / SAFE_MIXED_SOURCE`
 
-导演任务已经可以把 GitHub 作为**第一入口和路由权威**，但遇到尚未迁移的 AI电影系统、项目记忆、当前剧本、角色/场景/资产/地图时，必须根据 `PROJECT_INDEX.yaml` 继续读取 File Library 当前 canonical，直到对应文件验证迁移完成。
+导演任务现在把 GitHub 作为**第一入口、路由权威、视觉资产文字权威、连续性权威和学习权威**。遇到尚未迁移的 AI电影系统、项目记忆、当前剧本、角色/场景/地图时，仍按 `PROJECT_INDEX.yaml` 去 File Library 读取当前 canonical，直到对应文件验证迁移完成。
