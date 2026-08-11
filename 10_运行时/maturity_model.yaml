@@ -1,0 +1,30 @@
+states:
+  candidate:
+    description: 理论、单次反馈或未充分验证的候选
+    default_recall: false
+  scene_verified:
+    description: 在一个明确场景中经用户确认或真实生成验证
+    default_recall: conditional
+  project_verified:
+    description: 跨多个项目场景重复有效
+    default_recall: true
+  general_stable:
+    description: 可迁移到更广导演任务且边界清楚
+    default_recall: true
+  conflicted:
+    description: 存在相反有效证据，必须按边界路由
+    default_recall: conditional
+  needs_revalidation:
+    description: 模型、工具、版本或环境变化使旧证据可能过期
+    default_recall: false
+  deprecated:
+    description: 已被新规则替代或证伪
+    default_recall: false
+
+promotion_requires:
+  - evidence
+  - scope
+  - boundary
+  - counterexample_or_failure_condition
+  - validation
+  - source_or_user_confirmation
