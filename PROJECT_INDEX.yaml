@@ -34,6 +34,7 @@ canonical:
 effective_sources:
   PROJECT_INDEX.yaml: github_verified
   项目入口.md: github_verified
+  04_角色与表演/角色与表演设定库.md: github_verified
   06_视觉资产/视觉资产登记库.md: github_verified
   07_连续性与生产状态/连续性与当前生产状态.md: github_verified
   08_系统学习/反馈反推与系统反哺引擎.md: github_verified
@@ -48,7 +49,6 @@ effective_sources:
   01_AI电影系统/AI电影系统.md: file_library_until_verified_migration
   02_AI电影项目记忆/AI电影项目记忆.md: file_library_until_verified_migration
   03_剧本与改编/当前改编剧本.md: file_library_until_verified_migration
-  04_角色与表演/角色与表演设定库.md: file_library_until_verified_migration
   05_场景与空间/场景与空间设定库.md: file_library_until_verified_migration
 
 external_binary_sources:
