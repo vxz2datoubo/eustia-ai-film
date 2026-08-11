@@ -1,0 +1,42 @@
+cases:
+  - id: REG-CALC-001
+    title: 菲奥奈在广场不是等凯姆出现
+    must_preserve:
+      - 菲奥奈原本带队巡查和维护秩序
+      - 高处异常只产生轻微职业警觉
+      - 队友处理插队男子形成职责打断
+      - 菲奥奈回到现场协调
+      - 不启动追捕凯姆的一级悬念
+    checks:
+      - camera_off_test
+      - resumption_test
+      - background_independence_test
+      - narrative_weight_budget
+
+  - id: REG-EXPOSITION-001
+    title: 爱丽丝VO与凯姆攀爬并行
+    must_preserve:
+      - 爱丽丝信息说明通过VO延续
+      - 凯姆同时攀爬并扩大搜索视野
+      - 声音和画面承担不同信息
+      - 不提前展示男孩翅膀
+    checks:
+      - temporal_parallel
+      - attention_budget
+      - reveal_budget
+
+  - id: REG-ASSET-001
+    title: 登记资产必须正式提交
+    must_preserve:
+      - status_active_unless_user_says_candidate
+      - update_formal_asset_registry
+      - update_related_scene_or_character_if_needed
+      - fetch_after_commit_verify
+      - memory_not_substitute_for_registry
+
+  - id: REG-SOURCE-001
+    title: 旧版总纲不得夺权
+    must_preserve:
+      - reject_legacy_as_active
+      - use_PROJECT_INDEX_authority
+      - use_fixed_current_AI电影系统
