@@ -8,6 +8,7 @@ read_sets:
     conditional:
       characters: 角色与表演设定库#named_characters
       scenes: 场景与空间设定库#named_scene
+      map: 00_项目地图文件#required_for_spatial_direction_camera_orientation_movement
       assets: 视觉资产登记#bound_assets
       evidence: 官方资料与证据索引#only_if_research_or_tool_uncertain
       learning: 反馈反推与系统反哺引擎#relevant_lessons
@@ -17,6 +18,7 @@ read_sets:
       - PROJECT_INDEX.yaml
       - 视觉资产登记
     conditional:
+      - 00_项目地图文件#direction_or_topology_sensitive_assets
       - 场景与空间设定库
       - 角色与表演设定库
       - 连续性与当前生产状态
@@ -34,3 +36,4 @@ rules:
   local_targeted_retrieval_default: true
   global_expand_on_route_uncertainty: true
   director_task_must_read_project_index: true
+  spatial_task_must_read_map: true
