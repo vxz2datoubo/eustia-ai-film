@@ -1,0 +1,25 @@
+routes:
+  general_directing_method: 01_AI电影系统/AI电影系统.md
+  ai_image_video_method: 01_AI电影系统/AI电影系统.md
+  project_long_term_fact: 02_AI电影项目记忆/AI电影项目记忆.md
+  confirmed_story_change: 03_剧本与改编/当前改编剧本.md
+  character_behavior_dialogue_relationship: 04_角色与表演/角色与表演设定库.md
+  scene_topology_map_movement: 05_场景与空间/场景与空间设定库.md
+  formal_visual_asset: 06_视觉资产/视觉资产登记库.md
+  current_shot_production_state: 07_连续性与生产状态/连续性与当前生产状态.md
+  learning_evidence_and_outcome: 08_系统学习/反馈反推与系统反哺引擎.md
+  official_research_evidence: 09_资料证据/官方资料与证据索引.md
+  unresolved_unknown: 12_未知项/UNKNOWN_REGISTRY.yaml
+
+write_protocol:
+  - fetch_current_blob
+  - edit_current_content
+  - commit_serially
+  - fetch_again
+  - verify_new_content_and_status
+  - report_committed_only_after_verification
+
+rules:
+  memory_cannot_substitute_for_formal_write: true
+  candidate_cannot_auto_promote_to_stable: true
+  fixed_active_filenames_only: true
