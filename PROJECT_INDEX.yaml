@@ -1,6 +1,6 @@
 project_id: EUSTIA_AI_FILM
 title: 秽翼的尤斯蒂娅 AI电影
-status: poc_verified
+status: migration_active
 source_authority: this_file
 policy:
   active_filename_versioning: forbidden
@@ -10,6 +10,8 @@ policy:
   memory_is_canonical: false
   library_media_is_canonical_binary_source: true
   old_file_search_rank_can_define_authority: false
+  director_task_must_read_project_index_first: true
+
 canonical:
   project_entry: 项目入口.md
   ai_film_system: 01_AI电影系统/AI电影系统.md
@@ -28,6 +30,27 @@ canonical:
   maturity_model: 10_运行时/maturity_model.yaml
   regression_cases: 11_验收/director_regression_cases.yaml
   unknown_registry: 12_未知项/UNKNOWN_REGISTRY.yaml
+
+effective_sources:
+  PROJECT_INDEX.yaml: github_verified
+  项目入口.md: github_verified
+  08_系统学习/反馈反推与系统反哺引擎.md: github_verified
+  10_运行时/source_authority.yaml: github_verified
+  10_运行时/read_sets.yaml: github_verified
+  10_运行时/write_routes.yaml: github_verified
+  10_运行时/maturity_model.yaml: github_verified
+  10_运行时/director_route_index.yaml: github_verified
+  11_验收/director_regression_cases.yaml: github_verified
+  12_未知项/UNKNOWN_REGISTRY.yaml: github_verified
+  01_AI电影系统/AI电影系统.md: file_library_until_verified_migration
+  02_AI电影项目记忆/AI电影项目记忆.md: file_library_until_verified_migration
+  03_剧本与改编/当前改编剧本.md: file_library_until_verified_migration
+  04_角色与表演/角色与表演设定库.md: file_library_until_verified_migration
+  05_场景与空间/场景与空间设定库.md: file_library_until_verified_migration
+  06_视觉资产/视觉资产登记库.md: file_library_v5_until_reconciled
+  07_连续性与生产状态/连续性与当前生产状态.md: file_library_until_verified_migration
+  09_资料证据/官方资料与证据索引.md: file_library_until_verified_migration
+
 external_binary_sources:
   primary: ChatGPT Library
   categories:
@@ -38,12 +61,14 @@ external_binary_sources:
     - pdf
     - official_raw_evidence
     - historical_snapshots
+
 legacy_policy:
   default_action: reject_as_active
   patterns:
     - "AI电影化系统总纲_v*.md"
     - "AI电影化系统总纲.md"
     - "*_更新补丁.md"
+
 poc:
   create_read_update_verify: passed
   verified_at: 2026-08-11
