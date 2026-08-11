@@ -1,6 +1,6 @@
 project_id: EUSTIA_AI_FILM
 title: 秽翼的尤斯蒂娅 AI电影
-status: poc_bootstrap
+status: poc_verified
 source_authority: this_file
 policy:
   active_filename_versioning: forbidden
@@ -44,3 +44,6 @@ legacy_policy:
     - "AI电影化系统总纲_v*.md"
     - "AI电影化系统总纲.md"
     - "*_更新补丁.md"
+poc:
+  create_read_update_verify: passed
+  verified_at: 2026-08-11
