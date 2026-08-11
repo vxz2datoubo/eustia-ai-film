@@ -1,0 +1,19 @@
+task: FINAL_GITHUB_CANONICAL_CUTOVER
+repository: vxz2datoubo/eustia-ai-film
+source_agent: CODEX
+target_agent: GPT
+reviewer: GPT
+branch: codex/migration/final-canonical-cutover
+base: main
+status: ready_for_secondary_review
+scope:
+  - complete migration of AI film system canonical
+  - complete migration of project memory canonical
+  - reconcile scene library with map SSOT
+  - switch source authority to GitHub
+  - validate full GitHub cutover
+review_requirements:
+  - confirm public-repository copyright boundary
+  - review source-authority cutover
+  - review regression and restore coverage
+merge_authorization: absent

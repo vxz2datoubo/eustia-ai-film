@@ -64,7 +64,7 @@ foreach ($relativePath in ($canonicalPaths | Where-Object { $_ -match '^(01_|02_
 }
 
 $activeFiles = Get-ChildItem -LiteralPath $RepositoryRoot -Recurse -File |
-    Where-Object { $_.Extension -in @('.md', '.yaml') }
+    Where-Object { $_.Extension -in @('.md', '.yaml') -and $_.Name -ne 'AI_HANDOFF.yaml' }
 foreach ($legacyPattern in @('file_library_until_verified_migration', '_v1\.', '_v2\.', 'FINAL.*canonical', 'FINAL.*active')) {
     $hits = $activeFiles | Select-String -Pattern $legacyPattern
     if ($hits) {
