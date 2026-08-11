@@ -41,3 +41,11 @@ unknowns:
       target: 05_场景与空间/场景与空间设定库.md
       source_authority_switched: true
     status: resolved
+
+  - id: U-ASSET-RETRIEVAL-001
+    question: GitHub 视觉资产登记库中的正式 File ID 能否在当前 ChatGPT File Library 检索接口中被稳定反解为对应图片本体
+    impact: Source Authority 与资产身份可以正确路由，但在部分会话中 File Library 只能命中资产表/相关候选图，无法通过 opaque File ID 稳定打开正式图片本体，因此会影响基于正式图像像素的精确视觉分析。
+    evidence: 2026-08-11 对钟楼正面、左右侧视图和桥南立面使用正式 File ID 检索时，只稳定命中资产总表与相关历史图片，未能直接打开对应正式图片卡；不得把语义相近候选图冒充正式资产。
+    safe_default: 继续以 GitHub Asset Registry 决定应调用的 Asset ID / File ID；若当前接口无法解引用正式图片，则只做基于注册元数据、地图和已明确来源的结构分析，并明确标注未实际看到正式像素；需要像素级分析时要求用户在当前对话上传正式图或提供可直接访问的图像位置。
+    next_action: 为正式视觉资产增加可检索 filename/title/library_locator 或 GitHub 可访问缩略图/派生预览指针，并验证普通 Chat 能否 Asset ID → locator → image 完整闭环。
+    status: open

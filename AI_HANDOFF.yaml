@@ -6,6 +6,13 @@ reviewer: GPT
 branch: codex/migration/final-canonical-cutover
 base: main
 status: ready_for_secondary_review
+review_feedback:
+  source: PR-1 GPT secondary review
+  state: remediation_in_progress
+  required_before_re_review:
+    - synchronize latest main and preserve U-ASSET-RETRIEVAL-001 as open
+    - restore AIP-001 natural duration allocation
+    - complete semantic coverage audit
 scope:
   - complete migration of AI film system canonical
   - complete migration of project memory canonical

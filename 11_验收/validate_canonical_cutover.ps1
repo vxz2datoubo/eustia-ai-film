@@ -77,6 +77,7 @@ $map = Get-DocumentContent -MetadataPattern 'document_id: EUSTIA-PROJECT-MAP'
 $assets = Get-DocumentContent -MetadataPattern 'document_id: EUSTIA-VISUAL-ASSET-REGISTRY'
 $screenplay = Get-DocumentContent -MetadataPattern 'document_id: EUSTIA-CURRENT-ADAPTED-SCRIPT'
 $system = Get-DocumentContent -MetadataPattern 'system_id: DIRECTOR-CINEMA-SYSTEM'
+$memory = Get-DocumentContent -MetadataPattern 'document_id: EUSTIA-PROJECT-MEMORY'
 Require-Content -Label 'map' -Content $map -Pattern 'SCN-CHURCH-BELLTOWER-SOUTH-001'
 Require-Content -Label 'map' -Content $map -Pattern 'SCN-CHECKPOINT-MIDDLE-GATE-001'
 Require-Content -Label 'map' -Content $map -Pattern 'SCN-BRIDGE-SOUTH-FACE-001'
@@ -86,6 +87,10 @@ Require-Content -Label 'screenplay' -Content $screenplay -Pattern 'CONFIRMED / C
 Require-Content -Label 'screenplay' -Content $screenplay -Pattern 'target_confirmed: false'
 Require-Content -Label 'system' -Content $system -Pattern 'Character Autonomous Life Continuity'
 Require-Content -Label 'system' -Content $system -Pattern 'Camera-Off.*Swap.*Omniscience.*Optimizer'
+Require-Content -Label 'system' -Content $system -Pattern 'timecode'
+Require-Content -Label 'system' -Content $system -Pattern 'six freedom|six.*degree|camera height'
+Require-Content -Label 'project_memory' -Content $memory -Pattern 'AIP-001'
+Require-Content -Label 'project_memory' -Content $memory -Pattern 'Seedance'
 $writeRoutesFile = Get-ChildItem -LiteralPath $RepositoryRoot -Recurse -File -Filter 'write_routes.yaml'
 if ($writeRoutesFile.Count -ne 1) {
     $failures.Add("expected one write_routes.yaml; found $($writeRoutesFile.Count)")
@@ -105,6 +110,9 @@ foreach ($id in @('U-MIG-001', 'U-MIG-002', 'U-SCENE-001')) {
     if ($unknown -notmatch "(?s)$id.*?status: resolved") {
         $failures.Add("migration unknown remains open: $id")
     }
+}
+if ($unknown -notmatch '(?s)U-ASSET-RETRIEVAL-001.*?status: open') {
+    $failures.Add('asset retrieval unknown is missing or not open')
 }
 
 if ($failures.Count -gt 0) {
