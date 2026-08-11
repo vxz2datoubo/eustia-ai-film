@@ -1,0 +1,58 @@
+routes:
+  - id: CHARACTER_WAITS_FOR_PLOT
+    symptoms:
+      - 人物像在等剧情
+      - 人物一出场才开始做事
+      - 所有人反应一致
+      - 行为过度理性
+    mandatory_scans:
+      - CALC
+      - CLCS
+      - character_knowledge_boundary
+    candidate_axes:
+      - preexisting_activity
+      - interruption_and_resumption
+      - personality_specific_response
+      - duty_and_relationship_filter
+
+  - id: EXPOSITION_STALL
+    symptoms:
+      - 持续对白
+      - 世界观说明
+      - 画外音
+      - 节奏停滞
+      - 信息很多但画面不推进
+    mandatory_scans:
+      - narrative_multiplex
+      - attention_budget
+      - reveal_budget
+    candidate_axes:
+      - compression
+      - embodiment
+      - temporal_parallel
+      - deliberate_stillness
+
+  - id: SPACE_CONTINUITY_RISK
+    symptoms:
+      - 左右反了
+      - 正反打关系不清
+      - 桥上桥下混乱
+      - 场景拓扑漂移
+    mandatory_scans:
+      - map_authority
+      - camera_orientation
+      - asset_direction_tags
+      - adjacency_and_height
+
+  - id: ASSET_REGISTRATION
+    symptoms:
+      - 登记资产
+      - 加入资产库
+      - 录入资产
+      - 设为正式资产
+    mandatory_scans:
+      - asset_identity
+      - source_authority
+      - continuity_binding
+      - commit_verification
+    candidate_axes: []
