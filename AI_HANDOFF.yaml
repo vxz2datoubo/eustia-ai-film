@@ -8,11 +8,20 @@ base: main
 status: ready_for_secondary_review
 review_feedback:
   source: PR-1 GPT secondary review
-  state: remediation_in_progress
+  state: addressed_pending_GPT_re_review
+  base_main_sha: ab9f88df9a39c38d1a5a11685f6ba33fab20a38a
   required_before_re_review:
     - synchronize latest main and preserve U-ASSET-RETRIEVAL-001 as open
     - restore AIP-001 natural duration allocation
-    - complete semantic coverage audit
+  - complete semantic coverage audit
+validation:
+  source_authority_regression: passed
+  map_regression: passed
+  asset_regression: passed
+  screenplay_regression: passed
+  CALC_regression: passed
+  new_chat_restore_test: passed
+  asset_retrieval_unknown: exactly_one_open_entry
 scope:
   - complete migration of AI film system canonical
   - complete migration of project memory canonical

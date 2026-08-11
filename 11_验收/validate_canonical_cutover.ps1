@@ -114,6 +114,9 @@ foreach ($id in @('U-MIG-001', 'U-MIG-002', 'U-SCENE-001')) {
 if ($unknown -notmatch '(?s)U-ASSET-RETRIEVAL-001.*?status: open') {
     $failures.Add('asset retrieval unknown is missing or not open')
 }
+if ([regex]::Matches($unknown, 'U-ASSET-RETRIEVAL-001').Count -ne 1) {
+    $failures.Add('asset retrieval unknown must have exactly one registry entry')
+}
 
 if ($failures.Count -gt 0) {
     $failures | ForEach-Object { Write-Error $_ }

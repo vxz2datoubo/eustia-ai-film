@@ -4,7 +4,7 @@ agent_id: CODEX
 
 # GitHub 迁移状态
 
-最后更新：2026-08-11
+最后更新：2026-08-12
 
 ## 当前系统状态
 
@@ -68,7 +68,7 @@ U-MIG-001、U-MIG-002、U-SCENE-001 均已 resolved。U-MIG-004 已在 UNKNOWN_R
 | 官方 MHTML/PDF 原文、游戏母本与媒体二进制 | deprecated_with_reason | public GitHub 只保留项目自有方法和来源边界；原始资料继续在 Library / 证据层 |
 | 旧外部记忆路径、版本基线和补丁链 | deprecated_with_reason | PROJECT_INDEX GitHub-first 路由及固定文件名已取代旧路径和版本文件 |
 
-本轮同时同步 main 新增的 U-ASSET-RETRIEVAL-001，并保持 status: open。它是资产像素检索接口缺口，不改变 Asset Registry 的 Source Authority。
+本轮已合并 origin/main 的 `ab9f88df9a39c38d1a5a11685f6ba33fab20a38a`，保留唯一的 U-ASSET-RETRIEVAL-001，且 status: open。它是资产像素检索接口缺口，不改变 Asset Registry 的 Source Authority。最终树重新通过 Source Authority、地图、资产、剧本、CALC 与新会话恢复回归。
 
 ## 公开仓库边界
 
