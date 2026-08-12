@@ -60,6 +60,51 @@ cases:
         - prompt_complexity
         - overconstraint_rigidity
 
+  - id: REG-POSITIVE-SPEC-001
+    title: 凯姆跑酷攀墙用正向动作规格替代绝对否定
+    maturity: candidate
+    scene_evidence:
+      work_item: KAIM-HIGH-SEARCH-30S
+      observed_result: 含“不飞跃、不悬空”等强否定的Seedance 2.5提示词导致动作退化成爬楼梯式替代行为
+      evidence_level: E4
+      incident_status: scene_verified_observation
+    must_preserve:
+      - 正向描述角色实际沿建筑外立面持续上行
+      - 允许相邻支点之间自然短距离腾跃和短暂离墙悬空
+      - 真实重量通过可见支点发力抓点踩点重心转移和明确落点建立
+      - 动作风格通过轻盈连续高效的正向运动包络定义而不是通过“不飞跃不悬空”定义
+      - 摄影机正向描述为沿上行路径跟随并同时保留人物与建筑支点可读性
+      - 默认先不用全局绝对否定句控制动作
+      - 必须保留的排除项应局部化对象化并只用于会毁掉剧情身份空间或关键连续性的严重错误
+      - 若平台存在独立negative-prompt接口必须按该平台官方语义使用不得把专用负向控制与主提示自然语言否定混为一谈
+      - 不能因为减少否定词而撤销真实物理空间拓扑角色身份揭示预算等硬不变量
+    checks:
+      - positive_target_specification
+      - physical_motion_envelope
+      - hard_vs_soft_constraint
+      - negation_scope
+      - feasible_action_space
+      - substitute_behavior_risk
+      - prompt_constraint_budget
+      - platform_negative_prompt_support
+      - screen_evidence_link
+    targeted_eval:
+      method: A_B_C_compare
+      A: 绝对否定为主，例如不飞跃不悬空不做超级英雄动作
+      B: 纯正向动作规格，明确外立面支点短距离腾跃抓踩与连续上行
+      C: 正向动作规格加最多一条局部严重错误排除
+      compare:
+        - desired_motion_adherence
+        - unintended_staircase_or_route_substitution
+        - physical_contact_and_body_mechanics
+        - motion_energy_and_lightness
+        - spatial_continuity
+        - camera_behavior
+        - visual_quality
+        - prompt_complexity
+        - rigidity_or_overconstraint
+        - catastrophic_error_rate
+
   - id: REG-ASSET-001
     title: 登记资产必须正式提交
     must_preserve:
