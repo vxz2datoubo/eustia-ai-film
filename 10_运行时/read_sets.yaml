@@ -28,6 +28,7 @@ read_sets:
       - PROJECT_INDEX.yaml
       - AI电影系统#relevant_sections_only
       - 反馈反推与系统反哺引擎
+      - 本地问题模式集合#relevant_tools_formats_and_failure_patterns
       - 官方资料与证据索引
       - UNKNOWN_REGISTRY
 

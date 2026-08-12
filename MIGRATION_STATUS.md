@@ -43,6 +43,7 @@ U-MIG-001、U-MIG-002、U-SCENE-001 均已 resolved。U-MIG-004 已在 UNKNOWN_R
 |---|---|---|
 | 导演执行流程、场景诊断、动作线优先 | migrated | AI电影系统，第2、3、5节 |
 | 镜头卡、导演母版和执行提示模板 | migrated | AI电影系统，第2.1与6.4节 |
+| 用户只提供剧情时的十五项默认完整导演输出合同 | migrated | AI电影系统，第2.2节；REG-DIRECTOR-FULL-OUTPUT-001 防止退化为只交执行稿 |
 | DirectorSkills 症状路由与按需组合 | moved_to_other_canonical | 10_运行时/director_route_index.yaml 与 read_sets.yaml；系统第1.1节保留 DTRM 接口 |
 | 摄影机合同与 six degrees of freedom | migrated | AI电影系统，第6.3–6.4节 |
 | 顶视、正交及特殊机位 | migrated | AI电影系统，第6.4节 |
@@ -65,6 +66,9 @@ U-MIG-001、U-MIG-002、U-SCENE-001 均已 resolved。U-MIG-004 已在 UNKNOWN_R
 | 质量验收与生成前单测 | migrated | AI电影系统，第6.3节 |
 | 模型自主权 LOCKED / GUIDED / FREE | migrated | AI电影系统，第6.2节 |
 | 三层编译、单一主导变化律、风格冲突检查和证据边界 | migrated | AI电影系统，第2、6、7节 |
+| 任务域提示词编译器：影视剧情、几何空间、产品/材质、平面/海报/Logo、教育/科普、IP/创意反差 | migrated | AI电影系统，第6.4节；DTRM 按任务最小召回，非相关域不默认激活 |
+| 学习对象字段 schema：evidence、goal、causal graph、causes、counterfactuals、rules、triggers、boundaries、verification、maturity、writeback | moved_to_other_canonical | 08_系统学习/反馈反推与系统反哺引擎.md，第7节是唯一学习记录 schema，并保留旧字段语义后写回 |
+| 可复现本地问题的高频收集、任务前防错与任务后归档 | moved_to_other_canonical | 08_系统学习/本地问题模式集合.md；反馈引擎第9节规定发布前读取与任务收尾记录，不复制活动导演规则 |
 | 官方 MHTML/PDF 原文、游戏母本与媒体二进制 | deprecated_with_reason | public GitHub 只保留项目自有方法和来源边界；原始资料继续在 Library / 证据层 |
 | 旧外部记忆路径、版本基线和补丁链 | deprecated_with_reason | PROJECT_INDEX GitHub-first 路由及固定文件名已取代旧路径和版本文件 |
 

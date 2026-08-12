@@ -73,6 +73,15 @@ foreach ($legacyPattern in @('file_library_until_verified_migration', '_v1\.', '
 }
 
 Require-Text -RelativePath 'MIGRATION_STATUS.md' -Pattern 'FULL_GITHUB_CUTOVER / VERIFIED'
+$handoffPath = Join-Path $RepositoryRoot 'AI_HANDOFF.yaml'
+if (-not (Test-Path -LiteralPath $handoffPath -PathType Leaf)) {
+    $failures.Add('missing AI_HANDOFF.yaml')
+} else {
+    & python -c "import sys,yaml; yaml.safe_load(open(sys.argv[1], encoding='utf-8')); print('PASS AI_HANDOFF YAML parse')" $handoffPath
+    if ($LASTEXITCODE -ne 0) {
+        $failures.Add('AI_HANDOFF.yaml failed YAML parser validation')
+    }
+}
 $map = Get-DocumentContent -MetadataPattern 'document_id: EUSTIA-PROJECT-MAP'
 $assets = Get-DocumentContent -MetadataPattern 'document_id: EUSTIA-VISUAL-ASSET-REGISTRY'
 $screenplay = Get-DocumentContent -MetadataPattern 'document_id: EUSTIA-CURRENT-ADAPTED-SCRIPT'
@@ -89,8 +98,16 @@ Require-Content -Label 'system' -Content $system -Pattern 'Character Autonomous 
 Require-Content -Label 'system' -Content $system -Pattern 'Camera-Off.*Swap.*Omniscience.*Optimizer'
 Require-Content -Label 'system' -Content $system -Pattern 'timecode'
 Require-Content -Label 'system' -Content $system -Pattern 'six freedom|six.*degree|camera height'
+Require-Content -Label 'system' -Content $system -Pattern 'DIRECTOR-FULL-OUTPUT-001'
 Require-Content -Label 'project_memory' -Content $memory -Pattern 'AIP-001'
 Require-Content -Label 'project_memory' -Content $memory -Pattern 'Seedance'
+$regressionCasesFile = Get-ChildItem -LiteralPath $RepositoryRoot -Recurse -File -Filter 'director_regression_cases.yaml'
+if ($regressionCasesFile.Count -ne 1) {
+    $failures.Add("expected one director_regression_cases.yaml; found $($regressionCasesFile.Count)")
+} else {
+    $regressionCases = [System.IO.File]::ReadAllText($regressionCasesFile.FullName, [System.Text.Encoding]::UTF8)
+    Require-Content -Label 'regression_cases' -Content $regressionCases -Pattern 'REG-DIRECTOR-FULL-OUTPUT-001'
+}
 $writeRoutesFile = Get-ChildItem -LiteralPath $RepositoryRoot -Recurse -File -Filter 'write_routes.yaml'
 if ($writeRoutesFile.Count -ne 1) {
     $failures.Add("expected one write_routes.yaml; found $($writeRoutesFile.Count)")
@@ -123,4 +140,4 @@ if ($failures.Count -gt 0) {
     exit 1
 }
 
-Write-Output "PASS canonical existence, source authority, legacy rejection, map, asset, screenplay, CALC, write routes, and migration unknown closure"
+Write-Output "PASS canonical existence, source authority, handoff YAML, map, asset, screenplay, CALC, director full output, write routes, and migration unknown closure"

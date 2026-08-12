@@ -41,6 +41,30 @@ cases:
       - use_PROJECT_INDEX_authority
       - use_fixed_current_AI电影系统
 
+  - id: REG-DIRECTOR-FULL-OUTPUT-001
+    title: 用户仅提供剧情并要求完整处理时，必须返回完整导演合同
+    must_preserve:
+      - 母本与连续性核对
+      - 场景诊断
+      - 导演意图
+      - 人物目标与潜台词
+      - 节拍
+      - 表演
+      - 场面调度
+      - 镜头脚本
+      - 摄影与灯光
+      - 剪辑与声音
+      - AI资产清单
+      - 模型自主权合同
+      - 视频模型执行稿
+      - 验收清单
+      - 结尾接口
+    checks:
+      - complete_director_output_contract
+      - not_execution_prompt_only
+      - continuity_before_execution
+      - ending_handoff
+
   - id: REG-MAP-001
     title: 钟楼与关所的空间职责不得再混同
     must_preserve:
