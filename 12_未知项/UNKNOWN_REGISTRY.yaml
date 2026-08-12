@@ -1,9 +1,16 @@
 unknowns:
   - id: U-MIG-001
     question: AI电影系统.md 尚未完成全文迁移
-    resolution: 2026-08-11 已完整读取 File Library canonical（38855 bytes，1265 lines），将其有效导演、分镜、摄影、表演、AI图像和AI视频方法，与 GitHub-first、PRE-DIRECT、DSRI/DTRM、CALC/CLCS、EDCM 和成熟度规则合并到固定路径 01_AI电影系统/AI电影系统.md。
+    resolution: 2026-08-12 已完整读取用户当前 File Library canonical（38855 bytes，1767 lines），将其有效导演、分镜、摄影、表演、AI图像和AI视频方法，与 GitHub-first、PRE-DIRECT、DSRI/DTRM、CALC/CLCS、EDCM 和成熟度规则合并到固定路径 01_AI电影系统/AI电影系统.md。
     evidence:
-      source: F:\aidanao\eustia-migration-source\AI电影系统.md
+      source: D:\LiblibAI-workspace\comfyui-deploy-win\ComfyUI\output\AI电影系统.md
+      source_bytes: 38855
+      source_lines: 1767
+      source_sha256: E8817BB10969AB64C3668D500DB430CC27B61FB21EADEF8C27FAABD4379B767E
+      preserved_migration_copy: F:\aidanao\eustia-migration-source\AI电影系统.md
+      preserved_migration_copy_status: byte_identical_preserved_migration_copy
+      verification_date: 2026-08-12
+      line_count_method: ReadAllLines_UTF8
       full_read: true
       target: 01_AI电影系统/AI电影系统.md
       source_authority_switched: true
@@ -11,9 +18,16 @@ unknowns:
 
   - id: U-MIG-002
     question: AI电影项目记忆.md 尚未完成全文迁移
-    resolution: 2026-08-11 已完整读取 File Library canonical（18051 bytes，358 lines），将未与当前 GitHub剧本、地图、资产和连续性冲突的项目事实、稳定偏好、实测经验和历史裁决迁移到固定路径 02_AI电影项目记忆/AI电影项目记忆.md。
+    resolution: 2026-08-12 已完整读取用户当前 File Library canonical（18051 bytes，490 lines），将未与当前 GitHub剧本、地图、资产和连续性冲突的项目事实、稳定偏好、实测经验和历史裁决迁移到固定路径 02_AI电影项目记忆/AI电影项目记忆.md。
     evidence:
-      source: F:\aidanao\eustia-migration-source\AI电影项目记忆.md
+      source: D:\LiblibAI-workspace\comfyui-deploy-win\ComfyUI\output\AI电影项目记忆.md
+      source_bytes: 18051
+      source_lines: 490
+      source_sha256: 9BA184D7D5EC122E6FA9E0CD650D6133E1E87591324FEC2D4A3283B5DE1F6744
+      preserved_migration_copy: F:\aidanao\eustia-migration-source\AI电影项目记忆.md
+      preserved_migration_copy_status: byte_identical_preserved_migration_copy
+      verification_date: 2026-08-12
+      line_count_method: ReadAllLines_UTF8
       full_read: true
       target: 02_AI电影项目记忆/AI电影项目记忆.md
       source_authority_switched: true
@@ -32,11 +46,22 @@ unknowns:
 
   - id: U-SCENE-001
     question: 场景与空间设定库.md 的局部场景职责尚未完成迁移
-    resolution: 2026-08-11 已完整读取 File Library 场景与空间设定库（3791 bytes，142 lines）和场景资产库（6561 bytes，193 lines），将局部材质、建筑风格、道具、光照、使用痕迹、局部功能、摄影基线、资产职责和模型约束迁移到 05_场景与空间/场景与空间设定库.md。00_项目地图文件.md 保持唯一拓扑 SSOT，write_routes 已把拓扑写回单独路由到地图。
+    resolution: 2026-08-12 已完整读取用户当前 File Library 场景与空间设定库（3791 bytes，172 lines）及辅助 reconciliation source 场景资产库（6561 bytes，193 lines），将局部材质、建筑风格、道具、光照、使用痕迹、局部功能、摄影基线、资产职责和模型约束迁移到 05_场景与空间/场景与空间设定库.md。00_项目地图文件.md 保持唯一拓扑 SSOT，write_routes 已把拓扑写回单独路由到地图。
     evidence:
       sources:
-        - F:\aidanao\eustia-migration-source\场景与空间设定库.md
-        - F:\aidanao\eustia-migration-source\场景资产库.md
+        - path: D:\LiblibAI-workspace\comfyui-deploy-win\ComfyUI\output\场景与空间设定库.md
+          role: user_current_canonical_source
+          source_bytes: 3791
+          source_lines: 172
+          source_sha256: 43F504772B51530B2D7B7675A3675552C5611611100D68E7BE4FA564A99D03FF
+          preserved_migration_copy: F:\aidanao\eustia-migration-source\场景与空间设定库.md
+          preserved_migration_copy_status: byte_identical_preserved_migration_copy
+        - path: F:\aidanao\eustia-migration-source\场景资产库.md
+          role: auxiliary_reconciliation_source
+          source_bytes: 6561
+          source_lines: 193
+      verification_date: 2026-08-12
+      line_count_method: ReadAllLines_UTF8
       full_read: true
       target: 05_场景与空间/场景与空间设定库.md
       source_authority_switched: true
