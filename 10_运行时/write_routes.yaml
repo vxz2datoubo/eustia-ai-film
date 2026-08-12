@@ -8,6 +8,8 @@ routes:
   scene_topology_map_movement: 05_场景与空间/00_项目地图文件.md
   formal_visual_asset: 06_视觉资产/视觉资产登记库.md
   current_shot_production_state: 07_连续性与生产状态/连续性与当前生产状态.md
+  revision_checkpoint_current_state: 07_连续性与生产状态/连续性与当前生产状态.md
+  revision_trace_and_learning: 08_系统学习/反馈反推与系统反哺引擎.md
   learning_evidence_and_outcome: 08_系统学习/反馈反推与系统反哺引擎.md
   official_research_evidence: 09_资料证据/官方资料与证据索引.md
   unresolved_unknown: 12_未知项/UNKNOWN_REGISTRY.yaml
@@ -24,3 +26,5 @@ rules:
   memory_cannot_substitute_for_formal_write: true
   candidate_cannot_auto_promote_to_stable: true
   fixed_active_filenames_only: true
+  revision_checkpoint_does_not_equal_skill_promotion: true
+  omitted_constraint_does_not_equal_revoked: true
