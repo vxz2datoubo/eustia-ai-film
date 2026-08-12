@@ -6,7 +6,7 @@ status: active
 canonical_filename: AI电影系统.md
 maintenance_mode: in_place_only
 versioned_filename_policy: forbidden
-last_updated: 2026-08-12
+last_updated: 2026-08-13
 maintainer: Bob Huang × ChatGPT
 language: zh-CN
 ---
@@ -481,6 +481,60 @@ confidence:
 maturity:
 writeback_status:
 ```
+
+## 10.1 Candidate 技能登记与晋级边界（2026-08-13）
+
+`registration != promotion`。有证据、明确 scope、trigger、operational rule、failure boundary 和 targeted eval 接口的候选技能，可以按 `write_routes.yaml` 登记到本唯一主档；登记不把 `candidate` 晋级为 `scene_verified`、`project_verified` 或 `general_stable`，也不使其成为默认全局调用规则。学习证据、真实生成结果和 revision trace 继续保存在反馈引擎；后续真实生成、用户确认与跨场景证据按 `maturity_model.yaml` 决定 promotion。
+
+若安全技术原因使唯一 target canonical 不能写入，必须登记 `pending_canonical_writes.yaml`，不得声称 fully integrated；只有目标文件回读、规则与既有内容完整性验证均通过后，才可关闭 pending item。
+
+### SCREEN-EVIDENCE-001｜屏幕证据化提示词编译
+
+- maturity：`candidate`；scope：关键空间、动作、尺度、高度、速度或危险性不能只由概念总结词承担的执行稿。
+- trigger：提示词“很高、很快、很危险、数层高”等抽象词承担关键画面，或模型需要自行猜测高度、接触、路线和结果。
+- operational rule：按 `VISIBLE FRAME → RELATIVE SPATIAL EVIDENCE → PHYSICAL ACTION CHAIN → ENVIRONMENT RESPONSE（按需）→ FINAL STATE` 把导演意图翻译为最小充分的可见楼层/窗户/地面高差/人物尺度、支点/接触点、重心/方向、位置变化和结果。图生视频或多模态参考已锁定主体、静态构图、材质、光线和背景时，文本优先补动作、时序、摄影机、接触关系、环境变化与最终状态，不重复静态像素。
+- boundary / failure condition：不得把具体化变成逐帧、同义词、微动作或负面词堆砌；参考图未锁住的关键几何仍须补最小视觉锚点；模型版本变化或反例出现时转 `needs_revalidation`。
+- verification：`REG-SCREEN-EVIDENCE-001`；以概念概括与最小充分屏幕证据化 A/B 比较可读性、接触物理、动作连续、空间稳定、意外脑补和过约束僵硬度。
+
+### POSITIVE-SPEC-001｜正向动作规格与否定约束预算
+
+- maturity：`candidate`；scope：Seedance 或同类 AI 视频执行稿中的动作、运动包络与约束编译。
+- trigger：禁止项比正向动作更强或更长，模型为满足绝对否定而采用字面合规却违背导演意图的替代路线。
+- operational rule：按 `SCREEN EVIDENCE → POSITIVE TARGET ACTION → ALLOWED MOTION ENVELOPE → HARD INVARIANTS → LOCAL EXCLUSIONS ONLY IF NECESSARY → FINAL STATE` 编译。HARD 只保护剧情因果、身份、canonical 拓扑、关键道具、reveal budget、锁定摄影机和最终状态；动作风格、速度、支点、腾跃范围和表演强度通常为 GUIDED；呼吸、衣摆、风尘、非关键群众与自然时长属于 FREE。少量 local exclusion 只排除明确 catastrophic error，不能误杀正确动作的必要中间态。
+- boundary / failure condition：不是禁止所有否定词；平台独立 negative-prompt 通道、反复验证的严重错误、身份/拓扑/文字等硬交付可使用局部否定。若正向规格仍不能稳定路线，改用动作参考、白模或局部编辑，不继续堆叠自然语言否定。
+- verification：`REG-POSITIVE-SPEC-001`；比较绝对否定、纯正向规格和正向规格加最少局部排除的动作可行性、替代行为、硬不变量与模型自主空间。
+
+### EVENT-SEQUENCE-EXPLICIT-001｜关键事件顺序显式化
+
+- maturity：`candidate`；scope：叙事因果依赖先后，而视频模型可能把连续动作错误并发化的镜头。
+- trigger：一个主体先改变状态、另一主体随后利用该状态，且同时发生会改变施力者、被作用者或结果。
+- operational rule：用“先 → 随后 → 已经……之后 → 再 → 直到 → 此时才”明确动作主语、施力者、被作用者、状态变化与结果；把关键顺序写入动作不变量和 final state。
+- boundary / failure condition：显式因果顺序不等于逐秒 timecode；Seedance 默认自然分配时长，只有对白/口型同步、定点视频编辑、extension、明确节拍或必须锁定的因果时序才使用时间码。无因果依赖的自然并行动作不强行串行化。
+- verification：对动作绑定错误或并发化风险，检查顺序、接触、状态变化和结果是否可读，且不因过控损害自然时长分配。
+
+### ROLE-FUNCTION-COMPRESSION-001｜角色职能压缩介绍
+
+- maturity：`candidate`；scope：角色首次进入新章节或公共空间，且必须在短时间建立身份、职责、性格、组织关系与现场运作。
+- trigger：需要说明对白解释角色“是谁/负责什么”，或多主体现场信息密度高但人物职能不可读。
+- operational rule：用一个短而因果清楚的事件，让动作服务同一角色/组织介绍目标：谁先发现、谁一线执行、谁协调/接管，以及群众或组织原本如何运作。角色职能通过行动、结果与组织分工可见，而非另起说明支线。
+- boundary / failure condition：高信息密度不等于塞入无关事件；主语、因果和 subject-action binding 必须清楚，不能为介绍角色改写当前剧情事实或制造与本场无关的新支线。
+- verification：检查观众能否仅凭事件读出职责分工、性格倾向和组织层级，同时主线、reveal budget 与动作绑定保持稳定。
+
+### OPERATIONAL-PRESENCE-PRELOAD-001｜在场机制预载
+
+- maturity：`candidate`；scope：后续角色或组织需要快速发现、到场、干预或响应事件的因果准备。
+- trigger：后续快速响应若无前置正常工作状态，会显得角色或组织为剧情需要而瞬移出现。
+- operational rule：在前面通过正常工作状态证明其本来就在相关区域、正在执行相关职责，并具备发现和处理条件；后续响应由这一已建立状态自然承接。
+- boundary / failure condition：本规则是 CALC / CLCS 的快速响应专用补充，不建立第二套角色连续性系统；不得为预载而提前泄露不应揭示的信息，或把角色写成全知、最优和等待剧情。
+- verification：执行 Camera-Off、Resumption 与 Background-Independence 检查；确认快速响应有前置因果，且不消费后续 reveal。
+
+### MOTION-SIGNATURE-001｜人物运动性格指纹
+
+- maturity：`candidate`；scope：具有相近移动能力的人物在追逐、攀爬、战斗或垂直空间移动中的角色化动作设计。
+- trigger：不同人物共享相同动作模板，或仅靠形容词而非动作选择表达人物差异。
+- operational rule：通过 rhythm、purpose、force、route choice、support usage、center of mass、hesitation、correction、landing/closure 与 camera response 选择建立差异；优先让路线、施力、重心、节奏和动作结果呈现人物，而非追加形容词。
+- boundary / failure condition：运动签名不得覆盖身份、空间拓扑、动作不变量或当前镜头目的；人物可共享能力，但不能因此被强行写成相同的节奏、支点和收束方式。
+- verification：比较角色间的路线、重心、节奏、支点和结果是否可区分；同时检查动作物理、空间连续与摄影机响应没有被人物化风格破坏。
 
 # 11. 默认完整输出
 
@@ -1575,6 +1629,17 @@ Seedream干净顶视场景
 ### S25-13 证据边界守卫
 
 区分官方原文、媒体归纳和项目推导，禁止伪造缺失章节。
+
+### S25-14 至 S25-19 Candidate 调用入口
+
+- `S25-14 / SCREEN-EVIDENCE-001`：当 `SCREEN_EVIDENCE_GAP` 命中时，用最小充分屏幕证据编译关键画面。
+- `S25-15 / POSITIVE-SPEC-001`：当 `NEGATIVE_CONSTRAINT_OVERLOAD` 命中时，优先正向动作规格与受控约束预算。
+- `S25-16 / EVENT-SEQUENCE-EXPLICIT-001`：关键因果动作可能被并发化时，显式编译状态变化和先后关系。
+- `S25-17 / ROLE-FUNCTION-COMPRESSION-001`：新章节角色/组织需要高密度但清楚地进入观众认知时调用。
+- `S25-18 / OPERATIONAL-PRESENCE-PRELOAD-001`：后续快速响应需要前置在场因果时调用，并与 CALC / CLCS 联动。
+- `S25-19 / MOTION-SIGNATURE-001`：相近能力人物需要通过运动选择而非形容词区分时调用。
+
+以上均为 `candidate`，按需定向调用，不因登记成为默认全局激活项。
 
 ---
 
