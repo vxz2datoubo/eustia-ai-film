@@ -29,6 +29,7 @@ canonical:
   read_sets: 10_运行时/read_sets.yaml
   write_routes: 10_运行时/write_routes.yaml
   maturity_model: 10_运行时/maturity_model.yaml
+  pending_canonical_writes: 10_运行时/pending_canonical_writes.yaml
   regression_cases: 11_验收/director_regression_cases.yaml
   legacy_authority_regression_cases: 11_验收/legacy_authority_regression_cases.yaml
   canonical_migration_integrity_audit: 11_验收/canonical_migration_integrity_audit.md
@@ -48,6 +49,7 @@ effective_sources:
   10_运行时/read_sets.yaml: github_verified
   10_运行时/write_routes.yaml: github_verified
   10_运行时/maturity_model.yaml: github_verified
+  10_运行时/pending_canonical_writes.yaml: github_verified
   10_运行时/director_route_index.yaml: github_verified
   11_验收/director_regression_cases.yaml: github_verified
   11_验收/legacy_authority_regression_cases.yaml: github_verified
