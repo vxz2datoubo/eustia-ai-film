@@ -32,6 +32,36 @@ routes:
       - temporal_parallel
       - deliberate_stillness
 
+  - id: SCREEN_EVIDENCE_GAP
+    symptoms:
+      - 提示词太概念
+      - 画面描述太空泛
+      - 像小说需要观众脑补
+      - 数层高或很高但没有可见高度证据
+      - 很快或很危险但没有动作与空间证据
+      - AI需要自行猜测画面
+      - 抽象形容词承担了关键空间或动作信息
+      - 为补救歧义不断堆叠约束
+    maturity: candidate
+    mandatory_scans:
+      - observable_screen_evidence
+      - visible_frame_outline
+      - relative_scale_and_elevation
+      - physical_contact_action_chain
+      - environment_response
+      - modality_role_split
+      - prompt_constraint_budget
+      - final_state
+    candidate_axes:
+      - visible_geometry_anchor
+      - relative_position_anchor
+      - scale_and_height_evidence
+      - physical_contact_and_motion
+      - environmental_reaction
+      - temporal_order_without_forced_timecode
+      - minimum_sufficient_constraints
+      - final_state_anchor
+
   - id: SPACE_CONTINUITY_RISK
     symptoms:
       - 左右反了
