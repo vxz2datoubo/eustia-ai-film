@@ -5,15 +5,17 @@ target_agent: GPT
 reviewer: GPT
 branch: codex/migration/final-canonical-cutover
 base: main
-status: ready_for_secondary_review
+status: ready_for_final_review
 review_feedback:
-  source: PR-1 GPT secondary review
-  state: second_round_addressed_pending_final_GPT_re_review
+  source: PR-1 GPT review cycle
+  state: film_scope_cleaned_cross_project_issue_registry_moved_out
   base_main_sha: ab9f88df9a39c38d1a5a11685f6ba33fab20a38a
-  required_before_re_review:
+  addressed:
     - synchronize latest main and preserve U-ASSET-RETRIEVAL-001 as open
     - restore AIP-001 natural duration allocation
     - complete semantic coverage audit
+    - restore DIRECTOR-FULL-OUTPUT-001
+    - remove cross-project local execution issue registry from film canonical scope
 validation:
   source_authority_regression: passed
   map_regression: passed
@@ -22,10 +24,10 @@ validation:
   CALC_regression: passed
   new_chat_restore_test: passed
   asset_retrieval_unknown: exactly_one_open_entry
-  AI_HANDOFF_yaml_parser: passed_with_PyYAML
+  AI_HANDOFF_yaml_parser: previously_passed_with_PyYAML
   director_full_output_regression: passed
   semantic_coverage_audit: updated_full_output_task_domains_learning_schema
-  local_issue_pattern_collection: passed_with_initial_patterns_and_routes
+  cross_project_issue_patterns: moved_to_second_brain_coordination_PR_237
 scope:
   - complete migration of AI film system canonical
   - complete migration of project memory canonical
@@ -36,4 +38,5 @@ review_requirements:
   - confirm public-repository copyright boundary
   - review source-authority cutover
   - review regression and restore coverage
+  - confirm cross-project executor issues are not film canonical
 merge_authorization: absent
