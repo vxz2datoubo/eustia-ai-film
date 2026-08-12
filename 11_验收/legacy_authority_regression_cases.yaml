@@ -28,3 +28,9 @@ cases:
     scope: document
     sample: 参考 AI电影化系统总纲_v1.3.3.md。
     expected: fail_ambiguous
+
+  - id: LEGACY-AUTHORITY-006
+    title: 未带版本号的旧总纲活动指针也必须失败
+    scope: document
+    sample: 当前依据是 AI电影化系统总纲.md。
+    expected: fail_active

@@ -83,4 +83,4 @@ U-MIG-001、U-MIG-002、U-SCENE-001 均已 resolved。U-MIG-004 已在 UNKNOWN_R
 
 ## 验收
 
-11_验收/validate_canonical_cutover.ps1 是本次确定性验收脚本，检查 canonical 路径、Source Authority、行级语义 legacy authority 拒绝、地图、资产、剧本、CALC、写回路由和迁移 Unknown 关闭状态。`legacy_authority_regression_cases.yaml` 含五个 Golden Cases：活动 legacy 指针和机器路由必须 FAIL；明确废弃/迁移上下文 PASS；模糊引用报告具体位置并 FAIL。Golden director cases 位于 11_验收/director_regression_cases.yaml。
+11_验收/validate_canonical_cutover.ps1 是本次确定性验收脚本，检查 canonical 路径、Source Authority、行级语义 legacy authority 拒绝、地图、资产、剧本、CALC、写回路由和迁移 Unknown 关闭状态。`legacy_authority_regression_cases.yaml` 含六个 Golden Cases：活动 legacy 指针（含无版本号旧总纲）和机器路由必须 FAIL；明确废弃/迁移上下文 PASS；模糊引用报告具体位置并 FAIL。Golden director cases 位于 11_验收/director_regression_cases.yaml。

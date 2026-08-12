@@ -46,7 +46,9 @@ function Require-Content {
 function Get-LegacyReferenceClassification {
     param([string]$Text, [string]$Scope = 'document')
 
-    $legacyPattern = '(?i)(?:_v[0-9]+(?:\.[0-9]+)*\.md|_V[0-9]+(?:\.[0-9]+)?(?:_[^\s`"'']+)?\.md)'
+    # The named retired outline is legacy even when an historical note omits its
+    # version suffix; generic versioned Markdown references remain covered too.
+    $legacyPattern = '(?i)(?:AI\u7535\u5F71\u5316\u7CFB\u7EDF\u603B\u7EB2(?:_v[0-9]+(?:\.[0-9]+)*)?\.md|_v[0-9]+(?:\.[0-9]+)*\.md|_V[0-9]+(?:\.[0-9]+)?(?:_[^\s`"'']+)?\.md)'
     if ($Text -notmatch $legacyPattern) { return 'pass_no_reference' }
     if ($Scope -eq 'machine_route') { return 'fail_active' }
 
@@ -60,7 +62,7 @@ function Get-LegacyReferenceClassification {
 function Test-LegacyAuthorityReferences {
     param([string]$Root)
 
-    $legacyPattern = '(?i)(?:_v[0-9]+(?:\.[0-9]+)*\.md|_V[0-9]+(?:\.[0-9]+)?(?:_[^\s`"'']+)?\.md)'
+    $legacyPattern = '(?i)(?:AI\u7535\u5F71\u5316\u7CFB\u7EDF\u603B\u7EB2(?:_v[0-9]+(?:\.[0-9]+)*)?\.md|_v[0-9]+(?:\.[0-9]+)*\.md|_V[0-9]+(?:\.[0-9]+)?(?:_[^\s`"'']+)?\.md)'
     $strictMachineFiles = @('PROJECT_INDEX.yaml', 'read_sets.yaml', 'write_routes.yaml', 'director_route_index.yaml', 'CHATGPT_PROJECT_INSTRUCTION.md')
     $files = Get-ChildItem -LiteralPath $Root -Recurse -File | Where-Object { $_.Extension -in @('.md', '.yaml') }
     foreach ($file in $files) {
