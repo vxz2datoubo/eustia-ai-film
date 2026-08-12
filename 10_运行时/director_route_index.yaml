@@ -43,6 +43,8 @@ routes:
       - 抽象形容词承担了关键空间或动作信息
       - 为补救歧义不断堆叠约束
     maturity: candidate
+    mandatory_reads:
+      - 08_系统学习/反馈反推与系统反哺引擎.md#SCREEN-EVIDENCE-001
     mandatory_scans:
       - observable_screen_evidence
       - visible_frame_outline
