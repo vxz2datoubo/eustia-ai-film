@@ -23,7 +23,6 @@ canonical:
   asset_registry: 06_视觉资产/视觉资产登记库.md
   continuity: 07_连续性与生产状态/连续性与当前生产状态.md
   feedback_engine: 08_系统学习/反馈反推与系统反哺引擎.md
-  local_issue_patterns: 08_系统学习/本地问题模式集合.md
   evidence_index: 09_资料证据/官方资料与证据索引.md
   route_index: 10_运行时/director_route_index.yaml
   source_authority_rules: 10_运行时/source_authority.yaml
@@ -42,7 +41,6 @@ effective_sources:
   06_视觉资产/视觉资产登记库.md: github_verified
   07_连续性与生产状态/连续性与当前生产状态.md: github_verified
   08_系统学习/反馈反推与系统反哺引擎.md: github_verified
-  08_系统学习/本地问题模式集合.md: github_verified
   09_资料证据/官方资料与证据索引.md: github_verified
   10_运行时/source_authority.yaml: github_verified
   10_运行时/read_sets.yaml: github_verified
