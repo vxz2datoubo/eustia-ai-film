@@ -93,3 +93,33 @@ cases:
       - screenplay_continuity_map_asset_recall
       - CALC
       - reveal_budget
+
+  - id: REG-REVISION-001
+    title: 多轮修改时省略不等于撤销
+    must_preserve:
+      - 后续版本未重复旧约束时不得自动取消已接受约束
+      - 只有明确撤销或不可兼容冲突才能移除旧约束
+      - 新版本继承仍有效的剧情角色空间资产连续性与导演约束
+      - 冲突不清时保留旧约束并提示风险
+    checks:
+      - revision_series_identity
+      - constraint_ledger
+      - omitted_not_revoked
+      - continuity_inheritance
+
+  - id: REG-REVISION-002
+    title: 多轮修订只逐轮留痕并在收敛点学习
+    must_preserve:
+      - 每次实质修改记录最小Delta
+      - 中间revision不自动晋级长期技能
+      - 约3到5次实质修改或关键确认可形成checkpoint
+      - 切换下一镜或下一场前自动执行Trajectory Final-Delta
+      - 最终提示词不得整体机械复制成通用规则
+      - candidate或scene_verified与更高成熟度晋级分离
+    checks:
+      - micro_capture
+      - checkpoint
+      - semantic_finalization
+      - trajectory_final_delta
+      - maturity_gate
+      - regression_gate
