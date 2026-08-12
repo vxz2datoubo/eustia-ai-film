@@ -64,6 +64,36 @@ routes:
       - minimum_sufficient_constraints
       - final_state_anchor
 
+  - id: NEGATIVE_CONSTRAINT_OVERLOAD
+    symptoms:
+      - 大量否定词
+      - 不飞跃不悬空等绝对动作禁令
+      - 禁止项比正向动作描述更强或更长
+      - 模型为了满足禁止项改走错误动作路线
+      - 出现形式合规但导演意图失败的替代行为
+      - 为避免夸张动作而误杀正常的短距离腾跃或自然悬空
+      - 负面约束导致动作僵硬保守或退化
+    maturity: candidate
+    mandatory_reads:
+      - 08_系统学习/反馈反推与系统反哺引擎.md#POSITIVE-SPEC-001
+    mandatory_scans:
+      - positive_target_specification
+      - negation_scope
+      - hard_vs_soft_constraint
+      - feasible_action_space
+      - substitute_behavior_risk
+      - prompt_constraint_budget
+      - platform_negative_prompt_support
+      - physical_motion_envelope
+    candidate_axes:
+      - positive_action_envelope
+      - bounded_freedom
+      - localized_exclusion
+      - hard_invariants_only
+      - physical_support_evidence
+      - reference_based_control
+      - A_B_C_validation
+
   - id: SPACE_CONTINUITY_RISK
     symptoms:
       - 左右反了
