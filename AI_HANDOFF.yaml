@@ -8,7 +8,7 @@ base: main
 status: ready_for_final_review
 review_feedback:
   source: PR-1 GPT review cycle
-  state: film_scope_cleaned_cross_project_issue_registry_moved_out
+  state: full_source_cutover_validated_pending_commit_push_readback
   base_main_sha: ab9f88df9a39c38d1a5a11685f6ba33fab20a38a
   addressed:
     - synchronize latest main and preserve U-ASSET-RETRIEVAL-001 as open
@@ -28,6 +28,9 @@ validation:
   director_full_output_regression: passed
   semantic_coverage_audit: updated_full_output_task_domains_learning_schema
   cross_project_issue_patterns: moved_to_second_brain_coordination_PR_237
+  full_source_integrity_audit: passed_local_pending_remote_readback
+  legacy_authority_semantic_validator: passed_with_6_golden_cases
+  director_dry_run: passed_local_targeted_retrieval
 scope:
   - complete migration of AI film system canonical
   - complete migration of project memory canonical

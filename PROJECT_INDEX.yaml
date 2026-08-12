@@ -30,6 +30,8 @@ canonical:
   write_routes: 10_运行时/write_routes.yaml
   maturity_model: 10_运行时/maturity_model.yaml
   regression_cases: 11_验收/director_regression_cases.yaml
+  legacy_authority_regression_cases: 11_验收/legacy_authority_regression_cases.yaml
+  canonical_migration_integrity_audit: 11_验收/canonical_migration_integrity_audit.md
   unknown_registry: 12_未知项/UNKNOWN_REGISTRY.yaml
 
 effective_sources:
@@ -48,6 +50,8 @@ effective_sources:
   10_运行时/maturity_model.yaml: github_verified
   10_运行时/director_route_index.yaml: github_verified
   11_验收/director_regression_cases.yaml: github_verified
+  11_验收/legacy_authority_regression_cases.yaml: github_verified
+  11_验收/canonical_migration_integrity_audit.md: github_verified
   12_未知项/UNKNOWN_REGISTRY.yaml: github_verified
   01_AI电影系统/AI电影系统.md: github_verified
   02_AI电影项目记忆/AI电影项目记忆.md: github_verified

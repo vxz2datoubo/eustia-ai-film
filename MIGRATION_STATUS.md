@@ -10,6 +10,8 @@ agent_id: CODEX
 
 FULL_GITHUB_CUTOVER / VERIFIED
 
+2026-08-12 最终完整原件复核：此前压缩版不再作为三份 pending canonical 的迁移证据。已以用户提供 D: 当前 canonical 原件恢复 `01_AI电影系统/AI电影系统.md`、`02_AI电影项目记忆/AI电影项目记忆.md` 和 `05_场景与空间/场景与空间设定库.md` 的完整章节内容，并只做可审计的 authority/path/map reconcile。逐文件 source/destination bytes、lines、SHA-256、零实质删除、精确 reconcile、未知项及 Dry Run 路径见 `11_验收/canonical_migration_integrity_audit.md`。
+
 GitHub 是所有持续成长文字主档的唯一可修改 canonical truth。ChatGPT Library / 外部只读层继续承担图片、视频、音频、游戏母本、PDF、原始证据与历史快照；Memory 只作辅助索引。
 
 ## 本次最终切换
@@ -81,4 +83,4 @@ U-MIG-001、U-MIG-002、U-SCENE-001 均已 resolved。U-MIG-004 已在 UNKNOWN_R
 
 ## 验收
 
-11_验收/validate_canonical_cutover.ps1 是本次确定性验收脚本，检查 canonical 路径、Source Authority、legacy 拒绝、地图、资产、剧本、CALC、写回路由和迁移 Unknown 关闭状态。Golden cases 位于 11_验收/director_regression_cases.yaml。
+11_验收/validate_canonical_cutover.ps1 是本次确定性验收脚本，检查 canonical 路径、Source Authority、行级语义 legacy authority 拒绝、地图、资产、剧本、CALC、写回路由和迁移 Unknown 关闭状态。`legacy_authority_regression_cases.yaml` 含五个 Golden Cases：活动 legacy 指针和机器路由必须 FAIL；明确废弃/迁移上下文 PASS；模糊引用报告具体位置并 FAIL。Golden director cases 位于 11_验收/director_regression_cases.yaml。
