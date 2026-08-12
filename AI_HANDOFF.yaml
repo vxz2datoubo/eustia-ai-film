@@ -1,0 +1,46 @@
+task: FINAL_GITHUB_CANONICAL_CUTOVER
+repository: vxz2datoubo/eustia-ai-film
+source_agent: CODEX
+target_agent: GPT
+reviewer: GPT
+branch: codex/migration/final-canonical-cutover
+base: main
+status: ready_for_final_review
+review_feedback:
+  source: PR-1 GPT review cycle
+  state: full_source_cutover_validated
+  base_main_sha: ab9f88df9a39c38d1a5a11685f6ba33fab20a38a
+  addressed:
+    - synchronize latest main and preserve U-ASSET-RETRIEVAL-001 as open
+    - restore AIP-001 natural duration allocation
+    - complete semantic coverage audit
+    - restore DIRECTOR-FULL-OUTPUT-001
+    - remove cross-project local execution issue registry from film canonical scope
+validation:
+  source_authority_regression: passed
+  map_regression: passed
+  asset_regression: passed
+  screenplay_regression: passed
+  CALC_regression: passed
+  new_chat_restore_test: passed
+  asset_retrieval_unknown: exactly_one_open_entry
+  AI_HANDOFF_yaml_parser: passed_with_PyYAML
+  director_full_output_regression: passed
+  semantic_coverage_audit: updated_full_output_task_domains_learning_schema
+  cross_project_issue_patterns: moved_to_second_brain_coordination_PR_237
+  full_source_integrity_audit: passed
+  legacy_authority_semantic_validator: passed_with_9_golden_cases
+  director_dry_run: passed_local_targeted_retrieval
+  exact_head_receipt: PR-1_body_and_GitHub_API_readback_required_after_push
+scope:
+  - complete migration of AI film system canonical
+  - complete migration of project memory canonical
+  - reconcile scene library with map SSOT
+  - switch source authority to GitHub
+  - validate full GitHub cutover
+review_requirements:
+  - confirm public-repository copyright boundary
+  - review source-authority cutover
+  - review regression and restore coverage
+  - confirm cross-project executor issues are not film canonical
+merge_authorization: absent

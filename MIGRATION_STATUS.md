@@ -1,81 +1,86 @@
+---
+agent_id: CODEX
+---
+
 # GitHub 迁移状态
 
-最后更新：2026-08-11
-
-## 原则
-
-- 不采用“大爆炸切换”。
-- 每个 canonical 文件只有在“完整读取旧权威源 → 写入 GitHub → 回读核验”后，才把 effective_source 切到 GitHub。
-- 尚未完成完整迁移的文件继续以 File Library 当前 canonical 为权威，避免静默丢内容。
-- 旧 `AI电影化系统总纲_v*.md` 永久不得恢复为活动主档。
-
-## POC
-
-- GitHub 仓库连接：PASS
-- ChatGPT create file：PASS
-- ChatGPT fetch file：PASS
-- ChatGPT update file：PASS
-- ChatGPT fetch verify：PASS
-
-## 已切换为 GitHub 权威
-
-| 文件 | 状态 | 当前有效来源 | 说明 |
-|---|---|---|---|
-| PROJECT_INDEX.yaml | verified | GitHub | Source Authority Registry；每次导演前必读 |
-| 项目入口.md | verified | GitHub | GitHub-first 架构和每轮 P0 已回读核验 |
-| 当前改编剧本.md | verified | GitHub | 已读取旧 canonical 全文，并合并 8/11 凯姆攀爬 + 菲奥奈巡查/插队事件 |
-| 角色与表演设定库.md | verified | GitHub | 已绑定最新 Asset ID，并合并菲奥奈当前职责/CALC行为状态 |
-| 00_项目地图文件.md | verified | GitHub | 已纠正钟楼/关所关系、主街南北轴与桥东西轴 |
-| 视觉资产登记库.md | verified | GitHub | 已从 CURRENT_v5 对账迁移视觉资产，并正式登记钟楼左右侧视图 |
-| 连续性与当前生产状态.md | verified | GitHub | 已合并菲奥奈巡查+插队事件，并绑定 GitHub 资产库 |
-| 反馈反推与系统反哺引擎.md | verified | GitHub | 已加入 EDCM、成熟度、Final-Delta 和正式写回事务 |
-| 官方资料与证据索引.md | verified | GitHub | 已迁移证据等级并记录 CALC 研究来源边界 |
-| source_authority.yaml | verified | GitHub | 旧主档拒绝规则 |
-| read_sets.yaml | verified | GitHub | 每任务最小必要读取；空间任务强制读取地图 |
-| write_routes.yaml | verified | GitHub | 唯一写回路由与回读验证 |
-| maturity_model.yaml | verified | GitHub | candidate → stable 生命周期 |
-| director_route_index.yaml | verified | GitHub | 症状到技能/扫描路由 |
-| director_regression_cases.yaml | verified | GitHub | 首批 Golden Cases |
-| UNKNOWN_REGISTRY.yaml | verified | GitHub | 未知项与安全默认 |
-
-## 本轮资产迁移结果
-
-- `SCN-CHURCH-BELLTOWER-LEFT-001`：**active / 左视职责默认**，File ID `file_000000005ef481fd986ebe6946d669f5`。
-- `SCN-CHURCH-BELLTOWER-RIGHT-001`：**active / 右视职责默认**，File ID `file_00000000d40881fdbf84fc376df37d00`。
-- 钟楼正面继续由 `SCN-CHURCH-BELLTOWER-SOUTH-001` 承担，不被左右视图覆盖。
-- File Library 的 `秽翼AI电影资产总表_CURRENT_v5.xlsx` 保留为迁移前快照/对账证据；后续视觉资产状态与默认指针写 GitHub `视觉资产登记库.md`。
-
-## 本轮空间迁移结果
-
-- 主街锁定为南北向。
-- 高架石桥锁定为东西向，桥在上、主街在下。
-- 北侧链：蔷薇酒馆 / 绯灯街。
-- 南侧链：市集 / 布道施粥广场 → 教堂钟楼 → 钟楼后方关所底层入口。
-- 关所内部通过长距离四方回旋楼梯向上到中层。
-- 钟楼不再与关所合并；旧“通天楼”只作兼容旧称，不再默认解释为另一栋独立上层通道建筑。
-
-## 尚未切换
-
-| 文件 | 状态 | 当前有效来源 | 原因 |
-|---|---|---|---|
-| AI电影系统.md | pending_full_export | File Library | 文件约 41.5KB；当前接口读取会截断，不能从摘要重建后冒充完整迁移 |
-| AI电影项目记忆.md | pending_full_export | File Library | 文件较长；必须完整迁移后切换 |
-| 场景与空间设定库.md | pending_reconcile | File Library | 地图权威已切 GitHub；仍需迁移各场景节点材质/功能/资产关系，避免和地图重复 |
-
-## 完成定义
-
-单文件只有满足以下全部条件才标 `verified`：
-
-1. 找到旧体系当前 canonical；
-2. 完整读取；
-3. 明确旧文件中的 legacy 引用；
-4. 写入固定 GitHub 路径；
-5. 回读 GitHub；
-6. 核对关键头信息、核心段落、记录数量或结构；
-7. PROJECT_INDEX 的 effective_source 改为 GitHub。
+最后更新：2026-08-12
 
 ## 当前系统状态
 
-`PARTIAL_CUTOVER / SAFE_MIXED_SOURCE`
+FULL_GITHUB_CUTOVER / VERIFIED
 
-导演任务现在把 GitHub 作为**第一入口、路由权威、当前改编剧本权威、角色权威、空间地图权威、视觉资产文字权威、连续性权威和学习权威**。目前只剩 AI电影系统、AI电影项目记忆和局部场景设定库仍按 `PROJECT_INDEX.yaml` 从 File Library 读取，直到完整验证迁移完成。
+2026-08-12 最终完整原件复核：此前压缩版不再作为三份 pending canonical 的迁移证据。已以用户提供 D: 当前 canonical 原件恢复 `01_AI电影系统/AI电影系统.md`、`02_AI电影项目记忆/AI电影项目记忆.md` 和 `05_场景与空间/场景与空间设定库.md` 的完整章节内容，并只做可审计的 authority/path/map reconcile。逐文件 source/destination bytes、lines、SHA-256、零实质删除、精确 reconcile、未知项及 Dry Run 路径见 `11_验收/canonical_migration_integrity_audit.md`。
+
+GitHub 是所有持续成长文字主档的唯一可修改 canonical truth。ChatGPT Library / 外部只读层继续承担图片、视频、音频、游戏母本、PDF、原始证据与历史快照；Memory 只作辅助索引。
+
+## 本次最终切换
+
+已按 SOURCE FOUND → FULL READ → MERGED → WRITTEN → FETCH VERIFY → VERIFIED 完成：
+
+| 主档 | 旧 canonical 完整源 | GitHub 固定路径 | 最终 effective source |
+|---|---|---|---|
+| AI电影系统.md | D:\LiblibAI-workspace\comfyui-deploy-win\ComfyUI\output\AI电影系统.md，38855 bytes，1767 lines | 01_AI电影系统/AI电影系统.md | github_verified |
+| AI电影项目记忆.md | D:\LiblibAI-workspace\comfyui-deploy-win\ComfyUI\output\AI电影项目记忆.md，18051 bytes，490 lines | 02_AI电影项目记忆/AI电影项目记忆.md | github_verified |
+| 场景与空间设定库.md | D:\LiblibAI-workspace\comfyui-deploy-win\ComfyUI\output\场景与空间设定库.md，3791 bytes，172 lines | 05_场景与空间/场景与空间设定库.md | github_verified |
+
+场景资产库.md（6561 bytes，193 lines）已作为对账源完整读取。其有效局部场景与资产职责已合并；地图、动线和资产状态的旧表述不恢复为活动权威。
+
+## 关键裁决
+
+- 地图仍是拓扑 SSOT：主街南北向；高架石桥东西向；桥在上、主街在下；钟楼后方为关所入口；关所内部回旋楼梯向上至中层。
+- 场景库仅负责局部时代、建筑、材质、装饰、光照、天气、道具、使用痕迹、局部功能、摄影基线、模型约束与关联 Asset ID。
+- 当前剧本、角色、地图、资产、连续性和学习主档的 GitHub verified 内容优先于旧源，不被旧文静默覆盖。
+- 钟楼正面、左视和右视资产仍保留各自职责；左右视图不覆盖正面资产。
+- 本地执行/编码/shell/Git 等跨Agent问题不属于电影项目 canonical；该机制已迁往 `vxz2datoubo/second-brain-coordination` 的 Draft PR #237。
+
+## 迁移 Unknown
+
+U-MIG-001、U-MIG-002、U-SCENE-001 均已 resolved。U-MIG-004 已在 UNKNOWN_REGISTRY 中真实缩小为 Library 外部历史证据边界，不参与 active canonical 裁决。
+
+## GPT 二次审查修复与 semantic coverage audit
+
+本审计重新逐项对照用户提供的旧 AI电影系统.md（38855 bytes，1767 lines）。压缩只允许删除重复、过时路径和不适合公开仓库的原始资料描述；下列仍有效能力均有唯一当前承载位置。
+
+| 旧 canonical 能力 | 分类 | 当前承载或原因 |
+|---|---|---|
+| 导演执行流程、场景诊断、动作线优先 | migrated | AI电影系统，第2、3、5节 |
+| 镜头卡、导演母版和执行提示模板 | migrated | AI电影系统，第2.1与6.4节 |
+| 用户只提供剧情时的十五项默认完整导演输出合同 | migrated | AI电影系统，第2.2节；REG-DIRECTOR-FULL-OUTPUT-001 防止退化为只交执行稿 |
+| DirectorSkills 症状路由与按需组合 | moved_to_other_canonical | 10_运行时/director_route_index.yaml 与 read_sets.yaml；系统第1.1节保留 DTRM 接口 |
+| 摄影机合同与 six degrees of freedom | migrated | AI电影系统，第6.3–6.4节 |
+| 顶视、正交及特殊机位 | migrated | AI电影系统，第6.4节 |
+| YAML、白模、深度图与空间几何 | migrated | AI电影系统，第6.1与6.4节；地图是拓扑 SSOT |
+| Seedream 职责 | migrated | AI电影系统，第6.2节 |
+| Seedance 职责 | migrated | AI电影系统，第6.2节 |
+| 身份、几何、动作、摄影机、风格、声音六通道 | migrated | AI电影系统，第6.1节 |
+| 首尾帧连续性 | migrated | AI电影系统，第6.2与6.4节 |
+| 视频延长与定点视频编辑 | migrated | AI电影系统，第6.2与6.4节 |
+| 镜头时长自动分配与按需时间码 | migrated | AI电影系统，第6.2节；项目记忆 AIP-001 |
+| AI 视频失败诊断矩阵 | migrated | AI电影系统，第6.3节 |
+| 人物变脸修复 | migrated | AI电影系统，第6.3节 |
+| 场景搬家修复 | migrated | AI电影系统，第6.3节 |
+| 动作绑定错误修复 | migrated | AI电影系统，第6.3节 |
+| 非破坏式图像工作流 | migrated | AI电影系统，第6.3节 |
+| 脏图重建 | migrated | AI电影系统，第6.3节 |
+| 资产自动调用 | moved_to_other_canonical | 视觉资产登记库与 write_routes；系统第6.1、6.4节保留接口 |
+| 连续性约束 | moved_to_other_canonical | 07_连续性与生产状态 canonical；系统第4、6.4节读取并执行 |
+| 声音、剪辑、表演与调度 | migrated | AI电影系统，第5节 |
+| 质量验收与生成前单测 | migrated | AI电影系统，第6.3节 |
+| 模型自主权 LOCKED / GUIDED / FREE | migrated | AI电影系统，第6.2节 |
+| 三层编译、单一主导变化律、风格冲突检查和证据边界 | migrated | AI电影系统，第2、6、7节 |
+| 任务域提示词编译器：影视剧情、几何空间、产品/材质、平面/海报/Logo、教育/科普、IP/创意反差 | migrated | AI电影系统，第6.4节；DTRM 按任务最小召回，非相关域不默认激活 |
+| 学习对象字段 schema：evidence、goal、causal graph、causes、counterfactuals、rules、triggers、boundaries、verification、maturity、writeback | moved_to_other_canonical | 08_系统学习/反馈反推与系统反哺引擎.md，第7节是唯一学习记录 schema，并保留旧字段语义后写回 |
+| 可复现本地执行/编码/shell/Git问题的跨Agent防复发机制 | moved_out_of_project_scope | 归属第二大脑工程治理；已在 `second-brain-coordination` PR #237 建立跨Agent登记表与任务发布/执行门禁，电影仓库不保留第二份 canonical |
+| 官方 MHTML/PDF 原文、游戏母本与媒体二进制 | deprecated_with_reason | public GitHub 只保留项目自有方法和来源边界；原始资料继续在 Library / 证据层 |
+| 旧外部记忆路径、版本基线和补丁链 | deprecated_with_reason | PROJECT_INDEX GitHub-first 路由及固定文件名已取代旧路径和版本文件 |
+
+本轮已合并 origin/main 的 `ab9f88df9a39c38d1a5a11685f6ba33fab20a38a`，保留唯一的 U-ASSET-RETRIEVAL-001，且 status: open。它是资产像素检索接口缺口，不改变 Asset Registry 的 Source Authority。最终树重新通过 Source Authority、地图、资产、剧本、CALC 与新会话恢复回归。
+
+## 公开仓库边界
+
+迁移文件只包含项目自有导演方法、项目事实、改编索引、场景摘要、Asset ID、File ID 和来源边界。未迁入游戏母本全文、受版权 PDF 全文、媒体二进制、凭证、token、账号或私人数据。
+
+## 验收
+
+11_验收/validate_canonical_cutover.ps1 是本次确定性验收脚本，检查 canonical 路径、Source Authority、行级语义 legacy authority 拒绝、地图、资产、剧本、CALC、写回路由和迁移 Unknown 关闭状态。`legacy_authority_regression_cases.yaml` 含六个 Golden Cases：活动 legacy 指针（含无版本号旧总纲）和机器路由必须 FAIL；明确废弃/迁移上下文 PASS；模糊引用报告具体位置并 FAIL。Golden director cases 位于 11_验收/director_regression_cases.yaml。

@@ -40,3 +40,56 @@ cases:
       - reject_legacy_as_active
       - use_PROJECT_INDEX_authority
       - use_fixed_current_AI电影系统
+
+  - id: REG-DIRECTOR-FULL-OUTPUT-001
+    title: 用户仅提供剧情并要求完整处理时，必须返回完整导演合同
+    must_preserve:
+      - 母本与连续性核对
+      - 场景诊断
+      - 导演意图
+      - 人物目标与潜台词
+      - 节拍
+      - 表演
+      - 场面调度
+      - 镜头脚本
+      - 摄影与灯光
+      - 剪辑与声音
+      - AI资产清单
+      - 模型自主权合同
+      - 视频模型执行稿
+      - 验收清单
+      - 结尾接口
+    checks:
+      - complete_director_output_contract
+      - not_execution_prompt_only
+      - continuity_before_execution
+      - ending_handoff
+
+  - id: REG-MAP-001
+    title: 钟楼与关所的空间职责不得再混同
+    must_preserve:
+      - 主街南北向
+      - 高架石桥东西向且桥在上主街在下
+      - 钟楼后方为关所底层入口
+      - 关所内部回旋楼梯向上到中层
+      - 场景库不得建立第二套拓扑
+    checks:
+      - map_authority
+      - scene_library_boundary
+      - asset_direction_tags
+
+  - id: REG-RESTORE-001
+    title: 新会话可通过最小读取恢复凯姆当前段
+    must_preserve:
+      - 凯姆已经攀爬
+      - 爱丽丝VO与行动并行
+      - 妇女开窗后再察觉高处异常
+      - 菲奥奈原本带队巡查且队友处理插队
+      - 凯姆登顶搜索而目标未确认
+      - 不提前展示男孩翅膀
+    checks:
+      - project_index_first
+      - read_sets_minimal_retrieval
+      - screenplay_continuity_map_asset_recall
+      - CALC
+      - reveal_budget

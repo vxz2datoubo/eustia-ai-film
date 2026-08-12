@@ -1,0 +1,59 @@
+cases:
+  - id: LEGACY-AUTHORITY-001
+    title: 活动 authority 指向旧版必须失败
+    scope: document
+    sample: 导演任务必须读取 AI电影化系统总纲_v1.3.3.md。
+    expected: fail_active
+
+  - id: LEGACY-AUTHORITY-002
+    title: 明确废弃的历史事实可以保留
+    scope: document
+    sample: AI电影化系统总纲_v1.3.3.md 已废弃，不得作为活动规则源。
+    expected: pass_historical
+
+  - id: LEGACY-AUTHORITY-003
+    title: 迁移说明可以保留
+    scope: document
+    sample: 旧 AI电影化系统总纲_v1.0.0.md 的有效内容已经迁移进入 AI电影系统.md。
+    expected: pass_historical
+
+  - id: LEGACY-AUTHORITY-004
+    title: 机器可执行路由出现旧路径必须失败
+    scope: machine_route
+    sample: AI电影化系统总纲_v1.3.3.md
+    expected: fail_active
+
+  - id: LEGACY-AUTHORITY-005
+    title: 模糊旧路径必须进入审查
+    scope: document
+    sample: 参考 AI电影化系统总纲_v1.3.3.md。
+    expected: fail_ambiguous
+
+  - id: LEGACY-AUTHORITY-006
+    title: 未带版本号的旧总纲活动指针也必须失败
+    scope: document
+    sample: 当前依据是 AI电影化系统总纲.md。
+    expected: fail_active
+
+  - id: LEGACY-AUTHORITY-007
+    title: 废弃声明不能覆盖同句活动读取指令
+    scope: document
+    sample: AI电影化系统总纲_v1.3.3.md 已废弃，但当前导演仍必须读取它。
+    expected: fail_active
+
+  - id: LEGACY-AUTHORITY-008
+    title: 前置历史说明不能洗白目标活动引用
+    scope: document
+    sample: |-
+      AI电影化系统总纲_v1.3.3.md 已废弃，不得作为活动规则源。
+      这是上一轮迁移的历史记录。
+      历史记录不参与当前导演路由。
+
+      导演任务必须读取 AI电影化系统总纲_v1.3.3.md。
+    expected: fail_active
+
+  - id: LEGACY-AUTHORITY-009
+    title: 合法版本化证据文件不属于 legacy canonical
+    scope: document
+    sample: Seedance研究报告_v2.md 是历史证据，仅供研究参考。
+    expected: pass_no_reference
