@@ -56,3 +56,27 @@ routes:
       - continuity_binding
       - commit_verification
     candidate_axes: []
+
+  - id: MULTI_REVISION_WORK_ITEM
+    symptoms:
+      - 在上一版基础上继续改
+      - 这版更好
+      - 这版不对再改
+      - 继续修改同一镜头
+      - 继续修改同一场景
+      - 这一版先用
+      - 好了下一镜
+      - 换下一个场景
+    mandatory_scans:
+      - revision_series_identity
+      - constraint_ledger
+      - accepted_vs_revoked
+      - continuity_inheritance
+      - checkpoint_need
+      - semantic_finalization
+      - trajectory_final_delta
+    candidate_axes:
+      - micro_capture
+      - preserve_accepted_constraints
+      - checkpoint
+      - final_consolidation
