@@ -74,11 +74,16 @@ function Test-LegacyAuthorityReferences {
             if ($line -match '^([A-Za-z_][A-Za-z0-9_]*):') { $section = $Matches[1] }
             if ($line -notmatch $legacyPattern) { continue }
             $relative = $file.FullName.Substring($Root.Length).TrimStart('\', '/')
-            if (($strictMachineFiles -contains $file.Name) -or (($file.Name -eq 'source_authority.yaml') -and ($section -ne 'reject_as_active'))) {
+            # Machine-readable route files are strict.  The only exception is the
+            # explicit deny-list itself: it documents retired names in order to
+            # reject them, rather than selecting them as a source.
+            $isExplicitRejectList = (($file.Name -eq 'PROJECT_INDEX.yaml') -and ($section -eq 'legacy_policy')) -or
+                (($file.Name -eq 'source_authority.yaml') -and ($section -eq 'reject_as_active'))
+            if ((($strictMachineFiles -contains $file.Name) -and (-not $isExplicitRejectList)) -or (($file.Name -eq 'source_authority.yaml') -and ($section -ne 'reject_as_active'))) {
                 $failures.Add("active legacy authority reference: ${relative}:$($i + 1): $line")
                 continue
             }
-            if (($file.Name -eq 'source_authority.yaml') -and ($section -eq 'reject_as_active')) { continue }
+            if ($isExplicitRejectList) { continue }
             $from = [Math]::Max(0, $i - 10)
             $to = [Math]::Min($lines.Count - 1, $i + 2)
             $context = [string]::Join("`n", $lines[$from..$to])

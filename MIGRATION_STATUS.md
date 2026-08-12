@@ -20,9 +20,9 @@ GitHub 是所有持续成长文字主档的唯一可修改 canonical truth。Cha
 
 | 主档 | 旧 canonical 完整源 | GitHub 固定路径 | 最终 effective source |
 |---|---|---|---|
-| AI电影系统.md | F:\aidanao\eustia-migration-source\AI电影系统.md，38855 bytes，1265 lines | 01_AI电影系统/AI电影系统.md | github_verified |
-| AI电影项目记忆.md | F:\aidanao\eustia-migration-source\AI电影项目记忆.md，18051 bytes，358 lines | 02_AI电影项目记忆/AI电影项目记忆.md | github_verified |
-| 场景与空间设定库.md | F:\aidanao\eustia-migration-source\场景与空间设定库.md，3791 bytes，142 lines | 05_场景与空间/场景与空间设定库.md | github_verified |
+| AI电影系统.md | D:\LiblibAI-workspace\comfyui-deploy-win\ComfyUI\output\AI电影系统.md，38855 bytes，1767 lines | 01_AI电影系统/AI电影系统.md | github_verified |
+| AI电影项目记忆.md | D:\LiblibAI-workspace\comfyui-deploy-win\ComfyUI\output\AI电影项目记忆.md，18051 bytes，490 lines | 02_AI电影项目记忆/AI电影项目记忆.md | github_verified |
+| 场景与空间设定库.md | D:\LiblibAI-workspace\comfyui-deploy-win\ComfyUI\output\场景与空间设定库.md，3791 bytes，172 lines | 05_场景与空间/场景与空间设定库.md | github_verified |
 
 场景资产库.md（6561 bytes，193 lines）已作为对账源完整读取。其有效局部场景与资产职责已合并；地图、动线和资产状态的旧表述不恢复为活动权威。
 
@@ -40,7 +40,7 @@ U-MIG-001、U-MIG-002、U-SCENE-001 均已 resolved。U-MIG-004 已在 UNKNOWN_R
 
 ## GPT 二次审查修复与 semantic coverage audit
 
-本审计重新逐项对照旧 AI电影系统.md（38855 bytes，1265 lines）。压缩只允许删除重复、过时路径和不适合公开仓库的原始资料描述；下列仍有效能力均有唯一当前承载位置。
+本审计重新逐项对照用户提供的旧 AI电影系统.md（38855 bytes，1767 lines）。压缩只允许删除重复、过时路径和不适合公开仓库的原始资料描述；下列仍有效能力均有唯一当前承载位置。
 
 | 旧 canonical 能力 | 分类 | 当前承载或原因 |
 |---|---|---|
