@@ -9,7 +9,6 @@ routes:
   formal_visual_asset: 06_视觉资产/视觉资产登记库.md
   current_shot_production_state: 07_连续性与生产状态/连续性与当前生产状态.md
   learning_evidence_and_outcome: 08_系统学习/反馈反推与系统反哺引擎.md
-  local_execution_issue_pattern: 08_系统学习/本地问题模式集合.md
   official_research_evidence: 09_资料证据/官方资料与证据索引.md
   unresolved_unknown: 12_未知项/UNKNOWN_REGISTRY.yaml
 
