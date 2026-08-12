@@ -8,8 +8,15 @@ items:
     route_classes:
       - general_directing_method
       - ai_image_video_method
-    status: pending_safe_patch
-    reason: 当前 GitHub contents 更新接口要求整文件替换；AI电影系统主档较长，直接使用截断读取结果替换存在破坏 canonical 的风险。
+    status: completed
+    completed_at: 2026-08-13
+    commit_sha: dc7117bff64f100150b666ddd8b979e2c3170d01
+    verified_target: 01_AI电影系统/AI电影系统.md
+    verification:
+      intended_rules_present: true
+      existing_main_content_intact: true
+      diff_scope_verified: true
+    reason: 本地精确 patch 已写入 target canonical；提交后将 fetch/readback 作为远端完整性确认。
     already_persisted_evidence:
       - 08_系统学习/反馈反推与系统反哺引擎.md#SCREEN-EVIDENCE-001
       - 08_系统学习/反馈反推与系统反哺引擎.md#POSITIVE-SPEC-001
