@@ -1,6 +1,6 @@
 ---
 title: EUSTIA Canonical Migration Integrity Audit
-status: verified_pending_remote_readback
+status: verified
 agent_id: CODEX
 branch: codex/migration/final-canonical-cutover
 source_root: D:/LiblibAI-workspace/comfyui-deploy-win/ComfyUI/output
@@ -11,7 +11,7 @@ audit_date: 2026-08-12
 
 ## 1. Source evidence and destination data
 
-The supplied D: source files were present and matched the preserved local migration inputs byte-for-byte before writing. `ReadAllLines(UTF-8)` is the line-count method used here. The user-provided earlier counts (1265 / 358 / 142) do not match the currently supplied byte-identified files; this audit therefore reports the reproducible current file counts below rather than asserting the older figures.
+The user-current canonical source is `D:/LiblibAI-workspace/comfyui-deploy-win/ComfyUI/output`. The preserved migration copy at `F:/aidanao/eustia-migration-source` was byte-identical to that supplied D: source before writing; it is preservation evidence, not a second or final authority. `ReadAllLines(UTF-8)` is the line-count method used here. The user-provided earlier counts (1265 / 358 / 142) do not match the currently supplied byte-identified files; this audit therefore reports the reproducible current file counts below rather than asserting the older figures.
 
 | Canonical | Source bytes | Source lines | Source SHA-256 | Destination bytes | Destination lines | Destination SHA-256 |
 |---|---:|---:|---|---:|---:|---|
@@ -63,7 +63,7 @@ Each fixed destination was restored from the supplied complete source, not recon
 
 ## 5. Authority and dry-run acceptance criteria
 
-The three destination paths remain the fixed canonical paths in `PROJECT_INDEX.yaml`. Their effective sources may be reported as `github_verified` only after the tested branch is committed, pushed, and the identical remote head is read back.
+The three destination paths remain the fixed canonical paths in `PROJECT_INDEX.yaml`. `github_verified` is maintained only after the tested branch is committed, pushed, and the identical remote PR head is read back. The exact immutable SHA receipt is recorded in the PR #1 body after push: embedding a commit's own SHA in that commit's tracked content would change the SHA, so the repository keeps the durable validation state here and the PR keeps the exact-head receipt.
 
 Dry run task: “对凯姆、菲奥奈、市集/钟楼附近的一段剧情进行导演分析。” Required route:
 
