@@ -25,6 +25,41 @@ cases:
       - attention_budget
       - reveal_budget
 
+  - id: REG-SCREEN-EVIDENCE-001
+    title: AI视频执行稿用最小充分屏幕证据替代关键概念概括
+    maturity: candidate
+    must_preserve:
+      - 高度尺度速度危险距离等关键状态不能只靠抽象形容词承担
+      - 用楼层窗户地面人物尺度接触点位置变化等可见证据建立画面
+      - 动作只保留关键接触重心方向和结果不写无意义微动作清单
+      - 图生视频时不高密度复述参考图已经明确的静态像素而优先描述动作摄影机时间推进和关键变化
+      - 具体化必须服从canonical地图角色资产与空间连续性
+      - 屏幕证据化遵守最小充分原则不得演变成同义词重复负面词堆叠或逐秒过控
+      - 默认通过事件顺序表达节拍不强制每镜时间码
+      - 镜头结束时保留明确final_state供下一镜继承
+    checks:
+      - observable_screen_evidence
+      - visible_frame_outline
+      - relative_scale_and_elevation
+      - physical_contact_action_chain
+      - modality_role_split
+      - prompt_constraint_budget
+      - final_state
+      - no_forced_timecode_without_need
+    targeted_eval:
+      method: A_B_compare
+      A: 概念概括为主
+      B: 最小充分屏幕证据化
+      compare:
+        - instruction_following
+        - scale_and_height_readability
+        - physical_contact_and_body_mechanics
+        - motion_continuity
+        - spatial_stability
+        - unwanted_model_invention
+        - prompt_complexity
+        - overconstraint_rigidity
+
   - id: REG-ASSET-001
     title: 登记资产必须正式提交
     must_preserve:
