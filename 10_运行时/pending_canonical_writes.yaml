@@ -1,0 +1,49 @@
+registry_id: EUSTIA-PENDING-CANONICAL-WRITES
+status: active
+purpose: 记录已经形成可写回规则但因安全写入、验证或人工门尚未完成目标 canonical 落盘的事项；不得用本文件替代目标 canonical。
+
+items:
+  - id: PCW-2026-08-12-AI-FILM-SYSTEM-001
+    target: 01_AI电影系统/AI电影系统.md
+    route_classes:
+      - general_directing_method
+      - ai_image_video_method
+    status: pending_safe_patch
+    reason: 当前 GitHub contents 更新接口要求整文件替换；AI电影系统主档较长，直接使用截断读取结果替换存在破坏 canonical 的风险。
+    already_persisted_evidence:
+      - 08_系统学习/反馈反推与系统反哺引擎.md#SCREEN-EVIDENCE-001
+      - 08_系统学习/反馈反推与系统反哺引擎.md#POSITIVE-SPEC-001
+      - 10_运行时/director_route_index.yaml#SCREEN_EVIDENCE_GAP
+      - 10_运行时/director_route_index.yaml#NEGATIVE_CONSTRAINT_OVERLOAD
+      - 11_验收/director_regression_cases.yaml#REG-SCREEN-EVIDENCE-001
+      - 11_验收/director_regression_cases.yaml#REG-POSITIVE-SPEC-001
+    candidate_rules_to_integrate:
+      - id: SCREEN-EVIDENCE-001
+        maturity: candidate
+        summary: 把关键高度、尺度、速度、危险、距离和动作关系从概念总结翻译成最小充分的可见屏幕证据。
+      - id: POSITIVE-SPEC-001
+        maturity: candidate
+        summary: AI视频执行稿优先正向描述正确动作与允许运动范围；少量硬约束只保护剧情、身份、空间、关键道具、揭示和最终状态。
+      - id: EVENT-SEQUENCE-EXPLICIT-001
+        maturity: candidate
+        summary: 对存在先后因果且容易被模型并发化的动作，显式写清先后顺序、施力者、被作用者与结果；不必因此逐秒锁时间码。
+      - id: ROLE-FUNCTION-COMPRESSION-001
+        maturity: candidate
+        summary: 角色首次进入新章节时，可用一个高信息密度但因果清楚的短事件同时建立人物性格、职责、组织层级和现场关系，避免说明对白。
+      - id: OPERATIONAL-PRESENCE-PRELOAD-001
+        maturity: candidate
+        summary: 后续某组织或角色需要快速响应事件时，前面先通过正常工作状态证明其本来就在该区域，避免剧情需要时突然出现。
+      - id: MOTION-SIGNATURE-001
+        maturity: candidate
+        summary: 相同移动能力可通过节奏、目的、力度、支点使用和收束方式形成不同人物运动指纹，避免动作同质化。
+    verification_required:
+      - apply_patch_without_truncating_existing_main_file
+      - inspect_diff_for_only_intended_changes
+      - fetch_target_again
+      - verify_new_sections_and_existing_tail_intact
+    completion_condition: 目标 AI电影系统.md 回读确认新规则已存在且原有内容未丢失后，才可改为 completed。
+
+rules:
+  pending_item_is_not_canonical_rule_source: true
+  pending_item_must_be_rechecked_on_next_project_turn: true
+  completed_only_after_fetch_verify: true
