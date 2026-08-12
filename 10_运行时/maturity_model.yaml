@@ -21,6 +21,13 @@ states:
     description: 已被新规则替代或证伪
     default_recall: false
 
+registration_policy:
+  maturity_controls_promotion_not_registration: true
+  candidate_may_be_registered_in_target_canonical: true
+  candidate_registration_does_not_mean_default_global_activation: true
+  candidate_registration_requires_explicit_scope_and_boundary: true
+  unresolved_or_unsafe_write_must_be_marked_pending: true
+
 promotion_requires:
   - evidence
   - scope
