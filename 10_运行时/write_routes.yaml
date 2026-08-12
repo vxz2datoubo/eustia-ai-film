@@ -22,9 +22,39 @@ write_protocol:
   - verify_new_content_and_status
   - report_committed_only_after_verification
 
+canonical_learning_gate:
+  principle: maturity_controls_promotion_not_registration
+  candidate_registration_allowed: true
+  applies_to:
+    - general_directing_method
+    - ai_image_video_method
+  candidate_registration_requires:
+    - operational_rule
+    - evidence_or_user_feedback
+    - scope
+    - boundary_or_failure_condition
+    - explicit_maturity_label
+  after_learning_capture:
+    - classify_write_route
+    - decide_maturity
+    - write_operational_rule_to_target_canonical_or_mark_pending
+    - keep_evidence_and_revision_trace_in_feedback_engine
+    - create_or_update_targeted_eval_when_needed
+    - fetch_again_and_verify_target_canonical
+  pending_write_policy:
+    canonical_write_failure_or_unsafe_edit_must_be_explicit: true
+    may_not_report_fully_integrated_until_verified: true
+    next_project_turn_must_recheck_pending_canonical_write: true
+  promotion_policy:
+    candidate_to_scene_verified_requires_validation: true
+    scene_verified_to_project_verified_requires_cross_scene_evidence: true
+    project_verified_to_general_stable_requires_clear_transfer_boundary: true
+
 rules:
   memory_cannot_substitute_for_formal_write: true
   candidate_cannot_auto_promote_to_stable: true
+  candidate_can_exist_in_target_canonical_with_maturity_label: true
+  registration_and_promotion_are_separate: true
   fixed_active_filenames_only: true
   revision_checkpoint_does_not_equal_skill_promotion: true
   omitted_constraint_does_not_equal_revoked: true
