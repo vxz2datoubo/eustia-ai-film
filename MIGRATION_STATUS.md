@@ -30,6 +30,7 @@ GitHub 是所有持续成长文字主档的唯一可修改 canonical truth。Cha
 - 场景库仅负责局部时代、建筑、材质、装饰、光照、天气、道具、使用痕迹、局部功能、摄影基线、模型约束与关联 Asset ID。
 - 当前剧本、角色、地图、资产、连续性和学习主档的 GitHub verified 内容优先于旧源，不被旧文静默覆盖。
 - 钟楼正面、左视和右视资产仍保留各自职责；左右视图不覆盖正面资产。
+- 本地执行/编码/shell/Git 等跨Agent问题不属于电影项目 canonical；该机制已迁往 `vxz2datoubo/second-brain-coordination` 的 Draft PR #237。
 
 ## 迁移 Unknown
 
@@ -68,7 +69,7 @@ U-MIG-001、U-MIG-002、U-SCENE-001 均已 resolved。U-MIG-004 已在 UNKNOWN_R
 | 三层编译、单一主导变化律、风格冲突检查和证据边界 | migrated | AI电影系统，第2、6、7节 |
 | 任务域提示词编译器：影视剧情、几何空间、产品/材质、平面/海报/Logo、教育/科普、IP/创意反差 | migrated | AI电影系统，第6.4节；DTRM 按任务最小召回，非相关域不默认激活 |
 | 学习对象字段 schema：evidence、goal、causal graph、causes、counterfactuals、rules、triggers、boundaries、verification、maturity、writeback | moved_to_other_canonical | 08_系统学习/反馈反推与系统反哺引擎.md，第7节是唯一学习记录 schema，并保留旧字段语义后写回 |
-| 可复现本地问题的高频收集、任务前防错与任务后归档 | moved_to_other_canonical | 08_系统学习/本地问题模式集合.md；反馈引擎第9节规定发布前读取与任务收尾记录，不复制活动导演规则 |
+| 可复现本地执行/编码/shell/Git问题的跨Agent防复发机制 | moved_out_of_project_scope | 归属第二大脑工程治理；已在 `second-brain-coordination` PR #237 建立跨Agent登记表与任务发布/执行门禁，电影仓库不保留第二份 canonical |
 | 官方 MHTML/PDF 原文、游戏母本与媒体二进制 | deprecated_with_reason | public GitHub 只保留项目自有方法和来源边界；原始资料继续在 Library / 证据层 |
 | 旧外部记忆路径、版本基线和补丁链 | deprecated_with_reason | PROJECT_INDEX GitHub-first 路由及固定文件名已取代旧路径和版本文件 |
 
