@@ -21,6 +21,103 @@ principles:
   conflicting_cases_must_be_retained_with_boundaries: true
   model_version_change_can_trigger_needs_revalidation: true
   secrets_and_credentials_must_never_be_registered: true
+  proactive_recall_enabled: true
+  user_does_not_need_to_name_or_remember_case_id: true
+  functional_similarity_has_priority_over_surface_style_similarity: true
+  high_relevance_case_should_be_surfaced_as_an_active_suggestion: true
+
+proactive_retrieval_policy:
+  purpose: 在新任务中主动召回与当前目标真正相关的优秀案例，提高其在战术与提示词设计层的参考权重，并在高相关时主动向用户提出可尝试的机制。
+  authority_boundary:
+    may_influence:
+      - prompt_structure
+      - camera_strategy
+      - performance_execution
+      - typography_or_graphic_behavior
+      - lighting_strategy
+      - temporal_structure
+      - multimodal_reference_binding
+      - constraint_strategy
+      - sound_or_visual_integration
+    must_not_override:
+      - user_current_explicit_instruction
+      - PROJECT_INDEX
+      - current_screenplay
+      - character_canonical
+      - scene_and_map_canonical
+      - formal_asset_binding
+      - continuity
+  activation:
+    do_not_require_user_to_name_case: true
+    run_on:
+      - creating_or_revising_prompt
+      - directing_scene_or_shot
+      - designing_ai_image_or_video_execution
+      - designing_commercial_or_graphic_motion
+      - user_asks_for_options_or_improvement
+  ranking:
+    strong_signals:
+      - same_task_function
+      - same_director_goal
+      - same_shot_function
+      - same_transferable_mechanism
+      - same_failure_symptom
+    medium_signals:
+      - same_generation_mode
+      - same_model_family_or_version
+      - same_subject_camera_relationship
+      - same_lighting_structure
+      - same_typography_or_graphic_behavior
+      - same_temporal_structure
+    weak_signals:
+      - same_color
+      - same_genre_label_without_functional_match
+      - superficial_style_similarity_only
+    evidence_priority_when_other_similarity_is_equal:
+      - golden_cross_scene
+      - golden_reproduced
+      - golden_output_verified
+      - golden_user_approved
+  recommendation_tiers:
+    high:
+      condition: 核心任务功能与至少一个可迁移机制高度一致且边界不冲突
+      behavior:
+        - raise_case_priority
+        - retrieve_case
+        - actively_tell_user_a_relevant_golden_case_exists
+        - explain_which_mechanisms_are_worth_trying
+        - optionally_compile_those_mechanisms_into_current_prompt
+    medium:
+      condition: 只有部分机制一致而整体任务目的不同
+      behavior:
+        - use_as_secondary_precedent
+        - borrow_only_matching_mechanisms
+        - mention_only_if_material_to_user_choice
+    low:
+      condition: 只有表面风格相似而核心功能不同
+      behavior:
+        - do_not_surface_case
+        - do_not_copy_prompt
+  suggestion_contract:
+    must_say_why_relevant: true
+    must_name_transferable_parts: true
+    must_not_copy_entire_prompt_by_default: true
+    may_propose_experiment: true
+    examples:
+      - 这里很像以前的优秀案例，我建议试它的“人物占比恒定 + 摄影机同步后退”。
+      - 这里可以借优秀广告案例里的“三维文字作为场景实体 + 同场光照/反射绑定”，但不照搬黑底黄字。
+      - 这个场景只适合借它的前动后静收束结构，不适合照搬视觉风格。
+  feedback_loop:
+    accepted_and_better:
+      - record_transfer_evidence
+      - link_sibling_transfer_case_when_appropriate
+      - run_final_delta
+      - update_maturity_only_under_existing_maturity_rules
+    rejected_or_worse:
+      - record_negative_transfer
+      - refine_matching_boundary
+      - keep_original_golden_case
+      - lower_future_recall_for_that_context
 
 case_id_policy:
   format: GPC-YYYYMMDD-NNN
