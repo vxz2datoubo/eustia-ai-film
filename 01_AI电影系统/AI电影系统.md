@@ -536,6 +536,14 @@ writeback_status:
 - boundary / failure condition：运动签名不得覆盖身份、空间拓扑、动作不变量或当前镜头目的；人物可共享能力，但不能因此被强行写成相同的节奏、支点和收束方式。
 - verification：比较角色间的路线、重心、节奏、支点和结果是否可区分；同时检查动作物理、空间连续与摄影机响应没有被人物化风格破坏。
 
+### SHOT-SCOPE-001｜单镜头可观察域与跨镜头信息隔离
+
+- maturity：`candidate`；scene observation：`scene_verified observation / E4`；scope：全局剧情规划与逐 shot AI 视频执行稿的编译边界。
+- trigger：全局剧情摘要、后续镜头实体、尚未揭示的空间或仅为 VO 的说话者被混入当前 shot，造成提前 reveal、跨镜头实体污染、视点混乱或声音人物视觉泄漏。
+- operational rule：全局计划只保留在内部层；最终执行稿按 `GLOBAL PLAN internal only → SHOT BOUNDARY → CAMERA STATE → VISIBLE SET → AUDIBLE SET → ACTION/CHANGE → IN-SHOT REVEAL → EXIT STATE → NEXT-SHOT CONTRACT` 编译。当前 shot 只写此刻摄影机实际可见的前景、中景、后景、主体、物体、动作和环境变化；VO 与镜外声进入 audible set，不使说话者自动成为画面实体；下一 shot 的继承信息写入 final state 或 next-shot contract。
+- boundary / failure condition：不是只能描述第一帧。同一连续 shot 内摄影机真实移动后将 reveal 的区域或主体可按先后描述；反射、玻璃、开口中实际可见内容属于 visible set，镜外但可听声音属于 audible set；T2V 无参考图时可完整建立当前 shot 所需环境。不得把后续 POV / 建立镜头信息提前写入当前背景，也不得以全局叙事总结替代 shot-local 可观察描述；白模与因果连续分镜同样按 shot / action-state 隔离实体和几何。
+- verification：`REG-SHOT-SCOPE-001`；比较错误实体注入、视点与摄影机一致性、提前揭示、shot boundary、动作绑定、画外音人物视觉泄漏、空间稳定与 prompt 复杂度。
+
 # 11. 默认完整输出
 
 用户只发剧情并要求完整处理时，默认输出 `DIRECTOR-FULL-OUTPUT-001`：
@@ -1371,11 +1379,11 @@ Seedream干净顶视场景
 
 [00:00–00:__]
 当前景别和机位：
-当前可见人物与背景：
+当前可见人物与背景（仅写当前 camera state 实际可见，或本 shot 内由摄影机真实 reveal 的内容；后续 shot 信息写入段末状态或 next-shot contract）：
 动作：
 反应：
-声音：
-段末状态：
+声音（可听但不可见的 VO / 镜外声进入 audible set，不能使说话者自动成为画面实体）：
+段末状态 / next-shot contract：
 
 [__–__]
 ……
@@ -1630,7 +1638,7 @@ Seedream干净顶视场景
 
 区分官方原文、媒体归纳和项目推导，禁止伪造缺失章节。
 
-### S25-14 至 S25-19 Candidate 调用入口
+### S25-14 至 S25-20 Candidate 调用入口
 
 - `S25-14 / SCREEN-EVIDENCE-001`：当 `SCREEN_EVIDENCE_GAP` 命中时，用最小充分屏幕证据编译关键画面。
 - `S25-15 / POSITIVE-SPEC-001`：当 `NEGATIVE_CONSTRAINT_OVERLOAD` 命中时，优先正向动作规格与受控约束预算。
@@ -1638,6 +1646,7 @@ Seedream干净顶视场景
 - `S25-17 / ROLE-FUNCTION-COMPRESSION-001`：新章节角色/组织需要高密度但清楚地进入观众认知时调用。
 - `S25-18 / OPERATIONAL-PRESENCE-PRELOAD-001`：后续快速响应需要前置在场因果时调用，并与 CALC / CLCS 联动。
 - `S25-19 / MOTION-SIGNATURE-001`：相近能力人物需要通过运动选择而非形容词区分时调用。
+- `S25-20 / SHOT-SCOPE-001`：当 `SHOT_SCOPE_LEAK` 命中时，将全局计划与逐 shot 执行稿分层，只编译当前 camera state 的 visible / audible set、合法 in-shot reveal 与 next-shot contract。
 
 以上均为 `candidate`，按需定向调用，不因登记成为默认全局激活项。
 
