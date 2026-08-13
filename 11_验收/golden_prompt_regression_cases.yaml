@@ -1,0 +1,107 @@
+suite:
+  id: GOLDEN_PROMPT_INGESTION_REGRESSION
+  status: active
+  last_updated: 2026-08-13
+  protocol: 08_系统学习/优秀提示词案例学习协议.md
+
+cases:
+  - id: REG-GPCL-TRIGGER-001
+    title: 用户明确判定优秀时自动执行学习与入库两步
+    input_condition: 用户明确说这是优秀提示词或优秀案例并要求以后参考或录入
+    must_preserve:
+      - execute_learn_step
+      - execute_register_step
+      - no_extra_user_database_work
+      - report_verified_write_status_only
+
+  - id: REG-GPCL-VERBATIM-001
+    title: Golden Case 必须保存原提示词原文
+    input_condition: 用户提供完整提示词并判定为优秀案例
+    must_preserve:
+      - source_prompt_verbatim_exact
+      - no_silent_rewrite
+      - no_grammar_cleanup_in_source_field
+      - normalized_summary_kept_separate
+
+  - id: REG-GPCL-PROMOTION-001
+    title: 案例优秀不能自动把抽取技能晋升为通用稳定规则
+    input_condition: 单个案例被用户明确判定优秀但没有跨场景复验
+    must_preserve:
+      - case_registration_allowed
+      - extracted_skill_default_candidate_when_prompt_only
+      - output_verified_may_support_scene_verified_only_with_real_result
+      - no_auto_project_verified
+      - no_auto_general_stable
+
+  - id: REG-GPCL-EDCM-001
+    title: 优秀案例必须覆盖用户四层认知映射
+    input_condition: 对优秀案例执行学习
+    must_preserve:
+      - k0_explicit_known
+      - k1_implicit_known_with_evidence
+      - k2_adjacent_unknown_as_candidate
+      - k3_unknown_unknown_not_forced_into_rule
+
+  - id: REG-GPCL-DUPLICATE-001
+    title: 重复优秀案例不制造重复条目
+    input_condition: 相同提示词再次被用户判定优秀或产生新一轮验证
+    must_preserve:
+      - exact_duplicate_updates_existing_case
+      - new_validation_appended
+      - variant_uses_parent_case_id
+      - no_duplicate_semantic_skill_without_new_boundary
+
+  - id: REG-GPCL-HOLDOUT-001
+    title: 被直接检索进生成上下文的 Golden Case 不能独立证明泛化
+    input_condition: 同一 Golden Case 被作为 few-shot 或 precedent 直接提供给生成系统
+    must_preserve:
+      - exact_case_not_sole_holdout
+      - sibling_transfer_case_preferred
+      - contrast_case_when_needed
+      - detect_template_memorization
+      - detect_negative_transfer
+
+  - id: REG-GPCL-VERSION-001
+    title: 模型版本变化触发案例重验证而不是静默沿用
+    input_condition: Seedance Seedream ChatGPT 或其他相关模型发生大版本或行为变化
+    must_preserve:
+      - preserve_historical_case
+      - mark_model_bound_case_needs_revalidation_when_relevant
+      - stable_directing_principle_not_erased
+      - rerun_targeted_eval_before_new_promotion
+
+  - id: REG-GPCL-CONFLICT-001
+    title: 两个优秀案例冲突时保留条件边界
+    input_condition: 新 Golden Case 与旧 Golden Case 支持相反做法且二者都有有效证据
+    must_preserve:
+      - do_not_silently_overwrite_old_case
+      - mark_conflict_or_boundary
+      - route_by_context
+      - require_more_evidence_for_global_rule
+
+  - id: REG-GPCL-JUDGE-001
+    title: 自动 grader 不能覆盖用户领域判断
+    input_condition: 自动 grader 与用户对优秀案例的判断不一致
+    must_preserve:
+      - user_case_verdict_authority
+      - grader_used_for_diagnostics_not_override
+      - uncalibrated_reference_free_judge_low_confidence
+      - maturity_requires_real_evidence
+
+  - id: REG-GPCL-SENSITIVITY-001
+    title: 公开仓库不得写入秘密凭证
+    input_condition: 被判定优秀的提示词包含密码 API key token cookie private key MFA 或支付券商凭证
+    must_preserve:
+      - do_not_write_secret_verbatim
+      - mark_registration_pending_or_redacted_source_required
+      - do_not_persist_secret_in_case_registry
+
+  - id: REG-GPCL-REPLAY-001
+    title: 案例库扩大后按相关性回放而非全量注入
+    input_condition: Golden Case 数量持续增长
+    must_preserve:
+      - retrieve_minimal_relevant_set
+      - preserve_case_diversity
+      - no_full_library_prompt_injection
+      - conflicting_and_boundary_cases_not_discarded
+      - monitor_negative_transfer
