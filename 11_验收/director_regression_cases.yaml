@@ -105,6 +105,50 @@ cases:
         - rigidity_or_overconstraint
         - catastrophic_error_rate
 
+  - id: REG-SHOT-SCOPE-001
+    title: AI视频每个shot只编译当前镜头可观察状态
+    maturity: candidate
+    scene_evidence:
+      work_item: KAIM-HIGH-SEARCH-30S
+      observed_result: 农妇窗外反应镜头被写入下一主观镜头才应出现的广场钟楼与猎羽信息；真实生成同时出现爱丽丝被实体化进人群、农妇视点高度和画面域混乱等跨镜头污染
+      evidence_level: E4
+      incident_status: scene_verified_observation
+    must_preserve:
+      - 全局剧情计划和导演解释保留在内部规划层不重复灌入每个shot执行描述
+      - 每个shot只写当前摄影机在该时刻实际可见的前景中景后景主体物体动作与环境变化
+      - 当前可听但不可见的信息进入audible_offscreen_scope例如画外音远处声音和镜外音效
+      - 反应镜头只描述角色在看以及当前画面可见线索目标内容等切到POV或被摄影机实际揭示后再写
+      - 同一连续镜头若摄影机移动后会揭示新区域可按先后写成camera reveal但不得在揭示前把目标当成当前可见背景
+      - 下一镜需要继承的信息进入final_state或transition_contract不进入当前visible_set
+      - 图生视频和白模参考已经锁定当前构图时文字优先描述当前shot的动作摄影机时间推进和合法进入画面的新变化
+      - 多镜头执行稿按shot分块实体和背景的作用域不得跨shot自动扩散
+      - 画外音人物的存在默认属于声音通道不能仅因名字出现在VO里就成为当前画面实体
+    checks:
+      - shot_observable_set
+      - camera_view_consistency
+      - visible_entity_scope
+      - audible_offscreen_scope
+      - global_summary_vs_shot_caption
+      - reveal_scope
+      - transition_contract
+      - cross_shot_information_leakage
+      - storyboard_scope_alignment
+      - prompt_constraint_budget
+    targeted_eval:
+      method: A_B_compare
+      A: 将全局剧情总结和后续揭示内容混入当前shot描述
+      B: 全局计划内部保留并将执行稿编译为逐shot可观察状态加transition contract
+      compare:
+        - unwanted_entity_injection
+        - viewpoint_and_camera_consistency
+        - premature_reveal_rate
+        - shot_boundary_fidelity
+        - subject_action_binding
+        - offscreen_voice_visual_leakage
+        - spatial_layout_stability
+        - instruction_following
+        - prompt_complexity
+
   - id: REG-ASSET-001
     title: 登记资产必须正式提交
     must_preserve:
