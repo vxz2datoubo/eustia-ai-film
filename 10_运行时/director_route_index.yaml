@@ -136,7 +136,8 @@ routes:
       - 15至30秒多镜头段需要模型自主补全大量未逐项标注的自然行为
     maturity: candidate
     mandatory_reads:
-      - 10_运行时/pending_canonical_writes.yaml#PCW-2026-08-13-SEQUENCE-CONTEXT-001
+      - 12_未知项/UNKNOWN_REGISTRY.yaml#U-SEQUENCE-CONTEXT-001
+      - 01_AI电影系统/AI电影系统.md#SHOT-SCOPE-001
     mandatory_scans:
       - segment_context_need
       - segment_causal_relevance
