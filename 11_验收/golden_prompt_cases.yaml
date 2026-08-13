@@ -1,0 +1,134 @@
+registry:
+  id: EUSTIA_GOLDEN_PROMPT_CASES
+  title: 优秀提示词案例库
+  status: active
+  last_updated: 2026-08-13
+  authority: user_explicit_golden_case_verdict
+  protocol: 08_系统学习/优秀提示词案例学习协议.md
+  learning_engine: 08_系统学习/反馈反推与系统反哺引擎.md
+  maturity_model: 10_运行时/maturity_model.yaml
+
+principles:
+  user_facing_steps:
+    - learn
+    - register
+  preserve_source_prompt_verbatim: true
+  case_registration_is_not_skill_promotion: true
+  prompt_approval_is_not_output_verification: true
+  generated_output_verification_may_support_scene_verified: true
+  exact_case_used_as_demonstration_cannot_be_sole_holdout_eval: true
+  retrieve_minimal_relevant_cases_not_full_library: true
+  conflicting_cases_must_be_retained_with_boundaries: true
+  model_version_change_can_trigger_needs_revalidation: true
+  secrets_and_credentials_must_never_be_registered: true
+
+case_id_policy:
+  format: GPC-YYYYMMDD-NNN
+  immutable_after_creation: true
+  variants_use_parent_case_id: true
+  exact_duplicates_update_existing_case: true
+
+case_schema:
+  required:
+    - case_id
+    - created_at
+    - source_type
+    - source_prompt_verbatim
+    - user_verdict
+    - verdict_scope
+    - verdict_basis
+    - task_class
+    - case_status
+    - provenance
+  optional:
+    - parent_case_id
+    - variant_of
+    - work_item_id
+    - scene_or_shot
+    - model
+    - model_version
+    - generation_mode
+    - reference_assets
+    - generation_settings
+    - output_evidence
+    - user_named_strengths
+    - system_observed_strengths
+    - normalized_summary
+    - edcm
+    - extracted_lesson_refs
+    - related_skill_refs
+    - applicable_context
+    - non_applicable_context
+    - failure_boundaries
+    - counterfactuals
+    - model_or_tool_dependency
+    - revalidation_triggers
+    - targeted_eval
+    - fingerprint
+    - sensitivity
+
+verdict_basis_values:
+  - prompt_only
+  - generated_output
+  - both
+  - comparative
+
+verdict_scope_values:
+  - prompt_approved
+  - output_verified
+  - comparative_win
+  - reproduced
+  - cross_scene_transfer
+
+case_status_values:
+  - golden_user_approved
+  - golden_output_verified
+  - golden_reproduced
+  - golden_cross_scene
+  - conflicted
+  - needs_revalidation
+  - deprecated
+
+retrieval_dimensions:
+  - task_class
+  - symptom_tags
+  - model
+  - model_version
+  - generation_mode
+  - scene_type
+  - shot_function
+  - characters
+  - assets
+  - spatial_dependencies
+  - failure_symptoms
+  - director_goal
+  - verdict_scope
+  - linked_skill_maturity
+
+holdout_policy:
+  create_when_case_is_high_value:
+    - sibling_transfer_case
+    - contrast_case
+    - holdout_case
+  purpose:
+    - test_transfer_not_memorization
+    - reduce_template_overfitting
+    - detect_negative_transfer
+    - detect_model_version_drift
+
+sensitivity_policy:
+  repository_visibility: public
+  never_store:
+    - passwords
+    - api_keys
+    - tokens
+    - cookies
+    - session_credentials
+    - private_keys
+    - mfa_codes
+    - recovery_codes
+    - brokerage_credentials
+    - payment_credentials
+  if_sensitive_or_private_source_is_detected: mark_pending_and_do_not_write_verbatim
+
+cases: []
