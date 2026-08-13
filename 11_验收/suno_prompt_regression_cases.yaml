@@ -1,0 +1,158 @@
+cases:
+  - id: REG-SUNO-LEXICON-NAMESPACE-001
+    title: SUNO词条必须先做namespace消歧再编译
+    maturity: candidate
+    must_preserve:
+      - chorus区分song_structure vocal_ensemble和chorus_effect
+      - piano区分instrument和dynamic_marking
+      - modulation区分key_change和audio_modulation
+      - cadence区分music_cadence和spoken_cadence
+      - outro不得自动解释为片尾曲
+      - refrain不得使用反调旧译
+      - koto不得解释为古筝
+    checks:
+      - namespace_resolution
+      - target_field_correct
+      - deprecated_translation_blocked
+
+  - id: REG-SUNO-PROMPT-MODE-001
+    title: 简单tag stack与复杂自然语言style必须按任务复杂度路由
+    maturity: candidate
+    targeted_eval:
+      method: A_B_compare
+      A: compact_tag_stack
+      B: conversational_style_brief
+      controlled_variables:
+        - same_task
+        - same_model_version
+        - same_lyrics_or_instrumental_state
+        - same_controls
+      compare:
+        - instruction_following
+        - structural_adherence
+        - instrumentation_adherence
+        - affect_adherence
+        - unwanted_invention
+        - prompt_complexity
+
+  - id: REG-SUNO-INSTRUMENTAL-001
+    title: 纯音乐优先使用Instrumental状态并把排除项放入Exclude
+    maturity: candidate
+    must_preserve:
+      - instrumental_toggle_on
+      - lyrics_empty_or_not_applicable
+      - style_describes_target_music
+      - vocals_and_lyrics_can_be_secondary_exclude
+      - no_vocals_natural_language_is_not_only_control
+    checks:
+      - accidental_vocals
+      - accidental_song_form
+      - instruction_following
+
+  - id: REG-SUNO-CHORUS-FIRST-001
+    title: 开头直接副歌采用结构优先而非依赖单一旧metatag
+    maturity: candidate
+    targeted_eval:
+      method: A_B_C_compare
+      A: lyrics_starts_with_chorus_plus_natural_language_opens_immediately
+      B: legacy_immediate_high_note_chorus_tag_plus_chorus
+      C: both_structure_and_legacy_tag
+      compare:
+        - chorus_starts_immediately
+        - unwanted_intro_length
+        - vocal_entry_accuracy
+        - high_note_accuracy
+        - structural_coherence
+        - artifacts
+    promotion_gate:
+      - current_model_version_recorded
+      - at_least_three_generations_per_condition
+      - user_listening_acceptance
+
+  - id: REG-SUNO-VOCAL-STACK-001
+    title: 人声描述按角色音域音色技巧和制作分层而不是同义词堆叠
+    maturity: candidate
+    targeted_eval:
+      method: A_B_compare
+      A: unstructured_vocal_adjective_stack
+      B: role_register_timbre_technique_section_scope_production
+      compare:
+        - vocal_identity_consistency
+        - section_performance_adherence
+        - timbre_match
+        - technique_match
+        - lyric_intelligibility
+        - overprocessing
+
+  - id: REG-SUNO-EXCLUDE-001
+    title: 明确排除项优先使用Exclude字段而不是主Style大量否定
+    maturity: candidate
+    targeted_eval:
+      method: A_B_compare
+      A: natural_language_negative_inside_style
+      B: positive_style_plus_dedicated_exclude
+      compare:
+        - unwanted_element_rate
+        - target_style_retention
+        - structural_adherence
+        - prompt_conflict
+        - artifacts
+
+  - id: REG-SUNO-PROMPT-CONFLICT-001
+    title: Prompt编译前必须执行同作用域冲突检查
+    maturity: candidate
+    must_preserve:
+      - instrumental_vs_vocal_conflict_checked
+      - dialogue_safe_vs_catchy_hook_conflict_checked
+      - low_salience_vs_explosive_opening_scope_checked
+      - rubato_vs_steady_pulse_scope_checked
+      - global_contradiction_distinguished_from_section_arc
+      - song_structure_terms_not_leaked_into_underscore_without_reason
+    checks:
+      - same_scope_conflict
+      - temporal_scope_resolution
+      - section_localization
+      - accidental_song_form
+
+  - id: REG-SUNO-ARTIST-NAME-001
+    title: 艺术家姓名参考转译为音乐变量
+    maturity: candidate
+    must_preserve:
+      - no_stable_artist_name_prompt_template
+      - extract_genre_era_instrumentation_vocal_production_rhythm_harmony
+      - retain_user_intent_without_identity_imitation_dependency
+      - moderation_risk_reduced
+    checks:
+      - artist_name_removed_when_not_required
+      - observable_music_variables_present
+      - style_identity_preserved_at_attribute_level
+
+  - id: REG-SUNO-ERHU-ALIAS-001
+    title: 二胡英文提示词别名需要当前模型A/B验证
+    maturity: candidate
+    targeted_eval:
+      method: A_B_C_compare
+      A: erhu
+      B: Chinese_two_string_fiddle
+      C: erhu_plus_Chinese_two_string_fiddle
+      compare:
+        - instrument_identity
+        - timbre_plausibility
+        - confusion_with_violin
+        - mix_quality
+
+  - id: REG-SUNO-METATAG-GATE-001
+    title: 旧方括号metatag不能未经当前模型实测直接晋级
+    maturity: candidate
+    must_preserve:
+      - standard_music_semantics_can_be_used_without_claiming_parser_contract
+      - complex_bracket_tags_are_legacy_behavioral_until_tested
+      - current_model_version_recorded
+      - natural_language_fallback_available
+    targeted_eval:
+      method: tag_vs_plain_language
+      compare:
+        - section_boundary_adherence
+        - performance_instruction_adherence
+        - unwanted_literalization
+        - reproducibility
