@@ -26,11 +26,15 @@ cases:
       - reveal_budget
 
   - id: REG-SCREEN-EVIDENCE-001
-    title: AI视频执行稿用最小充分屏幕证据替代关键概念概括
+    title: AI视频执行稿用最小充分屏幕证据替代关键概念与抽象含义
     maturity: candidate
     must_preserve:
       - 高度尺度速度危险距离等关键状态不能只靠抽象形容词承担
+      - 情绪氛围人物气质能力感主题含义等只要承担关键生成职责也必须落到可见或可听证据
+      - 隐喻诗性表达和小说化结论默认不能独自承担关键渲染控制除非确实希望模型按字面把该意象生成出来
+      - 抽象词可以在具体证据之后作为弱辅助但不能替代光线材质构图动作表情视线环境反应或声音证据
       - 用楼层窗户地面人物尺度接触点位置变化等可见证据建立画面
+      - 用光线反射材质状态遮挡占幅负空间人物视线身体动作群众行为和环境声音等证据建立情绪氛围或人物状态
       - 动作只保留关键接触重心方向和结果不写无意义微动作清单
       - 图生视频时不高密度复述参考图已经明确的静态像素而优先描述动作摄影机时间推进和关键变化
       - 具体化必须服从canonical地图角色资产与空间连续性
@@ -40,21 +44,31 @@ cases:
     checks:
       - observable_screen_evidence
       - visible_frame_outline
+      - abstract_meaning_to_renderable_evidence
+      - literal_renderability
+      - metaphor_literalization_risk
       - relative_scale_and_elevation
       - physical_contact_action_chain
+      - light_material_environment_evidence
+      - facial_gaze_body_evidence
+      - audible_evidence
       - modality_role_split
       - prompt_constraint_budget
       - final_state
       - no_forced_timecode_without_need
     targeted_eval:
       method: A_B_compare
-      A: 概念概括为主
-      B: 最小充分屏幕证据化
+      A: 关键画面以抽象概括隐喻或含义词为主
+      B: 将同一导演意图翻译成最小充分的可见可听屏幕证据
       compare:
         - instruction_following
         - scale_and_height_readability
         - physical_contact_and_body_mechanics
         - motion_continuity
+        - emotional_and_atmospheric_alignment
+        - character_state_readability
+        - metaphor_literalization_error
+        - generic_style_cliche_rate
         - spatial_stability
         - unwanted_model_invention
         - prompt_complexity
