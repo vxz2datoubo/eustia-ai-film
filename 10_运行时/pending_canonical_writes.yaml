@@ -110,13 +110,22 @@ items:
     route_classes:
       - general_directing_method
       - ai_image_video_method
-    status: pending_safe_patch
+    status: completed
     created_at: 2026-08-13
+    completed_at: 2026-08-13
+    commit_sha: afd87d5708b8a017b95675fff680ffbb98dcb158
+    verified_target: 01_AI电影系统/AI电影系统.md
+    verification:
+      intended_rules_present: true
+      optional_segment_context_field_present: true
+      shot_scope_intact_and_higher_local_visual_authority: true
+      existing_main_content_intact: true
+      diff_scope_verified: true
     change_type:
       - MODIFY
       - EXPERIMENT
     parent_revision_series: KAIM-HIGH-SEARCH-30S
-    reason: 用户提出在15至30秒多镜头AI视频执行稿前保留一个受限的本段剧情语境，使具备剧情理解能力的视频模型能基于人物动机、当前场景职能和局部社会状态自动补全合理动作、表情与环境行为；这不是恢复旧的全局剧情总结，而是一个受SHOT-SCOPE约束的segment-level semantic prior。当前GitHub contents写入接口对长主档只支持整文件替换，因此先登记精确候选和验证接口，等待安全局部patch。
+    reason: 用户提出在15至30秒多镜头AI视频执行稿前保留一个受限的本段剧情语境，使具备剧情理解能力的视频模型能基于人物动机、当前场景职能和局部社会状态自动补全合理动作、表情与环境行为；这不是恢复旧的全局剧情总结，而是一个受SHOT-SCOPE约束的segment-level semantic prior。精确局部 patch 已写入两份指定 canonical，提交后回读确认 candidate、可选模板字段、SHOT-SCOPE 局部权威与主档尾部完整。
     candidate_rules_to_integrate:
       - id: SEQUENCE-CONTEXT-001
         title: 本段剧情语境与受限全段语义锚

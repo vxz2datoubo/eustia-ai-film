@@ -544,6 +544,18 @@ writeback_status:
 - boundary / failure condition：不是只能描述第一帧。同一连续 shot 内摄影机真实移动后将 reveal 的区域或主体可按先后描述；反射、玻璃、开口中实际可见内容属于 visible set，镜外但可听声音属于 audible set；T2V 无参考图时可完整建立当前 shot 所需环境。不得把后续 POV / 建立镜头信息提前写入当前背景，也不得以全局叙事总结替代 shot-local 可观察描述；白模与因果连续分镜同样按 shot / action-state 隔离实体和几何。
 - verification：`REG-SHOT-SCOPE-001`；比较错误实体注入、视点与摄影机一致性、提前揭示、shot boundary、动作绑定、画外音人物视觉泄漏、空间稳定与 prompt 复杂度。
 
+### SEQUENCE-CONTEXT-001｜本段剧情语境与受限全段语义锚
+
+- maturity：`candidate`；experiment status：`unvalidated`；scope：约 15–30 秒的多镜头剧情型 AI 视频段落，尤其是模型需要根据上下文自然补全动作、表情、视线、群众行为和环境反应时。
+- purpose：逐 shot 执行稿之前可加入一个简短自然语言的【本段剧情语境】作为 segment-level semantic prior，让模型理解本段为何这样运作；它不是完整故事、导演内部分析或镜头流程摘要。
+- operational rule：默认约 2–6 句，长度按信息密度而非固定字数决定。优先写本段持续成立的剧情状态、人物即时目标与动机、人物/组织的本段职能或关系、场景当前运作状态，以及会影响模型自然补全行为的局部社会活动。`state over event`：主要写“现在是什么状态、为什么这样行动”，不写“接下来镜头依次发生什么”。
+- segment causal radius：若一条信息不能合理改变本段任何像素、声音、动作、表情、视线、注意力或环境行为选择，就删除。只保留会在本生成段内被表现、影响表演，或帮助模型补全合理但无需逐项指定的行为语境。
+- entity granularity / embodiment gate：只在局部 shot 出现的人物，优先以角色职能或组织状态表达，非必要不提前点名全部具体人物。语境提到某人物、地点或组织不等于视觉授权；具体角色是否进入某个 shot，仍严格由 `SHOT-SCOPE-001` 的 camera state、visible set、audible set 与 in-shot reveal 决定；VO 说话者仍只属于 audible set，不能仅因语境被实体化。
+- fact confidence gate：未经用户、剧本或 canonical 确认的具体动机不能因“合理”而写成已确认 Segment Fact；实验性动机只能保持 `GUIDED`，不得伪装为项目事实。若语境与具体 shot 描述冲突，以 canonical 事实和具体 shot 执行描述为准。
+- boundary / failure condition：仍排除完整故事、未来剧情答案、本段不会出现也不会影响本段行为的实体/事件、镜头一→镜头二→镜头三流程摘要、后续 shot 的具体前中后景、观众应如何理解、导演内部因果分析和大量否定条款。本规则不恢复已撤销的“完整整体叙事总结发送 Seedance”。
+- relation to SHOT-SCOPE-001：`SEQUENCE-CONTEXT` 负责“这段为什么这样运作、模型可以据此自然补什么”；`SHOT-SCOPE` 负责“这一镜此刻具体能看见和听见什么”。后者仍拥有局部视觉与声音执行权威。
+- verification：`REG-SEQUENCE-CONTEXT-001`；A/B 或 A/B/C 比较整体叙事连贯、自然行为相关性、动机对齐、微表情、群众/环境语义适配，以及跨 shot 实体泄漏、提前揭示、VO 视觉泄漏、指令遵从、动作绑定和 prompt 复杂度。真实 Seedance 结果同时证明改善且未显著增加串台/漂移后，才可考虑晋级 `scene_verified`。
+
 # 11. 默认完整输出
 
 用户只发剧情并要求完整处理时，默认输出 `DIRECTOR-FULL-OUTPUT-001`：
@@ -1355,6 +1367,8 @@ Seedream干净顶视场景
 【主导变化律】
 本镜只围绕：
 
+【本段剧情语境】（可选；仅在多镜头剧情段需要时使用。自然语言短段，不输出内部编译器标签。）
+
 【参考职责】
 @图片1：
 @图片2：
@@ -1638,7 +1652,7 @@ Seedream干净顶视场景
 
 区分官方原文、媒体归纳和项目推导，禁止伪造缺失章节。
 
-### S25-14 至 S25-20 Candidate 调用入口
+### S25-14 至 S25-21 Candidate 调用入口
 
 - `S25-14 / SCREEN-EVIDENCE-001`：当 `SCREEN_EVIDENCE_GAP` 命中时，用最小充分屏幕证据编译关键画面。
 - `S25-15 / POSITIVE-SPEC-001`：当 `NEGATIVE_CONSTRAINT_OVERLOAD` 命中时，优先正向动作规格与受控约束预算。
@@ -1647,6 +1661,7 @@ Seedream干净顶视场景
 - `S25-18 / OPERATIONAL-PRESENCE-PRELOAD-001`：后续快速响应需要前置在场因果时调用，并与 CALC / CLCS 联动。
 - `S25-19 / MOTION-SIGNATURE-001`：相近能力人物需要通过运动选择而非形容词区分时调用。
 - `S25-20 / SHOT-SCOPE-001`：当 `SHOT_SCOPE_LEAK` 命中时，将全局计划与逐 shot 执行稿分层，只编译当前 camera state 的 visible / audible set、合法 in-shot reveal 与 next-shot contract。
+- `S25-21 / SEQUENCE-CONTEXT-001`：当 `SEQUENCE_CONTEXT_UNDERCONDITIONED` 命中、且任务是约 15–30 秒的多镜头剧情段时，可在逐 shot 块前编译受限本段剧情语境；不以此授权任何实体越过 `SHOT-SCOPE-001` 进入当前 visible set。
 
 以上均为 `candidate`，按需定向调用，不因登记成为默认全局激活项。
 
