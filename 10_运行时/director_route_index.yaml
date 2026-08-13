@@ -171,6 +171,110 @@ routes:
       - asset_direction_tags
       - adjacency_and_height
 
+  - id: SOUND_DIRECTOR_INVOCATION
+    symptoms:
+      - 配乐
+      - BGM
+      - score
+      - underscore
+      - SUNO
+      - 主题曲
+      - 片头曲
+      - 片尾曲
+      - 插曲
+      - 角色歌
+      - 歌词
+      - 画内音乐
+      - 环境声
+      - Foley
+      - 音效
+      - 声桥
+      - 静默
+      - 混音
+      - 对白听不清
+      - stem
+      - 完整导演且声音可能改变剧情理解或剪辑
+    mandatory_reads:
+      - 01_AI电影系统/声音导演系统.md#relevant_sections_only
+    mandatory_scans:
+      - sound_need
+      - diegesis
+      - narrative_sound_function
+      - dialogue_priority
+      - audience_knowledge
+      - sound_layer_hierarchy
+      - music_or_silence
+      - spotting_need
+      - edit_and_mix_interface
+    candidate_axes:
+      - silence
+      - ambience
+      - foley
+      - sfx
+      - source_music
+      - underscore
+      - song
+      - sound_bridge
+      - subjective_sound
+
+  - id: SUNO_SONG_SCORE_ROUTING
+    symptoms:
+      - SUNO提示词
+      - 做一首歌
+      - 主题曲
+      - 角色歌
+      - 写歌词
+      - 电影配乐
+      - 长Cue
+      - 配一段音乐
+      - 同一个Suno既做歌曲又做配乐
+    mandatory_reads:
+      - 01_AI电影系统/声音导演系统.md#4-先分流再创作
+      - 09_资料证据/声音导演与SUNO证据索引.md
+    mandatory_scans:
+      - task_class_song_vs_score
+      - central_intent_or_scene_function
+      - prosody_if_song
+      - spotting_if_score
+      - structure_goal
+      - diegesis
+      - suno_current_capability
+      - rights_provenance
+    candidate_axes:
+      - song_compiler
+      - film_score_compiler
+      - diegetic_music_compiler
+      - hybrid_music_task
+
+  - id: SUNO_VERSION_REVALIDATION
+    symptoms:
+      - Suno更新
+      - Suno新模型
+      - v5.5以后新版本
+      - 提示词突然失效
+      - Exclude效果变化
+      - Voice效果变化
+      - Custom Model效果变化
+      - Stem效果变化
+      - Song Editor功能变化
+    maturity: candidate
+    mandatory_reads:
+      - 01_AI电影系统/声音导演系统.md#8-Suno当前执行层版本相关
+      - 12_未知项/SOUND_UNKNOWN_REGISTRY.yaml
+      - 11_验收/sound_director_regression_cases.yaml#REG-SOUND-MODEL-UPDATE-001
+    mandatory_scans:
+      - current_official_model
+      - feature_availability
+      - version_bound_rules
+      - prior_project_evidence_version
+      - needs_revalidation
+      - regression_scope
+    candidate_axes:
+      - official_doc_refresh
+      - controlled_A_B_retest
+      - preserve_stable_sound_principles
+      - deprecate_version_specific_prompt_hacks
+
   - id: ASSET_REGISTRATION
     symptoms:
       - 登记资产
