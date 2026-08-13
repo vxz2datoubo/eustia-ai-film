@@ -105,6 +105,95 @@ items:
       - verify_existing_main_content_and_tail_intact
     completion_condition: AI电影系统.md 回读确认 SHOT-SCOPE-001 与 S25-20 已存在、既有内容完整且 diff 仅含预期改动后，状态才可改为 completed。
 
+  - id: PCW-2026-08-13-SEQUENCE-CONTEXT-001
+    target: 01_AI电影系统/AI电影系统.md
+    route_classes:
+      - general_directing_method
+      - ai_image_video_method
+    status: pending_safe_patch
+    created_at: 2026-08-13
+    change_type:
+      - MODIFY
+      - EXPERIMENT
+    parent_revision_series: KAIM-HIGH-SEARCH-30S
+    reason: 用户提出在15至30秒多镜头AI视频执行稿前保留一个受限的本段剧情语境，使具备剧情理解能力的视频模型能基于人物动机、当前场景职能和局部社会状态自动补全合理动作、表情与环境行为；这不是恢复旧的全局剧情总结，而是一个受SHOT-SCOPE约束的segment-level semantic prior。当前GitHub contents写入接口对长主档只支持整文件替换，因此先登记精确候选和验证接口，等待安全局部patch。
+    candidate_rules_to_integrate:
+      - id: SEQUENCE-CONTEXT-001
+        title: 本段剧情语境与受限全段语义锚
+        maturity: candidate
+        experiment_status: unvalidated
+        scope: 约15至30秒的多镜头AI视频段落，尤其是模型会根据上下文自主补动作、表情、群众行为和环境反应的剧情型生成。
+        purpose: 在逐shot执行描述之前提供一个很短的segment-level context，让模型理解本段人物为何行动、现场正在发生什么、各角色在本段中的职能和局部社会状态，从而提高未逐项标注的自然补全质量与跨镜头语义一致性。
+        operational_rule:
+          - 在逐shot块之前可加入一个简短的本段剧情语境区，默认约2至6句，长度按信息密度而不是固定字数决定。
+          - 只写本生成段内会被表现、会影响表演或会影响模型自主补全的局部事实与动机。
+          - 可包含当前主目标、即时行动动机、角色在本段中的职能或关系、场景当前运作状态、群众或组织正在进行的活动、必要的局部社会背景。
+          - 不要求把这些信息全部直接拍成显式动作；其用途之一就是给模型合理补全微表情、视线、自然动作、群众活动和环境反应提供语义条件。
+          - 逐shot块仍是视觉与声音执行权威；每个shot继续严格服从SHOT-SCOPE-001的camera state、visible set、audible set、in-shot reveal与next-shot contract。
+          - 当segment context与具体shot描述冲突时，以具体shot描述和canonical事实为准。
+        context_inclusion_test:
+          - 这条信息是否属于当前生成段而不是完整故事或未来剧情
+          - 它是否会改变当前段人物的动作选择表情注意力环境行为或镜头理解
+          - 它是否能帮助模型补全合理但无需逐项指定的行为
+          - 即使某事实不在每一镜显式可见它是否属于本段真实成立的局部状态
+        exclude_from_sequence_context:
+          - 本段不会出现也不会影响本段可见行为的未来人物实体事件或揭示
+          - 后续剧情答案完整世界观和超出本段需要的背景史
+          - 镜头一镜头二镜头三的流程摘要
+          - 观众应该如何理解这一镜等内部导演分析
+          - 后续POV或后续镜头才可见的具体前景中景后景元素清单
+          - 为避免模型出错而堆叠的大量否定条款
+        relation_to_SHOT_SCOPE_001:
+          - SEQUENCE-CONTEXT负责本段为什么这样运作以及模型可据此自然补什么
+          - SHOT-SCOPE负责这一镜此刻具体能看见和听见什么
+          - sequence context不能授权任何实体提前进入某个shot的visible set
+          - sequence context中提到的角色或地点只有在对应shot合法出现时才可视觉实体化
+          - VO说话者仍只因声音进入audible set不能仅因sequence context被自动生成到画面
+        current_scene_example_boundary:
+          allowed_examples:
+            - 凯姆爬上高处的即时目的可概括为侦查和扩大搜索视野并体现其高强轻松熟练的移动能力
+            - 菲奥奈与副队长在当前公共区域执行巡查和秩序职责
+            - 平民在教会施粥与面包发放区域排队并维持正常生活活动
+            - 若某农妇触发动机已经在当前镜头方案中成立可概括其因钟声或窗外动静来到窗口
+          excluded_examples:
+            - 把当前30秒没有出现的目标男孩作为可见实体或详细剧情对象塞入本段总览
+            - 提前说明后续抓捕目标男孩或其他尚未发生事件
+            - 用完整镜头流程告诉模型先农妇再广场再副队长再屋顶
+        targeted_eval:
+          design: A_B_or_A_B_C
+          A: 不提供sequence context只给逐shot执行稿
+          B: 提供受限sequence context加同一逐shot执行稿
+          optional_C: 提供过长或包含镜头流程及未来信息的全局总结作为负面对照
+          compare:
+            - overall_narrative_coherence
+            - spontaneous_behavior_relevance
+            - character_motivation_alignment
+            - facial_and_micro_action_plausibility
+            - crowd_and_environment_semantic_fit
+            - cross_shot_entity_leakage
+            - premature_reveal_rate
+            - offscreen_voice_visual_leakage
+            - shot_instruction_following
+            - subject_action_binding
+            - prompt_complexity
+        promotion_gate: 真实Seedance生成结果证明受限sequence context改善本段语义连贯与自主补全且未显著增加串台提前揭示或指令漂移后才可考虑scene_verified。
+    integration_target_hint:
+      - 在10.1 Candidate技能登记区新增SEQUENCE-CONTEXT-001紧邻SHOT-SCOPE-001并明确二者上下层关系
+      - 在Seedance执行提示词标准中于逐shot时间块前增加可选的本段剧情语境字段并标注为segment-level而非shot visible set
+      - 在DirectorSkills Candidate调用入口新增对应调用项仅用于多镜头剧情段
+      - 在反馈引擎把上一轮revoked的整体叙事总结修正为仍撤销旧全局总结但新增受限sequence-context实验
+      - targeted eval建立后再根据真实生成结果决定maturity
+    verification_required:
+      - fetch_current_AI电影系统
+      - apply_precise_local_patch_only
+      - inspect_diff_for_only_SEQUENCE_CONTEXT_related_changes
+      - fetch_target_again
+      - verify_SEQUENCE_CONTEXT_001_present
+      - verify_optional_segment_context_field_present
+      - verify_SHOT_SCOPE_001_still_intact_and_higher_local_visual_authority
+      - verify_existing_main_content_and_tail_intact
+    completion_condition: AI电影系统.md回读确认SEQUENCE-CONTEXT-001与可选segment context字段已存在且SHOT-SCOPE-001完整保留后，状态才可改为completed。
+
 rules:
   pending_item_is_not_canonical_rule_source: true
   pending_item_must_be_rechecked_on_next_project_turn: true
