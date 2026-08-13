@@ -1,0 +1,180 @@
+runtime:
+  id: GOLDEN_PROMPT_RETRIEVAL
+  title: 优秀提示词主动召回与建议
+  status: active
+  maturity: candidate
+  last_updated: 2026-08-13
+  case_registry: 11_验收/golden_prompt_cases.yaml
+  protocol: 08_系统学习/优秀提示词案例学习协议.md
+
+purpose:
+  - 在新导演、图像、视频、广告、声音或提示词任务中主动发现与历史 Golden Case 的高价值相似性
+  - 提高经过用户明确认可案例在战术选择层的参考权重
+  - 在高相关时主动向用户提出可试用的历史机制，而不是等待用户记住案例名
+  - 迁移案例背后的有效机制，不机械复制表面风格或原文
+
+authority_boundary:
+  golden_case_may_influence:
+    - prompt_structure
+    - camera_strategy
+    - performance_execution
+    - typography_or_graphic_behavior
+    - lighting_strategy
+    - temporal_structure
+    - multimodal_reference_binding
+    - constraint_strategy
+    - sound_or_visual_integration
+  golden_case_must_not_override:
+    - user_current_explicit_instruction
+    - PROJECT_INDEX
+    - current_screenplay
+    - character_canonical
+    - scene_and_map_canonical
+    - formal_asset_binding
+    - continuity
+  principle: canonical facts first; Golden Cases rank tactics and execution options only
+
+activation:
+  run_after:
+    - PROJECT_INDEX_read
+    - task_classification
+    - required_canonical_context_read
+  run_when:
+    - creating_or_revising_prompt
+    - directing_scene_or_shot
+    - designing_ai_image_or_video_execution
+    - designing_commercial_or_graphic_motion
+    - user_asks_for_options_or_improvement
+  do_not_require_user_to_name_case: true
+
+matching_dimensions:
+  primary:
+    - task_class
+    - director_goal
+    - shot_function
+    - transferable_mechanisms
+    - failure_symptoms
+  secondary:
+    - generation_mode
+    - model_family_and_version
+    - scene_type
+    - subject_camera_relationship
+    - lighting_structure
+    - typography_or_graphic_behavior
+    - temporal_structure
+    - reference_asset_pattern
+  evidence:
+    - verdict_scope
+    - verdict_basis
+    - case_status
+    - linked_skill_maturity
+
+ranking_policy:
+  no_fixed_numeric_truth_claim: true
+  heuristic_priority:
+    - functional_similarity_over_surface_style
+    - verified_output_over_prompt_only_when_other_similarity_is_equal
+    - reproduced_or_cross_scene_over_single_scene_when_other_similarity_is_equal
+    - same_model_version_is_a_boost_not_a_requirement
+    - shared_failure_symptom_is_a_strong_boost
+    - shared_transferable_mechanism_is_a_strong_boost
+    - color_or_genre_similarity_alone_is_weak
+  evidence_boost_order:
+    - golden_cross_scene
+    - golden_reproduced
+    - golden_output_verified
+    - golden_user_approved
+  conflict_policy:
+    - retain_conflicting_cases
+    - compare_boundaries
+    - prefer_current_context_fit
+    - do_not_average_incompatible_rules_into_a_muddy_prompt
+
+recommendation_tiers:
+  high:
+    condition: 核心任务功能与至少一个可迁移机制高度一致，且案例边界不冲突
+    behavior:
+      - raise_case_priority
+      - retrieve_case
+      - actively_tell_user_that_a_relevant_golden_case_exists
+      - name_the_specific_mechanisms_worth_trying
+      - optionally_compile_those_mechanisms_into_current_execution
+    user_style: 简短说明“这里很像以前的优秀案例，我建议试其中X/Y/Z机制”，不要要求用户记 case_id
+  medium:
+    condition: 只有部分机制相似，整体场景目的不同
+    behavior:
+      - use_case_internally_as_secondary_precedent
+      - borrow_only_matching_mechanisms
+      - mention_to_user_only_if_it_materially_changes_the_choice
+  low:
+    condition: 仅颜色、题材、表面视觉词相似，核心任务与因果机制不同
+    behavior:
+      - do_not_surface_case
+      - do_not_copy_prompt
+      - rely_on_current_canonical_and_domain_method
+
+proactive_suggestion_contract:
+  must_say_why_relevant: true
+  must_name_transferable_parts: true
+  must_not_suggest_copying_entire_prompt_by_default: true
+  may_offer_experiment: true
+  experiment_language_examples:
+    - 这个镜头和我们已有的优秀案例很接近，我建议试它的“人物占比恒定 + 摄影机同步后退”机制。
+    - 这里可以借以前优秀广告案例里的“三维文字作为场景实体 + 同场光照/反射绑定”，但不要照搬黑底黄字。
+    - 这个场景只适合借它的节奏结构，不适合借它的视觉风格，我会只迁移前动后静的两阶段收束。
+
+case_usage_contract:
+  default_retrieval_count: minimal_relevant_set
+  preferred_range_when_multiple_exist: 1_to_3
+  exact_prompt_copy_requires:
+    - user_explicit_request_or_near_identical_task
+    - no_canonical_conflict
+  normal_behavior:
+    - retrieve
+    - identify_relevant_mechanisms
+    - adapt_to_current_scene
+    - preserve_current_canonical
+    - generate_current_prompt
+  do_not:
+    - dump_full_case_library_into_context
+    - copy_surface_style_without_functional_reason
+    - let_prompt_only_case_outvote_real_project_failure
+    - treat_same_genre_as_same_problem
+
+current_seed_case:
+  case_id: GPC-20260813-001
+  useful_retrieval_tags:
+    - high_end_fashion_commercial
+    - runway_style_ad
+    - kinetic_typography
+    - diegetic_3d_typography
+    - black_void_minimal_commercial
+    - matched_speed_dolly_back
+    - centered_hero_framing
+    - hard_light_split
+    - reflection_driven_visual_integration
+    - dynamic_then_title_lockup
+  proactive_trigger_examples:
+    - 用户要模特正面走向镜头且希望人物画面占比稳定
+    - 用户要高端时尚广告或走秀短片
+    - 用户要文字在人物周围穿梭并具有真实空间、投影或反射
+    - 用户要极简背景中用动态字体制造主要视觉节奏
+    - 用户要前半段高动势、最后停住形成品牌标题或人物特写
+  do_not_transfer_by_default:
+    - black_background
+    - yellow_color
+    - exact_chinese_words
+    - exact_timing
+  because: 这些是原案例表面实现或当前内容，不是所有相似任务都需要的因果机制
+
+learning_feedback:
+  when_user_accepts_suggestion_and_real_output_is_better:
+    - record_transfer_evidence
+    - update_case_or_link_sibling_transfer_case
+    - run_final_delta
+    - consider_scene_verified_or_higher_only_under_maturity_rules
+  when_user_rejects_suggestion_or_output_worsens:
+    - record_negative_transfer
+    - refine_matching_boundary
+    - do_not_delete_original_golden_case
+    - lower_future_recall_for_that_context
