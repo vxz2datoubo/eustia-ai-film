@@ -16,6 +16,7 @@ canonical:
   project_entry: 项目入口.md
   ai_film_system: 01_AI电影系统/AI电影系统.md
   sound_director: 01_AI电影系统/声音导演系统.md
+  suno_prompt_lexicon: 01_AI电影系统/SUNO提示词词库与编译映射.md
   project_memory: 02_AI电影项目记忆/AI电影项目记忆.md
   current_screenplay: 03_剧本与改编/当前改编剧本.md
   character_db: 04_角色与表演/角色与表演设定库.md
@@ -26,6 +27,7 @@ canonical:
   feedback_engine: 08_系统学习/反馈反推与系统反哺引擎.md
   evidence_index: 09_资料证据/官方资料与证据索引.md
   sound_evidence: 09_资料证据/声音导演与SUNO证据索引.md
+  suno_user_prompt_evidence: 09_资料证据/SUNO用户提示词资料摄取记录.md
   route_index: 10_运行时/director_route_index.yaml
   source_authority_rules: 10_运行时/source_authority.yaml
   read_sets: 10_运行时/read_sets.yaml
@@ -34,6 +36,7 @@ canonical:
   pending_canonical_writes: 10_运行时/pending_canonical_writes.yaml
   regression_cases: 11_验收/director_regression_cases.yaml
   sound_regression_cases: 11_验收/sound_director_regression_cases.yaml
+  suno_prompt_regression_cases: 11_验收/suno_prompt_regression_cases.yaml
   legacy_authority_regression_cases: 11_验收/legacy_authority_regression_cases.yaml
   canonical_migration_integrity_audit: 11_验收/canonical_migration_integrity_audit.md
   unknown_registry: 12_未知项/UNKNOWN_REGISTRY.yaml
@@ -50,6 +53,7 @@ effective_sources:
   08_系统学习/反馈反推与系统反哺引擎.md: github_verified
   09_资料证据/官方资料与证据索引.md: github_verified
   09_资料证据/声音导演与SUNO证据索引.md: github_verified
+  09_资料证据/SUNO用户提示词资料摄取记录.md: github_verified
   10_运行时/source_authority.yaml: github_verified
   10_运行时/read_sets.yaml: github_verified
   10_运行时/write_routes.yaml: github_verified
@@ -58,12 +62,14 @@ effective_sources:
   10_运行时/director_route_index.yaml: github_verified
   11_验收/director_regression_cases.yaml: github_verified
   11_验收/sound_director_regression_cases.yaml: github_verified
+  11_验收/suno_prompt_regression_cases.yaml: github_verified
   11_验收/legacy_authority_regression_cases.yaml: github_verified
   11_验收/canonical_migration_integrity_audit.md: github_verified
   12_未知项/UNKNOWN_REGISTRY.yaml: github_verified
   12_未知项/SOUND_UNKNOWN_REGISTRY.yaml: github_verified
   01_AI电影系统/AI电影系统.md: github_verified
   01_AI电影系统/声音导演系统.md: github_verified
+  01_AI电影系统/SUNO提示词词库与编译映射.md: github_verified
   02_AI电影项目记忆/AI电影项目记忆.md: github_verified
   05_场景与空间/场景与空间设定库.md: github_verified
 
