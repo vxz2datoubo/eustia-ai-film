@@ -131,4 +131,97 @@ sensitivity_policy:
     - payment_credentials
   if_sensitive_or_private_source_is_detected: mark_pending_and_do_not_write_verbatim
 
-cases: []
+cases:
+  - case_id: GPC-20260813-001
+    created_at: 2026-08-13
+    source_type: user_supplied_prompt
+    user_verdict: excellent
+    verdict_scope: prompt_approved
+    verdict_basis: prompt_only
+    task_class: high_end_fashion_commercial_kinetic_typography
+    case_status: golden_user_approved
+    provenance: user_current_explicit_instruction
+    source_prompt_verbatim: |
+      以参考图1作为模特及参照。
+
+      全程保留人物的面部、发型，造型与颜色。
+
+      高端时尚商业片，写实真人实拍风格。
+
+      无限延展的黑色虚空背景，光亮的黑色地面。仅对人物打光：一侧打出硬主光，另一侧打出第二道硬光，两者之间形成浓重阴影。
+
+      模特下巴保持水平，双眼看向镜头，缓缓向镜头走来。摄影机与她的行进速度同步向后移动，人物在画面中的占比保持不变。
+
+      所有文字均为醒目黄色、粗体压缩型无衬线大写字体，渲染为带有真实厚度的三维立体实体物件，接收与人物相同的光照，并在地面投下淡淡的阴影。
+
+      [0‑3秒] 文字“我”从模特前方的地面深处浮现，具备强透视效果，随模特走近不断放大，从画面两侧掠过并移出画面。
+
+      文字“真”从右侧高速冲入，带着强烈运动模糊效果在模特身后飞驰而过，从画面左侧飞出。
+
+      文字“棒”以大尺寸出现，初始完全失焦，在半秒内变得极致锐利，短暂定格后碎裂散开。
+
+      四根细黄线勾勒出环绕模特的矩形边框，文字“哈哈”沿着矩形下边缘逐步拼接成型。
+
+      文字掠过模特身旁时，会在光亮的镜片上产生对应反射效果，贯穿本段全程。
+
+      [3‑5秒] 模特停下脚步。全部文字向内坍缩，消散于黑暗之中。摄影机继续推进，给到人物面部与黄色太阳镜的近距离特写。模特完全静止，双眼直视镜头。在人物下方的黑色背景上，以同款黄色字体逐步拼合出标题：“还真是”，其下方字号更小的文字：“超棒的”。画面定格。
+
+      所有文字干净清晰、易于辨认，为拼写无误的英文大写字母，每个单词仅出现一次。禁止出现乱码、重复字母、拼写错误、字幕、水印以及其他额外文字或标识。
+
+      音频：低沉持续的低音。
+
+      画面构图：模特居于画面中心，全部文字都位于画面居中三分之一区域内。
+    normalized_summary: 高端黑色虚空走秀商业片；人物恒定居中，摄影机与模特同速后退；黄色三维动态文字作为场景实体参与透视、运动、光照、投影与镜片反射；前段高动势动态图形，后段近景标题锁定。
+    system_observed_strengths:
+      - reference_identity_lock
+      - coherent_black_void_and_reflective_floor_world
+      - matched_speed_camera_subject_contract
+      - centered_hero_framing
+      - hard_light_split_with_deep_shadow
+      - diegetic_3d_kinetic_typography
+      - typography_motion_has_distinct_behaviors
+      - reflection_links_graphics_to_subject
+      - two_phase_dynamic_then_lockup_structure
+      - explicit_text_legibility_and_error_constraints
+    edcm:
+      k0:
+        - 用户明确判定该提示词为优秀广告走秀风格案例
+        - 人物身份与造型保持、灯光、走秀动作、摄影机同步后退、文字运动、构图和音频均有显式定义
+      k1:
+        - 偏好高控制度但仍以视觉结果为中心的商业片提示结构
+        - 偏好让图形文字真正进入三维场景而不是作为后期字幕漂浮
+        - 偏好动态段落最终收束成稳定广告标题画面
+      k2:
+        - kinetic_typography
+        - diegetic_3d_typography
+        - matched_speed_dolly_back
+        - hero_framing_stability
+        - reflection_driven_visual_integration
+        - title_lockup
+      k3:
+        - 中文指定文案与“英文大写字母”约束存在内部冲突，跨模型最稳处理方式尚待实测
+        - 不同视频模型对复杂文字拼写、三维字形、动态文字与反射绑定的可靠度尚待版本化验证
+    applicable_context:
+      - high_end_fashion_commercial
+      - runway_style_ad
+      - model_centered_brand_film
+      - kinetic_typography_short_video
+      - black_void_minimal_commercial
+      - graphic_motion_integrated_with_subject
+    non_applicable_context:
+      - dialogue_driven_scene
+      - multi_character_dramatic_blocking
+      - documentary_observation
+      - topology_heavy_story_scene
+    failure_boundaries:
+      - 不应把黑色虚空、黄色字体或具体中文文案机械迁移到所有广告任务
+      - 中文文案与英文大写字母要求存在冲突，复用时必须按当前任务文字语言消歧
+      - 文字准确率、反射绑定和多段复杂动效属于模型能力相关项，不能仅凭提示词文本优秀视为输出已验证
+    model_or_tool_dependency:
+      status: unknown
+      note: 本次用户未提供具体生成模型、版本或真实输出验证信息
+    revalidation_triggers:
+      - model_or_version_change
+      - text_rendering_interface_change
+      - generation_mode_change
+      - user_reports_real_output_success_or_failure
