@@ -1,6 +1,8 @@
 routes:
   general_directing_method: 01_AI电影系统/AI电影系统.md
   ai_image_video_method: 01_AI电影系统/AI电影系统.md
+  sound_directing_method: 01_AI电影系统/声音导演系统.md
+  suno_music_method: 01_AI电影系统/声音导演系统.md
   project_long_term_fact: 02_AI电影项目记忆/AI电影项目记忆.md
   confirmed_story_change: 03_剧本与改编/当前改编剧本.md
   character_behavior_dialogue_relationship: 04_角色与表演/角色与表演设定库.md
@@ -12,7 +14,10 @@ routes:
   revision_trace_and_learning: 08_系统学习/反馈反推与系统反哺引擎.md
   learning_evidence_and_outcome: 08_系统学习/反馈反推与系统反哺引擎.md
   official_research_evidence: 09_资料证据/官方资料与证据索引.md
+  sound_research_evidence: 09_资料证据/声音导演与SUNO证据索引.md
+  sound_regression_case: 11_验收/sound_director_regression_cases.yaml
   unresolved_unknown: 12_未知项/UNKNOWN_REGISTRY.yaml
+  sound_unresolved_unknown: 12_未知项/SOUND_UNKNOWN_REGISTRY.yaml
 
 write_protocol:
   - fetch_current_blob
@@ -28,6 +33,8 @@ canonical_learning_gate:
   applies_to:
     - general_directing_method
     - ai_image_video_method
+    - sound_directing_method
+    - suno_music_method
   candidate_registration_requires:
     - operational_rule
     - evidence_or_user_feedback
@@ -58,3 +65,4 @@ rules:
   fixed_active_filenames_only: true
   revision_checkpoint_does_not_equal_skill_promotion: true
   omitted_constraint_does_not_equal_revoked: true
+  sound_subsystem_cannot_override_story_character_scene_or_map_canonical: true
