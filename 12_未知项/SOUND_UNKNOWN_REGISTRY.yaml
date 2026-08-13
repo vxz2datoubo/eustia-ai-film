@@ -1,13 +1,35 @@
 unknowns:
   - id: U-SUNO-USER-SONG-SOURCE-001
     question: 用户此前提到的偏歌曲类 SUNO 提示词表在当前 File Library 中的精确文件与完整内容是什么
-    impact: 当前已稳定找到电影配乐向旧补丁，但本轮按 SUNO、歌曲、歌词、verse、chorus、style 等多组查询仍未定位到独立歌曲词表，因此无法声称已完整迁移用户原表中的歌曲术语与权重。
+    resolution: 2026-08-13 用户已在当前会话直接上传歌曲与配乐相关资料包，已逐份读取并完成来源、重复、术语、冲突与当前官方文档核验。歌曲源包括 Suno人声六大分类提示词、歌曲结构-风格 乐器 嗓音等提示词、歌曲开头就唱副歌提示词、嗓音演唱技巧和音色质感提示词、纯R&B提示词，以及大型音乐术语中英表。统一手册 DOCX/PDF 同时覆盖歌曲与电影配乐；suno无权重提示词.docx 与统一手册 DOCX SHA-256 完全一致。
     evidence:
-      file_library_search_date: 2026-08-13
-      found_score_source: 00_项目长期外部记忆与系统演化总文档_v1.0.35_更新补丁.md
-      song_specific_source_found: false
-    safe_default: 歌曲分支先使用用户当前明确需求加 Berklee 歌曲写作专业知识与 Suno 当前官方功能建立完整框架；若后续定位到用户原歌曲表，按来源对照做差异合并，不静默覆盖当前规则。
-    next_action: 后续 File Library 检索命中疑似歌曲词表时先 mclick 全文，再做 terminology mapping / duplicate / conflict / missing coverage audit。
+      ingest_date: 2026-08-13
+      song_specific_source_found: true
+      canonical_lexicon: 01_AI电影系统/SUNO提示词词库与编译映射.md
+      evidence_record: 09_资料证据/SUNO用户提示词资料摄取记录.md
+    status: resolved
+
+  - id: U-SUNO-METATAG-V55-001
+    question: v5.5 对旧资料中方括号 metatag（如 [immediate high note chorus]、[Sad Verse]、[Dorian mode]、[End]）的精确解析、作用域与稳定性如何
+    impact: 原始资料包含大量旧模型/社区式标签；标准音乐术语本身有明确语义，但当前官方 Help Center 未提供这些复杂方括号组合的完整 parser contract。若直接当稳定控制，可能造成结构或表演漂移。
+    evidence:
+      user_source_pack_ingested: true
+      official_music_glossary_supports_standard_terms: true
+      official_complex_bracket_parser_contract_found: false
+    safe_default: 标准 section 名和音乐术语可以作为语义输入；复杂 metatag 默认 legacy_behavioral/candidate。优先自然语言和结构层表达，并保留 current-model A/B fallback。
+    next_action: 执行 11_验收/suno_prompt_regression_cases.yaml 中 REG-SUNO-METATAG-GATE-001 与 REG-SUNO-CHORUS-FIRST-001。
+    status: open
+
+  - id: U-SUNO-PROMPT-WEIGHT-001
+    question: 当前 Suno 是否存在可复用的提示词权重、词序权重或可量化 tag 强度函数
+    impact: 用户上传文件名中出现“无权重提示词”，但该 DOCX 与统一手册字节完全一致，资料中没有可靠数值权重。误把词频、位置或旧经验当权重会造成伪精确。
+    evidence:
+      suno_unweighted_docx_sha256: a7950b8030b461ef417b2e2b56dba5b4457983fa27f82934cc993499a3e7f453
+      unified_manual_docx_sha256: a7950b8030b461ef417b2e2b56dba5b4457983fa27f82934cc993499a3e7f453
+      numeric_weight_table_found: false
+      official_weight_function_found: false
+    safe_default: 不使用伪权重。用 prompt axis、scope、dedicated controls、A/B 与模型版本记录校准控制效果。
+    next_action: 若官方未来公开权重/优先级机制，进入版本重验；否则只记录实际 A/B 结果。
     status: open
 
   - id: U-SUNO-API-001
