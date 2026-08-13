@@ -1,0 +1,171 @@
+cases:
+  - id: REG-SOUND-ROUTE-001
+    title: 完整导演任务能自动调用声音导演且允许得出不配乐
+    maturity: candidate
+    must_preserve:
+      - 完整导演不要求用户额外说调用声音导演
+      - 先判断声音叙事功能再决定是否配乐
+      - 不配乐时仍设计 ambience Foley SFX dialogue space silence
+      - 音乐不得替代表演或提前泄露剧情
+    checks:
+      - sound_need_scan
+      - music_function
+      - silence_as_design
+      - audience_knowledge_alignment
+
+  - id: REG-SONG-SCORE-SPLIT-001
+    title: 歌曲与电影配乐必须先分流再编译
+    maturity: candidate
+    must_preserve:
+      - song 分支优先 central_intent POV prosody section_function hook
+      - film_score 分支优先 spotting cue_boundary dialogue_priority sync theme_relation
+      - underscore 不强塞 verse chorus
+      - 主题曲不强套低显著度 dialogue_safe 规则
+    checks:
+      - task_classification
+      - structural_goal_match
+      - song_form_leakage_into_score
+      - score_constraints_leakage_into_song
+
+  - id: REG-SOUND-DIALOGUE-001
+    title: 对白密集场景的音乐必须通过对白安全验收
+    maturity: candidate
+    scenario: 角色重要对白下存在持续 underscore
+    must_preserve:
+      - 音乐功能明确且不是因为习惯而常驻
+      - 关键台词的辅音和语义保持可懂
+      - 配器密度音域瞬态动态和混响为对白让位
+      - 必要时通过 automation EQ ducking silence 或局部重混解决
+      - 不用单一 prompt 标签代替最终听检
+    targeted_eval:
+      method: A_B_compare
+      A: 原始未对白优化的音乐混音
+      B: 对白安全重编配或 stem 级让位版本
+      compare:
+        - dialogue_intelligibility
+        - narrative_focus
+        - music_function_retention
+        - masking
+        - emotional_effect
+
+  - id: REG-SCORE-CUE-001
+    title: 长段落配乐按剧情 Cue 而非每个短视频重新起曲
+    maturity: candidate
+    must_preserve:
+      - Cue 边界由剧情功能变化定义而非固定15秒
+      - 4至15秒视频段不重复注入完整非画内配乐设计
+      - 同一 Cue 可跨多个镜头和生成片段
+      - 少量 hard sync 加 soft sync 大弧线
+      - picture lock 前以剧情事件和 rough range 追踪
+      - picture lock 后才做精确 conform
+    checks:
+      - cue_continuity
+      - short_segment_music_reset
+      - spotting_quality
+      - edit_resilience
+      - sync_hierarchy
+
+  - id: REG-SONG-PROSODY-001
+    title: 歌曲不能只靠风格词而忽略歌词与音乐的 prosody
+    maturity: candidate
+    must_preserve:
+      - central intent 清楚
+      - 关键词语言重音与旋律节拍关系自然
+      - verse chorus bridge 等段落有明确功能差异或有合理替代结构
+      - hook 与核心意图一致
+      - 和声节奏旋律和歌词共同服务歌曲意义
+    targeted_eval:
+      method: paired_listening
+      compare:
+        - prosody
+        - lyric_stress_fit
+        - singability
+        - section_contrast
+        - hook_effectiveness
+        - central_intent_clarity
+
+  - id: REG-DIEGETIC-MUSIC-001
+    title: 画内音乐必须服从世界空间与声源逻辑
+    maturity: candidate
+    must_preserve:
+      - 明确 sound_source 和 source_position
+      - 人物是否听见与反应符合剧情
+      - 乐器文化时代阶层符合场景设定
+      - 距离遮挡混响与空间关系一致
+      - 画内转画外或画外转画内必须有可理解的声画过渡
+    checks:
+      - diegesis_correctness
+      - source_localization
+      - worldbuilding_fit
+      - acoustic_space
+      - character_hearing_state
+
+  - id: REG-SUNO-CONTROLS-001
+    title: Suno 控制参数不得因单次成功变成全局固定值
+    maturity: candidate
+    must_preserve:
+      - 记录 Suno model version
+      - 固定其他变量再测试 Weirdness Style Influence Audio Influence Exclude 等
+      - 不把单次最佳值自动推广到歌曲和配乐所有任务
+      - 模型版本更新后标记 needs_revalidation
+    targeted_eval:
+      method: A_B_C_compare
+      controlled_variables:
+        - same_prompt
+        - same_lyrics_when_applicable
+        - same_reference_audio
+        - same_model_version
+      compare:
+        - instruction_following
+        - structural_adherence
+        - style_adherence
+        - reference_overfit
+        - artifacts
+        - narrative_fit
+
+  - id: REG-SUNO-STEMS-001
+    title: Stem 导出必须经过真实可用性验收
+    maturity: candidate
+    must_preserve:
+      - stem 名称不等于内容一定正确
+      - 检查 bleed artifacts transient loss phase and missing_elements
+      - 对话让位或重混前必须听检关键 stem
+      - stem 失败时允许回退 section regeneration 或整轨混音方案
+    checks:
+      - stem_identity
+      - bleed
+      - separation_artifacts
+      - remix_usability
+      - fallback_available
+
+  - id: REG-SOUND-RIGHTS-001
+    title: 正式音乐必须有 rights provenance
+    maturity: candidate
+    must_preserve:
+      - 记录生成时订阅层级和模型版本
+      - 记录歌词作者
+      - 上传音频必须有权利来源
+      - Voice 只能使用当前有权建立的声音
+      - Custom Model 训练集必须有权利
+      - 商业使用权不得等同版权保护
+      - 记录 human authorship contribution
+    checks:
+      - provenance_complete
+      - commercial_use_state
+      - input_rights
+      - voice_consent
+      - human_authorship_ledger
+
+  - id: REG-SOUND-MODEL-UPDATE-001
+    title: Suno 模型或产品更新触发版本相关技能重验
+    maturity: candidate
+    must_preserve:
+      - 稳定电影声音原则与模型技巧分开
+      - 新模型发布不静默覆盖旧实测
+      - prompt controls voice custom_model stems sounds editor 等版本相关能力重新核验
+      - 未重验前可保持 candidate 或 needs_revalidation
+    checks:
+      - model_version_detected
+      - version_bound_rules_identified
+      - revalidation_queue
+      - stable_principles_preserved
