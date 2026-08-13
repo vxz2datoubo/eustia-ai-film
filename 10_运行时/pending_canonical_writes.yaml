@@ -50,6 +50,54 @@ items:
       - verify_new_sections_and_existing_tail_intact
     completion_condition: 目标 AI电影系统.md 回读确认新规则已存在且原有内容未丢失后，才可改为 completed。
 
+  - id: PCW-2026-08-13-SHOT-SCOPE-001
+    target: 01_AI电影系统/AI电影系统.md
+    route_classes:
+      - general_directing_method
+      - ai_image_video_method
+    status: pending_safe_patch
+    created_at: 2026-08-13
+    reason: 当前 GitHub contents 写入接口对长主档只支持整文件替换；为避免约1700行 AI电影系统.md 被截断或覆盖，不进行不安全整文件重写，等待可做精确局部 patch 的执行器完成最终登记。
+    already_persisted_evidence:
+      - 08_系统学习/反馈反推与系统反哺引擎.md#SHOT-SCOPE-001
+      - 09_资料证据/官方资料与证据索引.md#单镜头可观察域与跨镜头信息隔离证据
+      - 10_运行时/director_route_index.yaml#SHOT_SCOPE_LEAK
+      - 11_验收/director_regression_cases.yaml#REG-SHOT-SCOPE-001
+    candidate_rules_to_integrate:
+      - id: SHOT-SCOPE-001
+        maturity: candidate
+        scene_observation: scene_verified observation / E4
+        summary: 全局剧情规划与逐shot渲染条件分层；最终AI视频执行稿每个shot只编译当前camera state实际可见、可听或在本shot内被摄影机真实揭示的内容，未来shot信息放入next-shot contract而不提前进入当前visible set。
+        compiler: GLOBAL PLAN internal only -> SHOT BOUNDARY -> CAMERA STATE -> VISIBLE SET -> AUDIBLE SET -> ACTION/CHANGE -> IN-SHOT REVEAL -> EXIT STATE -> NEXT-SHOT CONTRACT
+        key_rules:
+          - 前景中景后景只列当前机位实际可见元素
+          - POV目标只在切到POV或本shot真实camera reveal后进入visible set
+          - VO与镜外声属于audible set且说话者不自动成为画面实体
+          - 下一shot需要继承的信息进入final_state或next-shot contract
+          - 白模与因果连续分镜同样按shot/action-state隔离可见实体与几何
+          - 图生视频或白模已锁当前构图时文字优先描述当前shot动作摄影机时间推进和合法新变化
+        boundaries:
+          - 不等于只能描述第一帧
+          - 同一连续shot内真实camera reveal可按先后描述新区域和主体
+          - 镜面玻璃开口中实际可见内容属于visible set
+          - 镜外但可听声音可进入audible set
+          - T2V无参考图时可完整建立当前shot所需环境
+        regression: REG-SHOT-SCOPE-001
+    integration_target_hint:
+      - 在 10.1 Candidate 技能登记区新增 SHOT-SCOPE-001
+      - 在 DirectorSkills Candidate 调用入口新增 S25-20 / SHOT-SCOPE-001
+      - 可在 Seedance执行提示词标准中把当前可见人物与背景进一步解释为 current shot visible set
+      - 保留既有所有主档内容和尾部运行时兼容章节
+    verification_required:
+      - fetch_current_AI电影系统
+      - apply_precise_local_patch_only
+      - inspect_diff_for_only_SHOT_SCOPE_related_changes
+      - fetch_target_again
+      - verify_SHOT_SCOPE_001_present
+      - verify_S25_20_present
+      - verify_existing_main_content_and_tail_intact
+    completion_condition: AI电影系统.md 回读确认 SHOT-SCOPE-001 与 S25-20 已存在、既有内容完整且 diff 仅含预期改动后，状态才可改为 completed。
+
 rules:
   pending_item_is_not_canonical_rule_source: true
   pending_item_must_be_rechecked_on_next_project_turn: true
