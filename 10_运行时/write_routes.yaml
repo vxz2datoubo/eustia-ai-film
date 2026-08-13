@@ -14,9 +14,13 @@ routes:
   revision_checkpoint_current_state: 07_连续性与生产状态/连续性与当前生产状态.md
   revision_trace_and_learning: 08_系统学习/反馈反推与系统反哺引擎.md
   learning_evidence_and_outcome: 08_系统学习/反馈反推与系统反哺引擎.md
+  golden_prompt_learning_protocol: 08_系统学习/优秀提示词案例学习协议.md
   official_research_evidence: 09_资料证据/官方资料与证据索引.md
+  golden_prompt_research_evidence: 09_资料证据/优秀提示词案例学习证据索引.md
   sound_research_evidence: 09_资料证据/声音导演与SUNO证据索引.md
   suno_user_prompt_evidence: 09_资料证据/SUNO用户提示词资料摄取记录.md
+  golden_prompt_case: 11_验收/golden_prompt_cases.yaml
+  golden_prompt_regression_case: 11_验收/golden_prompt_regression_cases.yaml
   sound_regression_case: 11_验收/sound_director_regression_cases.yaml
   suno_prompt_regression_case: 11_验收/suno_prompt_regression_cases.yaml
   unresolved_unknown: 12_未知项/UNKNOWN_REGISTRY.yaml
@@ -61,6 +65,29 @@ canonical_learning_gate:
     scene_verified_to_project_verified_requires_cross_scene_evidence: true
     project_verified_to_general_stable_requires_clear_transfer_boundary: true
 
+golden_prompt_ingestion_gate:
+  trigger_authority: user_explicit_golden_case_verdict
+  required_steps:
+    - learn_from_case
+    - register_case_verbatim
+  learn_from_case:
+    - run_edcm_k0_k1_k2_k3_scan
+    - distill_atomic_lessons
+    - link_or_conflict_with_existing_skills
+    - assign_maturity_without_auto_global_promotion
+    - route_each_lesson_to_unique_domain_canonical_or_mark_pending
+    - create_targeted_eval_or_regression_when_needed
+  register_case_verbatim:
+    - preserve_source_prompt_verbatim
+    - distinguish_prompt_approval_from_output_verification
+    - write_or_update_golden_prompt_case
+    - preserve_model_version_asset_and_provenance_when_known
+  verification:
+    - fetch_target_domain_canonical_if_lesson_written
+    - fetch_golden_prompt_cases
+    - verify_case_and_lesson_references
+    - report_partial_status_if_one_branch_failed
+
 rules:
   memory_cannot_substitute_for_formal_write: true
   candidate_cannot_auto_promote_to_stable: true
@@ -71,3 +98,7 @@ rules:
   omitted_constraint_does_not_equal_revoked: true
   sound_subsystem_cannot_override_story_character_scene_or_map_canonical: true
   suno_lexicon_cannot_override_sound_director_or_current_official_model_capability: true
+  golden_prompt_case_registration_and_skill_promotion_are_separate: true
+  golden_prompt_source_verbatim_cannot_be_replaced_by_normalized_summary: true
+  golden_prompt_exact_demo_case_cannot_be_sole_holdout_eval: true
+  golden_prompt_case_replay_must_be_targeted_and_bounded: true
