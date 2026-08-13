@@ -55,9 +55,16 @@ items:
     route_classes:
       - general_directing_method
       - ai_image_video_method
-    status: pending_safe_patch
+    status: completed
     created_at: 2026-08-13
-    reason: 当前 GitHub contents 写入接口对长主档只支持整文件替换；为避免约1700行 AI电影系统.md 被截断或覆盖，不进行不安全整文件重写，等待可做精确局部 patch 的执行器完成最终登记。
+    completed_at: 2026-08-13
+    commit_sha: 8e2057555ac2b2253a65c21d971eb0fe80450f2c
+    verified_target: 01_AI电影系统/AI电影系统.md
+    verification:
+      intended_rules_present: true
+      existing_main_content_intact: true
+      diff_scope_verified: true
+    reason: 本地精确 patch 已写入 target canonical；提交后回读确认 SHOT-SCOPE-001、S25-20、既有主档尾部和 diff 范围均符合要求。
     already_persisted_evidence:
       - 08_系统学习/反馈反推与系统反哺引擎.md#SHOT-SCOPE-001
       - 09_资料证据/官方资料与证据索引.md#单镜头可观察域与跨镜头信息隔离证据
