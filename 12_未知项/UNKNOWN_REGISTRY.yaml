@@ -86,3 +86,18 @@ unknowns:
     safe_default: Seedance 2.5 影视执行稿默认用正向动作与画面描述定义目标轨迹；否定词只保留少量、局部、会毁掉剧情/身份/空间的不变量级约束。不得用全局绝对否定去定义动作风格。
     next_action: 后续以凯姆攀爬和至少一个不同类型镜头进行 A/B/C 真实生成，比较绝对否定、纯正向规格、正向规格加单条局部排除；如取得 Seedance 2.5 官方否定/negative prompt 文档则重新核验。
     status: open
+
+  - id: U-SEQUENCE-CONTEXT-001
+    question: Seedance 2.5 在15至30秒多镜头剧情生成中，是否会稳定利用受限的segment-level剧情语境改善未逐项标注的表情、视线、角色行为、群众活动和跨镜头语义一致性，同时不增加实体串台、提前揭示或逐shot指令漂移
+    impact: 如果成立，可在不逐项锁死微动作的前提下给模型更准确的自主补全方向；如果不成立或context过宽，会把本段背景人物和未来信息错误实体化到不属于它们的镜头。
+    current_hypothesis:
+      status: candidate_unvalidated
+      rule_shape: sequence context只提供当前生成段的持续状态、人物即时动机、角色或组织职能、场景运作状态和局部社会背景；事件顺序和具体可见内容继续由逐shot执行稿控制。
+      causal_radius: 只有能够改变本段合理像素、声音、动作、表情、注意力或环境行为选择的信息才有资格进入context。
+      state_over_event: context优先写“现在是什么状态、为什么这样行动”，不写“接下来镜头依次发生什么”。
+      entity_granularity: 对只在局部shot出现的人物，segment context优先使用角色职能或组织层级而不是无必要地提前点名；精确身份在对应shot中再绑定，以降低早期实体注入风险。
+      embodiment_gate: context中的实体存在不等于视觉授权，任何角色进入具体画面仍须服从SHOT-SCOPE-001的visible set。
+      fact_confidence_gate: 未被剧本、用户或canonical确认的具体动机不能因为“听起来合理”就写成segment事实；可作为实验性动作动机时必须保持GUIDED而不能伪装成已确认剧情。
+    safe_default: 当前只把SEQUENCE-CONTEXT-001用于多镜头剧情段的受控实验；默认2至6句自然语言，优先状态、动机、职能和场景运作，不写完整故事、未来答案、镜头流程摘要、后续shot具体前中后景或内部导演解释。
+    next_action: 用REG-SEQUENCE-CONTEXT-001进行A/B/C控制变量实测。A无context，B受限context，C过长全局总结；保持参考资产、逐shot描述、模型版本、时长和可用生成设置一致，比较语义连贯、自主行为相关性、人物动机、表情微动作、群众语义、实体串台、提前揭示、VO人物实体化、逐shot遵循和prompt复杂度。
+    status: open
