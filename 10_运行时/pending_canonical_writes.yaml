@@ -203,6 +203,77 @@ items:
       - verify_existing_main_content_and_tail_intact
     completion_condition: AI电影系统.md回读确认SEQUENCE-CONTEXT-001与可选segment context字段已存在且SHOT-SCOPE-001完整保留后，状态才可改为completed。
 
+  - id: PCW-2026-08-13-SCREEN-EVIDENCE-ABSTRACT-001
+    target: 01_AI电影系统/AI电影系统.md
+    supporting_target: 08_系统学习/反馈反推与系统反哺引擎.md
+    route_classes:
+      - general_directing_method
+      - ai_image_video_method
+    status: pending_safe_patch
+    created_at: 2026-08-13
+    change_type:
+      - MODIFY
+      - EXPERIMENT
+    parent_revision_series: KAIM-HIGH-SEARCH-30S
+    reason: 用户明确反馈AI视频执行稿应写镜头可见可听的东西而不是只写其含义；具体可视直白描述优先于隐喻诗性或小说化结论。现有SCREEN-EVIDENCE-001已覆盖空间动作尺度与部分压迫等抽象词转屏幕证据，本次不是新增重复技能，而是扩展其scope到情绪氛围人物气质能力感和主题含义等承担关键生成职责的抽象语义，并增加隐喻字面化风险边界。
+    already_persisted_changes:
+      - 10_运行时/director_route_index.yaml#SCREEN_EVIDENCE_GAP
+      - 11_验收/director_regression_cases.yaml#REG-SCREEN-EVIDENCE-001
+    candidate_modification:
+      id: SCREEN-EVIDENCE-001
+      maturity: candidate
+      evidence_status: explicit_user_feedback_unvalidated_by_controlled_generation
+      scope_extension:
+        - 高度尺度速度危险距离空间与动作
+        - 情绪与氛围
+        - 人物气质能力感与状态
+        - 主题或叙事含义中真正需要由画面承担的部分
+      operational_rule:
+        - 先判断导演意图中哪些含义必须由当前shot实际表现
+        - 将关键含义翻译为最小充分的可见或可听证据再交给视频模型
+        - 优先使用主体物体动作表情视线构图遮挡占幅负空间光线反射材质状态天气环境反应群众行为和声音等可渲染证据
+        - 抽象词可在证据之后作为弱辅助但不能独自承担关键生成职责
+        - 隐喻诗性表达或小说化句子如果不是希望按字面生成必须先转译为屏幕证据
+        - 每次转译仍服从SHOT-SCOPE-001只编译当前shot合法可见可听的证据
+        - 遵守Prompt Constraint Budget只保留改变目标画面或模型行为的最小充分证据
+      boundaries:
+        - 不是全面禁止情绪风格或抽象词
+        - 风格意图可保留少量抽象标签但关键叙事表演空间动作和氛围控制应有屏幕证据支撑
+        - 有意追求象征主义梦境超现实或字面隐喻画面时隐喻本身可以成为可渲染对象
+        - 参考图已锁定的信息不重复高密度描述
+        - 具体化不得演化为逐帧过控同义词堆叠或无叙事价值微动作清单
+      fast_test: 如果一句话交给不会读心的摄影机无法直接拍出来或录出来而它又承担关键生成职责则先改写成屏幕证据
+      regression: REG-SCREEN-EVIDENCE-001
+      targeted_eval:
+        A: 关键意图主要使用抽象含义隐喻或小说化概括
+        B: 同一导演意图翻译成最小充分的可见可听证据
+        compare:
+          - instruction_following
+          - emotional_and_atmospheric_alignment
+          - character_state_readability
+          - metaphor_literalization_error
+          - generic_style_cliche_rate
+          - unwanted_model_invention
+          - prompt_complexity
+          - overconstraint_rigidity
+    integration_target_hint:
+      - 扩展AI电影系统.md中SCREEN-EVIDENCE-001的scope trigger operational rule和boundary不新建同义技能
+      - 扩展反馈引擎SCREEN-EVIDENCE-001章节的第一性原理和抽象词映射并记录本次用户反馈为MODIFY加EXPERIMENT
+      - 保留现有S25-14和SCREEN_EVIDENCE_GAP路由名称不新增重复入口
+      - SHOT-SCOPE-001继续裁决每个shot哪些证据合法进入执行稿
+    verification_required:
+      - fetch_current_AI电影系统
+      - fetch_current_feedback_engine
+      - apply_precise_local_patch_only
+      - inspect_diff_for_only_SCREEN_EVIDENCE_scope_extension
+      - verify_SCREEN_EVIDENCE_001_not_duplicated
+      - verify_existing_SCREEN_EVIDENCE_behavior_preserved
+      - verify_SHOT_SCOPE_001_intact
+      - verify_S25_14_still_routes_to_SCREEN_EVIDENCE_001
+      - fetch_targets_again
+      - verify_existing_tail_intact
+    completion_condition: AI电影系统.md和反馈引擎回读确认SCREEN-EVIDENCE-001已完成抽象含义与隐喻转屏幕证据的scope扩展、无重复技能且既有内容完整后才可改为completed。
+
 rules:
   pending_item_is_not_canonical_rule_source: true
   pending_item_must_be_rechecked_on_next_project_turn: true
