@@ -101,3 +101,40 @@ unknowns:
     safe_default: 当前只把SEQUENCE-CONTEXT-001用于多镜头剧情段的受控实验；默认2至6句自然语言，优先状态、动机、职能和场景运作，不写完整故事、未来答案、镜头流程摘要、后续shot具体前中后景或内部导演解释。
     next_action: 用REG-SEQUENCE-CONTEXT-001进行A/B/C控制变量实测。A无context，B受限context，C过长全局总结；保持参考资产、逐shot描述、模型版本、时长和可用生成设置一致，比较语义连贯、自主行为相关性、人物动机、表情微动作、群众语义、实体串台、提前揭示、VO人物实体化、逐shot遵循和prompt复杂度。
     status: open
+
+  - id: U-GOLDEN-RETRIEVAL-001
+    question: Golden Prompt Case 在 Seedance / Seedream / 其他项目生成任务中，最有效的检索维度、相似度组合以及单次调用 1、2、3 个案例的最优数量是什么
+    impact: 案例过少可能无法提供足够先例，案例过多可能挤压上下文、造成模板粘连或 negative transfer；不同任务类型的最优检索策略可能不同。
+    current_hypothesis:
+      status: candidate_unvalidated
+      safe_start: 默认仅检索 1 至 3 个最相关且互补的案例，优先 task_class、symptom、model/version、generation_mode、shot function、director goal 与 failure symptom。
+    evidence: 外部 Case-Based Reasoning 与 continual-learning replay 支持“按相关性检索历史经验”这一方向，但不能直接给出本项目视频生成的最佳案例数；真实最佳值尚无项目 E4 数据。
+    next_action: 在至少三类任务中比较 no-case、top-1、top-2/3 与过量案例注入，控制模型版本、参考资产与核心任务不变，评价生成质量、指令遵循、模板过拟合、prompt complexity 与 negative transfer。
+    status: open
+
+  - id: U-GOLDEN-PROMPT-OUTPUT-001
+    question: 用户认为“提示词文本写得优秀”与真实生成结果“确实优秀”在本项目中的一致程度有多高，哪些提示词特征只提升可读性却不提升生成质量
+    impact: 如果不区分 prompt-level excellence 与 output-level excellence，系统可能把“写得漂亮”误学成“生成上因果有效”，进而错误推动技能成熟度。
+    current_hypothesis:
+      status: candidate_unvalidated
+      safe_default: verdict_basis 严格区分 prompt_only、generated_output、both、comparative；prompt_only 案例可立即进入 Golden Case，但抽取的生成技能默认保持 candidate。
+    next_action: 对后续 Golden Cases 记录提示词评价与真实输出评价，累计样本后分析两者一致率、主要分歧类型和真正与生成结果相关的变量。
+    status: open
+
+  - id: U-GOLDEN-GRADER-001
+    question: 自动文本/图像/视频 grader 在本项目各验收维度上与用户导演判断的相关性、偏差方向和可接受使用边界是什么
+    impact: 未校准 grader 若被赋予过高权重，可能把身份、空间或表面指令遵循的高分误当成导演质量，也可能在开放式审美任务中产生系统性宽松或偏差。
+    current_hypothesis:
+      status: candidate_unvalidated
+      safe_default: 自动 grader 只承担客观与半客观诊断，不覆盖用户对 Golden Case 的领域判断，不凭 reference-free 单次自动评分晋升 maturity。
+    next_action: 对一组用户已明确分层评价的真实生成结果做盲评对照，分别测身份、空间、动作物理、时间稳定、剧情功能、表演与整体导演质量的 grader-human agreement，再决定哪些维度允许自动门控。
+    status: open
+
+  - id: U-GOLDEN-VERSION-TRANSFER-001
+    question: Golden Prompt Case 中哪些结构属于稳定导演原则，哪些属于特定 Seedance / Seedream / ChatGPT 或其他模型版本的 prompt syntax / interface dependency，以及跨版本迁移时失效速度如何
+    impact: 若把版本绑定的写法当成长期导演规律，模型升级后会产生陈旧技能；若模型升级时全部废弃旧案例，又会丢失稳定导演知识。
+    current_hypothesis:
+      status: candidate_unvalidated
+      safe_default: 案例保留历史 provenance，技能抽取时显式标注 model_or_tool_dependency；版本变化只使相关 version-bound lesson 进入 needs_revalidation，不删除稳定导演原则。
+    next_action: 发生大版本更新或同提示在新版本明显漂移时，对代表性 Golden Cases 做 targeted revalidation，并记录哪些变量稳定、哪些变量需改写。
+    status: open
