@@ -25,7 +25,9 @@ canonical:
   asset_registry: 06_视觉资产/视觉资产登记库.md
   continuity: 07_连续性与生产状态/连续性与当前生产状态.md
   feedback_engine: 08_系统学习/反馈反推与系统反哺引擎.md
+  golden_prompt_protocol: 08_系统学习/优秀提示词案例学习协议.md
   evidence_index: 09_资料证据/官方资料与证据索引.md
+  golden_prompt_evidence: 09_资料证据/优秀提示词案例学习证据索引.md
   sound_evidence: 09_资料证据/声音导演与SUNO证据索引.md
   suno_user_prompt_evidence: 09_资料证据/SUNO用户提示词资料摄取记录.md
   route_index: 10_运行时/director_route_index.yaml
@@ -35,6 +37,8 @@ canonical:
   maturity_model: 10_运行时/maturity_model.yaml
   pending_canonical_writes: 10_运行时/pending_canonical_writes.yaml
   regression_cases: 11_验收/director_regression_cases.yaml
+  golden_prompt_cases: 11_验收/golden_prompt_cases.yaml
+  golden_prompt_regression_cases: 11_验收/golden_prompt_regression_cases.yaml
   sound_regression_cases: 11_验收/sound_director_regression_cases.yaml
   suno_prompt_regression_cases: 11_验收/suno_prompt_regression_cases.yaml
   legacy_authority_regression_cases: 11_验收/legacy_authority_regression_cases.yaml
@@ -51,7 +55,9 @@ effective_sources:
   06_视觉资产/视觉资产登记库.md: github_verified
   07_连续性与生产状态/连续性与当前生产状态.md: github_verified
   08_系统学习/反馈反推与系统反哺引擎.md: github_verified
+  08_系统学习/优秀提示词案例学习协议.md: github_verified
   09_资料证据/官方资料与证据索引.md: github_verified
+  09_资料证据/优秀提示词案例学习证据索引.md: github_verified
   09_资料证据/声音导演与SUNO证据索引.md: github_verified
   09_资料证据/SUNO用户提示词资料摄取记录.md: github_verified
   10_运行时/source_authority.yaml: github_verified
@@ -61,6 +67,8 @@ effective_sources:
   10_运行时/pending_canonical_writes.yaml: github_verified
   10_运行时/director_route_index.yaml: github_verified
   11_验收/director_regression_cases.yaml: github_verified
+  11_验收/golden_prompt_cases.yaml: github_verified
+  11_验收/golden_prompt_regression_cases.yaml: github_verified
   11_验收/sound_director_regression_cases.yaml: github_verified
   11_验收/suno_prompt_regression_cases.yaml: github_verified
   11_验收/legacy_authority_regression_cases.yaml: github_verified
