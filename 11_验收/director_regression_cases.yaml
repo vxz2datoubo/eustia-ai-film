@@ -149,6 +149,64 @@ cases:
         - instruction_following
         - prompt_complexity
 
+  - id: REG-SEQUENCE-CONTEXT-001
+    title: 多镜头AI视频使用受限本段剧情语境帮助模型自然补全且不得越过shot scope
+    maturity: candidate
+    experiment_status: unvalidated
+    scene_target:
+      work_item: KAIM-HIGH-SEARCH-30S
+      rationale: 当前30秒包含主角高位侦查、VO、农妇生活反应、猎羽现场巡查、群众领取粥和面包等多种自主行为，适合测试segment-level语义条件是否改善未逐项指定的动作表情和环境行为。
+    must_preserve:
+      - sequence context是可选的segment-level语义条件不是每个视频任务强制字段
+      - 默认只在约15至30秒多镜头剧情段或自主行为信息密度较高时考虑使用
+      - 内容只限当前生成段真实成立且会影响本段动作表情注意力群众行为环境反应或角色职能理解的局部事实
+      - 可概括当前主目标即时动机角色职能关系场景运作状态和局部社会活动
+      - 使用因果相关性门槛若某信息无法改变本段任何合理像素动作声音或行为选择则从sequence context删除
+      - 不写完整故事未来剧情答案后续场景实体或本段不会表现也不会影响本段行为的剧情信息
+      - 不把镜头一镜头二镜头三的流程顺序摘要放入sequence context
+      - 不把观众应该如何理解导演为何这样设计等内部分析放入模型上下文
+      - sequence context中提到某角色地点组织只提供语义先验不授权其进入任意shot的visible set
+      - 每个shot仍由SHOT-SCOPE-001决定camera state visible set audible set in-shot reveal和next-shot contract
+      - 具体shot执行描述与canonical事实优先于sequence context
+      - VO说话者仍需经过shot visible gate不能仅因出现在segment context而视觉实体化
+      - 语言保持自然简短默认约2至6句不输出编译器元数据和内部标签脚手架
+    checks:
+      - segment_context_need
+      - segment_causal_relevance
+      - motive_alignment
+      - role_alignment
+      - scene_operating_state
+      - spontaneous_behavior_relevance
+      - entity_embodiment_gate
+      - future_information_leakage
+      - shot_scope_compatibility
+      - offscreen_voice_visual_leakage
+      - prompt_constraint_budget
+    targeted_eval:
+      method: A_B_C_compare
+      A: 完全不提供sequence context只给相同逐shot执行稿
+      B: 提供2至6句受限sequence context再给完全相同逐shot执行稿
+      C: 提供包含未来剧情镜头流程摘要和过多实体的长全局总结再给相同逐shot执行稿
+      controlled_variables:
+        - same_reference_assets
+        - same_shot_descriptions
+        - same_duration
+        - same_model_version
+        - same_generation_settings_when_available
+      compare:
+        - overall_narrative_coherence
+        - spontaneous_behavior_relevance
+        - character_motivation_alignment
+        - facial_and_micro_action_plausibility
+        - crowd_and_environment_semantic_fit
+        - cross_shot_entity_leakage
+        - premature_reveal_rate
+        - offscreen_voice_visual_leakage
+        - shot_instruction_following
+        - subject_action_binding
+        - prompt_complexity
+      success_condition: B相较A在语义连贯和自主补全上有可见改善且不显著增加串台提前揭示VO人物实体化或逐shot指令漂移；C若恶化则同时支持限制context范围而不是简单支持更多背景文字。
+
   - id: REG-ASSET-001
     title: 登记资产必须正式提交
     must_preserve:
