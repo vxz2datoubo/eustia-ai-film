@@ -94,6 +94,38 @@ routes:
       - reference_based_control
       - A_B_C_validation
 
+  - id: SHOT_SCOPE_LEAK
+    symptoms:
+      - 当前镜头描述了当前机位实际看不到的人物场景或目标
+      - 反应镜头提前写入下一主观镜头才会揭示的内容
+      - 画面还没切到POV就把POV目标写进当前shot
+      - 全局剧情总结被复制进每个镜头执行描述
+      - 画外音人物被错误实体化进当前画面
+      - 当前shot混入后续shot的背景实体或空间信息
+      - 镜头视点与提示词中的前景中景后景不一致
+    maturity: candidate
+    mandatory_reads:
+      - 08_系统学习/反馈反推与系统反哺引擎.md#SHOT-SCOPE-001
+    mandatory_scans:
+      - shot_observable_set
+      - camera_view_consistency
+      - visible_entity_scope
+      - audible_offscreen_scope
+      - global_summary_vs_shot_caption
+      - reveal_scope
+      - transition_contract
+      - cross_shot_information_leakage
+      - prompt_constraint_budget
+    candidate_axes:
+      - shot_local_prompt_compilation
+      - current_visible_set
+      - current_audible_set
+      - latent_global_state_isolation
+      - reveal_on_cut_or_camera_reveal
+      - per_shot_entity_binding
+      - next_shot_contract
+      - storyboard_scope_alignment
+
   - id: SPACE_CONTINUITY_RISK
     symptoms:
       - 左右反了
