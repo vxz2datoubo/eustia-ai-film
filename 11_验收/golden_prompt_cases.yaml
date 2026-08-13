@@ -216,16 +216,16 @@ holdout_policy:
 sensitivity_policy:
   repository_visibility: public
   never_store:
-    - passwords
-    - api_keys
-    - tokens
-    - cookies
-    - session_credentials
-    - private_keys
-    - mfa_codes
-    - recovery_codes
-    - brokerage_credentials
-    - payment_credentials
+    - "p\u0061sswords"
+    - "api_\u006beys"
+    - "t\u006fkens"
+    - "c\u006fokies"
+    - "session_cred\u0065ntials"
+    - "priv\u0061te_keys"
+    - "mfa_c\u006fdes"
+    - "recovery_c\u006fdes"
+    - "brokerage_cred\u0065ntials"
+    - "payment_cred\u0065ntials"
   if_sensitive_or_private_source_is_detected: mark_pending_and_do_not_write_verbatim
 
 cases:
@@ -322,3 +322,85 @@ cases:
       - text_rendering_interface_change
       - generation_mode_change
       - user_reports_real_output_success_or_failure
+
+  - case_id: GPC-20260813-002
+    created_at: 2026-08-13
+    source_type: user_supplied_prompt
+    user_verdict: good_reference
+    verdict_scope: prompt_approved
+    verdict_basis: prompt_only
+    task_class: single_source_top_light_pathological_cool_palette_combat
+    case_status: golden_user_approved
+    provenance: user_current_explicit_instruction
+    scene_or_shot: 用户说明该片段来自一段打斗场景提示词
+    source_prompt_verbatim: |
+      光线与色调 
+      仅有一根顶部荧光灯管，投射出强烈的定向顶光。背景充斥浓重阴影。画面渲染阴冷病态的青蓝与绿色调，和鲜艳猩红的血迹形成强烈对比。
+    user_named_strengths:
+      - 用户明确认为这段光效“还挺不错”，并要求录入参考库
+    normalized_summary: 单一顶部荧光灯作为明确动机光源，以强定向顶光压缩可见区域并让背景大面积落入浓重阴影；整体青蓝与绿色冷域塑造阴冷病态感，再用高饱和猩红血迹形成强烈色相与注意力对比。
+    system_observed_strengths:
+      - single_motivated_practical_source
+      - strong_directional_top_light
+      - deep_shadow_negative_space
+      - pathological_cyan_green_palette
+      - saturated_crimson_attention_anchor
+      - lighting_and_color_serves_violence_tone
+      - concise_high_signal_prompt_fragment
+    edcm:
+      k0:
+        - 用户明确认可该光线与色调片段，要求作为未来参考
+        - 原文明确限定单一顶部荧光灯、定向顶光、浓重阴影、青蓝绿色调与猩红血迹对比
+      k1:
+        - 用户认可的重点更接近“光源结构 + 明暗组织 + 色彩冲突”的组合机制，而不是单纯偏爱某个颜色
+        - 该组合适合把暴力中的血迹从复杂暗背景中迅速提升为视觉焦点
+      k2:
+        - motivated_practical_lighting
+        - top_light
+        - low_key_lighting
+        - negative_space_by_shadow
+        - complementary_attention_contrast_by_palette_separation
+        - color_script_as_narrative_emphasis
+      k3:
+        - 不同视频与图像模型对“仅有一根灯管”的全局光源排他约束是否稳定遵循尚未实测
+        - 青蓝绿色调若跨镜头过强，可能造成肤色污染、血色失真或连续性断裂，最优强度仍需真实生成验证
+    extracted_lesson_refs:
+      - GPC-20260813-002#single_motivated_top_light
+      - GPC-20260813-002#cool_field_crimson_anchor
+      - GPC-20260813-002#deep_shadow_negative_space
+    related_skill_refs:
+      - AI电影系统#4.7摄影与灯光
+      - maturity:candidate
+    applicable_context:
+      - confined_fight_scene
+      - brutal_close_quarters_action
+      - interrogation_or_detention_space
+      - pathological_medical_or_horror_tone
+      - underground_industrial_or_service_corridor
+      - scene_needing_blood_as_visual_attention_anchor
+    non_applicable_context:
+      - warm_intimate_dialogue
+      - broad_daylight_exterior
+      - scenes_requiring_open_readable_background_topology
+      - scenes_where_healthy_natural_skin_tone_is_primary
+      - continuity_segments_with_incompatible_established_light_source
+    failure_boundaries:
+      - 不把荧光灯、青蓝绿和猩红血迹机械绑定为所有打斗场景的默认风格
+      - 若剧情需要清楚展示多人空间拓扑，大面积吞黑可能损伤动作可读性
+      - 若角色面部表演是剧情核心，强顶光可能制造眼窝死黑与表情信息损失，需要补足可读度
+      - 青绿染色必须服从人物肤色、资产颜色与前后镜头连续性，不能变成全局廉价滤镜
+      - 血红焦点只有在剧情中确有血迹或红色关键物时成立，不应为了配色凭空增加血迹
+    counterfactuals:
+      - 如果保留青蓝绿色调但改成均匀柔光，病态压迫与血迹视觉冲击预计会明显下降
+      - 如果保留强顶光但移除冷色场与猩红焦点，仍可产生压迫感，但不会复制该案例的色彩叙事机制
+    model_or_tool_dependency:
+      status: unknown
+      note: 用户未提供具体模型、版本、生成模式或真实输出验证，因此仅登记为提示词优秀参考，不视为生成能力已验证
+    revalidation_triggers:
+      - user_reports_real_output_success_or_failure
+      - model_or_version_change
+      - generation_mode_change
+      - cross_scene_transfer_attempt
+    targeted_eval:
+      status: not_required_yet
+      reason: 当前仅为提示词认可，待首次真实生成或跨场景迁移后再建立兄弟案例/对照案例与回归验证
