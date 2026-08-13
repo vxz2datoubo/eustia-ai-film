@@ -126,6 +126,38 @@ routes:
       - next_shot_contract
       - storyboard_scope_alignment
 
+  - id: SEQUENCE_CONTEXT_UNDERCONDITIONED
+    symptoms:
+      - 多镜头剧情段每个shot单独成立但整段像彼此失联的片段
+      - AI自动补出的表情视线小动作与人物当前动机不符
+      - 群众和环境行为技术上合理但不符合当前场景正在运作的社会状态
+      - 角色在多个shot中缺少一致的即时目标或职业职能感
+      - 逐shot提示很完整但模型仍把现场理解成泛化的街景人群或随机活动
+      - 15至30秒多镜头段需要模型自主补全大量未逐项标注的自然行为
+    maturity: candidate
+    mandatory_reads:
+      - 10_运行时/pending_canonical_writes.yaml#PCW-2026-08-13-SEQUENCE-CONTEXT-001
+    mandatory_scans:
+      - segment_context_need
+      - segment_causal_relevance
+      - current_character_motives
+      - current_role_and_relationship_state
+      - scene_operating_state
+      - spontaneous_behavior_budget
+      - entity_embodiment_gate
+      - future_information_leakage
+      - shot_scope_compatibility
+      - prompt_constraint_budget
+    candidate_axes:
+      - limited_segment_context
+      - motive_prior
+      - role_prior
+      - scene_state_prior
+      - local_social_context
+      - guided_spontaneous_behavior
+      - per_shot_visual_authority
+      - A_B_C_validation
+
   - id: SPACE_CONTINUITY_RISK
     symptoms:
       - 左右反了
