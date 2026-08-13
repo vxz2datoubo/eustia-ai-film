@@ -11,7 +11,9 @@ read_sets:
       map: 00_项目地图文件#required_for_spatial_direction_camera_orientation_movement
       assets: 视觉资产登记#bound_assets
       sound: 声音导演系统#sound_music_song_dialogue_foley_mix_relevant
+      suno_lexicon: SUNO提示词词库与编译映射#when_suno_prompt_terms_vocal_structure_or_style_compilation
       sound_evidence: 声音导演与SUNO证据索引#only_if_sound_research_or_model_capability_uncertain
+      suno_user_evidence: SUNO用户提示词资料摄取记录#only_if_source_provenance_correction_or_legacy_term_needed
       sound_unknowns: SOUND_UNKNOWN_REGISTRY#only_if_sound_tool_or_delivery_unknown
       evidence: 官方资料与证据索引#only_if_research_or_tool_uncertain
       learning: 反馈反推与系统反哺引擎#relevant_lessons
@@ -27,9 +29,28 @@ read_sets:
       characters: 角色与表演设定库#named_characters
       scenes: 场景与空间设定库#named_scene
       map: 00_项目地图文件#diegetic_source_position_or_acoustic_topology
+      suno_lexicon: SUNO提示词词库与编译映射#suno_generation_or_prompt_compilation
       sound_evidence: 声音导演与SUNO证据索引#model_research_or_professional_method
+      suno_user_evidence: SUNO用户提示词资料摄取记录#source_provenance_or_legacy_prompt_audit
       sound_unknowns: SOUND_UNKNOWN_REGISTRY#unresolved_sound_or_suno_capability
       sound_regression: sound_director_regression_cases#targeted_eval_or_regression
+      suno_prompt_regression: suno_prompt_regression_cases#prompt_lexicon_eval_or_revalidation
+      learning: 反馈反推与系统反哺引擎#relevant_sound_lessons
+
+  suno_prompt_compilation:
+    always:
+      - PROJECT_INDEX.yaml
+      - AI电影系统#relevant_sections_only
+      - 声音导演系统#relevant_sections_only
+      - SUNO提示词词库与编译映射#relevant_namespaces_only
+    conditional:
+      story: 当前改编剧本#only_if_film_or_character_song
+      characters: 角色与表演设定库#only_if_character_voice_or_song
+      scenes: 场景与空间设定库#only_if_diegetic_or_worldbuilding_sensitive_music
+      sound_evidence: 声音导演与SUNO证据索引#current_model_capability_or_official_check
+      suno_user_evidence: SUNO用户提示词资料摄取记录#legacy_term_or_source_audit
+      sound_unknowns: SOUND_UNKNOWN_REGISTRY#metatag_weight_api_or_control_unknown
+      suno_prompt_regression: suno_prompt_regression_cases#A_B_or_version_revalidation
       learning: 反馈反推与系统反哺引擎#relevant_sound_lessons
 
   asset_registration:
@@ -51,7 +72,9 @@ read_sets:
       - UNKNOWN_REGISTRY
     conditional:
       sound: 声音导演系统#when_sound_music_song_or_audio_domain
+      suno_lexicon: SUNO提示词词库与编译映射#when_suno_prompt_or_music_generation_domain
       sound_evidence: 声音导演与SUNO证据索引#when_sound_music_song_or_audio_domain
+      suno_user_evidence: SUNO用户提示词资料摄取记录#when_user_prompt_pack_or_legacy_terms_are_relevant
       sound_unknowns: SOUND_UNKNOWN_REGISTRY#when_sound_music_song_or_audio_domain
 
 rules:
@@ -61,3 +84,4 @@ rules:
   director_task_must_read_project_index: true
   spatial_task_must_read_map: true
   sound_relevant_task_must_read_sound_director: true
+  suno_prompt_compilation_must_read_lexicon: true
