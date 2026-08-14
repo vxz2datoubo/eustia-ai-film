@@ -181,6 +181,7 @@ routes:
       - 把北侧机位和朝北视图混为一谈
     mandatory_reads:
       - 10_运行时/scene_asset_identity_schema.yaml
+      - 10_运行时/scene_media_resolver_manifest.yaml#when_formal_scene_pixels_are_called
     mandatory_scans:
       - map_authority
       - world_cardinal_frame
@@ -189,6 +190,7 @@ routes:
       - view_resolution
       - relation_resolution
       - asset_direction_tags
+      - current_media_version_resolution
       - pixel_verification_state
       - adjacency_and_height
       - no_legacy_id_direction_inference
@@ -307,6 +309,7 @@ routes:
       - 场景图方向核验
     mandatory_reads:
       - 10_运行时/scene_asset_identity_schema.yaml#when_scene_asset
+      - 10_运行时/scene_media_resolver_manifest.yaml#when_scene_asset
     mandatory_scans:
       - asset_identity
       - source_authority
@@ -315,12 +318,48 @@ routes:
       - camera_anchor_resolution
       - view_resolution
       - relation_binding
+      - media_asset_role
+      - media_version_creation
       - media_locator
+      - content_hash
       - pixel_verification
       - continuity_binding
       - referential_integrity
       - old_reference_zero_after_migration
       - commit_verification
+    candidate_axes: []
+
+  - id: ASSET_VERSION_UPDATE
+    symptoms:
+      - 这张替换正式母图
+      - 以后用这版
+      - 更新这个正式资产
+      - 这是修改后的正式图
+      - 重新上传同一张正式图
+      - 正式图片改了一版
+      - 用这张覆盖当前正式版
+      - 旧图不用了换这张
+    mandatory_reads:
+      - 10_运行时/scene_asset_identity_schema.yaml#formal_asset_replacement
+      - 10_运行时/scene_media_resolver_manifest.yaml
+      - 06_视觉资产/视觉资产登记库.md#target_asset
+    mandatory_scans:
+      - target_asset_resolution
+      - same_pixels_vs_changed_pixels
+      - content_hash
+      - same_asset_new_revision_vs_new_variant_vs_new_view
+      - camera_anchor_stability
+      - view_stability
+      - media_role_and_variant_dimensions
+      - current_version_pointer
+      - locator_refresh
+      - pixel_verification
+      - supersession_state
+      - pinned_media_version_references
+      - default_pointer_resolution
+      - relation_integrity
+      - garbage_collection_guard
+      - fetch_after_commit_verify
     candidate_axes: []
 
   - id: MULTI_REVISION_WORK_ITEM
