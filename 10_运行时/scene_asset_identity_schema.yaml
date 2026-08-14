@@ -1,20 +1,22 @@
 schema_id: EUSTIA_SCENE_ASSET_IDENTITY
-version: 1.0.0
+version: 1.1.0
 status: active
 confirmed_by_user: 2026-08-14
-scope: formal_scene_assets_camera_anchors_views_media_and_relations
+scope: formal_scene_assets_camera_anchors_views_logical_media_assets_media_versions_locators_and_relations
 
 purpose:
   - 为长期AI电影建立可追溯的场景空间身份系统
-  - 把场景、机位、视图、媒体文件和正反打关系拆成不同实体
+  - 把场景、机位、视图、逻辑媒体资产、实际媒体版本、文件位置和正反打关系拆成不同实体
   - 让导演系统按真实位置与绝对方位调用正式场景像素
-  - 避免依赖文件名、左右称呼、正反打称呼或旧语义ID猜方向
-  - 支持GitHub、ChatGPT Library、未来ComfyUI、Unreal、OpenUSD、OTIO等工具链
+  - 允许正式母图被反复修改而不破坏上层Scene、Camera Anchor、View、Asset或Relation引用
+  - 避免依赖文件名、左右称呼、正反打称呼、旧语义ID或同名覆盖猜方向和版本
+  - 支持GitHub、ChatGPT Library、未来ComfyUI、Unreal、OpenUSD、OTIO及其他存储迁移
 
 source_authority:
   world_topology: 05_场景与空间/00_项目地图文件.md
   scene_local_design: 05_场景与空间/场景与空间设定库.md
-  formal_media_registry: 06_视觉资产/视觉资产登记库.md
+  formal_logical_asset_registry: 06_视觉资产/视觉资产登记库.md
+  media_version_and_locator_resolver: 10_运行时/scene_media_resolver_manifest.yaml
   current_binding_state: 07_连续性与生产状态/连续性与当前生产状态.md
 
 world_frame:
@@ -35,7 +37,10 @@ identity_policy:
   semantics_must_not_be_inferred_from_machine_id: true
   persistent_legacy_id_mapping: forbidden
   git_history_is_legacy_history: true
-  storage_filename_default: "{asset_id}.{ext}"
+  stable_asset_identity_survives_pixel_revision: true
+  media_version_identity_is_immutable: true
+  locator_is_not_identity: true
+  storage_filename_default: "{version_id}.{ext}"
   binary_storage_filename_prefer_ascii: true
   chinese_binary_filename_allowed_but_not_canonical_identity: true
 
@@ -52,6 +57,11 @@ id_namespaces:
   media_asset:
     pattern: "EUS-AST-######"
     example: EUS-AST-000001
+    meaning: stable_logical_media_slot
+  media_version:
+    pattern: "EUS-VER-######"
+    example: EUS-VER-000001
+    meaning: immutable_pixel_revision
   relation:
     pattern: "EUS-REL-######"
     example: EUS-REL-000001
@@ -61,12 +71,14 @@ human_naming:
   camera_anchor_display_name: "{场景名}·{绝对位置描述}·机位{NN}"
   perspective_view_display_name: "{场景名}·{机位名}·朝{北|南|东|西}{视图职责}"
   top_view_display_name: "{场景名}·{北|南|东|西}朝上{顶视职责}"
-  media_display_name: "{view_display_name}·{媒体角色或光照状态}"
+  media_asset_display_name: "{view_display_name}·{媒体角色或时间/天气/光照职责}"
+  media_version_display_name: "{media_asset_display_name}·修订{revision_no}"
   rules:
     - 普通视图的方向描述摄影机光轴在水平面上的绝对朝向
     - 顶视图的方向描述画面顶部对应的世界绝对方位，不描述摄影机向下的光轴
     - “正打/反打/左视/右视”不得作为正式主方向名，只能作为关系或历史别名
     - “北侧机位”和“朝北视图”必须分开，前者是摄影机位置，后者是摄影机朝向
+    - 用户日常只需使用中文Asset显示名，不需要记Media Version编号
 
 cardinal_direction_model:
   perspective:
@@ -137,15 +149,15 @@ entities:
       - occlusion_notes
       - continuity_axis_id
       - default_media_asset_id
-    rule: view表示“从某个确定机位朝某个绝对方向看”的视觉槽，不等同具体PNG/JPG。
+    rule: view表示“从某个确定机位朝某个绝对方向看”的视觉槽，不等同具体PNG/JPG，也不等同某次修订版本。
   media_asset:
+    meaning: stable_logical_media_slot
     required:
       - asset_id
       - view_id
       - display_name_zh
       - media_role
       - status
-      - pixel_verified
     media_role_enum:
       - color_master
       - lighting_variant
@@ -156,21 +168,52 @@ entities:
       - video_reference
       - derived_preview
     optional:
-      - source_file_id
-      - library_locator
-      - storage_filename
-      - mime_type
-      - content_hash
       - lighting_state
       - weather_state
       - time_state
       - derived_from_asset_id
-      - provenance
       - rights_status
+      - notes
     rules:
-      - 同一view可以有多个时间、天气、光照或技术用途的media_asset
-      - 正式导演调用默认先解析view，再按连续性选择media_asset
-      - 无法实际打开正式像素时不得把语义相似候选图冒充该asset
+      - 同一view可以有多个承担不同时间、天气、光照或技术用途的media_asset
+      - media_asset是长期稳定的逻辑职责槽，不等同当前某一张实际文件
+      - 同一asset内部像素修订不改变asset_id
+      - 正式导演调用默认先解析view，再按连续性选择media_asset，再通过resolver解析current media_version
+  media_version:
+    meaning: immutable_pixel_revision
+    authority: 10_运行时/scene_media_resolver_manifest.yaml
+    required:
+      - version_id
+      - asset_id
+      - revision_no
+      - lifecycle_status
+      - content_hash
+      - pixel_verified
+    lifecycle_status_enum:
+      - pending_verification
+      - current
+      - superseded
+      - archived
+      - missing_binary
+      - rejected
+    optional:
+      - parent_version_id
+      - change_summary
+      - created_at
+      - source_file_id
+      - locators
+      - storage_filename
+      - mime_type
+      - provenance
+      - superseded_by_version_id
+    rules:
+      - version_id一旦分配不可复用到不同像素内容
+      - 一个active asset最多一个current版本
+      - current版本切换必须在新版本像素核验完成后进行
+      - 同一像素重新上传且content_hash相同，只更新locator，不创建新version
+      - 像素改变但Scene、Camera Anchor、View、media_role和variant职责不变时创建新version
+      - 时间、天气、光照职责或media_role发生有意变化时优先建立独立asset variant，而不是把并列变体伪装成版本修订
+      - Camera Anchor或View职责发生实质变化时必须建立新View或新Asset，不得伪装成旧Asset新版
   relation:
     required:
       - relation_id
@@ -203,6 +246,7 @@ entities:
         - 可额外记录axis_id、eyeline_target和screen_direction_constraint
 
 resolver:
+  manifest: 10_运行时/scene_media_resolver_manifest.yaml
   user_input_language: zh-CN
   order:
     - 解析用户中文地点、别名与绝对位置描述
@@ -210,15 +254,33 @@ resolver:
     - 根据人物站位、调度或用户描述确定camera_anchor
     - 根据朝北/朝南/朝东/朝西或顶视画面朝上方向确定view
     - 若用户要求正反打/互看/对位，查询relation，不自行猜反向资产
-    - 根据当前连续性的时间、天气、光照、损伤和默认职责选择media_asset
-    - 解析source_file_id/library_locator并实际打开正式像素
-    - 像素可访问时核验身份、方向、地标和构图后用于导演
+    - 根据当前连续性的时间、天气、光照、损伤和媒体职责选择media_asset
+    - 在resolver manifest中读取该asset的current_version_id
+    - 收集该version的verified locators并解析实际二进制
+    - 实际打开正式像素并在需要视觉判断时核验身份、方向、地标和构图
   forbidden_shortcuts:
     - 从storage_filename推断世界方向
     - 从legacy Asset ID中的NORTH/SOUTH/LEFT/RIGHT推断世界方向
     - 把正反打等同于简单方向取反
     - 在同方向存在多个机位时跳过camera_anchor
-    - 无像素访问时用相似候选图替代正式资产
+    - 把File ID或文件名当作Asset身份
+    - 通过删除旧文件并同名覆盖来维护版本正确性
+    - 用old→new→newer链式映射代替稳定asset_id和current_version指针
+    - 无像素访问时用相似候选图替代正式资产或正式版本
+
+media_revision_classification:
+  same_pixels_new_locator:
+    signal: content_hash相同且逻辑Asset相同
+    result: 保留version_id，仅新增或刷新locator
+  same_asset_new_revision:
+    signal: 像素改变但Scene、Camera Anchor、View、media_role和variant职责保持不变
+    result: 新建media_version，核验后移动current_version指针
+  new_variant_asset:
+    signal: 有意改变time_state、lighting_state、weather_state或media_role并需要并列保留
+    result: 同View下建立或解析新的asset_id，由其独立维护版本链
+  new_view_or_anchor:
+    signal: 摄影机位置、朝向职责、顶视朝上方向或View职责发生实质改变
+    result: 建立新的Camera Anchor/View/Asset，不作为旧Asset版本
 
 shot_binding:
   minimum_metadata:
@@ -227,27 +289,34 @@ shot_binding:
     - view_id
     - asset_id
   optional_metadata:
+    - media_version_id
     - relation_id
     - continuity_axis_id
     - lighting_state
     - time_state
   editorial_namespace: eustia_ai_film
-  rule: 后续进入OTIO/剪辑时间线时优先把上述ID写入namespaced metadata，而不是重新建立第二套资产身份。
+  rules:
+    - 普通导演与长期连续性默认绑定asset_id，以便正式母图升级后自动解析到current版本
+    - 已生成镜头、回归案例、复现任务或精确审计可以额外锁定media_version_id
+    - 显式锁定media_version_id的记录不得因current版本更新而自动改指向
+    - 后续进入OTIO/剪辑时间线时优先把上述ID写入namespaced metadata，而不是重新建立第二套资产身份
 
 interoperability:
   git:
-    policy: 中文canonical文档和display_name可正常使用UTF-8；二进制媒体存储文件名默认ASCII以降低跨平台工具链风险。
+    policy: 中文canonical文档和display_name可正常使用UTF-8；二进制媒体存储文件名默认ASCII version ID以降低跨平台工具链风险。
   openassetio:
     dependency_status: inspiration_only_not_required
     adopted_principles:
       - opaque_entity_identity
       - identity_separate_from_location
       - explicit_relationships
+      - version_or_location_change_must_not_force_upstream_identity_change
   openusd:
     dependency_status: future_adapter
     adopted_principles:
       - UTF-8可作为人类标签与路径信息
       - authored/resolved asset path与内部身份分离
+      - resolver负责逻辑引用到物理位置的解析
   unreal:
     dependency_status: future_adapter
     adopted_principles:
@@ -266,20 +335,40 @@ legacy_scene_asset_migration:
   do_not_bulk_rename_unverified_assets: true
   persistent_old_to_new_mapping_forbidden: true
   transaction_steps:
-    - FETCH当前PROJECT_INDEX、地图、场景库、资产登记、连续性及所有命中旧ID的canonical文件
+    - FETCH当前PROJECT_INDEX、地图、场景库、资产登记、identity schema、resolver manifest、连续性及所有命中旧ID的canonical文件
     - 实际打开该正式图片像素并与用户核对地点、机位、朝向、可见地标和配对关系
-    - 分配新的opaque scene/camera_anchor/view/media/relation ID（仅对本单元需要的实体）
+    - 分配新的opaque scene/camera_anchor/view/asset/relation ID（仅对本单元需要的实体）
+    - 为当前实际像素分配media_version_id并记录content_hash、pixel_verified和verified locator
+    - 把asset_id的current_version_id写入resolver manifest
     - 写入中文display_name_zh和完整空间元数据
     - 全仓搜索旧ID、旧正式名和旧方向别名的活动引用
     - 串行更新所有活动canonical引用
     - FETCH AGAIN逐文件回读
-    - 验证所有新ID可解析、关系端点存在、默认指针有效
+    - 验证所有新ID可解析、关系端点存在、默认指针有效、current_version可解析
     - 验证旧ID在活动canonical中的引用计数为0
     - 关闭事务；旧身份仅保留在Git历史，不建立长期resolver映射
   partial_failure_policy:
     - 不得宣布迁移完成
     - 在连续性中记录blocked事务和待恢复文件
     - 下一项目回合优先恢复并关闭事务
+
+formal_asset_replacement:
+  principle: replace_current_version_not_asset_identity
+  steps:
+    - 解析用户指定的现有asset_id
+    - 实际打开新上传媒体
+    - 判断same_pixels_new_locator / same_asset_new_revision / new_variant_asset / new_view_or_anchor
+    - same_pixels_new_locator只更新manifest locator
+    - same_asset_new_revision创建新media_version并先置pending_verification
+    - 核验像素、空间、方向、职责和连续性
+    - 核验通过后原子式切换current_version指针并把旧current标记superseded
+    - 检查默认指针、Relation、当前镜头与回归绑定
+    - FETCH AGAIN验证
+  deletion_policy:
+    - 普通替换不物理删除旧版本
+    - 旧版本默认superseded
+    - 只有用户明确要求删除且通过无活动引用、无证据/回归需求和可恢复性检查后才允许执行物理删除
+    - 当前工具无对应存储删除能力时只更新生命周期状态，不得声称物理删除完成
 
 validation:
   active_scene_asset_requires:
@@ -288,23 +377,28 @@ validation:
     - valid_view_id
     - valid_asset_id
     - chinese_display_name
-    - pixel_verified_true_for_final_direction_binding
-    - resolvable_media_locator_or_explicit_unavailable_state
+    - exactly_one_current_media_version_or_explicit_migration_state
+    - current_version_pixel_verified_true
+    - current_version_has_resolvable_locator_or_explicit_unavailable_state
   referential_integrity:
     - all_default_pointers_resolve
     - all_relation_members_resolve
     - same_anchor_relations_share_anchor
     - reciprocal_relation_is_bidirectionally_resolvable
+    - all_current_version_pointers_resolve
+    - every_media_version_belongs_to_existing_asset
+    - no_two_current_versions_for_same_asset
     - no_direction_inference_from_opaque_id
     - no_active_reference_to_retired_legacy_id_after_transaction_close
   duplicate_guard:
-    key: [scene_id, camera_anchor_id, view_class, facing_or_screen_top_cardinal, media_role, lighting_state, time_state]
-    rule: 相同key只能有一个current_default；其他必须显式alternate或variant。
+    key: [scene_id, camera_anchor_id, view_class, facing_or_screen_top_cardinal, media_role, lighting_state, weather_state, time_state]
+    rule: 相同key只能有一个current_default Asset；同一Asset的像素修改进入version链，不创建重复Asset。
   director_gate:
     - 涉及正反打、空间方向、道路、桥上下、人物或摄影机移动时必须读取地图
-    - 涉及正式场景图时必须读取本schema与视觉资产登记库
-    - 调用资产前先解析camera_anchor与view，再解析media_asset
+    - 涉及正式场景图时必须读取本schema、视觉资产登记库与resolver manifest
+    - 调用资产前先解析camera_anchor与view，再解析media_asset和current media_version
 
 research_basis:
   evidence_record: ASSET-IDENTITY-SYSTEM-2026-08-14
-  maturity_note: 用户确认的项目架构为active；外部标准仅提供互操作设计依据，不自动把第三方具体实现变成本项目依赖。
+  versioning_extension_record: ASSET-VERSION-RESOLVER-2026-08-14
+  maturity_note: 用户确认的项目架构与版本解析扩展为active；外部标准只提供互操作设计依据，不自动把第三方具体实现变成本项目依赖。
