@@ -230,6 +230,43 @@ cases:
       - fetch_after_commit_verify
       - memory_not_substitute_for_registry
 
+  - id: REG-SCENE-ASSET-IDENTITY-001
+    title: 正式场景资产必须通过Scene-CameraAnchor-View-Media-Relation身份链解析且重命名不破坏引用
+    must_preserve:
+      - 用户层正式显示名使用中文
+      - machine ID使用ASCII opaque identity且不编码方向或左右语义
+      - 同一场景同一朝向允许存在多个不同Camera Anchor
+      - Camera Anchor位置与View摄影机朝向不得混为一个字段
+      - 普通View只用N/S/E/W绝对方向作为主方向并可用yaw_offset记录精确偏角
+      - 顶视View使用screen_top_cardinal表示北朝上南朝上东朝上西朝上
+      - 正打反打同机位180跨机位互看和剪辑正反打使用显式Relation绑定不得仅靠方向反转猜测
+      - 导演调用顺序为map→scene→camera_anchor→view→relation_if_needed→media_asset→实际像素
+      - 正式Media Asset保存可解析locator并在最终方向绑定前完成pixel_verified
+      - 无法打开正式像素时不得使用语义相似候选图冒充
+      - 旧语义scene registry key逐张像素核验后一次性迁移为opaque ID
+      - 迁移关闭后活动canonical中旧key引用计数必须为0且不建立长期old_to_new resolver映射
+      - 中文display name改动不得导致machine identity变化
+      - binary storage filename默认使用ASCII machine ID以降低跨工具链路径风险
+      - 世界东南西北不得直接假设等同Unreal或其他DCC的XYZ轴
+    checks:
+      - project_index_schema_registered
+      - map_authority
+      - scene_asset_identity_schema_loaded
+      - opaque_id_validation
+      - camera_anchor_resolution
+      - view_direction_validation
+      - top_view_screen_orientation_validation
+      - relation_endpoint_validation
+      - pair_relation_is_explicit
+      - pixel_verification_gate
+      - media_locator_resolution
+      - default_pointer_resolution
+      - duplicate_default_guard
+      - repo_wide_reference_search_before_migration
+      - old_reference_zero_after_transaction_close
+      - fetch_after_each_serial_write
+      - final_fetch_verify
+
   - id: REG-SOURCE-001
     title: 旧版总纲不得夺权
     must_preserve:
