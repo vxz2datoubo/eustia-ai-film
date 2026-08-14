@@ -10,6 +10,7 @@ read_sets:
       scenes: 场景与空间设定库#named_scene
       map: 00_项目地图文件#required_for_spatial_direction_camera_orientation_movement
       scene_asset_identity: scene_asset_identity_schema#formal_scene_asset_camera_anchor_view_pair_or_direction_sensitive
+      scene_media_resolver: scene_media_resolver_manifest#formal_scene_pixel_version_locator_or_reproducibility_sensitive
       assets: 视觉资产登记#bound_assets
       sound: 声音导演系统#sound_music_song_dialogue_foley_mix_relevant
       suno_lexicon: SUNO提示词词库与编译映射#when_suno_prompt_terms_vocal_structure_or_style_compilation
@@ -61,12 +62,25 @@ read_sets:
     always:
       - PROJECT_INDEX.yaml
       - scene_asset_identity_schema
+      - scene_media_resolver_manifest
       - 视觉资产登记
     conditional:
       - 00_项目地图文件#direction_or_topology_sensitive_assets
       - 场景与空间设定库
       - 角色与表演设定库
       - 连续性与当前生产状态
+
+  asset_replacement:
+    always:
+      - PROJECT_INDEX.yaml
+      - scene_asset_identity_schema
+      - scene_media_resolver_manifest
+      - 视觉资产登记
+      - 连续性与当前生产状态#asset_binding_state
+    conditional:
+      map: 00_项目地图文件#when_camera_anchor_view_direction_or_topology_may_change
+      scene: 场景与空间设定库#when_scene_design_or_view_duty_may_change
+      regression: director_regression_cases#when_existing_version_is_pinned_by_eval_or_reproducibility
 
   system_research:
     always:
@@ -77,6 +91,7 @@ read_sets:
       - UNKNOWN_REGISTRY
     conditional:
       scene_asset_identity: scene_asset_identity_schema#asset_identity_camera_anchor_view_relation_or_interop_research
+      scene_media_resolver: scene_media_resolver_manifest#media_version_locator_migration_or_retrieval_research
       sound: 声音导演系统#when_sound_music_song_or_audio_domain
       suno_lexicon: SUNO提示词词库与编译映射#when_suno_prompt_or_music_generation_domain
       sound_evidence: 声音导演与SUNO证据索引#when_sound_music_song_or_audio_domain
@@ -102,6 +117,7 @@ read_sets:
       scenes: 场景与空间设定库#named_scene
       map: 00_项目地图文件#spatial_or_camera_direction_sensitive
       scene_asset_identity: scene_asset_identity_schema#formal_scene_asset_or_camera_anchor_sensitive
+      scene_media_resolver: scene_media_resolver_manifest#formal_scene_media_version_or_locator_sensitive
       assets: 视觉资产登记#bound_assets
       continuity: 连续性与当前生产状态#relevant_work_item
       evidence: 优秀提示词案例学习证据索引#K2_K3_research_or_method_validation
@@ -115,6 +131,8 @@ rules:
   director_task_must_read_project_index: true
   spatial_task_must_read_map: true
   formal_scene_asset_task_must_read_scene_asset_identity_schema: true
+  formal_scene_media_resolution_must_read_resolver_manifest: true
+  formal_scene_asset_replacement_must_classify_version_variant_or_new_view: true
   sound_relevant_task_must_read_sound_director: true
   suno_prompt_compilation_must_read_lexicon: true
   golden_prompt_explicit_user_verdict_must_run_two_step_ingestion: true
