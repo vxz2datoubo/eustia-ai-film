@@ -390,3 +390,68 @@ cases:
       - trajectory_final_delta
       - maturity_gate
       - regression_gate
+
+  - id: REG-SOAC-001
+    title: Screen Observable & Audible Compiler 受控导演编译回归
+    maturity: candidate
+    scene_evidence:
+      work_item: KAIM-HIGH-SEARCH-30S
+      status: test_spec_only_no_SOAC_generation_result
+    must_preserve:
+      - canonical事实先进入WorldStateIR但不自动成为当前shot画面授权
+      - EventGraphIR绑定agent action target instrument support_contact与状态变化
+      - BlockingIR先服从人物目标关系和空间因果再决定摄影机
+      - 每个ShotPlanIR有entry_state exit_state和next_shot_contract
+      - VisibleIR严格服从SHOT-SCOPE-001的camera_state_visible_set_audible_set和in_shot_reveal
+      - AudibleIR与VisibleIR平级且VO说话者不自动视觉实体化
+      - SoundDirectorIR继续是唯一声音方法authority
+      - TransitionContract解析Shot_A_exit_state到Shot_B_entry_state
+      - 最终提示只输出最小充分执行信息而非完整IR或内部分析
+      - ReverseObservation可由人工或AI辅助输入但不得声称全自动grader已实现
+      - SOAC保持candidate直至真实受控生成验证
+    checks:
+      - world_truth_vs_shot_observable_truth
+      - event_actor_target_binding
+      - support_contact_validation
+      - blocking_spatial_causality
+      - visible_set_fidelity
+      - audible_set_fidelity
+      - VO_visual_leak
+      - reveal_control
+      - transition_continuity
+      - constraint_autonomy_contract
+      - model_adapter_revalidation_boundary
+      - minimal_execution_prompt
+      - reverse_observation_boundary
+      - static_compiler_check_codes
+    targeted_eval:
+      method: controlled_A_B_compare
+      A: 当前传统完整导演流程
+      B: SOAC编译流程
+      controls:
+        - same_screenplay
+        - same_assets
+        - same_model_version
+        - same_generation_settings
+        - same_duration
+        - same_story_goal
+      compare:
+        - instruction_following
+        - visible_set_fidelity
+        - audible_set_fidelity
+        - identity
+        - spatial_topology
+        - subject_action_binding
+        - support_contact
+        - body_mechanics
+        - event_order
+        - reveal_control
+        - VO_visual_leakage
+        - camera_behavior
+        - performance_readability
+        - transition
+        - final_state
+        - unwanted_invention
+        - prompt_complexity
+        - repair_iterations
+      promotion_gate: 真实生成证明B改善目标维度且未显著增加scope_leak_constraint_overload或新严重失败后，才可考虑scene_verified。

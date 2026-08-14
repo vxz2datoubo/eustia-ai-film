@@ -385,3 +385,43 @@ routes:
       - preserve_accepted_constraints
       - checkpoint
       - final_consolidation
+
+  - id: SOAC_COMPILER_INVOCATION
+    symptoms:
+      - 完整导演
+      - 剧情转镜头
+      - 屏幕可见
+      - 屏幕可听
+      - 前景中景后景
+      - 人物动作表情方位不清
+      - 谁说台词对谁说怎么说不清
+      - 多人物动作绑定风险
+      - VO实体化
+      - 镜头间状态承接不清
+      - AI需要自行猜测空间接触动作声音
+      - 生成后无法精确判断失败维度
+    maturity: candidate
+    mandatory_reads:
+      - 10_运行时/screen_observable_audible_ir_schema.yaml
+      - 01_AI电影系统/AI电影系统.md#SOAC-001
+      - 01_AI电影系统/声音导演系统.md#relevant_sections_only
+    mandatory_scans:
+      - world_state
+      - character_knowledge_boundary
+      - event_graph
+      - blocking
+      - screen_observable
+      - audible_scope
+      - shot_scope
+      - transition_contract
+      - constraint_autonomy
+      - model_adapter
+      - static_compiler_checks
+      - final_state
+    candidate_axes:
+      - world_truth_vs_shot_truth
+      - visible_audible_IR
+      - minimal_execution_compiler
+      - reverse_observation
+      - targeted_repair
+      - controlled_A_B_validation
