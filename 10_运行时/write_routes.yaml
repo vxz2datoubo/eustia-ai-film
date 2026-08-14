@@ -9,6 +9,7 @@ routes:
   character_behavior_dialogue_relationship: 04_角色与表演/角色与表演设定库.md
   scene_local_design_material_light_props: 05_场景与空间/场景与空间设定库.md
   scene_topology_map_movement: 05_场景与空间/00_项目地图文件.md
+  scene_asset_identity_schema: 10_运行时/scene_asset_identity_schema.yaml
   formal_visual_asset: 06_视觉资产/视觉资产登记库.md
   current_shot_production_state: 07_连续性与生产状态/连续性与当前生产状态.md
   revision_checkpoint_current_state: 07_连续性与生产状态/连续性与当前生产状态.md
@@ -102,3 +103,4 @@ rules:
   golden_prompt_source_verbatim_cannot_be_replaced_by_normalized_summary: true
   golden_prompt_exact_demo_case_cannot_be_sole_holdout_eval: true
   golden_prompt_case_replay_must_be_targeted_and_bounded: true
+  scene_asset_identity_schema_controls_scene_camera_view_media_relation_identifiers: true
