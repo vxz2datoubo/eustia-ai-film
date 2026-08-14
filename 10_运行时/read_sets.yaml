@@ -9,6 +9,7 @@ read_sets:
       characters: 角色与表演设定库#named_characters
       scenes: 场景与空间设定库#named_scene
       map: 00_项目地图文件#required_for_spatial_direction_camera_orientation_movement
+      scene_asset_identity: scene_asset_identity_schema#formal_scene_asset_camera_anchor_view_pair_or_direction_sensitive
       assets: 视觉资产登记#bound_assets
       sound: 声音导演系统#sound_music_song_dialogue_foley_mix_relevant
       suno_lexicon: SUNO提示词词库与编译映射#when_suno_prompt_terms_vocal_structure_or_style_compilation
@@ -59,6 +60,7 @@ read_sets:
   asset_registration:
     always:
       - PROJECT_INDEX.yaml
+      - scene_asset_identity_schema
       - 视觉资产登记
     conditional:
       - 00_项目地图文件#direction_or_topology_sensitive_assets
@@ -74,6 +76,7 @@ read_sets:
       - 官方资料与证据索引
       - UNKNOWN_REGISTRY
     conditional:
+      scene_asset_identity: scene_asset_identity_schema#asset_identity_camera_anchor_view_relation_or_interop_research
       sound: 声音导演系统#when_sound_music_song_or_audio_domain
       suno_lexicon: SUNO提示词词库与编译映射#when_suno_prompt_or_music_generation_domain
       sound_evidence: 声音导演与SUNO证据索引#when_sound_music_song_or_audio_domain
@@ -98,6 +101,7 @@ read_sets:
       characters: 角色与表演设定库#named_characters
       scenes: 场景与空间设定库#named_scene
       map: 00_项目地图文件#spatial_or_camera_direction_sensitive
+      scene_asset_identity: scene_asset_identity_schema#formal_scene_asset_or_camera_anchor_sensitive
       assets: 视觉资产登记#bound_assets
       continuity: 连续性与当前生产状态#relevant_work_item
       evidence: 优秀提示词案例学习证据索引#K2_K3_research_or_method_validation
@@ -110,6 +114,7 @@ rules:
   global_expand_on_route_uncertainty: true
   director_task_must_read_project_index: true
   spatial_task_must_read_map: true
+  formal_scene_asset_task_must_read_scene_asset_identity_schema: true
   sound_relevant_task_must_read_sound_director: true
   suno_prompt_compilation_must_read_lexicon: true
   golden_prompt_explicit_user_verdict_must_run_two_step_ingestion: true
