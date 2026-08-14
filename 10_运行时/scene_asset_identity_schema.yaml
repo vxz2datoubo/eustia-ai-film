@@ -1,0 +1,310 @@
+schema_id: EUSTIA_SCENE_ASSET_IDENTITY
+version: 1.0.0
+status: active
+confirmed_by_user: 2026-08-14
+scope: formal_scene_assets_camera_anchors_views_media_and_relations
+
+purpose:
+  - 为长期AI电影建立可追溯的场景空间身份系统
+  - 把场景、机位、视图、媒体文件和正反打关系拆成不同实体
+  - 让导演系统按真实位置与绝对方位调用正式场景像素
+  - 避免依赖文件名、左右称呼、正反打称呼或旧语义ID猜方向
+  - 支持GitHub、ChatGPT Library、未来ComfyUI、Unreal、OpenUSD、OTIO等工具链
+
+source_authority:
+  world_topology: 05_场景与空间/00_项目地图文件.md
+  scene_local_design: 05_场景与空间/场景与空间设定库.md
+  formal_media_registry: 06_视觉资产/视觉资产登记库.md
+  current_binding_state: 07_连续性与生产状态/连续性与当前生产状态.md
+
+world_frame:
+  id: EUSTIA_WORLD_CARDINAL_V1
+  north_definition: 教堂钟楼 / 关所侧
+  south_definition: 绯灯街 / 蔷薇酒馆侧
+  east_west_definition: 服从canonical地图的绝对东西关系
+  primary_cardinals: [N, S, E, W]
+  tool_axis_independent: true
+  rule: 世界东南西北不直接等同任何DCC或引擎的XYZ轴；接入Unreal/OpenUSD等工具时使用显式坐标变换适配器。
+
+identity_policy:
+  human_facing_language: zh-CN
+  canonical_display_names_use_chinese: true
+  machine_ids_use_ascii: true
+  machine_ids_are_opaque: true
+  machine_ids_are_immutable_after_assignment: true
+  semantics_must_not_be_inferred_from_machine_id: true
+  persistent_legacy_id_mapping: forbidden
+  git_history_is_legacy_history: true
+  storage_filename_default: "{asset_id}.{ext}"
+  binary_storage_filename_prefer_ascii: true
+  chinese_binary_filename_allowed_but_not_canonical_identity: true
+
+id_namespaces:
+  scene:
+    pattern: "EUS-SCN-######"
+    example: EUS-SCN-000001
+  camera_anchor:
+    pattern: "EUS-CAM-######"
+    example: EUS-CAM-000001
+  view:
+    pattern: "EUS-VIEW-######"
+    example: EUS-VIEW-000001
+  media_asset:
+    pattern: "EUS-AST-######"
+    example: EUS-AST-000001
+  relation:
+    pattern: "EUS-REL-######"
+    example: EUS-REL-000001
+
+human_naming:
+  scene_display_name: "{场景名}"
+  camera_anchor_display_name: "{场景名}·{绝对位置描述}·机位{NN}"
+  perspective_view_display_name: "{场景名}·{机位名}·朝{北|南|东|西}{视图职责}"
+  top_view_display_name: "{场景名}·{北|南|东|西}朝上{顶视职责}"
+  media_display_name: "{view_display_name}·{媒体角色或光照状态}"
+  rules:
+    - 普通视图的方向描述摄影机光轴在水平面上的绝对朝向
+    - 顶视图的方向描述画面顶部对应的世界绝对方位，不描述摄影机向下的光轴
+    - “正打/反打/左视/右视”不得作为正式主方向名，只能作为关系或历史别名
+    - “北侧机位”和“朝北视图”必须分开，前者是摄影机位置，后者是摄影机朝向
+
+cardinal_direction_model:
+  perspective:
+    facing_cardinal_enum: [N, S, E, W]
+    yaw_offset_deg:
+      optional: true
+      purpose: 在不新增东北等主方向标签的前提下记录相对主方向的精确偏角
+      recommended_range: [-45, 45]
+    pitch_deg: optional
+    roll_deg: optional
+  top_view:
+    screen_top_cardinal_enum: [N, S, E, W]
+    camera_vertical_facing: down
+    projection_enum: [orthographic, perspective_oblique]
+
+entities:
+  scene:
+    required:
+      - scene_id
+      - display_name_zh
+      - map_node
+      - status
+    optional:
+      - aliases_zh
+      - function
+      - adjacent_scene_ids
+      - default_view_ids
+  camera_anchor:
+    required:
+      - camera_anchor_id
+      - scene_id
+      - display_name_zh
+      - world_position_relation
+      - status
+    optional:
+      - map_xy_normalized
+      - elevation_m
+      - camera_height_m
+      - exact_transform
+      - visible_region_hint
+    rule: 同一场景同一朝向允许有多个不同机位，必须用不同camera_anchor_id区分。
+  view:
+    required:
+      - view_id
+      - scene_id
+      - camera_anchor_id
+      - display_name_zh
+      - view_class
+      - status
+    view_class_enum:
+      - perspective
+      - top_orthographic
+      - top_oblique
+      - material_closeup
+      - detail
+    perspective_required_when_applicable:
+      - facing_cardinal
+    top_required_when_applicable:
+      - screen_top_cardinal
+    optional:
+      - yaw_offset_deg
+      - pitch_deg
+      - roll_deg
+      - projection
+      - focal_length_mm
+      - lens_intent
+      - visible_landmarks
+      - occlusion_notes
+      - continuity_axis_id
+      - default_media_asset_id
+    rule: view表示“从某个确定机位朝某个绝对方向看”的视觉槽，不等同具体PNG/JPG。
+  media_asset:
+    required:
+      - asset_id
+      - view_id
+      - display_name_zh
+      - media_role
+      - status
+      - pixel_verified
+    media_role_enum:
+      - color_master
+      - lighting_variant
+      - white_model
+      - depth
+      - mask
+      - material_reference
+      - video_reference
+      - derived_preview
+    optional:
+      - source_file_id
+      - library_locator
+      - storage_filename
+      - mime_type
+      - content_hash
+      - lighting_state
+      - weather_state
+      - time_state
+      - derived_from_asset_id
+      - provenance
+      - rights_status
+    rules:
+      - 同一view可以有多个时间、天气、光照或技术用途的media_asset
+      - 正式导演调用默认先解析view，再按连续性选择media_asset
+      - 无法实际打开正式像素时不得把语义相似候选图冒充该asset
+  relation:
+    required:
+      - relation_id
+      - relation_type
+      - member_view_ids
+      - status
+    relation_type_enum:
+      - same_anchor_180
+      - same_anchor_90
+      - reciprocal_cross_anchor
+      - editorial_shot_reverse_shot
+      - top_view_orientation_pair
+      - continuity_match
+    optional:
+      - axis_id
+      - eyeline_target
+      - screen_direction_constraint
+      - notes
+    invariants:
+      same_anchor_180:
+        - 两个view使用同一个camera_anchor_id
+        - 水平朝向近似相反
+        - 关系必须双向可解析
+      reciprocal_cross_anchor:
+        - 两个view使用不同camera_anchor_id
+        - 两个机位位于可互相建立空间关系的位置
+        - 不得仅因为一个朝北一个朝南就自动判定为互看对位
+      editorial_shot_reverse_shot:
+        - 必须显式绑定，不得仅靠方向名称自动推断
+        - 可额外记录axis_id、eyeline_target和screen_direction_constraint
+
+resolver:
+  user_input_language: zh-CN
+  order:
+    - 解析用户中文地点、别名与绝对位置描述
+    - 从canonical地图确定scene
+    - 根据人物站位、调度或用户描述确定camera_anchor
+    - 根据朝北/朝南/朝东/朝西或顶视画面朝上方向确定view
+    - 若用户要求正反打/互看/对位，查询relation，不自行猜反向资产
+    - 根据当前连续性的时间、天气、光照、损伤和默认职责选择media_asset
+    - 解析source_file_id/library_locator并实际打开正式像素
+    - 像素可访问时核验身份、方向、地标和构图后用于导演
+  forbidden_shortcuts:
+    - 从storage_filename推断世界方向
+    - 从legacy Asset ID中的NORTH/SOUTH/LEFT/RIGHT推断世界方向
+    - 把正反打等同于简单方向取反
+    - 在同方向存在多个机位时跳过camera_anchor
+    - 无像素访问时用相似候选图替代正式资产
+
+shot_binding:
+  minimum_metadata:
+    - scene_id
+    - camera_anchor_id
+    - view_id
+    - asset_id
+  optional_metadata:
+    - relation_id
+    - continuity_axis_id
+    - lighting_state
+    - time_state
+  editorial_namespace: eustia_ai_film
+  rule: 后续进入OTIO/剪辑时间线时优先把上述ID写入namespaced metadata，而不是重新建立第二套资产身份。
+
+interoperability:
+  git:
+    policy: 中文canonical文档和display_name可正常使用UTF-8；二进制媒体存储文件名默认ASCII以降低跨平台工具链风险。
+  openassetio:
+    dependency_status: inspiration_only_not_required
+    adopted_principles:
+      - opaque_entity_identity
+      - identity_separate_from_location
+      - explicit_relationships
+  openusd:
+    dependency_status: future_adapter
+    adopted_principles:
+      - UTF-8可作为人类标签与路径信息
+      - authored/resolved asset path与内部身份分离
+  unreal:
+    dependency_status: future_adapter
+    adopted_principles:
+      - 大型项目尽早统一命名
+      - 描述性信息适合放metadata而非全部挤进文件名
+      - 项目世界方位不得直接假设等同Unreal XYZ轴
+  opentimelineio:
+    dependency_status: future_adapter
+    adopted_principles:
+      - clip/timeline对象可携带namespaced metadata
+      - media reference与剪辑语义对象分离
+
+legacy_scene_asset_migration:
+  mode: one_asset_unit_at_a_time
+  pixel_verification_required_before_final_identity_migration: true
+  do_not_bulk_rename_unverified_assets: true
+  persistent_old_to_new_mapping_forbidden: true
+  transaction_steps:
+    - FETCH当前PROJECT_INDEX、地图、场景库、资产登记、连续性及所有命中旧ID的canonical文件
+    - 实际打开该正式图片像素并与用户核对地点、机位、朝向、可见地标和配对关系
+    - 分配新的opaque scene/camera_anchor/view/media/relation ID（仅对本单元需要的实体）
+    - 写入中文display_name_zh和完整空间元数据
+    - 全仓搜索旧ID、旧正式名和旧方向别名的活动引用
+    - 串行更新所有活动canonical引用
+    - FETCH AGAIN逐文件回读
+    - 验证所有新ID可解析、关系端点存在、默认指针有效
+    - 验证旧ID在活动canonical中的引用计数为0
+    - 关闭事务；旧身份仅保留在Git历史，不建立长期resolver映射
+  partial_failure_policy:
+    - 不得宣布迁移完成
+    - 在连续性中记录blocked事务和待恢复文件
+    - 下一项目回合优先恢复并关闭事务
+
+validation:
+  active_scene_asset_requires:
+    - valid_scene_id
+    - valid_camera_anchor_id
+    - valid_view_id
+    - valid_asset_id
+    - chinese_display_name
+    - pixel_verified_true_for_final_direction_binding
+    - resolvable_media_locator_or_explicit_unavailable_state
+  referential_integrity:
+    - all_default_pointers_resolve
+    - all_relation_members_resolve
+    - same_anchor_relations_share_anchor
+    - reciprocal_relation_is_bidirectionally_resolvable
+    - no_direction_inference_from_opaque_id
+    - no_active_reference_to_retired_legacy_id_after_transaction_close
+  duplicate_guard:
+    key: [scene_id, camera_anchor_id, view_class, facing_or_screen_top_cardinal, media_role, lighting_state, time_state]
+    rule: 相同key只能有一个current_default；其他必须显式alternate或variant。
+  director_gate:
+    - 涉及正反打、空间方向、道路、桥上下、人物或摄影机移动时必须读取地图
+    - 涉及正式场景图时必须读取本schema与视觉资产登记库
+    - 调用资产前先解析camera_anchor与view，再解析media_asset
+
+research_basis:
+  evidence_record: ASSET-IDENTITY-SYSTEM-2026-08-14
+  maturity_note: 用户确认的项目架构为active；外部标准仅提供互操作设计依据，不自动把第三方具体实现变成本项目依赖。
