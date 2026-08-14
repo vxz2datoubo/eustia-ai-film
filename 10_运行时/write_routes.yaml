@@ -10,6 +10,7 @@ routes:
   scene_local_design_material_light_props: 05_场景与空间/场景与空间设定库.md
   scene_topology_map_movement: 05_场景与空间/00_项目地图文件.md
   scene_asset_identity_schema: 10_运行时/scene_asset_identity_schema.yaml
+  scene_media_version_locator_resolution: 10_运行时/scene_media_resolver_manifest.yaml
   formal_visual_asset: 06_视觉资产/视觉资产登记库.md
   current_shot_production_state: 07_连续性与生产状态/连续性与当前生产状态.md
   revision_checkpoint_current_state: 07_连续性与生产状态/连续性与当前生产状态.md
@@ -34,6 +35,27 @@ write_protocol:
   - fetch_again
   - verify_new_content_and_status
   - report_committed_only_after_verification
+
+scene_media_transaction_policy:
+  logical_asset_change:
+    target: 06_视觉资产/视觉资产登记库.md
+    includes:
+      - asset_identity
+      - view_binding
+      - media_role
+      - variant_duty
+      - default_pointer
+      - user_confirmation
+  media_version_or_locator_change:
+    target: 10_运行时/scene_media_resolver_manifest.yaml
+    includes:
+      - current_version_pointer
+      - media_version_history
+      - content_hash
+      - locator_set
+      - pixel_verification
+      - supersession_state
+  atomicity_rule: Asset职责与Version/Locator同时变化时必须串行写入两个唯一主档并最终共同回读；任一分支失败不得宣布完整替换完成。
 
 canonical_learning_gate:
   principle: maturity_controls_promotion_not_registration
@@ -103,4 +125,5 @@ rules:
   golden_prompt_source_verbatim_cannot_be_replaced_by_normalized_summary: true
   golden_prompt_exact_demo_case_cannot_be_sole_holdout_eval: true
   golden_prompt_case_replay_must_be_targeted_and_bounded: true
-  scene_asset_identity_schema_controls_scene_camera_view_media_relation_identifiers: true
+  scene_asset_identity_schema_controls_scene_camera_view_asset_version_relation_identifiers: true
+  scene_media_resolver_manifest_controls_scene_asset_current_version_and_locator_resolution: true
