@@ -117,6 +117,18 @@ static_checks:
   INFO:
     - NEEDS_MODEL_ADAPTER_REVALIDATION
     - REVERSE_OBSERVATION_MANUAL_OR_AI_ASSISTED
+  applicability:
+    UNBOUND_ACTION_TARGET:
+      trigger: only_when_action_semantics_require_a_target_or_affected_object
+      examples: [strike, hand_over, pull, push, point_at, inspect, pursue, open_or_close_an_object]
+      non_trigger: self_contained_actions_without_a_semantic_target_or_affected_object
+      severity_when_triggered: ERROR
+    MISSING_SUPPORT_OR_CONTACT:
+      trigger: only_when_physical_validity_depends_on_support_contact_grasp_step_collision_force_carry_or_landing_relation
+      examples: [climb, grab, step, jump, strike, collide, lift, carry, land, pull_or_push]
+      non_trigger: actions_whose_physical_validity_does_not_depend_on_a_specific_support_or_contact_relation
+      severity_when_triggered: ERROR
+      guard: applicability_limits_do_not_reduce_check_strength_for_physical_actions_that_require_the_relation
   gate: severe_ERROR_must_not_enter_formal_generation_without_targeted_repair_or_explicit_override
 
 reverse_compiler:
