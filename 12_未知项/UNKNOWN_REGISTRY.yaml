@@ -138,3 +138,30 @@ unknowns:
       safe_default: 案例保留历史 provenance，技能抽取时显式标注 model_or_tool_dependency；版本变化只使相关 version-bound lesson 进入 needs_revalidation，不删除稳定导演原则。
     next_action: 发生大版本更新或同提示在新版本明显漂移时，对代表性 Golden Cases 做 targeted revalidation，并记录哪些变量稳定、哪些变量需改写。
     status: open
+
+  - id: U-SOAC-IR-GRANULARITY-001
+    question: SOAC IR 多细最有利于导演准确度，而不会带来上下文或约束过载
+    impact: 字段不足会使世界事件调度与可见可听合同重新混写；字段过多可能压缩模型执行空间并增加编译维护成本。
+    current_hypothesis:
+      status: candidate_unvalidated
+      safe_default: 只在完整导演、剧情转镜头、AI执行编译、可见可听诊断、反向验收或编译器回归时按需读取schema；最终模型提示只保留最小充分执行字段。
+    next_action: 在REG-SOAC-001及至少一个不同任务中比较最小必要IR、过细IR与直接提示的生成质量、scope leak、constraint overload、prompt complexity和repair iterations。
+    status: open
+
+  - id: U-SOAC-ADAPTER-001
+    question: 不同模型和版本真正应该消费 SOAC 的哪些字段
+    impact: 若把模型私有接口或提示词习惯误写进SOAC核心，会使模型升级时导演方法陈旧或错误迁移。
+    current_hypothesis:
+      status: candidate_unvalidated
+      safe_default: SOAC核心保持模型无关；Seedance、Veo、Runway、H3及未来模型只通过adapter声明能力、参考、音频、摄影机、编辑、延长与negative prompt语义，版本变化进入needs_revalidation。
+    next_action: 为每个实际使用模型记录adapter capability并在模型大版本变化后用同一SOAC合同做targeted revalidation。
+    status: open
+
+  - id: U-SOAC-REVERSE-001
+    question: 人工或AI辅助反向观察与未来自动视觉音频grader之间，什么组合最可靠
+    impact: 未校准自动grader可能把表面指令遵循误当成导演成功，或遗漏身份、空间、表演、声音来源和转场失败。
+    current_hypothesis:
+      status: candidate_unvalidated
+      safe_default: 当前reverse compiler只接受人工或AI辅助观察作为candidate输入；自动grader只做诊断，不自动晋级maturity或覆盖用户导演判断。
+    next_action: 用用户已确认的真实生成样本比较人工、AI辅助和自动grader对identity space action_binding contact event_order performance camera audio transition与final_state的agreement。
+    status: open

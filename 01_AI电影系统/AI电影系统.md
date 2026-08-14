@@ -556,6 +556,19 @@ writeback_status:
 - relation to SHOT-SCOPE-001：`SEQUENCE-CONTEXT` 负责“这段为什么这样运作、模型可以据此自然补什么”；`SHOT-SCOPE` 负责“这一镜此刻具体能看见和听见什么”。后者仍拥有局部视觉与声音执行权威。
 - verification：`REG-SEQUENCE-CONTEXT-001`；A/B 或 A/B/C 比较整体叙事连贯、自然行为相关性、动机对齐、微表情、群众/环境语义适配，以及跨 shot 实体泄漏、提前揭示、VO 视觉泄漏、指令遵从、动作绑定和 prompt 复杂度。真实 Seedance 结果同时证明改善且未显著增加串台/漂移后，才可考虑晋级 `scene_verified`。
 
+### SOAC-001｜Screen Observable & Audible Compiler
+
+- maturity：`candidate`；scope：完整导演、剧情转镜头、AI 执行编译、可见/可听诊断、生成后反向验收或编译器回归任务。SOAC 是协调器 + 中间表示 + 编译器，不是第二套导演总纲。
+- purpose：完整导演模式不得把“剧情 → 直接 Prompt”作为默认主链，而按 `Canonical Facts → WorldStateIR → Beat / EventGraphIR → BlockingIR → ShotPlanIR → VisibleIR + PerformanceIR + AudibleIR → Transition Contract → Constraint / Autonomy Contract → Model Adapter → Minimal Execution Prompt → Generated Output → Reverse Observation → Expected vs Observed Eval → Targeted Repair → Feedback / Learning` 分层编译。
+- world truth vs shot observable truth：WorldStateIR 保存当前世界实际成立的时间、地点、场景运作、人物身份/位置/朝向/活动/目标/知识、关系、物体/道具、门窗道路楼梯高低、光源和声源；对象不在当前画面不等于从世界状态消失。每个 shot 的 VisibleIR / AudibleIR 只取当前 camera state 合法可见或可听、或在本 shot 内真实 reveal 的子集。
+- core IR：EventGraphIR 明确 agent、action、target、instrument、support/contact、precondition、时序、state change、result、reaction trigger、reveal effect 与叙事功能；BlockingIR 先按人物目标、关系和空间因果确定站位、朝向、距离、路线、遮挡、权力中心和最终位置，再决定摄影机；ShotPlanIR 必须给出镜头功能、观众知识变化、entry/exit state 和 next-shot contract。无信息、关系、空间、情绪、节奏或状态改变功能的镜头进入必要性检查。
+- screen observable / audible：VisibleIR 包含摄影机、前/中/后景、可见实体、几何、光线、材质、动作、接触和可见表演证据；PerformanceIR 将心理/潜台词编译为行为任务、身体选择与可见证据，不套用“悲伤=低头”等固定公式。AudibleIR 与 VisibleIR 平级，调用 `声音导演系统.md` 的唯一声音方法；进入 Audible Set 不等于获得 Visual Embodiment 权限，VO 说话者不会自动入画。
+- continuity and autonomy：Transition Contract 把 Shot A exit state 显式解析到 Shot B entry state，并覆盖视线、动作、声音、reveal 与连续性。Constraint / Autonomy Contract 只以 HARD 保护 canonical 事实、身份、拓扑、关键揭示和 final state；其余模型空间按 GUIDED / FREE 分配。
+- model-independent / minimal execution：SOAC 本体不写 Seedance、Veo、Runway 或未来模型的私有行为；模型版本与能力由 adapter 处理，变化时 adapter 进入 `needs_revalidation`。最终执行稿不输出完整 IR、内部分析或编译元数据，只经 relevance、能力、参考职责和约束预算筛选为当前镜头目的、Visible/Audible Set、主体动作、关键时序、摄影机、关键声音、HARD 不变量、自主权、final state 与极少灾难性禁止项。
+- static and reverse checks：运行时 schema 以 ERROR/WARNING/INFO 检查未绑定行动者/台词说话者、VO 视觉泄漏、提前 reveal、不可能空间过渡、缺失起止状态、连续性断裂、抽象无证据、约束过载和参考冲突；严重 ERROR 未修复不得进入正式生成。Reverse Compiler 当前只是 candidate interface：允许人工/AI 辅助记录观察到的可见/可听/事件/摄影机/final state，并按身份、空间、动作、接触、表演、摄影机、声音、AV 同步、转场和 final state 对照预期合同；不声称已实现全自动视觉/音频验收。
+- integration：显式调用 CALC/CLCS、SCREEN-EVIDENCE-001、POSITIVE-SPEC-001、EVENT-SEQUENCE-EXPLICIT-001、ROLE-FUNCTION-COMPRESSION-001、OPERATIONAL-PRESENCE-PRELOAD-001、MOTION-SIGNATURE-001、SHOT-SCOPE-001、SEQUENCE-CONTEXT-001、SoundDirectorIR、canonical 地图、场景资产身份 schema、资产登记与反馈引擎；SOAC 不复制或夺取它们的 authority。
+- boundary / verification：完整字段、类型、静态检查与 adapter 接口唯一存于 `10_运行时/screen_observable_audible_ir_schema.yaml`。`REG-SOAC-001` 仅建立 KAIM-HIGH-SEARCH-30S 的受控测试规范；只有真实生成显示收益且未显著增加 scope leak 或 constraint overload，才可考虑晋级。
+
 # 11. 默认完整输出
 
 用户只发剧情并要求完整处理时，默认输出 `DIRECTOR-FULL-OUTPUT-001`：
@@ -1652,7 +1665,7 @@ Seedream干净顶视场景
 
 区分官方原文、媒体归纳和项目推导，禁止伪造缺失章节。
 
-### S25-14 至 S25-21 Candidate 调用入口
+### S25-14 至 S25-22 Candidate 调用入口
 
 - `S25-14 / SCREEN-EVIDENCE-001`：当 `SCREEN_EVIDENCE_GAP` 命中时，用最小充分屏幕证据编译关键画面。
 - `S25-15 / POSITIVE-SPEC-001`：当 `NEGATIVE_CONSTRAINT_OVERLOAD` 命中时，优先正向动作规格与受控约束预算。
@@ -1662,6 +1675,7 @@ Seedream干净顶视场景
 - `S25-19 / MOTION-SIGNATURE-001`：相近能力人物需要通过运动选择而非形容词区分时调用。
 - `S25-20 / SHOT-SCOPE-001`：当 `SHOT_SCOPE_LEAK` 命中时，将全局计划与逐 shot 执行稿分层，只编译当前 camera state 的 visible / audible set、合法 in-shot reveal 与 next-shot contract。
 - `S25-21 / SEQUENCE-CONTEXT-001`：当 `SEQUENCE_CONTEXT_UNDERCONDITIONED` 命中、且任务是约 15–30 秒的多镜头剧情段时，可在逐 shot 块前编译受限本段剧情语境；不以此授权任何实体越过 `SHOT-SCOPE-001` 进入当前 visible set。
+- `S25-22 / SOAC-001`：完整导演、剧情转镜头、可见/可听诊断、AI 执行编译或反向验收需要从 canonical facts 形成可检查的世界、事件、调度、镜头、Visible/Audible 与 transition 合同时调用；先读 runtime schema，再按需定向调用既有技能。
 
 以上均为 `candidate`，按需定向调用，不因登记成为默认全局激活项。
 

@@ -20,6 +20,7 @@ read_sets:
       evidence: 官方资料与证据索引#only_if_research_or_tool_uncertain
       learning: 反馈反推与系统反哺引擎#relevant_lessons
       golden_prompt_cases: 优秀提示词案例库#only_if_a_relevant_precedent_or_regression_case_exists
+      soac_runtime: screen_observable_audible_ir_schema#only_if_full_directing_story_to_shot_AI_execution_observable_audible_diagnosis_reverse_evaluation_or_compiler_regression
 
   sound_directing:
     always:
@@ -100,6 +101,7 @@ read_sets:
       golden_prompt_protocol: 优秀提示词案例学习协议#when_golden_case_learning_or_prompt_case_system_is_relevant
       golden_prompt_evidence: 优秀提示词案例学习证据索引#when_golden_case_external_research_is_relevant
       golden_prompt_regression: golden_prompt_regression_cases#when_golden_case_protocol_eval_is_relevant
+      soac_runtime: screen_observable_audible_ir_schema#when_story_to_shot_compilation_observable_audible_diagnosis_reverse_evaluation_or_compiler_test
 
   golden_prompt_ingestion:
     always:

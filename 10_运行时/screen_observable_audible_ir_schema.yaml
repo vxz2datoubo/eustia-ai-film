@@ -1,0 +1,133 @@
+schema_id: EUSTIA_SCREEN_OBSERVABLE_AUDIBLE_IR
+version: 1.0.0
+status: candidate
+scope: story_to_shot_compilation_observable_audible_contracts_and_reverse_evaluation
+purpose:
+  - 以模型无关的中间表示连接canonical事实导演分析镜头计划与最小执行提示
+  - 将World Truth与Shot Observable Truth显式分层
+  - 将VisibleIR与AudibleIR作为平级执行合同，并保留跨镜头连续性与反向验收接口
+non_goals:
+  - 不替代AI电影系统的导演方法
+  - 不复制声音导演系统的声音方法
+  - 不直接规定任一模型的私有prompt语法
+  - 不声明自动视觉或音频验收已经实现
+
+authority_and_interfaces:
+  canonical_facts:
+    - PROJECT_INDEX.yaml
+    - 03_剧本与改编/当前改编剧本.md
+    - 04_角色与表演/角色与表演设定库.md
+    - 05_场景与空间/场景与空间设定库.md
+    - 05_场景与空间/00_项目地图文件.md
+    - 06_视觉资产/视觉资产登记库.md
+    - 07_连续性与生产状态/连续性与当前生产状态.md
+  director_method: 01_AI电影系统/AI电影系统.md#SOAC-001
+  sound_method: 01_AI电影系统/声音导演系统.md
+  asset_identity: 10_运行时/scene_asset_identity_schema.yaml
+  feedback_learning: 08_系统学习/反馈反推与系统反哺引擎.md
+  regressions: 11_验收/director_regression_cases.yaml#REG-SOAC-001
+  constraints:
+    - SHOT-SCOPE-001 controls per-shot camera_state_visible_set_audible_set_and_in_shot_reveal
+    - SEQUENCE-CONTEXT-001 may supply a constrained segment prior but grants no visual embodiment
+    - SoundDirectorIR remains the unique sound-method authority
+    - model_adapter_capability_changes_require_needs_revalidation
+
+compiler_chain:
+  - CanonicalFacts
+  - WorldStateIR
+  - Beat_EventGraphIR
+  - BlockingIR
+  - ShotPlanIR
+  - VisibleIR_PerformanceIR_AudibleIR
+  - TransitionContract
+  - ConstraintAutonomyContract
+  - ModelAdapter
+  - MinimalExecutionPrompt
+  - GeneratedOutput
+  - ReverseObservation
+  - ExpectedVsObservedEval
+  - TargetedRepair
+  - FeedbackLearning
+
+ir_layers:
+  WorldStateIR:
+    meaning: story_world_truth_not_a_per_shot_visual_authorization
+    required: [time, location, scene_operating_state, characters, objects, spatial_relations, light_sources, sound_sources]
+    character_fields: [identity, world_position, orientation, current_activity, current_goal, body_state, knowledge_or_belief, relationship_state]
+    object_fields: [identity, world_position, ownership, state]
+    spatial_relation_fields: [doors_windows_roads_stairs_elevation_and_reachability]
+  EventGraphIR:
+    event_fields: [event_id, agent, action, target, instrument, support_or_contact, precondition, temporal_relation, state_change, result, reaction_trigger, reveal_effect, narrative_function]
+    temporal_relation_enum: [BEFORE, AFTER, OVERLAP, UNTIL, INTERRUPTS, CAUSES, ENABLES]
+    rule: abstract_results_must_route_to_SCREEN-EVIDENCE-001_for_observable_evidence
+  BlockingIR:
+    fields: [initial_positions, relative_positions, orientations, distances, movement_paths, approach_or_retreat, crossing, occlusion, depth_relationship, power_center, forced_movement, prop_interaction, final_positions]
+    rule: character_goal_relationship_and_spatial_causality_precede_camera_choice
+  ShotPlanIR:
+    shot_fields: [shot_id, dramatic_function, audience_knowledge_before, audience_knowledge_after, entry_state, events, camera_state, cut_in_reason, cut_out_reason, exit_state, next_shot_contract]
+    rule: shot_without_information_relationship_space_emotion_rhythm_or_state_change_requires_necessity_review
+  VisibleIR:
+    camera_fields: [position, orientation, shot_size, camera_height, lens_intent, camera_motion]
+    frame_fields: [foreground, midground, background]
+    entity_fields: [identity, screen_region, depth_layer, visibility, occlusion, relative_position, body_orientation, gaze_target, body_state, current_action, support_or_contact, expression_evidence, performance_evidence]
+    environment_fields: [visible_objects, visible_geometry, environmental_response, lighting_evidence, material_evidence]
+    rule: current_camera_state_only_and_SHOT-SCOPE-001_is_binding
+  PerformanceIR:
+    fields: [objective, hidden_objective, subtext, gaze, breath, pause, posture, center_of_mass, hand_behavior, facial_behavior, distance_change, suppression_or_release, preparation, aftershock]
+    rule: psychological_intent_compiles_to_task_body_choice_and_visible_evidence_without_fixed_emotion_gesture_formulas
+  AudibleIR:
+    dialogue_fields: [speaker, addressee, text, speaker_visible, mouth_visible, lip_sync_required, diegesis, spatial_source, volume, pace, prosody, pause, breath, onset, offset]
+    physical_sound_fields: [foley, sfx, source, visible_event, material, force, timing, spatial_position]
+    environment_music_fields: [ambience, crowd, source_music, score, silence, acoustic_space, reverb, distance, occlusion]
+    rule: audible_set_does_not_grant_visual_embodiment_and_VO_speaker_is_not_auto_visible
+  TransitionContract:
+    fields: [from_shot, to_shot, inherited_state, changed_state, visual_match, eyeline_relation, action_relation, sound_relation, reveal_relation, continuity_requirement]
+    rule: shot_A_exit_state_must_resolve_to_shot_B_entry_state
+  ConstraintAutonomyContract:
+    fields: [hard_invariants, guided_choices, free_model_space, constraint_budget, final_state]
+    rule: hard_constraints_protect_canonical_facts_identity_topology_key_reveals_and_final_state_only
+
+model_adapter:
+  model_fields: [model, version, generation_mode, image_reference, video_reference, audio_reference, first_frame, last_frame, camera_control, motion_control, native_audio, dialogue_support, editing_support, extension_support, negative_prompt_semantics, known_failure_modes, last_revalidated]
+  rule: adapters_compile_SOAC_to_model_capabilities_without_making_a_model_behavior_a_director_core_rule
+
+minimal_execution_compiler:
+  pipeline: [RichDirectorIR, RelevanceFilter, ModelCapabilityFilter, ReferenceResponsibilitySplit, ConstraintBudget, MinimalSufficientExecutionPrompt]
+  output_only: [shot_purpose, current_visible_set, current_audible_set, subject_action, key_event_order, camera, key_sound, hard_invariants, autonomy, final_state, catastrophic_local_exclusions]
+  forbidden_output: [full_internal_analysis, matrices, compiler_metadata, future_shot_entities]
+
+static_checks:
+  ERROR:
+    - UNBOUND_ACTOR
+    - UNBOUND_ACTION_TARGET
+    - UNBOUND_DIALOGUE_SPEAKER
+    - INVALID_VISUAL_ENTITY
+    - VO_VISUAL_LEAK
+    - PREMATURE_REVEAL
+    - IMPOSSIBLE_SPATIAL_TRANSITION
+    - MISSING_SUPPORT_OR_CONTACT
+    - CAMERA_SCOPE_CONFLICT
+    - MISSING_ENTRY_STATE
+    - MISSING_EXIT_STATE
+    - TRANSITION_DISCONTINUITY
+  WARNING:
+    - ABSTRACT_WITHOUT_EVIDENCE
+    - CONSTRAINT_OVERLOAD
+    - REFERENCE_CONFLICT
+  INFO:
+    - NEEDS_MODEL_ADAPTER_REVALIDATION
+    - REVERSE_OBSERVATION_MANUAL_OR_AI_ASSISTED
+  gate: severe_ERROR_must_not_enter_formal_generation_without_targeted_repair_or_explicit_override
+
+reverse_compiler:
+  status: candidate_interface
+  observed_fields: [observed_visible_state, observed_audible_state, observed_event_order, observed_camera_state, observed_final_state]
+  comparison: ExpectedSOACContract_vs_ObservedOutput
+  failure_categories: [identity, space, visibility, action_binding, contact, body_mechanics, event_order, performance, camera, lighting, dialogue, audio_source, AV_sync, transition, final_state]
+  current_input_mode: manual_or_AI_assisted_observation
+  boundary: not_an_implemented_fully_automatic_vision_or_audio_grader
+
+validation:
+  candidate_maturity_required: true
+  required_links: [SHOT-SCOPE-001, SCREEN-EVIDENCE-001, SoundDirectorIR, scene_asset_identity_schema, feedback_engine]
+  required_before_promotion: [controlled_generation_evidence, REG-SOAC-001, no_material_increase_in_scope_leaks_or_constraint_overload]
