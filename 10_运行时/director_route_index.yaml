@@ -176,11 +176,22 @@ routes:
       - 正反打关系不清
       - 桥上桥下混乱
       - 场景拓扑漂移
+      - 同一个方向存在多个机位但资产调用混淆
+      - 从文件名或旧Asset ID猜方位
+      - 把北侧机位和朝北视图混为一谈
+    mandatory_reads:
+      - 10_运行时/scene_asset_identity_schema.yaml
     mandatory_scans:
       - map_authority
+      - world_cardinal_frame
+      - camera_anchor_resolution
       - camera_orientation
+      - view_resolution
+      - relation_resolution
       - asset_direction_tags
+      - pixel_verification_state
       - adjacency_and_height
+      - no_legacy_id_direction_inference
 
   - id: SOUND_DIRECTOR_INVOCATION
     symptoms:
@@ -292,10 +303,23 @@ routes:
       - 加入资产库
       - 录入资产
       - 设为正式资产
+      - 场景资产改名
+      - 场景图方向核验
+    mandatory_reads:
+      - 10_运行时/scene_asset_identity_schema.yaml#when_scene_asset
     mandatory_scans:
       - asset_identity
       - source_authority
+      - chinese_display_name
+      - opaque_machine_id
+      - camera_anchor_resolution
+      - view_resolution
+      - relation_binding
+      - media_locator
+      - pixel_verification
       - continuity_binding
+      - referential_integrity
+      - old_reference_zero_after_migration
       - commit_verification
     candidate_axes: []
 
