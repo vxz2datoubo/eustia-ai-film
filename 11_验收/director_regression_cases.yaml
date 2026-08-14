@@ -231,7 +231,7 @@ cases:
       - memory_not_substitute_for_registry
 
   - id: REG-SCENE-ASSET-IDENTITY-001
-    title: 正式场景资产必须通过Scene-CameraAnchor-View-Media-Relation身份链解析且重命名不破坏引用
+    title: 正式场景资产必须通过Scene-CameraAnchor-View-Asset-Version-Relation身份链解析且重命名不破坏引用
     must_preserve:
       - 用户层正式显示名使用中文
       - machine ID使用ASCII opaque identity且不编码方向或左右语义
@@ -240,24 +240,28 @@ cases:
       - 普通View只用N/S/E/W绝对方向作为主方向并可用yaw_offset记录精确偏角
       - 顶视View使用screen_top_cardinal表示北朝上南朝上东朝上西朝上
       - 正打反打同机位180跨机位互看和剪辑正反打使用显式Relation绑定不得仅靠方向反转猜测
-      - 导演调用顺序为map→scene→camera_anchor→view→relation_if_needed→media_asset→实际像素
-      - 正式Media Asset保存可解析locator并在最终方向绑定前完成pixel_verified
+      - 导演调用顺序为map→scene→camera_anchor→view→relation_if_needed→media_asset→current_media_version→verified_locator→实际像素
+      - Media Asset是稳定逻辑职责槽而不是具体File ID或PNG
+      - Media Version是不可变像素修订且最终方向绑定前必须pixel_verified
       - 无法打开正式像素时不得使用语义相似候选图冒充
       - 旧语义scene registry key逐张像素核验后一次性迁移为opaque ID
       - 迁移关闭后活动canonical中旧key引用计数必须为0且不建立长期old_to_new resolver映射
       - 中文display name改动不得导致machine identity变化
-      - binary storage filename默认使用ASCII machine ID以降低跨工具链路径风险
+      - binary storage filename默认使用ASCII Media Version ID以降低跨工具链路径风险
       - 世界东南西北不得直接假设等同Unreal或其他DCC的XYZ轴
     checks:
       - project_index_schema_registered
+      - project_index_resolver_manifest_registered
       - map_authority
       - scene_asset_identity_schema_loaded
+      - scene_media_resolver_manifest_loaded
       - opaque_id_validation
       - camera_anchor_resolution
       - view_direction_validation
       - top_view_screen_orientation_validation
       - relation_endpoint_validation
       - pair_relation_is_explicit
+      - asset_to_current_version_resolution
       - pixel_verification_gate
       - media_locator_resolution
       - default_pointer_resolution
@@ -266,6 +270,36 @@ cases:
       - old_reference_zero_after_transaction_close
       - fetch_after_each_serial_write
       - final_fetch_verify
+
+  - id: REG-SCENE-MEDIA-VERSION-001
+    title: 正式场景母图更新必须通过稳定Asset与Media Version解析层而不是删除同名覆盖
+    must_preserve:
+      - 同一正式Asset的像素修订不得改变asset_id
+      - 同像素重新上传且content_hash相同只增加或刷新locator不得制造假版本
+      - 像素改变但Scene CameraAnchor View media_role与variant职责不变时创建新Media Version
+      - 新版本在pixel_verified前不得成为current
+      - 切换current后旧current必须变为superseded而不是静默消失
+      - 时间天气光照或媒体职责需要并列长期保留时建立独立Asset variant不得伪装成版本修订
+      - Camera Anchor或View实质变化时必须建立新身份不得覆盖旧Asset
+      - 普通导演与长期连续性默认绑定asset_id以自动跟随current版本
+      - 已生成镜头回归案例复现任务可额外锁定media_version_id且不得自动跟随current更新
+      - File ID文件名路径和Library locator都不是资产身份
+      - 普通替换不得自动物理删除旧版本
+      - 物理删除必须用户明确确认并通过无活动引用无回归证据用途和可恢复性检查
+      - resolver manifest必须是Asset→current Version→locator的唯一版本解析主档不得建立old→new→newer链式映射
+    checks:
+      - classification_same_pixels_vs_new_revision_vs_variant_vs_new_view
+      - content_hash_dedup
+      - asset_identity_stability
+      - media_version_immutability
+      - exactly_one_current_version
+      - current_pointer_switch_after_pixel_verify
+      - superseded_history_preserved
+      - multiple_locator_resolution
+      - pinned_version_reproducibility
+      - no_same_name_overwrite_dependency
+      - no_automatic_physical_delete
+      - resolver_manifest_fetch_verify
 
   - id: REG-SOURCE-001
     title: 旧版总纲不得夺权
