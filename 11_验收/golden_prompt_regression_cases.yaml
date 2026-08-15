@@ -1,8 +1,9 @@
 suite:
   id: GOLDEN_PROMPT_INGESTION_REGRESSION
   status: active
-  last_updated: 2026-08-13
+  last_updated: 2026-08-15
   protocol: 08_系统学习/优秀提示词案例学习协议.md
+  media_evidence_schema: 10_运行时/golden_media_evidence_schema.yaml
 
 cases:
   - id: REG-GPCL-TRIGGER-001
@@ -105,3 +106,54 @@ cases:
       - no_full_library_prompt_injection
       - conflicting_and_boundary_cases_not_discarded
       - monitor_negative_transfer
+
+  - id: REG-GPCL-MEDIA-RAW-001
+    title: 视频原文件是母证据序列帧只能作为派生索引
+    input_condition: 用户为优秀案例同时提供生成视频
+    must_preserve:
+      - raw_video_primary_binary_evidence
+      - original_audio_preserved_when_present
+      - content_hash_recorded_when_computable
+      - keyframes_and_contact_sheets_marked_derived
+      - derived_frames_do_not_replace_raw_video
+
+  - id: REG-GPCL-MEDIA-CAUSALITY-001
+    title: 只有视频没有原提示词时不得伪造提示词到效果因果链
+    input_condition: 用户只上传一段优秀或测试视频但未提供其源提示词
+    must_preserve:
+      - media_only_aesthetic_observation_allowed
+      - no_reconstructed_source_prompt
+      - no_prompt_clause_causality_claim
+      - request_or_wait_for_source_prompt_before_pairing
+
+  - id: REG-GPCL-MEDIA-TEMPORAL-001
+    title: 视频审查采用多分辨率时序证据而非默认永久逐帧存储
+    input_condition: 需要分析视频中零点几秒级动作转场身份漂移或节奏
+    must_preserve:
+      - whole_video_preserved
+      - shot_segmentation
+      - representative_keyframes
+      - uniform_index_default_around_half_second
+      - dense_subsecond_windows_only_where_needed
+      - frame_exact_mode_for_forensic_cases
+      - full_frame_dump_not_default
+
+  - id: REG-GPCL-MEDIA-AESTHETIC-001
+    title: 媒体案例形成可检索审美先例但不声称修改模型权重
+    input_condition: 用户询问保存优秀视频是否会让系统形成审美或以后主动参考
+    must_preserve:
+      - aesthetic_fingerprint_extraction
+      - temporal_grammar_and_sound_relation_extraction
+      - proactive_retrieval_when_relevant
+      - reference_video_reuse_when_target_model_supports_it
+      - no_model_weight_training_claim
+      - human_verdict_authority
+
+  - id: REG-GPCL-MEDIA-ASSET-BOUNDARY-001
+    title: 优秀视频证据不会自动升级成正式视觉资产
+    input_condition: 用户把视频作为优秀案例或学习证据上传但没有说设为正式资产
+    must_preserve:
+      - golden_evidence_allowed
+      - formal_asset_registration_not_triggered
+      - no_scene_asset_identity_pollution
+      - explicit_asset_intent_required
