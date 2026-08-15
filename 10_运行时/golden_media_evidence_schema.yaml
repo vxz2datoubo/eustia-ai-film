@@ -1,8 +1,9 @@
 schema_id: EUSTIA_GOLDEN_MEDIA_EVIDENCE
-version: 1.0.0
+version: 2.0.0
 status: active
 created_at: 2026-08-15
-scope: prompt_output_media_pairing_temporal_evidence_aesthetic_retrieval_and_eval
+last_updated: 2026-08-15
+scope: media_backed_golden_case_temporal_evidence_prompt_reconstruction_causal_validation_retrieval_eval
 
 canonical_relationship:
   project_index: PROJECT_INDEX.yaml
@@ -14,157 +15,454 @@ canonical_relationship:
   external_evidence: 09_资料证据/优秀提示词案例学习证据索引.md
 
 purpose:
-  - 把提示词、真实生成视频/图像/音频、时序观察、用户评价和模型版本绑定为同一条可追溯证据链
-  - 让优秀案例既可作为导演先例，也可作为多模态参考、回归评测和模型行为学习证据
-  - 区分“视频本身好看”与“某句提示词导致该效果”的证据强度
-  - 支持未来按视觉机制、时序结构、动作节奏、摄影、灯光、声音和失败症状检索案例
+  - 把优秀视频或真实生成结果蒸馏为可长期保存、可检索、可解释、可回归的时间证据包
+  - 把 Prompt、画面、动作、表情、运镜、前中后景、对白、说话方式、BGM、SFX、环境声与用户评价对齐到同一秒级时间轴
+  - 支持只有视频时的 reconstructed_prompt，但严格区分反推提示词与真实 source_prompt_verbatim
+  - 建立世界内物理因果、电影视听因果、Prompt控制因果三张相互隔离的因果图
+  - 支持从用户模糊自然语言主动召回最相关 Golden Case，并只迁移匹配机制而非机械抄风格
+  - 在大规模案例增长时通过自适应时间证据蒸馏、去重、contact sheet 与分层检索控制 GitHub 体积和上下文成本
+
+research_alignment:
+  byte_seedance_1_0:
+    observed_public_method:
+      - automated_shot_boundary_detection
+      - precise_dense_video_captioning
+      - dynamic_caption_for_actions_and_camera_motion
+      - static_caption_for_core_subjects_and_scenes_in_frames
+      - high_quality_video_text_sft
+      - foundational_motion_aesthetic_reward_models
+      - keyframe_based_aesthetic_reward_input
+      - video_specific_rlhf
+    project_translation:
+      - 先切 shot 再做时间证据，而不是把长视频视作单块
+      - 动态描述与静态描述分离后再合并
+      - 优秀案例学习不能止于 caption，必须进入多维 eval 与真实反馈闭环
+  seedance_1_5_pro:
+    observed_public_method:
+      - audio_visual_joint_training
+      - richer_professional_video_captions
+      - integrated_audio_descriptions
+      - audio_visual_sft
+      - multi_dimensional_rlhf
+    project_translation:
+      - 声音不能只做 ASR；对白、韵律、BGM、SFX、环境声和声画同步都需要进入 timeline
+  video_understanding_research:
+    observed_methods:
+      - dense_video_captioning
+      - temporal_grounding
+      - dynamic_fps_sampling
+      - absolute_time_encoding
+      - adaptive_temporal_evidence_selection
+      - bidirectional_caption_time_localization
+    project_translation:
+      - 用户可见时间以秒为主，不以 frame index 为主
+      - 固定采样只能做 baseline，长期保存优先自适应证据窗与去重
+  causal_research_boundary:
+    principle: 单个观察视频不能证明稳定物理法则或 Prompt 单变量因果
+    implication:
+      - 时序先后只能产生 observational 或 mechanistically_plausible hypothesis
+      - Prompt因果升级必须依靠受控 A/B/C、反事实或跨案例复现
 
 core_invariants:
-  raw_media_is_primary_binary_evidence: true
-  derived_frames_are_indexes_not_source_authority: true
-  original_audio_must_not_be_discarded_when_present: true
+  github_is_default_persistent_store_for_golden_temporal_evidence_bundle: true
+  source_video_default_persistence: transient_not_retained
+  source_video_may_be_exceptionally_retained_only_when_irreducible_evidence_requires_it: true
+  derived_temporal_evidence_is_primary_persistent_golden_media_representation: true
+  human_facing_time_unit_is_seconds: true
+  frame_index_is_secondary_technical_metadata_only: true
   prompt_verbatim_must_not_be_reconstructed_from_output: true
-  prompt_output_causality_requires_an_actual_pair: true
+  reconstructed_prompt_must_be_labeled_inferred_from_media: true
+  source_prompt_and_reconstructed_prompt_must_never_be_merged: true
+  audio_transcript_does_not_equal_full_audio_evidence: true
+  prompt_output_causality_requires_actual_pair_or_controlled_intervention: true
   model_version_and_generation_mode_should_be_recorded_when_known: true
   user_verdict_has_final_authority_for_project_aesthetic_judgment: true
   automatic_graders_are_diagnostic_only: true
-  media_storage_does_not_equal_model_weight_training: true
   no_golden_registration_without_explicit_golden_intent: true
   no_formal_asset_registration_without_explicit_asset_intent: true
+  case_bundle_files_must_resolve_to_one_case_id: true
+  media_learning_does_not_imply_model_weight_training: true
 
-# 证据强度只描述“我们能说多强的话”，不自动等同 maturity。
+case_bundle_layout:
+  root_pattern: 11_验收/golden_case_bundles/{case_id}/
+  recommended_files:
+    - case.yaml
+    - retrieval_card.yaml
+    - source_prompt.txt
+    - reconstructed_prompt.txt
+    - timeline.yaml
+    - analysis.md
+    - frames/keyframes/
+    - frames/contact_sheets/
+    - frames/dense_windows/
+  optional_files:
+    - audio_events.yaml
+    - eval.yaml
+    - experiments.yaml
+  rules:
+    - source_prompt.txt 只在真实源提示词存在时创建
+    - reconstructed_prompt.txt 只在反推提示词存在时创建，并写 provenance=inferred_from_media
+    - 空字段不要求制造空文件
+    - 每个持久化图像必须能从 case_id + timestamp_s 或 interval 追溯到 timeline
+
+# 证据强度描述“我们能说多强的话”，不自动等同 maturity。
 evidence_ladder:
   M0_prompt_only:
     evidence: prompt_text_without_verified_output
     allowed_claim: 提示结构或文案本身被认可
     forbidden_claim: 不能说该提示在真实模型中已实现某效果
-  M1_media_only:
-    evidence: video_image_or_audio_without_source_prompt
-    allowed_claim: 可学习可观察的美学、节奏、镜头、声音和结构先例
-    forbidden_claim: 不能反推某句提示词是效果原因
-  M2_prompt_media_pair:
-    evidence: source_prompt_plus_actual_output
+  M1_media_observation:
+    evidence: media_or_temporal_evidence_without_true_source_prompt
+    allowed_claim: 可学习可观察的美学、动作、运镜、声音、结构与时间关系，并可生成 reconstructed_prompt
+    forbidden_claim: 不能把 reconstructed_prompt 冒充原始 Prompt，也不能声称某句 Prompt 导致该效果
+  M2_prompt_output_pair:
+    evidence: true_source_prompt_plus_actual_output_or_verified_temporal_distillation
     allowed_claim: 可建立 prompt_clause_to_observed_effect 映射
     forbidden_claim: 多变量同时变化时不能强行做单变量因果归因
   M3_provenance_complete_pair:
-    evidence: prompt_plus_output_plus_model_version_mode_references_and_settings_when_available
+    evidence: prompt_plus_output_evidence_plus_model_version_mode_references_settings_when_available
     allowed_claim: 可形成版本绑定模型行为候选经验
     forbidden_claim: 单次成功仍不能证明跨场景稳定
   M4_controlled_comparison:
     evidence: A_B_or_A_B_C_with_verified_controls_and_user_verdict
-    allowed_claim: 可进行较强因果归因与反事实分析
-    forbidden_claim: 控制变量漂移时必须标 confounded
+    allowed_claim: 可进行较强 Prompt 控制因果归因与反事实分析
+    forbidden_claim: 控制变量漂移时必须标 confounded_or_inconclusive
   M5_reproduced_transfer:
     evidence: repeated_runs_or_sibling_transfer_cases_across_distinct_content
     allowed_claim: 可支持更高 maturity 评估
     forbidden_claim: 仍需遵守项目 maturity gate 与模型版本重验证
 
-media_bundle_schema:
-  media_evidence_id: required
-  media_type: video | image | audio
-  role: raw_generation_output | reference_media | golden_precedent | regression_reference | comparative_output | failure_evidence
-  source_provenance: required
-  source_prompt_present: boolean
-  user_verdict_present: boolean
-  model: optional
-  model_version: optional
-  model_alias: optional
-  generation_mode: optional
-  generation_settings: optional
-  reference_inputs: optional
-  content_hash:
-    preferred: sha256
-    required_when_computable: true
-  technical_metadata:
-    duration_s: optional
-    fps: optional
-    frame_count: optional
+source_ingestion:
+  accepted_inputs:
+    - video
+    - image_sequence
+    - audio_visual_clip
+    - image
+    - audio
+  transient_video_pipeline:
+    - decode_full_timeline
+    - inspect_audio_track_when_present
+    - compute_metadata_and_hash_when_possible
+    - segment_shots
+    - detect_candidate_change_points
+    - extract_adaptive_temporal_evidence
+    - transcribe_and_describe_audio
+    - align_all_annotations_to_seconds
+    - build_event_and_causal_hypotheses
+    - build_retrieval_card
+    - run_human_or_user_verdict_capture
+    - persist_distilled_bundle_to_github
+    - discard_source_video_by_default_after_verified_distillation
+  source_retention_exception_examples:
+    - exact_motion_blur_or_camera_acceleration_is_irreducible
+    - exact_voice_timbre_or_prosody_is_the_golden_property
+    - legal_or_regression_requirement_requires_original_media
+    - user_explicitly_requests_original_media_retention
+
+technical_metadata:
+  fields:
+    duration_s: required_when_known
+    fps: optional_technical
+    frame_count: optional_technical
     width: optional
     height: optional
-    audio_codec: optional
-    audio_sample_rate: optional
-    audio_channels: optional
-  locators:
-    allowed_types:
-      - chatgpt_file_id
-      - current_conversation_file
-      - file_library_title
-      - local_path
-      - external_uri
-      - derived_preview
-    each_locator_fields:
-      - type
-      - value
-      - status
-      - verified_at
-  persistence_status: verified_cross_session | current_session_only | unverified | unavailable
+    source_hash: optional
+    source_uri_or_provenance: required_when_known
+    source_rights_status: required_when_third_party_source
+    model: optional
+    model_version: optional
+    model_alias: optional
+    generation_mode: optional
+    generation_settings: optional
+    reference_inputs: optional
+  display_rule:
+    - 面向用户和导演的所有定位优先 timestamp_s 或 start_s/end_s
+    - frame_index 不进入默认文件名和用户主要说明
 
-binary_storage_policy:
-  preferred_primary_binary_source: ChatGPT Library
-  github_role: metadata_hash_annotations_rules_and_evals
-  raw_video_in_git_repository_default: false
-  reason:
-    - 二进制视频体积增长快
-    - Git 历史不适合作为媒体仓库
-    - GitHub canonical 更适合保存可审计的文字规则、索引与hash
-  derived_preview_storage:
-    default: transient_or_regenerable
-    may_persist_when:
-      - 某一帧是关键失败证据
-      - 某一帧是回归基准
-      - 未来视频解析能力不足而需要稳定视觉索引
-
-# 原视频是“母证据”，序列帧/关键帧是为检索和精确诊断服务的派生层。
+# ---------- 时间证据蒸馏 ----------
 temporal_evidence_policy:
-  default_strategy: multi_resolution_temporal_sampling
-  level_0_whole_video:
-    preserve:
-      - original_video
-      - original_audio
-      - duration
-      - fps
-      - hash
-  level_1_shot_segmentation:
+  default_strategy: adaptive_temporal_evidence_distillation
+  step_1_shot_segmentation:
     derive:
-      - shot_boundaries
-      - shot_duration
+      - shot_id
+      - start_s
+      - end_s
+      - duration_s
       - representative_keyframe
       - transition_type_when_observable
-  level_2_uniform_index:
+    methods:
+      - visual_dissimilarity_change_points
+      - editorial_cut_detection
+      - soft_transition_window_when_needed
+  step_2_baseline_sampling:
     default_interval_s: 0.5
+    role: recall_safety_net_not_persistence_requirement
+    rule: baseline 采样用于避免漏看，但不要求所有 baseline 帧最终持久化
+  step_3_adaptive_saliency:
+    increase_density_on:
+      - shot_boundary
+      - composition_change
+      - subject_scale_change
+      - expression_change
+      - action_phase_change
+      - physical_contact
+      - force_transfer_or_object_state_change
+      - camera_motion_change
+      - acceleration_or_deceleration
+      - typography_or_graphic_state_change
+      - identity_or_continuity_drift
+      - lighting_or_color_transition
+      - audio_onset_or_beat_hit
+      - dialogue_turn
+      - user_named_strength_or_failure
+    suggested_dense_interval_s: 0.125
+    frame_exact_analysis:
+      allowed: true
+      persistence_default: false
+      use_when:
+        - contact_first_occurrence
+        - flicker_first_occurrence
+        - identity_drift_first_occurrence
+        - exact_transition_boundary
+  step_4_perceptual_deduplication:
+    goal: 删除对理解没有新增证据的近重复帧
+    preserve_even_if_similar_when:
+      - marks_start_or_end_of_event
+      - proves_duration_or_hold
+      - establishes_before_after_pair
+      - supports_camera_motion_estimation
+      - supports_micro_expression_change
+      - aligns_with_audio_event
+    rule: 去重不能删除因果链所需的前态或后态
+  step_5_contact_sheet_compaction:
+    default_for_each_shot_or_short_segment: true
+    recommended_tiles: 6_to_12
+    tile_label: timestamp_seconds
     purpose:
-      - 快速总览
-      - 美学与构图检索
-      - 防止只看首尾帧
-  level_3_dense_windows:
-    suggested_interval_s: 0.125
-    activate_on:
-      - complex_contact_action
-      - fast_transition
-      - identity_drift
-      - typography_change
-      - continuity_failure
-      - beat_sync_analysis
-      - user_points_to_subsecond_problem
-  level_4_frame_exact:
-    activate_only_when:
-      - 需要确认接触发生在哪一帧
-      - 需要确认闪烁/破碎/身份漂移的首个出现点
-      - 回归测试要求逐帧复现
-    frame_reference:
-      - timestamp_s
-      - frame_index_when_fps_is_reliable
-  full_frame_dump_default: false
-  reason:
-    - 默认逐帧保存造成巨大冗余
-    - 孤立图片会丢失运动与声音关系
-    - 关键帧加密集窗口通常比全帧永久存储更适合检索与审计
+      - 降低 Git 文件数量
+      - 一次性观察构图、主体尺度、动作轨迹与运镜趋势
+      - 保留人类可读的秒级时序
+    standalone_frame_keep_when:
+      - golden_keyframe
+      - causal_boundary
+      - regression_reference
+      - user_named_aesthetic_peak
+      - contact_or_failure_evidence
 
+frame_naming:
+  primary_pattern: "{case_id}__t_{seconds_3dp}s__{role}.{ext}"
+  interval_pattern: "{case_id}__t_{start_3dp}s-{end_3dp}s__{role}.{ext}"
+  examples:
+    - GPC-20260815-003__t_06.125s__contact.jpg
+    - GPC-20260815-003__t_03.000s-05.500s__shot_contactsheet.webp
+  forbidden_as_primary_human_name:
+    - frame_147.jpg
+    - f000147.png
+  note: frame index 可在 timeline technical 字段保留，但不是美学与导演主坐标
+
+visual_timeline_schema:
+  segment_fields:
+    - segment_id
+    - start_s
+    - end_s
+    - shot_id
+    - frame_refs
+    - foreground
+    - midground
+    - background
+    - subject_identity
+    - shot_size
+    - camera_angle
+    - camera_motion
+    - camera_motion_confidence
+    - lens_intent_when_inferable
+    - composition
+    - spatial_relationships
+    - gaze
+    - expression
+    - micro_expression
+    - body_action
+    - gesture
+    - blocking
+    - contact_and_support
+    - state_change
+    - lighting
+    - color_and_tone
+    - material_response
+    - graphics_and_typography
+    - edit_relation
+    - continuity_notes
+  observation_rule:
+    - 可观察事实与摄影/镜头推断分开
+    - 无法区分真实 dolly 与数字 zoom 等情况时记录 alternatives + confidence
+
+# ---------- 声音文字化与声画对齐 ----------
+audio_timeline_schema:
+  principle: 声音描述必须绑定同一秒级时间轴，而不是单独生成一段无时间摘要
+  fields:
+    - start_s
+    - end_s
+    - speaker
+    - dialogue_text
+    - speech_language
+    - speech_style
+    - speech_emotion
+    - speech_rate
+    - pause_and_breath
+    - prosody_description
+    - bgm_presence
+    - bgm_style
+    - bgm_intensity
+    - bgm_rhythm_or_tempo_when_inferable
+    - sfx
+    - ambience
+    - spatial_audio_when_inferable
+    - onset_or_beat_events
+    - audio_visual_sync_relation
+  text_distillation_default: true
+  raw_audio_default_persistence: false
+  irreducible_loss_warning:
+    - 文字描述不能无损保存真实音色
+    - 文字描述不能无损保存微妙韵律、混响、频谱与混音细节
+  optional_preserve_compact_evidence_when_sound_is_core:
+    - spectrogram_or_waveform_preview
+    - short_audio_reference
+    - tempo_onset_loudness_features
+    - user_named_voice_or_sound_signature
+
+# ---------- 双向时间定位 ----------
+temporal_grounding:
+  forward_captioning:
+    name: time_to_description
+    input: start_s_end_s_plus_visual_audio_evidence
+    output: detailed_grounded_caption
+  reverse_localization:
+    name: description_to_time
+    input: text_query_or_director_intent
+    output: ranked_start_s_end_s_segments
+  dense_subject_timeline:
+    output_unit: [start_s, end_s, caption]
+    role: 描述一个人物/物体在全视频中的连续事件轨迹
+  requirement:
+    - retrieval card 和 timeline 必须允许“几秒发生什么”与“某件事发生在几秒”双向查询
+
+# ---------- 视频反推 Prompt ----------
+prompt_reconstruction:
+  source_prompt_present:
+    preserve_source_prompt_verbatim: true
+    reconstructed_prompt_optional: true
+    use_reconstruction_for: 对比“原 Prompt 写了什么”与“成片实际像什么 Prompt”之间差异
+  source_prompt_absent:
+    allow_reconstructed_prompt: true
+    provenance: inferred_from_media
+    forbidden_labels:
+      - source_prompt
+      - original_prompt
+      - verbatim_prompt
+    reconstruction_layers:
+      - literal_screen_description
+      - director_mechanism_description
+      - model_executable_prompt_candidate
+    confidence_required: true
+    uncertainty_required: true
+  optional_iterative_inversion:
+    status: candidate_experiment
+    loop:
+      - reconstruct_prompt
+      - regenerate_with_same_target_model_when_available
+      - compare_to_reference_case
+      - identify_delta
+      - revise_prompt
+      - stop_when_improvement_plateaus_or_budget_reached
+    boundary: 该循环寻找可复现 Prompt，不证明恢复了历史真实原 Prompt
+
+# ---------- 三层因果图 ----------
+causal_model:
+  graph_A_world_physical:
+    purpose: 描述画面世界内部事件机制
+    canonical_edge_examples:
+      - precondition_to_action
+      - action_to_contact
+      - contact_to_force_transfer
+      - force_transfer_to_state_change
+      - state_change_to_reaction
+      - reaction_to_recovery
+    fields_per_edge:
+      - cause_event_id
+      - effect_event_id
+      - evidence_time_ranges
+      - contact_or_state_evidence
+      - confidence
+      - alternatives
+      - counterfactual_question
+    default_status: observational_or_mechanistically_plausible
+  graph_B_cinematic_perceptual:
+    purpose: 描述视听选择如何影响观众注意、理解、情绪与揭示
+    edge_examples:
+      - camera_reframe_to_attention_shift
+      - reaction_shot_to_inference
+      - sound_onset_to_cut_emphasis
+      - lighting_change_to_subject_salience
+      - withholding_to_reveal
+    fields_per_edge:
+      - technique
+      - observable_evidence
+      - intended_viewer_effect
+      - alternative_interpretation
+      - confidence
+  graph_C_prompt_control:
+    purpose: 描述 Prompt 控制项与生成输出之间的因果假设
+    edge_fields:
+      - clause_id
+      - source_or_reconstructed
+      - intended_control_variable
+      - observed_output_dimension
+      - evidence_time_ranges
+      - observed_status
+      - confounders
+      - alternative_explanations
+      - intervention_status
+      - replication_count
+    causality_status_values:
+      - correlated_observation
+      - plausible_control_hypothesis
+      - intervention_supported
+      - reproduced
+      - contradicted
+      - confounded
+    promotion_rule: 只有真实 source prompt 配对并经过受控干预或重复验证，才能高于 plausible_control_hypothesis
+
+controlled_causal_validation:
+  preferred_design: one_primary_variable_at_a_time
+  freeze_when_possible:
+    - model
+    - model_version
+    - generation_mode
+    - seed_or_equivalent_randomness_control
+    - duration
+    - reference_assets
+    - reference_order
+    - generation_settings
+    - unrelated_prompt_clauses
+  compare:
+    - A_baseline
+    - B_single_change
+    - C_optional_counterfactual_or_boundary
+  required_outputs:
+    - observed_delta
+    - user_verdict
+    - objective_or_structured_eval_delta
+    - confound_check
+    - causal_update
+  failure_policy: 控制变量漂移则标 confounded_or_inconclusive，不晋级技能
+
+# ---------- Prompt 与效果对齐 ----------
 prompt_effect_alignment:
   unit: prompt_clause_or_control_intent
   fields:
     - clause_id
-    - source_text_verbatim
+    - source_text_verbatim_or_reconstructed_text
+    - provenance
     - intended_effect
     - observable_dimension
     - evidence_time_ranges
@@ -181,10 +479,10 @@ prompt_effect_alignment:
     - contradicted
     - not_observable
     - unknown
-  rule: 未提供源 prompt 时只允许建立 media_observation，不生成伪造的 clause mapping
 
-aesthetic_fingerprint:
-  principle: 记录可观察机制而不是只贴“高级感/电影感”标签
+# ---------- 可检索审美与导演指纹 ----------
+aesthetic_and_director_fingerprint:
+  principle: 记录可观察机制，不只贴“高级感/电影感”标签
   dimensions:
     composition:
       - shot_scale_pattern
@@ -202,12 +500,13 @@ aesthetic_fingerprint:
       - source_motivation
       - hardness
       - direction
-      - key_fill_ratio_when_observable
+      - key_fill_relation_when_observable
       - face_readability
     camera:
       - static_vs_moving
       - movement_type
       - movement_speed
+      - movement_phase
       - lens_intent_when_inferable
       - framing_stability
     subject_performance:
@@ -216,12 +515,14 @@ aesthetic_fingerprint:
       - gesture_density
       - pose_change
       - micro_expression
+      - speech_performance
     motion_design:
       - subject_motion
       - graphic_motion
       - environmental_motion
       - acceleration_pattern
       - motion_layer_separation
+      - contact_physics
     edit_rhythm:
       - shot_length_distribution
       - cut_pattern
@@ -248,7 +549,96 @@ aesthetic_fingerprint:
       - onset_cut_alignment
       - foley_sync
       - audio_visual_contrast
+      - prosody_action_alignment
 
+retrieval_card_schema:
+  required:
+    - case_id
+    - one_sentence_function_summary
+    - task_classes
+    - director_goals
+    - retrieval_aliases_zh
+    - retrieval_aliases_en
+    - transferable_mechanisms
+    - non_transferable_surface_traits
+  recommended:
+    - scene_types
+    - shot_functions
+    - camera_mechanisms
+    - motion_grammar
+    - lighting_mechanisms
+    - performance_mechanisms
+    - typography_graphics_mechanisms
+    - sound_mechanisms
+    - aesthetic_traits
+    - failure_symptoms
+    - model_and_version
+    - verdict_scope
+    - maturity
+  fuzzy_query_example:
+    user: 我想做个时尚片，走秀的那种
+    expansion:
+      - 时尚片
+      - 走秀
+      - 模特广告
+      - 高级商业片
+      - fashion_film
+      - runway
+      - editorial_commercial
+      - model_hero_presentation
+      - kinetic_typography_when_relevant
+    retrieval_rule: 先按任务功能与导演目标召回，再按表面风格做次级排序
+
+retrieval_and_reuse:
+  retrieval_unit: case_plus_relevant_temporal_segments
+  stage_1_candidate_recall:
+    methods:
+      - github_text_search_on_retrieval_cards
+      - alias_and_keyword_expansion
+      - future_semantic_embedding_index_when_available
+  stage_2_rerank:
+    high_weight_signals:
+      - same_director_goal
+      - same_task_function
+      - same_temporal_structure
+      - same_motion_grammar
+      - same_camera_subject_contract
+      - same_graphic_or_typography_mechanism
+      - same_lighting_mechanism
+      - same_sound_mechanism
+      - same_failure_symptom
+      - same_model_and_version
+    low_weight_signals:
+      - superficial_color_similarity_only
+      - genre_label_only
+      - same_character_without_same_function
+  default_top_k_to_open: 1_to_3
+  output_modes:
+    analyze_as_precedent: true
+    retrieve_contact_sheets_and_keyframes_for_reasoning: true
+    retrieve_timeline_segments_for_seconds_based_reasoning: true
+    copy_prompt_verbatim_by_default: false
+    copy_visual_style_wholesale_by_default: false
+  negative_transfer_guard:
+    - 检索到案例后必须说明迁移的是哪个机制
+    - 当前剧情角色空间资产 canonical 始终优先
+    - 表面风格相似但导演功能不同则降低权重
+
+embedding_policy:
+  status: candidate_future_capability
+  canonical_storage: false
+  recommended_units:
+    - retrieval_card_embedding
+    - timeline_segment_embedding
+    - contact_sheet_or_keyframe_embedding
+    - audio_description_embedding
+  purpose:
+    - scalable_semantic_retrieval
+    - near_duplicate_detection
+    - cluster_visual_motion_grammar
+  warning: embedding 只用于检索，不替代原始来源、时间证据、人工标签或用户 verdict
+
+# ---------- Eval / Reward-like learning ----------
 video_eval_dimensions:
   project_core:
     - instruction_following
@@ -262,73 +652,94 @@ video_eval_dimensions:
     - motion_smoothness
     - temporal_stability
     - physical_plausibility
+    - contact_and_force_transfer
     - lighting_material
     - audio_dialogue_sync
+    - audio_expressiveness
     - narrative_function
     - cross_shot_continuity
-  research_informed_optional:
+  compositional_optional:
+    - attribute_binding
+    - dynamic_attribute_binding
+    - spatial_relation_binding
+    - motion_binding
+    - action_binding
+    - object_interaction
+    - numeracy
+  aesthetic_optional:
     - aesthetic_quality
     - imaging_quality
     - dynamic_degree
     - temporal_flicker
-    - action_binding
-    - motion_binding
-    - object_interaction
     - human_fidelity
     - controllability
-    - commonsense
     - creativity
   evaluation_policy:
     - 不要求每个案例打满所有维度
     - 只启用与当前镜头目的相关的维度
-    - 自动分数必须与用户主观评价分开保存
+    - 自动分数与用户主观评价分开保存
+    - 用户优秀 verdict 是案例权威，但不是通用技能晋级证明
 
-retrieval_and_reuse:
-  retrieval_unit: case_plus_temporal_segments
-  high_weight_signals:
-    - same_director_goal
-    - same_task_function
-    - same_temporal_structure
-    - same_motion_grammar
-    - same_camera_subject_contract
-    - same_graphic_or_typography_mechanism
-    - same_lighting_mechanism
-    - same_failure_symptom
-    - same_model_and_version
-  low_weight_signals:
-    - superficial_color_similarity_only
-    - genre_label_only
-    - same_character_without_same_function
-  output_modes:
-    analyze_as_precedent: true
-    retrieve_keyframes_for_reasoning: true
-    use_source_video_as_generation_reference_when_target_model_supports_it: true
-    copy_prompt_verbatim_by_default: false
-    copy_visual_style_wholesale_by_default: false
-  negative_transfer_guard:
-    - 检索到案例后必须说明迁移的是哪个机制
-    - 当前剧情角色空间资产 canonical 始终优先
-    - 表面风格相似但导演功能不同则降低权重
+reward_like_learning_for_project:
+  note: 本项目不能直接更新 Seedance 权重，因此采用外部经验学习与检索优化模拟数据飞轮
+  channels:
+    - human_user_verdict
+    - structured_video_eval
+    - prompt_clause_alignment
+    - controlled_A_B_C
+    - negative_transfer_feedback
+    - cross_scene_transfer
+  loop:
+    - retrieve
+    - adapt
+    - generate
+    - evaluate
+    - compare
+    - distill_delta
+    - update_case_and_skill_boundary
+    - regression_test
 
-embedding_policy:
-  status: candidate_future_capability
-  canonical_storage: false
-  recommended_units:
-    - whole_video_embedding
-    - shot_or_clip_embedding
-    - keyframe_embedding
-    - text_annotation_embedding
-    - audio_embedding_when_relevant
-  purpose:
-    - scalable_semantic_retrieval
-    - near_duplicate_detection
-    - cluster_visual_grammar
-  warning: embedding 只用于检索，不替代原媒体、人工标签或用户 verdict
+# ---------- 大规模存储 ----------
+scale_and_storage_policy:
+  target_case_scale: thousands
+  default_source_video_retention: false
+  github_persists:
+    - text_metadata
+    - retrieval_card
+    - timeline
+    - analysis
+    - compressed_contact_sheets
+    - selected_keyframes
+    - selected_dense_window_frames
+  per_case_visual_budget:
+    status: adaptive_not_hard_cap
+    preferred_strategy:
+      - use_webp_or_jpeg_for_non_master_evidence
+      - prefer_contact_sheets_over_many_near_duplicate_files
+      - preserve_more_evidence_for_high_motion_or_high_value_cases
+      - preserve_less_for_static_or_redundant_cases
+  migration_trigger_examples:
+    - repository_growth_materially_harms_clone_fetch_or_search
+    - file_count_materially_harms_tooling
+    - third_party_rights_require_private_storage
+    - higher_resolution_evidence_becomes_necessary
+  migration_rule: Case ID、timeline 与 retrieval card 保持稳定，媒体存储层可以迁移而不改变上层案例身份
+
+rights_and_provenance:
+  preserve_source_attribution_when_known: true
+  do_not_claim_ownership_from_upload: true
+  public_repository_warning: 第三方受版权保护视频或帧不应因学习需求自动完整写入公开仓库
+  third_party_default:
+    - record_source_uri_and_provenance
+    - persist_only_permitted_or_necessary_derived_evidence
+    - prefer_private_storage_when_rights_are_unclear
+  real_person_reference_may_require_platform_authorization: true
+  sensitive_credentials_never_persist: true
 
 learning_and_maturity:
   media_only_case:
     default: precedent_candidate
-    cannot_promote_prompt_skill: true
+    cannot_promote_source_prompt_skill: true
   verified_prompt_output_pair:
     may_support: scene_verified_observation
   controlled_repeated_evidence:
@@ -341,7 +752,7 @@ learning_and_maturity:
 registration_routing:
   explicit_golden_case:
     case_target: 11_验收/golden_prompt_cases.yaml
-    media_binding_target: same_case_entry_using_this_schema
+    bundle_target: 11_验收/golden_case_bundles/{case_id}/
   version_bound_real_generation_behavior:
     target: 08_系统学习/C-DANCE2.5真实生成反馈库.md
   general_learning_trace:
@@ -351,14 +762,43 @@ registration_routing:
   media_uploaded_only_for_test:
     rule: 可以分析和形成临时观察，但不得自动登记为 Golden Case 或正式资产
 
-rights_and_provenance:
-  preserve_source_attribution_when_known: true
-  do_not_claim_ownership_from_upload: true
-  real_person_reference_may_require_platform_authorization: true
-  sensitive_credentials_never_persist: true
+edcm_mapping:
+  K0_explicit_known:
+    capture:
+      - 用户明确评价
+      - 真实 source prompt
+      - 明确模型版本和参数
+      - 明确希望学习的视觉声音或物理效果
+  K1_implicit_known:
+    infer_with_evidence:
+      - 多次稳定偏好的镜头语法
+      - 多次认可的运动节奏与美学结构
+      - 用户没有术语化但反复选择的控制目标
+    requirement: confidence_plus_boundary
+  K2_adjacent_unknown:
+    proactively_map:
+      - shot_boundary_detection
+      - dense_video_captioning
+      - temporal_grounding
+      - adaptive_temporal_evidence_distillation
+      - dynamic_fps_and_absolute_time
+      - audio_visual_captioning
+      - prompt_reconstruction
+      - retrieval_augmented_prompt_optimization
+      - reward_model_style_evaluation
+      - causal_chain_grounding
+  K3_unknown_unknown:
+    route_to_unknown_or_experiment:
+      - proprietary_Seedance_2_5_training_details
+      - causal_identifiability_from_single_observational_video
+      - optimal_sampling_budget_per_video_class
+      - correlation_between_automatic_aesthetic_grader_and_user_taste
+      - information_loss_from_discarding_source_video_for_specific_motion_or_sound_cases
 
 unknowns:
-  - 不同视频理解模型/ChatGPT版本对长视频和细粒度时序判断的稳定上限需持续实测
-  - 最优 uniform sampling 间隔取决于动作速度与镜头复杂度，0.5s/0.125s只是默认策略不是硬规则
+  - Seedance 2.5 的具体数据清洗、caption、reward 与后训练配方公开信息不足，不能用 1.0/1.5/2.0 资料冒充 2.5 内部实现
+  - 单一观察视频不能可靠区分真正物理规律、经验模仿和数据分布内模式匹配
+  - 最优自适应抽帧预算取决于动作速度、镜头复杂度、声音重要性与检索目标，需要项目语料实测
   - 自动美学 grader 与用户导演审美的项目内相关性尚需数据校准
-  - C-DANCE 2.5 对参考视频中哪些属性可独立借用、哪些会连带迁移，需要版本绑定 A/B 测试
+  - 舍弃原视频会损失连续光流、精确加速度、运动模糊、真实音色与微妙混音等信息；高价值不可压缩案例需要例外保留策略
+  - 当前 GitHub/ChatGPT 连接层对数千图像的真正视觉向量检索能力并非已验证事实，因此召回必须以文本 retrieval card/timeline 为稳定入口
