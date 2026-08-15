@@ -24,6 +24,7 @@ read_sets:
       model_real_generation_feedback: C-DANCE2.5真实生成反馈库#when_cdance_seedance_2_5_prompting_generation_reverse_observation_or_version_bound_behavior_is_relevant
       golden_prompt_cases: 优秀提示词案例库#only_if_a_relevant_precedent_or_regression_case_exists
       golden_media_evidence: golden_media_evidence_schema#when_video_image_audio_output_evidence_or_media_backed_golden_precedent_is_used
+      golden_case_director_pull: golden_case_director_pull_schema#when_retrieving_or_using_a_golden_director_precedent
       soac_runtime: screen_observable_audible_ir_schema#only_if_full_directing_story_to_shot_AI_execution_observable_audible_diagnosis_reverse_evaluation_or_compiler_regression
 
   sound_directing:
@@ -46,6 +47,7 @@ read_sets:
       learning: 反馈反推与系统反哺引擎#relevant_sound_lessons
       golden_prompt_cases: 优秀提示词案例库#only_if_a_sound_or_suno_precedent_is_relevant
       golden_media_evidence: golden_media_evidence_schema#when_audio_or_video_output_evidence_is_part_of_the_case
+      golden_case_director_pull: golden_case_director_pull_schema#when_golden_case_sound_performance_or_editing_analysis_is_relevant
 
   suno_prompt_compilation:
     always:
@@ -100,6 +102,9 @@ read_sets:
       scene_asset_identity: scene_asset_identity_schema#asset_identity_camera_anchor_view_relation_or_interop_research
       scene_media_resolver: scene_media_resolver_manifest#media_version_locator_migration_or_retrieval_research
       golden_media_evidence: golden_media_evidence_schema#when_prompt_output_media_pairing_temporal_video_evidence_aesthetic_retrieval_or_video_eval_is_researched
+      golden_case_director_pull: golden_case_director_pull_schema#when_director_grade_case_breakdown_performance_beats_stillness_sound_or_retrieval_is_researched
+      golden_case_director_pull_evidence: 导演级拉片与低运动表演证据索引#when_director_pull_or_low_motion_high_information_method_needs_external_evidence
+      golden_case_director_pull_regression: golden_case_director_pull_regression_cases#when_director_pull_protocol_or_retrieval_regression_is_being_evaluated
       sound: 声音导演系统#when_sound_music_song_or_audio_domain
       suno_lexicon: SUNO提示词词库与编译映射#when_suno_prompt_or_music_generation_domain
       sound_evidence: 声音导演与SUNO证据索引#when_sound_music_song_or_audio_domain
@@ -117,11 +122,14 @@ read_sets:
     always:
       - PROJECT_INDEX.yaml
       - 优秀提示词案例学习协议
+      - golden_case_director_pull_schema
       - 反馈反推与系统反哺引擎#relevant_learning_sections_only
       - maturity_model
       - 优秀提示词案例库
     conditional:
       media_evidence: golden_media_evidence_schema#when_user_supplies_video_image_audio_or_generated_output_evidence
+      director_pull_evidence: 导演级拉片与低运动表演证据索引#when_new_or_uncertain_director_pull_mechanism_requires_external_support
+      director_pull_regression: golden_case_director_pull_regression_cases#when_protocol_or_retrieval_behavior_is_tested
       ai_film_method: AI电影系统#relevant_sections_only
       sound_method: 声音导演系统#when_sound_music_dialogue_or_suno_case
       suno_lexicon: SUNO提示词词库与编译映射#when_suno_case
@@ -154,6 +162,9 @@ rules:
   sound_relevant_task_must_read_sound_director: true
   suno_prompt_compilation_must_read_lexicon: true
   golden_prompt_explicit_user_verdict_must_run_two_step_ingestion: true
+  golden_prompt_ingestion_must_execute_director_grade_pull: true
+  golden_prompt_prompt_only_pull_must_remain_prospective: true
+  golden_prompt_media_backed_pull_must_be_seconds_grounded: true
   golden_prompt_source_verbatim_must_be_preserved: true
   golden_prompt_case_registration_must_not_auto_promote_skill: true
   golden_prompt_retrieval_must_be_targeted_not_full_library: true
