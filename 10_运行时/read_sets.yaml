@@ -42,7 +42,7 @@ read_sets:
       suno_user_evidence: SUNO用户提示词资料摄取记录#source_provenance_or_legacy_prompt_audit
       sound_unknowns: SOUND_UNKNOWN_REGISTRY#unresolved_sound_or_suno_capability
       sound_regression: sound_director_regression_cases#targeted_eval_or_regression
-      suno_prompt_regression: suno_prompt_regression_cases#prompt_lexicon_eval_or_revalidation
+      suno_prompt_regression: suno_prompt_regression_cases#A_B_or_version_revalidation
       learning: 反馈反推与系统反哺引擎#relevant_sound_lessons
       golden_prompt_cases: 优秀提示词案例库#only_if_a_sound_or_suno_precedent_is_relevant
       golden_media_evidence: golden_media_evidence_schema#when_audio_or_video_output_evidence_is_part_of_the_case
@@ -157,7 +157,10 @@ rules:
   golden_prompt_source_verbatim_must_be_preserved: true
   golden_prompt_case_registration_must_not_auto_promote_skill: true
   golden_prompt_retrieval_must_be_targeted_not_full_library: true
-  golden_media_raw_binary_must_remain_primary_evidence_when_present: true
-  golden_media_derived_frames_are_indexes_not_source_authority: true
-  golden_media_without_source_prompt_must_not_claim_prompt_causality: true
+  golden_media_persistent_representation_must_follow_temporal_evidence_bundle_schema: true
+  golden_media_source_video_default_persistence_is_not_required: true
+  golden_media_timestamps_must_be_seconds_first_for_human_facing_use: true
+  golden_media_retrieval_must_start_from_text_retrieval_card_and_timeline: true
+  golden_media_reconstructed_prompt_must_not_be_labeled_as_source_prompt: true
+  golden_media_without_true_source_prompt_must_not_claim_prompt_causality: true
   cdance25_version_bound_behavior_must_read_real_generation_feedback_when_relevant: true
