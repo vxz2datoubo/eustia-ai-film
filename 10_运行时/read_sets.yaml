@@ -19,6 +19,7 @@ read_sets:
       sound_unknowns: SOUND_UNKNOWN_REGISTRY#only_if_sound_tool_or_delivery_unknown
       evidence: 官方资料与证据索引#only_if_research_or_tool_uncertain
       learning: 反馈反推与系统反哺引擎#relevant_lessons
+      model_real_generation_feedback: C-DANCE2.5真实生成反馈库#when_cdance_seedance_2_5_prompting_generation_reverse_observation_or_version_bound_behavior_is_relevant
       golden_prompt_cases: 优秀提示词案例库#only_if_a_relevant_precedent_or_regression_case_exists
       soac_runtime: screen_observable_audible_ir_schema#only_if_full_directing_story_to_shot_AI_execution_observable_audible_diagnosis_reverse_evaluation_or_compiler_regression
 
@@ -102,6 +103,7 @@ read_sets:
       golden_prompt_evidence: 优秀提示词案例学习证据索引#when_golden_case_external_research_is_relevant
       golden_prompt_regression: golden_prompt_regression_cases#when_golden_case_protocol_eval_is_relevant
       soac_runtime: screen_observable_audible_ir_schema#when_story_to_shot_compilation_observable_audible_diagnosis_reverse_evaluation_or_compiler_test
+      model_real_generation_feedback: C-DANCE2.5真实生成反馈库#when_seedance_2_5_cdance_real_generation_or_model_behavior_is_under_review
 
   golden_prompt_ingestion:
     always:
@@ -141,3 +143,4 @@ rules:
   golden_prompt_source_verbatim_must_be_preserved: true
   golden_prompt_case_registration_must_not_auto_promote_skill: true
   golden_prompt_retrieval_must_be_targeted_not_full_library: true
+  cdance25_version_bound_behavior_must_read_real_generation_feedback_when_relevant: true
