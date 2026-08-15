@@ -21,6 +21,7 @@ read_sets:
       learning: 反馈反推与系统反哺引擎#relevant_lessons
       model_real_generation_feedback: C-DANCE2.5真实生成反馈库#when_cdance_seedance_2_5_prompting_generation_reverse_observation_or_version_bound_behavior_is_relevant
       golden_prompt_cases: 优秀提示词案例库#only_if_a_relevant_precedent_or_regression_case_exists
+      golden_media_evidence: golden_media_evidence_schema#when_video_image_audio_output_evidence_or_media_backed_golden_precedent_is_used
       soac_runtime: screen_observable_audible_ir_schema#only_if_full_directing_story_to_shot_AI_execution_observable_audible_diagnosis_reverse_evaluation_or_compiler_regression
 
   sound_directing:
@@ -42,6 +43,7 @@ read_sets:
       suno_prompt_regression: suno_prompt_regression_cases#prompt_lexicon_eval_or_revalidation
       learning: 反馈反推与系统反哺引擎#relevant_sound_lessons
       golden_prompt_cases: 优秀提示词案例库#only_if_a_sound_or_suno_precedent_is_relevant
+      golden_media_evidence: golden_media_evidence_schema#when_audio_or_video_output_evidence_is_part_of_the_case
 
   suno_prompt_compilation:
     always:
@@ -59,6 +61,7 @@ read_sets:
       suno_prompt_regression: suno_prompt_regression_cases#A_B_or_version_revalidation
       learning: 反馈反推与系统反哺引擎#relevant_sound_lessons
       golden_prompt_cases: 优秀提示词案例库#only_if_a_relevant_music_prompt_precedent_exists
+      golden_media_evidence: golden_media_evidence_schema#when_generated_audio_or_video_is_bound_to_a_golden_case
 
   asset_registration:
     always:
@@ -94,6 +97,7 @@ read_sets:
     conditional:
       scene_asset_identity: scene_asset_identity_schema#asset_identity_camera_anchor_view_relation_or_interop_research
       scene_media_resolver: scene_media_resolver_manifest#media_version_locator_migration_or_retrieval_research
+      golden_media_evidence: golden_media_evidence_schema#when_prompt_output_media_pairing_temporal_video_evidence_aesthetic_retrieval_or_video_eval_is_researched
       sound: 声音导演系统#when_sound_music_song_or_audio_domain
       suno_lexicon: SUNO提示词词库与编译映射#when_suno_prompt_or_music_generation_domain
       sound_evidence: 声音导演与SUNO证据索引#when_sound_music_song_or_audio_domain
@@ -113,6 +117,7 @@ read_sets:
       - maturity_model
       - 优秀提示词案例库
     conditional:
+      media_evidence: golden_media_evidence_schema#when_user_supplies_video_image_audio_or_generated_output_evidence
       ai_film_method: AI电影系统#relevant_sections_only
       sound_method: 声音导演系统#when_sound_music_dialogue_or_suno_case
       suno_lexicon: SUNO提示词词库与编译映射#when_suno_case
@@ -143,4 +148,7 @@ rules:
   golden_prompt_source_verbatim_must_be_preserved: true
   golden_prompt_case_registration_must_not_auto_promote_skill: true
   golden_prompt_retrieval_must_be_targeted_not_full_library: true
+  golden_media_raw_binary_must_remain_primary_evidence_when_present: true
+  golden_media_derived_frames_are_indexes_not_source_authority: true
+  golden_media_without_source_prompt_must_not_claim_prompt_causality: true
   cdance25_version_bound_behavior_must_read_real_generation_feedback_when_relevant: true
