@@ -396,7 +396,16 @@ cases:
     maturity: candidate
     scene_evidence:
       work_item: KAIM-HIGH-SEARCH-30S
-      status: test_spec_only_no_SOAC_generation_result
+      status: real_7s_AB_observed_confounded
+      experiment_id: CD25-KAIM-WINDOW-AB-20260815
+      evidence_ref: 08_系统学习/C-DANCE2.5真实生成反馈库.md#实验-CD25-KAIM-WINDOW-AB-20260815
+      model: C-DANCE_2.5_project_alias_for_user_reported_Seedance_2.5
+      observed_result:
+        A: 外部机位与外墙上行基本成立且构图被用户判定较好，但严格事件先后、窗扇接触绑定与“妇女未看到凯姆”的屏幕证据失败
+        B: 外部机位、外墙上行、VO不实体化与scope基本成立，但严格事件先后与窗扇接触仍失败，并出现更明显横向伸腿与较弱coverage式构图
+        shared_failure: 更显式的事件与contact描述没有在本次7秒样本中单独解决复杂微接触链
+        control_drift: B额外使用斜侧摄影机描述，camera plan不等同A
+        conclusion: confounded_inconclusive_no_SOAC_maturity_inference
     must_preserve:
       - canonical事实先进入WorldStateIR但不自动成为当前shot画面授权
       - EventGraphIR绑定agent action target instrument support_contact与状态变化
@@ -408,7 +417,10 @@ cases:
       - TransitionContract解析Shot_A_exit_state到Shot_B_entry_state
       - 最终提示只输出最小充分执行信息而非完整IR或内部分析
       - ReverseObservation可由人工或AI辅助输入但不得声称全自动grader已实现
-      - SOAC保持candidate直至真实受控生成验证
+      - 可观察清楚不能以牺牲导演摄影构图为代价把camera退化成coverage机位
+      - 受控A/B除同剧本资产模型设置时长目标外还必须锁camera position orientation shot size height lens intent motion与material composition goal
+      - 关键非目标变量漂移时必须标记confounded且不得用于成熟度晋级
+      - SOAC保持candidate直至取得干净受控真实生成验证
     checks:
       - world_truth_vs_shot_observable_truth
       - event_actor_target_binding
@@ -424,6 +436,9 @@ cases:
       - minimal_execution_prompt
       - reverse_observation_boundary
       - static_compiler_check_codes
+      - controlled_variable_integrity
+      - camera_aesthetic_preservation
+      - confounded_eval_gate
     targeted_eval:
       method: controlled_A_B_compare
       A: 当前传统完整导演流程
@@ -431,10 +446,14 @@ cases:
       controls:
         - same_screenplay
         - same_assets
+        - same_reference_responsibilities
         - same_model_version
         - same_generation_settings
         - same_duration
         - same_story_goal
+        - same_camera_position_orientation_shot_size_height_lens_intent_and_motion
+        - same_material_composition_goal
+        - similar_final_prompt_information_budget
       compare:
         - instruction_following
         - visible_set_fidelity
@@ -448,10 +467,48 @@ cases:
         - reveal_control
         - VO_visual_leakage
         - camera_behavior
+        - camera_aesthetic_quality
         - performance_readability
         - transition
         - final_state
         - unwanted_invention
         - prompt_complexity
         - repair_iterations
-      promotion_gate: 真实生成证明B改善目标维度且未显著增加scope_leak_constraint_overload或新严重失败后，才可考虑scene_verified。
+      promotion_gate: 只有clean受控真实生成证明B改善目标维度且未显著增加scope_leak_constraint_overload_camera_aesthetic_degradation或新严重失败后，才可考虑scene_verified。
+
+  - id: REG-CDANCE25-TEMPORAL-EXCLUSIVITY-001
+    title: C-DANCE 2.5复杂短时序优先测试互斥屏幕状态而非继续堆叠时序文字
+    maturity: candidate
+    scene_evidence:
+      work_item: KAIM-HIGH-SEARCH-30S / 7s window micro-sequence
+      experiment_id: CD25-KAIM-WINDOW-AB-20260815
+      observed_result: A与B都未稳定实现“凯姆先经过→妇女后开窗→凯姆再踩已打开窗扇”的高耦合微动作链；B更显式的event/contact描述仍失败
+      evidence_ref: 08_系统学习/C-DANCE2.5真实生成反馈库.md
+      evidence_status: scene_verified_observation_reusable_strategy_unvalidated
+    must_preserve:
+      - 互斥状态策略是candidate而不是已证明的C-DANCE定律
+      - 若微接触不承担不可替代剧情功能先评估是否删减或拆分
+      - 若剧情允许状态分离则明确前一主体完全离开作用区域再启动下一事件
+      - 下一轮必须保留同一摄影机与构图合同避免再次污染变量
+      - 若真实交互接触是剧情必要不得用状态分离逃避必要物理关系
+      - 模型版本变化时该经验进入needs_revalidation
+    targeted_eval:
+      method: controlled_A_B_compare
+      A: 原高耦合链，角色运动、延迟开窗、旋转窗扇、微接触、受力反馈和认知错位同时成立
+      B: 互斥可见状态链，凯姆在窗口附近且窗关→凯姆完全离开且窗口短暂为空→妇女才开窗
+      controls:
+        - same_scene_and_character_assets
+        - same_camera_plan
+        - same_duration
+        - same_model_version
+        - same_generation_settings_when_available
+        - same_story_function
+      compare:
+        - event_order
+        - actor_overlap_error
+        - observer_knowledge_plausibility
+        - physical_motion_naturalness
+        - camera_composition_quality
+        - prompt_complexity
+        - repair_iterations
+      promotion_gate: B在真实C-DANCE 2.5生成中显著改善严格先后且不伤害镜头构图与剧情功能后，才可把该场策略记为scene_verified；跨场景前保持candidate。
