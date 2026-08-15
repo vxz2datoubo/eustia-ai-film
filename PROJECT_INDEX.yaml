@@ -13,6 +13,8 @@ policy:
   golden_case_source_video_default_retention: false
   golden_case_human_time_coordinate: seconds
   golden_case_reconstructed_prompt_must_preserve_inference_provenance: true
+  golden_case_director_pull_required: true
+  golden_case_low_motion_high_information_must_preserve_duration_evidence: true
   old_file_search_rank_can_define_authority: false
   director_task_must_read_project_index_first: true
 
@@ -33,12 +35,14 @@ canonical:
   golden_prompt_protocol: 08_系统学习/优秀提示词案例学习协议.md
   evidence_index: 09_资料证据/官方资料与证据索引.md
   golden_prompt_evidence: 09_资料证据/优秀提示词案例学习证据索引.md
+  golden_case_director_pull_evidence: 09_资料证据/导演级拉片与低运动表演证据索引.md
   proactive_assistance_and_cost_routing_evidence: 09_资料证据/主动协作与成本路由证据索引.md
   sound_evidence: 09_资料证据/声音导演与SUNO证据索引.md
   suno_user_prompt_evidence: 09_资料证据/SUNO用户提示词资料摄取记录.md
   scene_asset_identity_schema: 10_运行时/scene_asset_identity_schema.yaml
   scene_media_resolver_manifest: 10_运行时/scene_media_resolver_manifest.yaml
   golden_media_evidence_schema: 10_运行时/golden_media_evidence_schema.yaml
+  golden_case_director_pull_schema: 10_运行时/golden_case_director_pull_schema.yaml
   screen_observable_audible_ir_schema: 10_运行时/screen_observable_audible_ir_schema.yaml
   proactive_execution_opportunity_router: 10_运行时/proactive_execution_opportunity_router.yaml
   route_index: 10_运行时/director_route_index.yaml
@@ -49,7 +53,9 @@ canonical:
   pending_canonical_writes: 10_运行时/pending_canonical_writes.yaml
   regression_cases: 11_验收/director_regression_cases.yaml
   golden_prompt_cases: 11_验收/golden_prompt_cases.yaml
+  golden_case_director_pull_template: 11_验收/golden_case_templates/导演级拉片模板.md
   golden_prompt_regression_cases: 11_验收/golden_prompt_regression_cases.yaml
+  golden_case_director_pull_regression_cases: 11_验收/golden_case_director_pull_regression_cases.yaml
   sound_regression_cases: 11_验收/sound_director_regression_cases.yaml
   suno_prompt_regression_cases: 11_验收/suno_prompt_regression_cases.yaml
   legacy_authority_regression_cases: 11_验收/legacy_authority_regression_cases.yaml
@@ -70,12 +76,14 @@ effective_sources:
   08_系统学习/优秀提示词案例学习协议.md: github_verified
   09_资料证据/官方资料与证据索引.md: github_verified
   09_资料证据/优秀提示词案例学习证据索引.md: github_verified
+  09_资料证据/导演级拉片与低运动表演证据索引.md: github_verified
   09_资料证据/主动协作与成本路由证据索引.md: github_verified
   09_资料证据/声音导演与SUNO证据索引.md: github_verified
   09_资料证据/SUNO用户提示词资料摄取记录.md: github_verified
   10_运行时/scene_asset_identity_schema.yaml: github_verified
   10_运行时/scene_media_resolver_manifest.yaml: github_verified
   10_运行时/golden_media_evidence_schema.yaml: github_verified
+  10_运行时/golden_case_director_pull_schema.yaml: github_verified
   10_运行时/screen_observable_audible_ir_schema.yaml: github_verified
   10_运行时/proactive_execution_opportunity_router.yaml: github_verified
   10_运行时/source_authority.yaml: github_verified
@@ -86,7 +94,9 @@ effective_sources:
   10_运行时/director_route_index.yaml: github_verified
   11_验收/director_regression_cases.yaml: github_verified
   11_验收/golden_prompt_cases.yaml: github_verified
+  11_验收/golden_case_templates/导演级拉片模板.md: github_verified
   11_验收/golden_prompt_regression_cases.yaml: github_verified
+  11_验收/golden_case_director_pull_regression_cases.yaml: github_verified
   11_验收/sound_director_regression_cases.yaml: github_verified
   11_验收/suno_prompt_regression_cases.yaml: github_verified
   11_验收/legacy_authority_regression_cases.yaml: github_verified
