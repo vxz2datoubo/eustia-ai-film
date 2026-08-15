@@ -15,6 +15,8 @@ class FrameSample:
     timestamp_s: float
     path: Path
     visual_delta: float = 0.0
+    histogram_distance: float = 0.0
+    changed_block_ratio: float = 0.0
 
 
 def load_image_metric(path: Path) -> Image.Image:
@@ -25,10 +27,31 @@ def load_image_metric(path: Path) -> Image.Image:
 
 
 def image_delta(a: Path, b: Path) -> float:
+    return frame_change_metrics(a, b)["pixel_delta"]
+
+
+def frame_change_metrics(a: Path, b: Path) -> dict[str, float]:
     left, right = load_image_metric(a), load_image_metric(b)
     if left.size != right.size:
         right = right.resize(left.size)
-    return round(sum(ImageStat.Stat(ImageChops.difference(left, right)).mean) / 3, 4)
+    difference = ImageChops.difference(left, right)
+    pixel_delta = sum(ImageStat.Stat(difference).mean) / 3
+    left_histogram = left.convert("L").histogram()
+    right_histogram = right.convert("L").histogram()
+    pixel_count = left.width * left.height
+    histogram_distance = sum(abs(first - second) for first, second in zip(left_histogram, right_histogram)) / pixel_count
+    changed_blocks = 0
+    for row in range(4):
+        for column in range(4):
+            box = (column * left.width // 4, row * left.height // 4, (column + 1) * left.width // 4, (row + 1) * left.height // 4)
+            block_delta = sum(ImageStat.Stat(difference.crop(box)).mean) / 3
+            if block_delta >= 12.0:
+                changed_blocks += 1
+    return {
+        "pixel_delta": round(pixel_delta, 4),
+        "histogram_distance": round(histogram_distance, 6),
+        "changed_block_ratio": round(changed_blocks / 16, 4),
+    }
 
 
 def baseline_timestamps(duration_s: float, interval_s: float = 0.5) -> list[float]:
@@ -39,17 +62,30 @@ def baseline_timestamps(duration_s: float, interval_s: float = 0.5) -> list[floa
     return sorted(set(timestamps))
 
 
-def infer_shots(samples: list[FrameSample], duration_s: float, cut_threshold: float = 28.0) -> list[dict]:
+def infer_shots(samples: list[FrameSample], duration_s: float, reader=None, local_interval_s: float = 0.125) -> tuple[list[dict], list[FrameSample]]:
+    """Find editorial-cut candidates, then refine every coarse candidate locally."""
     boundaries = [0.0]
-    for sample in samples[1:]:
-        if sample.visual_delta >= cut_threshold and sample.timestamp_s > boundaries[-1]:
-            boundaries.append(sample.timestamp_s)
+    refined_samples: list[FrameSample] = []
+    for index, sample in enumerate(samples[1:], 1):
+        # The first baseline interval has no preceding change interval, so it
+        # cannot establish an editorial discontinuity rather than startup motion.
+        if index < 2:
+            continue
+        before_score = _cut_score(samples[index - 1])
+        after_score = _cut_score(samples[index + 1]) if index + 1 < len(samples) else 0.0
+        score = _cut_score(sample)
+        if not _is_coarse_cut(sample, score, before_score, after_score):
+            continue
+        boundary, _, local = _refine_boundary(reader, samples[index - 1].timestamp_s, sample.timestamp_s, local_interval_s, sample)
+        if boundary > boundaries[-1] + 1e-6 and boundary < duration_s - 1e-6:
+            boundaries.append(boundary)
+            refined_samples.extend(local)
     if duration_s > boundaries[-1]:
         boundaries.append(round(duration_s, 6))
     shots: list[dict] = []
     for index, start in enumerate(boundaries[:-1], 1):
         end = boundaries[index]
-        adjacent = next((s for s in samples if abs(s.timestamp_s - start) < 1e-6), None)
+        local = next((sample for sample in refined_samples if abs(sample.timestamp_s - start) < 1e-6), None)
         shots.append(
             {
                 "shot_id": f"SHOT-{index:03d}",
@@ -57,7 +93,12 @@ def infer_shots(samples: list[FrameSample], duration_s: float, cut_threshold: fl
                 "end_s": end,
                 "duration_s": round(end - start, 6),
                 "transition_candidate": "hard_cut_candidate" if index > 1 else "source_start",
-                "transition_confidence": round(min(1.0, (adjacent.visual_delta if adjacent else 0.0) / 60), 3),
+                "transition_confidence": round(_cut_score(local) if local else (1.0 if index == 1 else 0.5), 3),
+                "boundary_refinement": {
+                    "method": "local_frame_interval_search",
+                    "refined_boundary_s": start,
+                    "local_interval_s": local_interval_s,
+                } if index > 1 else None,
             }
         )
     if not shots:
@@ -71,7 +112,37 @@ def infer_shots(samples: list[FrameSample], duration_s: float, cut_threshold: fl
                 "transition_confidence": 1.0,
             }
         )
-    return shots
+    return shots, refresh_metrics(refined_samples)
+
+
+def _cut_score(sample: FrameSample | None) -> float:
+    if sample is None:
+        return 0.0
+    return round(
+        0.25 * min(1.0, sample.visual_delta / 80.0)
+        + 0.55 * min(1.0, sample.histogram_distance / 0.8)
+        + 0.20 * sample.changed_block_ratio,
+        6,
+    )
+
+
+def _is_coarse_cut(sample: FrameSample, score: float, before_score: float, after_score: float) -> bool:
+    is_global_discontinuity = sample.histogram_distance >= 0.35 and sample.changed_block_ratio >= 0.65
+    is_local_peak = score >= 0.45 and score >= before_score * 1.2 and score >= after_score * 1.2
+    return is_global_discontinuity and is_local_peak
+
+
+def _refine_boundary(reader, start_s: float, end_s: float, interval_s: float, fallback: FrameSample) -> tuple[float, float, list[FrameSample]]:
+    if reader is None or interval_s <= 0:
+        return fallback.timestamp_s, _cut_score(fallback), [fallback]
+    timestamps = [start_s]
+    current = start_s + interval_s
+    while current <= end_s + 1e-6:
+        timestamps.append(round(min(current, end_s), 6))
+        current += interval_s
+    local = refresh_metrics([FrameSample(timestamp_s=timestamp, path=reader(timestamp)) for timestamp in sorted(set(timestamps))])
+    strongest = max(local[1:], key=_cut_score, default=fallback)
+    return strongest.timestamp_s, _cut_score(strongest), local
 
 
 def dense_timestamps(samples: list[FrameSample], shots: list[dict], dense_interval_s: float = 0.125) -> set[float]:
@@ -87,21 +158,34 @@ def dense_timestamps(samples: list[FrameSample], shots: list[dict], dense_interv
     return points
 
 
-def duration_evidence_guard(samples: list[FrameSample], shot: dict) -> tuple[set[float], dict]:
+def duration_evidence_guard(samples: list[FrameSample], shot: dict) -> tuple[dict[float, str], dict]:
     inside = [s for s in samples if shot["start_s"] <= s.timestamp_s <= shot["end_s"]]
     if not inside:
-        return set(), {"status": "not_observed"}
+        return {}, {"status": "not_observed"}
     start, end = shot["start_s"], shot["end_s"]
     middle = round((start + end) / 2, 6)
     changes = [s for s in inside if s.visual_delta >= 3.0]
     first = changes[0].timestamp_s if changes else None
     threshold = max(inside, key=lambda s: s.visual_delta).timestamp_s if changes else None
-    protected = {start, middle, end}
-    protected.update(value for value in (first, threshold) if value is not None)
-    mean_delta = sum(sample.visual_delta for sample in inside) / len(inside)
+    low_motion_candidate = (
+        shot["duration_s"] >= 0.5
+        and bool(changes)
+        and sum(sample.visual_delta < 3.0 for sample in inside[1:]) >= max(1, len(inside[1:]) // 2)
+    )
+    if not low_motion_candidate:
+        return {start: "temporal_anchor", middle: "temporal_anchor", end: "temporal_anchor"}, {
+            "status": "generic_temporal_anchor",
+            "anchor_start_s": start,
+            "anchor_middle_s": middle,
+            "anchor_end_s": end,
+            "note": "No low-motion hold candidate was detected; anchors preserve ordinary temporal orientation only.",
+        }
+    protected = {start: "duration_evidence", middle: "duration_evidence", end: "duration_evidence"}
+    for value in (first, threshold):
+        if value is not None:
+            protected[value] = "duration_evidence"
     return protected, {
-        "status": "protected_duration_evidence",
-        "low_motion_candidate": mean_delta < 3.0,
+        "status": "low_motion_hold_candidate",
         "hold_start_s": start,
         "hold_middle_s": middle,
         "first_micro_change_s": first,
@@ -110,6 +194,16 @@ def duration_evidence_guard(samples: list[FrameSample], shot: dict) -> tuple[set
         "confidence": 0.55 if changes else 0.3,
         "note": "Mechanical guard; GPT determines whether this is high-information performance.",
     }
+
+
+def refresh_metrics(samples: list[FrameSample]) -> list[FrameSample]:
+    refreshed = []
+    previous = None
+    for sample in sorted(samples, key=lambda item: item.timestamp_s):
+        metrics = frame_change_metrics(previous.path, sample.path) if previous else {"pixel_delta": 0.0, "histogram_distance": 0.0, "changed_block_ratio": 0.0}
+        refreshed.append(FrameSample(sample.timestamp_s, sample.path, metrics["pixel_delta"], metrics["histogram_distance"], metrics["changed_block_ratio"]))
+        previous = refreshed[-1]
+    return refreshed
 
 
 def deduplicate(samples: list[FrameSample], protected: set[float], threshold: float = 2.0) -> list[FrameSample]:

@@ -24,6 +24,9 @@ records that the exact frame count was decoded by ffmpeg.
   --case-id GPC-20260815-DEMO `
   --video C:\media\demo.mp4 `
   --source-prompt-file C:\media\prompt.txt `
+  --prompt-output-pair-verified `
+  --source-origin-type user_supplied `
+  --source-rights-status user_supplied_rights_unverified `
   --output-root ..\..\11_验收\golden_case_bundles
 ```
 
@@ -59,6 +62,12 @@ onset and peak candidates), but `asr_status` is explicitly
   a formal visual asset or a Golden Case registry record.
 - Reconstructed prompts are copied only from an explicit user-supplied file and
   remain `inferred_from_media`; the tool never generates one automatically.
+- A source prompt remains `M1_media_observation` unless
+  `--prompt-output-pair-verified` explicitly confirms it belongs to this media.
+  Only that gate permits `M2_prompt_output_pair`.
+- Third-party input records origin, URI when known, rights status, and derived
+  evidence persistence status.  The validator rejects an unclassified rights
+  status for third-party sources; it does not make legal conclusions.
 - Shot/change and audio-event results are confidence-scored candidates, not
   editorial ground truth.  The duration-evidence guard is intentionally
   mechanical: it preserves hold start/middle/change/release evidence, while GPT

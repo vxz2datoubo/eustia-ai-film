@@ -23,6 +23,11 @@ def parser() -> argparse.ArgumentParser:
     ingest_parser.add_argument("--context-file", type=Path)
     ingest_parser.add_argument("--asr-command", nargs="+", help="External ASR command; include literal {audio} argument")
     ingest_parser.add_argument("--explicit-golden-intent", action="store_true", help="Record user intent only; never auto-registers a case")
+    ingest_parser.add_argument("--prompt-output-pair-verified", action="store_true", help="Only set when supplied prompt and media are a verified real pair")
+    ingest_parser.add_argument("--source-origin-type", default="user_supplied", help="e.g. user_supplied or third_party")
+    ingest_parser.add_argument("--source-uri", help="Known source URL or URI; not inferred by the tool")
+    ingest_parser.add_argument("--source-rights-status", default="not_provided", help="Recorded status, not a legal judgment")
+    ingest_parser.add_argument("--persistence-permission-status", default="derived_evidence_only", help="Permission/status for persisted derived evidence")
     validate_parser = commands.add_parser("validate", help="validate a generated bundle")
     validate_parser.add_argument("bundle", type=Path)
     return root
@@ -43,6 +48,11 @@ def main(argv: list[str] | None = None) -> None:
                 context_file=args.context_file,
                 asr_command=args.asr_command,
                 explicit_golden_intent=args.explicit_golden_intent,
+                prompt_output_pair_verified=args.prompt_output_pair_verified,
+                source_origin_type=args.source_origin_type,
+                source_uri=args.source_uri,
+                source_rights_status=args.source_rights_status,
+                persistence_permission_status=args.persistence_permission_status,
             ),
             resolve_ffmpeg() if args.video else "unused-for-image-sequence",
         )

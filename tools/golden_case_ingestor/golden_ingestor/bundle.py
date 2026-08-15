@@ -17,9 +17,9 @@ from .analysis import (
     deduplicate,
     dense_timestamps,
     duration_evidence_guard,
-    image_delta,
     infer_shots,
     make_contact_sheet,
+    refresh_metrics,
 )
 from .media import decode_audio_to_wav, extract_video_frame, probe_video
 from .util import dump_yaml, interval_filename, run, seconds_filename, sha256_file
@@ -37,6 +37,11 @@ class IngestOptions:
     context_file: Path | None = None
     asr_command: list[str] | None = None
     explicit_golden_intent: bool = False
+    prompt_output_pair_verified: bool = False
+    source_origin_type: str = "user_supplied"
+    source_uri: str | None = None
+    source_rights_status: str = "not_provided"
+    persistence_permission_status: str = "derived_evidence_only"
 
 
 def ingest(options: IngestOptions, ffmpeg: str) -> Path:
@@ -44,6 +49,8 @@ def ingest(options: IngestOptions, ffmpeg: str) -> Path:
         raise ValueError("Provide exactly one of --video or --image-dir")
     if not options.case_id.startswith("GPC-"):
         raise ValueError("case_id must start with GPC-")
+    if options.prompt_output_pair_verified and not options.source_prompt_file:
+        raise ValueError("--prompt-output-pair-verified requires --source-prompt-file")
     output = options.output_root / options.case_id
     if output.exists():
         raise FileExistsError(f"Refusing to overwrite existing bundle: {output}")
@@ -54,7 +61,7 @@ def ingest(options: IngestOptions, ffmpeg: str) -> Path:
             metadata = probe_video(options.video, ffmpeg)
             duration_s = metadata["duration_s"]
             get_frame = _video_frame_reader(ffmpeg, options.video, temp / "decoded", duration_s, metadata.get("fps"))
-            source = {"input_type": "video", "path": str(options.video), "sha256": metadata["sha256"]}
+            source = _source_provenance(options, "video", str(options.video), metadata["sha256"])
         else:
             image_paths = _image_paths(options.image_dir)
             if not image_paths:
@@ -74,28 +81,32 @@ def ingest(options: IngestOptions, ffmpeg: str) -> Path:
                 "sha256": _sequence_hash(image_paths),
             }
             get_frame = _image_frame_reader(image_paths, options.image_fps, temp / "decoded")
-            source = {"input_type": "image_sequence", "path": str(options.image_dir), "sha256": metadata["sha256"]}
+            source = _source_provenance(options, "image_sequence", str(options.image_dir), metadata["sha256"])
 
         baseline = _sample(get_frame, baseline_timestamps(duration_s))
         baseline = _refresh_deltas(baseline)
-        shots = infer_shots(baseline, duration_s)
+        local_interval_s = round(1.0 / metadata["fps"], 6) if metadata.get("fps") else 0.125
+        shots, boundary_samples = infer_shots(baseline, duration_s, get_frame, local_interval_s)
         audio = _audio_evidence(options, ffmpeg, temp) if options.video and metadata["audio_present"] else _no_audio_evidence()
 
         candidate_times = set(item.timestamp_s for item in baseline)
+        candidate_times.update(item.timestamp_s for item in boundary_samples)
         candidate_times.update(dense_timestamps(baseline, shots))
         for event in audio.get("onset_candidates", []):
             for offset in (-0.125, 0.0, 0.125):
                 candidate_times.add(round(max(0.0, min(duration_s, event["start_s"] + offset)), 6))
-        duration_guards: dict[str, dict] = {}
-        for shot in shots:
-            points, guard = duration_evidence_guard(baseline, shot)
-            candidate_times.update(points)
-            duration_guards[shot["shot_id"]] = guard
         all_samples = _refresh_deltas(_sample(get_frame, sorted(candidate_times)))
-        protected = {point for shot in shots for point in duration_evidence_guard(all_samples, shot)[0]}
-        protected.update({shot["start_s"] for shot in shots} | {shot["end_s"] for shot in shots})
+        duration_guards: dict[str, dict] = {}
+        protected_roles: dict[float, str] = {}
+        for shot in shots:
+            roles, guard = duration_evidence_guard(all_samples, shot)
+            duration_guards[shot["shot_id"]] = guard
+            for point, role in roles.items():
+                if role == "duration_evidence" or point not in protected_roles:
+                    protected_roles[point] = role
+        protected = set(protected_roles)
         selected = deduplicate(all_samples, protected)
-        frame_refs = _persist_frames(options.case_id, output, selected, protected, candidate_times - set(item.timestamp_s for item in baseline))
+        frame_refs = _persist_frames(options.case_id, output, selected, protected_roles, candidate_times - set(item.timestamp_s for item in baseline))
         _persist_contact_sheets(options.case_id, output, shots, selected)
 
         timeline = _timeline(options.case_id, shots, selected, frame_refs, audio, duration_guards)
@@ -105,7 +116,6 @@ def ingest(options: IngestOptions, ffmpeg: str) -> Path:
         manifest = {
             "schema": "10_运行时/golden_media_evidence_schema.yaml",
             "tool": {"name": "golden_case_ingestor", "version": "0.1.0", "deterministic_where_practical": True},
-            "case_id": options.case_id,
             "case_id": options.case_id,
             "source": source,
             "metadata": metadata,
@@ -125,7 +135,7 @@ def ingest(options: IngestOptions, ffmpeg: str) -> Path:
             "case_id": options.case_id,
             "case_status": "ingested_evidence_not_registered",
             "explicit_golden_case_intent": options.explicit_golden_intent,
-            "evidence_ladder": "M2_prompt_output_pair" if prompts["source_prompt_present"] else "M1_media_observation",
+            "evidence_ladder": "M2_prompt_output_pair" if prompts["prompt_output_pair_verified"] else "M1_media_observation",
             "source": source,
             "media_metadata": metadata,
             "prompt_provenance": prompts,
@@ -216,13 +226,7 @@ def _sample(reader: Callable[[float], Path], timestamps: list[float]) -> list[Fr
 
 
 def _refresh_deltas(samples: list[FrameSample]) -> list[FrameSample]:
-    refreshed = []
-    previous = None
-    for sample in sorted(samples, key=lambda item: item.timestamp_s):
-        delta = image_delta(previous.path, sample.path) if previous else 0.0
-        refreshed.append(FrameSample(sample.timestamp_s, sample.path, delta))
-        previous = refreshed[-1]
-    return refreshed
+    return refresh_metrics(samples)
 
 
 def _audio_evidence(options: IngestOptions, ffmpeg: str, temp: Path) -> dict:
@@ -265,11 +269,10 @@ def _no_audio_evidence() -> dict:
     return {"audio_present": False, "analysis_status": "no_audio_track", "asr": {"status": "not_applicable", "segments": []}}
 
 
-def _persist_frames(case_id: str, output: Path, samples: list[FrameSample], protected: set[float], dense: set[float]) -> dict[float, str]:
+def _persist_frames(case_id: str, output: Path, samples: list[FrameSample], protected_roles: dict[float, str], dense: set[float]) -> dict[float, str]:
     refs = {}
     for sample in samples:
-        is_protected = any(abs(sample.timestamp_s - point) < 1e-6 for point in protected)
-        role = "duration_evidence" if is_protected else "keyframe"
+        role = next((value for point, value in protected_roles.items() if abs(sample.timestamp_s - point) < 1e-6), "keyframe")
         name = seconds_filename(case_id, sample.timestamp_s, role)
         target = output / "frames" / "keyframes" / name
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -295,7 +298,13 @@ def _timeline(case_id: str, shots: list[dict], samples: list[FrameSample], refs:
     for shot in shots:
         in_shot = [sample for sample in samples if shot["start_s"] - 1e-6 <= sample.timestamp_s <= shot["end_s"] + 1e-6]
         changes = [
-            {"timestamp_s": sample.timestamp_s, "visual_delta": sample.visual_delta, "confidence": round(min(1.0, sample.visual_delta / 40), 3)}
+            {
+                "timestamp_s": sample.timestamp_s,
+                "pixel_delta": sample.visual_delta,
+                "histogram_distance": sample.histogram_distance,
+                "changed_block_ratio": sample.changed_block_ratio,
+                "confidence": round(min(1.0, sample.visual_delta / 40), 3),
+            }
             for sample in in_shot
             if sample.visual_delta >= 9.0
         ]
@@ -306,8 +315,7 @@ def _timeline(case_id: str, shots: list[dict], samples: list[FrameSample], refs:
                 "segment_id": f"SEG-{shot['shot_id'].split('-')[-1]}",
                 **shot,
                 "frame_refs": [refs[sample.timestamp_s] for sample in in_shot],
-                "visual_change_candidates": changes,
-                "motion_candidates": changes,
+                "unclassified_visual_change_candidates": changes,
                 "audio_events": audio_events,
                 "duration_evidence_guard": guards[shot["shot_id"]],
                 "dialogue": dialogue,
@@ -319,16 +327,33 @@ def _timeline(case_id: str, shots: list[dict], samples: list[FrameSample], refs:
 
 
 def _persist_prompts(options: IngestOptions, output: Path) -> dict:
-    result = {"source_prompt_present": False, "reconstructed_prompt": {"present": False}}
+    result = {
+        "source_prompt_present": False,
+        "prompt_output_pair_verified": False,
+        "reconstructed_prompt": {"present": False},
+    }
     if options.source_prompt_file:
         shutil.copyfile(options.source_prompt_file, output / "source_prompt.txt")
         result["source_prompt_present"] = True
         result["source_prompt_path"] = "source_prompt.txt"
         result["source_prompt_provenance"] = "user_supplied_verbatim"
+        result["prompt_output_pair_verified"] = options.prompt_output_pair_verified
     if options.reconstructed_prompt_file:
         shutil.copyfile(options.reconstructed_prompt_file, output / "reconstructed_prompt.txt")
         result["reconstructed_prompt"] = {"present": True, "path": "reconstructed_prompt.txt", "provenance": "inferred_from_media"}
     return result
+
+
+def _source_provenance(options: IngestOptions, input_type: str, path: str, source_hash: str) -> dict:
+    return {
+        "input_type": input_type,
+        "path": path,
+        "sha256": source_hash,
+        "source_origin_type": options.source_origin_type,
+        "source_uri": options.source_uri,
+        "source_rights_status": options.source_rights_status,
+        "persistence_permission_status": options.persistence_permission_status,
+    }
 
 
 def _persist_context(path: Path | None, output: Path) -> dict:

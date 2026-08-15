@@ -14,8 +14,8 @@ automatic_coverage:
     test: test_video_fixture_audio_evidence
     assertion: audio onset, peak, silence or low-density evidence shares the video seconds timeline
   - regression_id: REG-GCDP-PROMPT-ONLY-001
-    test: test_prompt_boundary_and_validator
-    assertion: absent source prompt remains absent and no prompt causality is registered
+    coverage: deferred_out_of_scope_for_media_ingestor
+    reason: This MVP ingests media-backed evidence bundles; prospective prompt-only director analysis remains owned by GPT and is not claimed as an automated test.
   - regression_id: REG-GCDP-MANDATORY-001
     test: test_image_sequence_preserves_duration_evidence
     assertion: bundle contains a GPT-pending director_pull.md stub but no automatic director interpretation
@@ -23,6 +23,14 @@ additional_engineering_contracts:
   - test: test_seconds_first_filenames
     assertion: evidence names use __t_seconds__ and no frame-first primary names
   - test: test_prompt_boundary_and_validator
-    assertion: source_prompt and reconstructed_prompt remain separate with inferred provenance
+    assertion: unverified source prompt remains M1 and reconstructed prompt remains inferred provenance
+  - test: test_verified_prompt_output_pair_is_m2_only_with_gate
+    assertion: M2 requires explicit verified prompt/media pairing
+  - test: test_validator_rejects_third_party_without_rights_status
+    assertion: third-party provenance cannot omit rights and persistence status
+  - test: test_exact_non_grid_cut_is_refined_locally
+    assertion: a non-0.5s cut is refined with local frame-interval search
+  - test: test_video_fixture_audio_evidence
+    assertion: continuous high-motion video does not become multiple hard-cut shots
   - test: test_image_sequence_preserves_duration_evidence
     assertion: perceptual dedup guard retains semantically necessary hold evidence

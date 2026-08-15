@@ -56,6 +56,14 @@ def validate_bundle(bundle: Path) -> ValidationResult:
     if (bundle / "source_prompt.txt").exists() and (bundle / "reconstructed_prompt.txt").exists():
         if (bundle / "source_prompt.txt").read_bytes() == (bundle / "reconstructed_prompt.txt").read_bytes():
             warnings.append("source and reconstructed prompt have identical bytes; retained separately but review provenance")
+    pair_verified = prompt.get("prompt_output_pair_verified") is True
+    if pair_verified and not prompt.get("source_prompt_present"):
+        errors.append("prompt_output_pair_verified requires a source prompt")
+    if case.get("evidence_ladder") == "M2_prompt_output_pair" and not (pair_verified and prompt.get("source_prompt_present")):
+        errors.append("M2_prompt_output_pair requires verified prompt/media provenance")
+    if case.get("evidence_ladder") == "M1_media_observation" and pair_verified:
+        errors.append("verified prompt/media pair must be represented as M2")
+    _check_source_provenance(case.get("source", {}), errors)
     if case.get("case_status") != "ingested_evidence_not_registered":
         errors.append("ingestor must not auto-register a Golden Case")
     boundaries = case.get("boundaries", {})
@@ -85,16 +93,22 @@ def _check_timeline(bundle: Path, timeline: dict[str, Any], duration_s: float, e
                 errors.append(f"{label} references missing frame: {ref}")
                 continue
             parsed = filename_timestamps(frame)
-            if parsed and not _in_range(parsed[0], duration_s):
+            if parsed and not _in_filename_range(parsed[0], duration_s):
                 errors.append(f"frame timestamp outside video range: {ref}")
+        if "motion_candidates" in segment:
+            errors.append(f"{label} must not label pixel deltas as motion candidates")
         guard = segment.get("duration_evidence_guard", {})
-        if guard.get("status") == "protected_duration_evidence":
-            needed = ("hold_start_s", "hold_middle_s", "release_s")
+        if guard.get("status") == "low_motion_hold_candidate":
+            needed = ("hold_start_s", "hold_middle_s", "first_micro_change_s", "threshold_s", "release_s")
             if any(value not in guard for value in needed):
                 errors.append(f"{label} lacks required duration evidence guard fields")
             for value in needed:
                 if value in guard and not _in_range(guard[value], duration_s):
                     errors.append(f"{label} duration evidence timestamp outside video range")
+            for value in needed:
+                timestamp = guard.get(value)
+                if timestamp is not None and not any(f"__t_{timestamp:.3f}s__duration_evidence" in ref for ref in segment.get("frame_refs", [])):
+                    errors.append(f"{label} duration evidence frame missing for {value}")
 
 
 def _check_frame_filenames(bundle: Path, duration_s: float, errors: list[str]) -> None:
@@ -106,7 +120,7 @@ def _check_frame_filenames(bundle: Path, duration_s: float, errors: list[str]) -
         parsed = filename_timestamps(frame)
         if not parsed:
             errors.append(f"frame evidence lacks seconds-first filename: {frame.relative_to(bundle)}")
-        elif not _in_range(parsed[0], duration_s) or (parsed[1] is not None and not _in_range(parsed[1], duration_s)):
+        elif not _in_filename_range(parsed[0], duration_s) or (parsed[1] is not None and not _in_filename_range(parsed[1], duration_s)):
             errors.append(f"filename timestamp outside video range: {frame.relative_to(bundle)}")
 
 
@@ -120,8 +134,24 @@ def _check_audio(audio: dict[str, Any], duration_s: float, errors: list[str]) ->
             errors.append("ASR timestamp outside video range")
 
 
+def _check_source_provenance(source: dict[str, Any], errors: list[str]) -> None:
+    for field in ("source_origin_type", "source_rights_status", "persistence_permission_status"):
+        if not source.get(field):
+            errors.append(f"source provenance lacks {field}")
+    if source.get("source_origin_type") in {"third_party", "third_party_public", "external"}:
+        if source.get("source_rights_status") in {None, "", "not_provided", "unknown"}:
+            errors.append("third-party source requires explicit source_rights_status")
+        if source.get("persistence_permission_status") in {None, "", "not_provided", "unknown"}:
+            errors.append("third-party source requires explicit persistence_permission_status")
+
+
 def _in_range(value: Any, duration_s: float) -> bool:
     return isinstance(value, (float, int)) and -1e-6 <= value <= duration_s + 1e-6
+
+
+def _in_filename_range(value: Any, duration_s: float) -> bool:
+    # Human-facing names are intentionally rounded to milliseconds.
+    return isinstance(value, (float, int)) and -0.0005 <= value <= duration_s + 0.0005
 
 
 def _valid_range(start: Any, end: Any, duration_s: float) -> bool:

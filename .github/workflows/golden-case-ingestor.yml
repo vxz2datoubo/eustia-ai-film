@@ -1,0 +1,39 @@
+name: Golden Case Ingestor
+
+on:
+  pull_request:
+    paths:
+      - 'tools/golden_case_ingestor/**'
+      - '.github/workflows/golden-case-ingestor.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'tools/golden_case_ingestor/**'
+      - '.github/workflows/golden-case-ingestor.yml'
+
+jobs:
+  golden-case-ingestor:
+    name: unit-yaml-fixture-e2e-validator-negative
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tools/golden_case_ingestor
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install tool dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Parse tool and project YAML
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import yaml
+          for path in Path('../..').rglob('*.yaml'):
+              yaml.safe_load(path.read_text(encoding='utf-8'))
+          print('YAML_PARSE=PASS')
+          PY
+      - name: Unit, validator-negative, and ffmpeg fixture E2E tests
+        run: python -m unittest discover -s tests -v
