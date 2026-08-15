@@ -1,0 +1,188 @@
+router_id: EUSTIA_PROACTIVE_EXECUTION_OPPORTUNITY_ROUTER
+version: 1.0.0
+status: candidate
+name: NEXT-STEP-OPPORTUNITY-001
+zh_name: 下一步交付机会扫描
+scope: mixed_initiative_next_step_detection_downstream_native_delivery_and_cost_aware_model_cascade
+
+purpose:
+  - 在不改变用户创作主导权的前提下，从用户当前目标、已明确下游工具、成本约束和工作流状态中识别高价值下一步
+  - 当下一步只是确定性适配、格式转换、低风险工具路由或低成本预筛时，主动减少用户重复开口和手工搬运
+  - 把“用户说了下一步要去哪”转成“当前交付物是否应立即适配到那个执行环境”的运行时扫描
+  - 在昂贵正式生成前优先寻找低成本、低时长、低风险的验证 probe，但不把代理模型结果冒充正式模型结果
+
+non_goals:
+  - 不替用户擅自改变剧情、角色、镜头、美学、正式资产或高风险生产决策
+  - 不为了显得主动而频繁插入无关建议
+  - 不把 H3、C-DANCE、Seedream、Suno 等模型私有语法复制进本 router
+  - 不假设便宜模型与昂贵模型在所有维度都具有可迁移相关性
+  - 不把用户尚未选择的工具自动设为默认工具
+
+evidence:
+  project_observation: 09_资料证据/主动协作与成本路由证据索引.md#OBS-NEXT-STEP-001
+  external_basis:
+    - 09_资料证据/主动协作与成本路由证据索引.md#EVID-MIXED-INITIATIVE-001
+    - 09_资料证据/主动协作与成本路由证据索引.md#EVID-MIXED-INITIATIVE-002
+    - 09_资料证据/主动协作与成本路由证据索引.md#EVID-PROACTIVE-ASSISTANT-001
+    - 09_资料证据/主动协作与成本路由证据索引.md#EVID-COST-ROUTING-001
+    - 09_资料证据/主动协作与成本路由证据索引.md#EVID-COST-ROUTING-002
+
+trigger_signals:
+  explicit_downstream_tool_or_model:
+    examples:
+      - 用户明确说接下来拿去 MiniMax H3 测试
+      - 用户明确说正式版再用 C-DANCE 2.5
+      - 用户明确说下一步去 Seedream 生成关键帧
+      - 用户明确说配乐交给 Suno
+  cost_or_credit_constraint:
+    examples:
+      - 很贵
+      - 积分不够
+      - 先用便宜模型测试
+      - 只想先测5到8秒
+  workflow_stage_change:
+    examples:
+      - 从导演分析进入实际生成
+      - 从低成本测试进入高保真终检
+      - 从镜头方案进入模型专用 prompt 编译
+      - 从生成结果进入 reverse observation 或 targeted repair
+  deterministic_handoff_gap:
+    examples:
+      - 当前已有完整内容但用户下游工具需要专用格式
+      - 用户已经选择工具但当前回复仍停留在通用自然语言
+      - 已知 adapter 能无创意损失地完成格式转换
+  repeated_manual_friction:
+    examples:
+      - 用户需要反复复制同一内容再要求转换
+      - 已有 accepted constraints 但每个工具都需要重新解释
+      - 用户已明确希望尽量少操作
+
+mandatory_scan:
+  - current_user_goal
+  - current_work_item
+  - explicit_next_step
+  - downstream_tool_or_model
+  - downstream_native_delivery_format
+  - cost_latency_credit_constraint
+  - required_fidelity_dimension
+  - proxy_vs_final_model_role
+  - adapter_availability_and_confidence
+  - accepted_constraints_to_preserve
+  - user_manual_steps_that_can_be_removed
+  - creative_or_high_impact_decision_boundary
+  - intervention_value
+  - intervention_confidence
+  - interruption_cost
+
+opportunity_classes:
+  native_format_bridge:
+    description: 用户已明确下游模型或工具，当前内容可确定性转换为其 native 执行稿
+    example: 通用7秒A/B方案已经完成且用户明确要用H3测试时，主动提供或提出编译为H3-native prompt
+  cost_aware_probe:
+    description: 高成本正式模型前存在能验证关键低层问题的低成本测试路径
+    example: 用较便宜模型先筛事件顺序、运动轨迹、人物重叠，再用高成本模型验证最终摄影与质感
+  asset_or_reference_preparation:
+    description: 当前下一步需要首帧、白模、动作参考、参考职责表等确定性准备物
+  reverse_eval_bridge:
+    description: 用户上传生成结果后，自动把观察结果路由到对应模型反馈库、回归或 targeted repair
+  continuation_bundle:
+    description: 用户明确进入下一制作阶段时，主动带上上一阶段已锁定约束和必要交付物
+
+intervention_gate:
+  HIGH:
+    conditions:
+      - downstream_tool_or_model_is_explicit: true
+      - next_step_is_clear: true
+      - conversion_or_suggestion_is_low_risk: true
+      - material_user_effort_saved: true
+      - adapter_confidence_is_high: true
+      - no_new_creative_choice_is_forced: true
+    behavior:
+      - directly_include_or_prepare_the_downstream_native_deliverable_when_reasonable
+      - briefly_explain_why_it_was_included
+      - do_not_require_an_extra_user_prompt_for_obvious_format_conversion
+  MEDIUM:
+    conditions:
+      - next_step_is_probable_but_not_fully_explicit: true
+      - or_adapter_confidence_is_partial: true
+      - or_choice_changes_cost_quality_tradeoff: true
+    behavior:
+      - give_one_concise_specific_suggestion
+      - preserve_user_choice
+      - do_not_execute_high_impact_change_silently
+  LOW:
+    conditions:
+      - speculative_only: true
+      - weak_relation_to_current_goal: true
+      - marginal_benefit: true
+      - high_interruption_cost: true
+    behavior:
+      - stay_silent
+
+cost_aware_cascade:
+  principle: use_the_cheapest_stage_that_can_validly_test_the_target_dimension_then_escalate_only_for_dimensions_that_require_the_stronger_model
+  required_partition:
+    proxy_model_can_test:
+      - only_dimensions_supported_by_project_evidence_or_explicit_user_observation
+    final_model_must_test:
+      - final_visual_quality
+      - model_specific_behavior
+      - dimensions_not_shown_transferable_by_proxy_evidence
+  evidence_policy:
+    - proxy_success_is_not_final_model_success
+    - proxy_failure_may_identify_obvious_structure_or_timing_problems_but_model_specific_failure_must_be_labeled
+    - cross_model_similarity_must_be_learned_from_real_project_outputs
+    - version_changes_require_revalidation
+
+adapter_boundary:
+  rule: this_router_decides_when_to_call_or_offer_an_adapter_but_does_not_define_private_prompt_syntax
+  if_adapter_exists:
+    - compile_to_native_format
+    - preserve_effective_constraint_ledger
+    - strip_other_model_specific_scaffolding
+  if_adapter_missing_or_uncertain:
+    - state_the_gap
+    - retrieve_or_research_the_model_specific_knowledge_if_authorized_or_required
+    - do_not_fake_native_syntax
+  isolation:
+    - H3_native_rules_must_not_leak_into_C-DANCE_execution_prompt
+    - C-DANCE_specific_rules_must_not_leak_into_H3_execution_prompt
+
+learning_policy:
+  positive_signal_examples:
+    - 用户明确说这个主动建议很好
+    - 用户采用建议后减少了重复步骤
+    - 低成本probe成功筛出正式模型前的明显错误
+  negative_signal_examples:
+    - 主动建议无关或打断创作
+    - 用户已经明确不要某工具仍重复建议
+    - 转换后丢失已接受约束
+    - proxy结果被误当成final模型结论
+  maturity:
+    current: candidate
+    promotion_requirement:
+      - multiple_distinct_workflows_with_positive_user_or_objective_evidence
+      - bounded_false_positive_rate_for_proactive_suggestions
+      - no_material_loss_of_user_control
+      - no_cross_model_prompt_contamination
+
+static_checks:
+  WARNING:
+    - DOWNSTREAM_TOOL_KNOWN_BUT_DELIVERABLE_NOT_ADAPTED
+    - COST_CONSTRAINT_PRESENT_BUT_NO_CHEAPER_VALID_PROBE_CONSIDERED
+    - PROACTIVE_SUGGESTION_LOW_RELEVANCE
+    - PROACTIVE_SUGGESTION_REQUIRES_UNSTATED_CREATIVE_DECISION
+    - PROXY_FINAL_MODEL_CONFUSION
+    - CROSS_MODEL_PROMPT_CONTAMINATION
+  INFO:
+    - HIGH_CONFIDENCE_NEXT_STEP_OPPORTUNITY
+    - MEDIUM_CONFIDENCE_NEXT_STEP_SUGGESTION_ONLY
+
+example_current_case:
+  date: 2026-08-15
+  observation: 用户把7秒A/B的小测试执行环境改成MiniMax H3并说明原因是成本显著低于C-DANCE 2.5
+  inferred_goal: 继续验证动作轨迹和事件时序同时节省正式模型积分
+  opportunity: 当前A/B导演方案可进一步转成H3专用执行稿
+  correct_intervention: 主动提出或直接附上H3-native版本而不是等待用户再次要求转换
+  user_feedback: 明确评价该主动联想非常好
+  lesson_maturity: candidate
