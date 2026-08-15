@@ -1,0 +1,28 @@
+suite: GOLDEN_CASE_INGESTOR_MVP
+source_regression: 11_验收/golden_case_director_pull_regression_cases.yaml
+automatic_coverage:
+  - regression_id: REG-GCDP-STILLNESS-001
+    test: test_image_sequence_preserves_duration_evidence
+    assertion: hold_start_middle_release frames survive perceptual deduplication
+  - regression_id: REG-GCDP-MICROCHANGE-001
+    test: test_image_sequence_preserves_duration_evidence
+    assertion: visual change candidates retain seconds and confidence without interpreting emotion
+  - regression_id: REG-GCDP-DURATION-001
+    test: test_image_sequence_preserves_duration_evidence
+    assertion: duration evidence guard records a seconds-based hold structure
+  - regression_id: REG-GCDP-SOUND-PUNCTUATION-001
+    test: test_video_fixture_audio_evidence
+    assertion: audio onset, peak, silence or low-density evidence shares the video seconds timeline
+  - regression_id: REG-GCDP-PROMPT-ONLY-001
+    test: test_prompt_boundary_and_validator
+    assertion: absent source prompt remains absent and no prompt causality is registered
+  - regression_id: REG-GCDP-MANDATORY-001
+    test: test_image_sequence_preserves_duration_evidence
+    assertion: bundle contains a GPT-pending director_pull.md stub but no automatic director interpretation
+additional_engineering_contracts:
+  - test: test_seconds_first_filenames
+    assertion: evidence names use __t_seconds__ and no frame-first primary names
+  - test: test_prompt_boundary_and_validator
+    assertion: source_prompt and reconstructed_prompt remain separate with inferred provenance
+  - test: test_image_sequence_preserves_duration_evidence
+    assertion: perceptual dedup guard retains semantically necessary hold evidence
