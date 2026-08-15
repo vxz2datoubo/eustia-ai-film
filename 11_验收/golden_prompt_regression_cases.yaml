@@ -16,8 +16,8 @@ cases:
       - report_verified_write_status_only
 
   - id: REG-GPCL-VERBATIM-001
-    title: Golden Case 必须保存原提示词原文
-    input_condition: 用户提供完整提示词并判定为优秀案例
+    title: Golden Case 必须保存真实原提示词原文
+    input_condition: 用户提供完整真实源提示词并判定为优秀案例
     must_preserve:
       - source_prompt_verbatim_exact
       - no_silent_rewrite
@@ -107,50 +107,137 @@ cases:
       - conflicting_and_boundary_cases_not_discarded
       - monitor_negative_transfer
 
-  - id: REG-GPCL-MEDIA-RAW-001
-    title: 视频原文件是母证据序列帧只能作为派生索引
-    input_condition: 用户为优秀案例同时提供生成视频
+  - id: REG-GPCL-MEDIA-PERSISTENCE-001
+    title: Golden 视频默认蒸馏为 GitHub 时间证据包而不是永久保存原视频
+    input_condition: 用户为优秀案例提供视频或音视频
     must_preserve:
-      - raw_video_primary_binary_evidence
-      - original_audio_preserved_when_present
-      - content_hash_recorded_when_computable
-      - keyframes_and_contact_sheets_marked_derived
-      - derived_frames_do_not_replace_raw_video
+      - full_source_video_available_during_ingestion_when_possible
+      - adaptive_temporal_distillation_before_discard
+      - github_case_bundle_persisted
+      - compressed_contact_sheets_and_selected_keyframes
+      - source_video_default_not_retained
+      - irreducible_motion_or_sound_evidence_may_trigger_exception
+      - no_formal_asset_registration_without_explicit_asset_intent
 
-  - id: REG-GPCL-MEDIA-CAUSALITY-001
-    title: 只有视频没有原提示词时不得伪造提示词到效果因果链
-    input_condition: 用户只上传一段优秀或测试视频但未提供其源提示词
+  - id: REG-GPCL-MEDIA-RECONSTRUCTION-001
+    title: 只有视频时允许反推 Prompt 但绝不能冒充真实原 Prompt
+    input_condition: 用户只上传优秀视频且希望系统深度分析并反推可复现提示词
     must_preserve:
-      - media_only_aesthetic_observation_allowed
-      - no_reconstructed_source_prompt
-      - no_prompt_clause_causality_claim
-      - request_or_wait_for_source_prompt_before_pairing
+      - media_observation_allowed
+      - reconstructed_prompt_allowed
+      - reconstructed_prompt_provenance_inferred_from_media
+      - source_prompt_verbatim_not_fabricated
+      - uncertainty_and_confidence_recorded
+      - no_prompt_clause_causality_claim_without_true_pair_or_intervention
 
   - id: REG-GPCL-MEDIA-TEMPORAL-001
-    title: 视频审查采用多分辨率时序证据而非默认永久逐帧存储
-    input_condition: 需要分析视频中零点几秒级动作转场身份漂移或节奏
+    title: 视频证据采用 shot 分段加自适应时序蒸馏而不是固定帧机械堆积
+    input_condition: 需要长期保存视频的视觉时间证据
     must_preserve:
-      - whole_video_preserved
       - shot_segmentation
-      - representative_keyframes
-      - uniform_index_default_around_half_second
-      - dense_subsecond_windows_only_where_needed
-      - frame_exact_mode_for_forensic_cases
+      - baseline_sampling_as_safety_net
+      - adaptive_density_at_event_boundaries
+      - perceptual_deduplication
+      - before_after_pairs_for_state_change
+      - contact_sheets_for_compaction
+      - standalone_frames_for_golden_or_causal_moments
+      - frame_exact_analysis_available_when_needed
       - full_frame_dump_not_default
+
+  - id: REG-GPCL-MEDIA-SECONDS-001
+    title: 人类可见时间坐标必须以秒为主而不是帧号
+    input_condition: 生成时间索引帧、timeline 或用户查询某个瞬间
+    must_preserve:
+      - timestamp_seconds_primary
+      - start_end_seconds_for_intervals
+      - three_decimal_seconds_when_precision_is_needed
+      - frame_index_secondary_technical_only
+      - filename_contains_seconds_not_only_frame_number
+      - support_time_to_description
+      - support_description_to_time
+
+  - id: REG-GPCL-MEDIA-AUDIO-001
+    title: 声音必须与同一秒级视觉时间轴对齐而不是只生成无时间转写
+    input_condition: 优秀案例视频包含对白、音乐、音效或环境声
+    must_preserve:
+      - dialogue_asr_with_timestamps
+      - speaker_when_inferable
+      - speech_style_and_prosody_description
+      - bgm_and_intensity
+      - sfx_and_ambience
+      - audio_onsets_or_beats_when_relevant
+      - audio_visual_sync_relation
+      - acknowledge_text_does_not_losslessly_preserve_timbre_or_mix
+
+  - id: REG-GPCL-MEDIA-CAUSAL-001
+    title: 世界物理因果电影视听因果与 Prompt 控制因果必须分离
+    input_condition: 系统从视频分析“为什么发生”或“哪句提示词产生这个效果”
+    must_preserve:
+      - graph_A_world_physical_separate
+      - graph_B_cinematic_perceptual_separate
+      - graph_C_prompt_control_separate
+      - temporal_order_not_equal_causality
+      - alternatives_and_counterfactuals
+      - evidence_time_ranges_on_edges
+      - true_prompt_pair_or_intervention_needed_for_strong_prompt_causality
+
+  - id: REG-GPCL-MEDIA-AB-001
+    title: Prompt 控制因果晋级必须经过受控 A/B/C 或复现
+    input_condition: 系统准备把某个提示词变量从相关性提升为可迁移因果规则
+    must_preserve:
+      - freeze_model_version_mode_references_and_unrelated_clauses_when_possible
+      - vary_primary_variable
+      - compare_observed_delta
+      - preserve_user_verdict
+      - detect_control_drift
+      - confounded_result_cannot_promote
+      - cross_case_reproduction_before_higher_maturity
 
   - id: REG-GPCL-MEDIA-AESTHETIC-001
     title: 媒体案例形成可检索审美先例但不声称修改模型权重
-    input_condition: 用户询问保存优秀视频是否会让系统形成审美或以后主动参考
+    input_condition: 用户希望大量优秀案例逐步形成项目审美与主动参考能力
     must_preserve:
-      - aesthetic_fingerprint_extraction
+      - aesthetic_and_director_fingerprint_extraction
       - temporal_grammar_and_sound_relation_extraction
       - proactive_retrieval_when_relevant
-      - reference_video_reuse_when_target_model_supports_it
+      - mechanism_level_transfer
       - no_model_weight_training_claim
       - human_verdict_authority
 
+  - id: REG-GPCL-MEDIA-FUZZY-RECALL-001
+    title: 模糊自然语言必须能通过检索卡召回功能相似案例
+    input_condition: 用户只说“时尚片走秀那种”“像之前高级广告那种”等模糊意图
+    must_preserve:
+      - zh_en_alias_expansion
+      - retrieve_by_task_function_and_director_goal_first
+      - surface_style_is_secondary_signal
+      - rerank_by_motion_camera_lighting_sound_mechanisms
+      - open_only_top_relevant_cases
+      - report_transferable_mechanisms_not_wholesale_style_copy
+
+  - id: REG-GPCL-MEDIA-SCALE-001
+    title: 数千案例规模下必须压缩文件数与近重复证据
+    input_condition: Golden Case 数量增长至数百至数千
+    must_preserve:
+      - contact_sheets_preferred_for_dense_visual_overview
+      - perceptual_deduplication
+      - adaptive_per_case_visual_budget
+      - text_retrieval_card_as_stable_recall_entry
+      - no_full_visual_library_context_injection
+      - media_storage_layer_may_migrate_without_changing_case_id
+
+  - id: REG-GPCL-MEDIA-RIGHTS-001
+    title: 第三方优秀视频不得因学习而自动完整写入公开仓库
+    input_condition: 优秀案例来源是第三方电影广告短视频或其他受版权保护内容
+    must_preserve:
+      - source_provenance
+      - rights_status_check
+      - public_repo_guard
+      - only_permitted_or_necessary_derived_evidence
+      - private_storage_preferred_when_rights_unclear
+
   - id: REG-GPCL-MEDIA-ASSET-BOUNDARY-001
-    title: 优秀视频证据不会自动升级成正式视觉资产
+    title: Golden 媒体证据不会自动升级成正式视觉资产
     input_condition: 用户把视频作为优秀案例或学习证据上传但没有说设为正式资产
     must_preserve:
       - golden_evidence_allowed
