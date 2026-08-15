@@ -12,6 +12,7 @@ routes:
   scene_asset_identity_schema: 10_运行时/scene_asset_identity_schema.yaml
   scene_media_version_locator_resolution: 10_运行时/scene_media_resolver_manifest.yaml
   golden_media_evidence_schema: 10_运行时/golden_media_evidence_schema.yaml
+  golden_case_director_pull_schema: 10_运行时/golden_case_director_pull_schema.yaml
   screen_observable_audible_method: 01_AI电影系统/AI电影系统.md
   screen_observable_audible_ir_schema: 10_运行时/screen_observable_audible_ir_schema.yaml
   formal_visual_asset: 06_视觉资产/视觉资产登记库.md
@@ -23,11 +24,16 @@ routes:
   golden_prompt_learning_protocol: 08_系统学习/优秀提示词案例学习协议.md
   official_research_evidence: 09_资料证据/官方资料与证据索引.md
   golden_prompt_research_evidence: 09_资料证据/优秀提示词案例学习证据索引.md
+  golden_case_director_pull_evidence: 09_资料证据/导演级拉片与低运动表演证据索引.md
   sound_research_evidence: 09_资料证据/声音导演与SUNO证据索引.md
   suno_user_prompt_evidence: 09_资料证据/SUNO用户提示词资料摄取记录.md
   golden_prompt_case: 11_验收/golden_prompt_cases.yaml
   golden_case_bundle: 11_验收/golden_case_bundles/{case_id}/
+  golden_case_director_pull: 11_验收/golden_case_bundles/{case_id}/director_pull.md
+  golden_case_director_pull_machine: 11_验收/golden_case_bundles/{case_id}/director_pull.yaml
+  golden_case_director_pull_template: 11_验收/golden_case_templates/导演级拉片模板.md
   golden_prompt_regression_case: 11_验收/golden_prompt_regression_cases.yaml
+  golden_case_director_pull_regression_case: 11_验收/golden_case_director_pull_regression_cases.yaml
   sound_regression_case: 11_验收/sound_director_regression_cases.yaml
   suno_prompt_regression_case: 11_验收/suno_prompt_regression_cases.yaml
   unresolved_unknown: 12_未知项/UNKNOWN_REGISTRY.yaml
@@ -64,6 +70,7 @@ scene_media_transaction_policy:
 
 golden_media_evidence_policy:
   schema: 10_运行时/golden_media_evidence_schema.yaml
+  director_pull_schema: 10_运行时/golden_case_director_pull_schema.yaml
   default_persistence_authority: GitHub
   default_bundle_root: 11_验收/golden_case_bundles/{case_id}/
   source_video_default_persistence: transient_not_retained
@@ -79,6 +86,7 @@ golden_media_evidence_policy:
     - selected_keyframes
     - selected_dense_window_frames
     - audio_transcript_and_audio_event_descriptions
+    - director_pull
     - prompt_effect_alignment
     - causal_graphs
     - aesthetic_and_director_fingerprint
@@ -97,6 +105,7 @@ golden_media_evidence_policy:
   explicit_golden_case:
     case_target: 11_验收/golden_prompt_cases.yaml
     bundle_target: 11_验收/golden_case_bundles/{case_id}/
+    director_pull_target: 11_验收/golden_case_bundles/{case_id}/director_pull.md
   version_bound_generation_behavior:
     target: 08_系统学习/C-DANCE2.5真实生成反馈库.md
   formal_asset_boundary:
@@ -140,6 +149,7 @@ golden_prompt_ingestion_gate:
   trigger_authority: user_explicit_golden_case_verdict
   required_steps:
     - learn_from_case
+    - execute_director_grade_pull
     - register_case_verbatim_or_reconstructed_with_provenance
   learn_from_case:
     - run_edcm_k0_k1_k2_k3_scan
@@ -151,6 +161,33 @@ golden_prompt_ingestion_gate:
     - assign_maturity_without_auto_global_promotion
     - route_each_lesson_to_unique_domain_canonical_or_mark_pending
     - create_targeted_eval_or_regression_when_needed
+  execute_director_grade_pull:
+    schema: 10_运行时/golden_case_director_pull_schema.yaml
+    output: 11_验收/golden_case_bundles/{case_id}/director_pull.md
+    machine_output_optional: 11_验收/golden_case_bundles/{case_id}/director_pull.yaml
+    mode_selection:
+      verified_media: observed_director_pull
+      prompt_only: prompt_prospective_director_analysis
+      prompt_plus_verified_media: hybrid_pull
+    must_analyze:
+      - context_and_trigger
+      - dramatic_function
+      - audience_cognition
+      - character_inner_action_with_confidence
+      - performance_beats
+      - duration_hold_latency_threshold_and_release
+      - blocking_camera_and_composition
+      - editing_and_rhythm
+      - sound_strategy_and_sound_punctuation
+      - observation_vs_inference
+      - why_it_works
+      - retrieval_mechanisms
+      - transfer_boundaries
+      - prompt_distillation
+    low_motion_rule:
+      - stillness_may_be_high_information
+      - duration_evidence_must_survive_perceptual_dedup
+      - preserve_hold_start_middle_microchange_threshold_release_when_relevant
   register_case_verbatim_or_reconstructed_with_provenance:
     - preserve_source_prompt_verbatim_when_true_source_exists
     - if_source_prompt_absent_keep_reconstructed_prompt_separate_and_labeled_inferred
@@ -158,11 +195,14 @@ golden_prompt_ingestion_gate:
     - when_media_exists_bind_using_golden_media_evidence_schema
     - write_or_update_golden_prompt_case
     - write_or_update_case_bundle
+    - link_director_pull_to_case
     - preserve_model_version_asset_and_provenance_when_known
   verification:
     - fetch_target_domain_canonical_if_lesson_written
     - fetch_golden_prompt_cases
     - verify_case_and_lesson_references
+    - verify_director_pull_exists_and_mode_matches_evidence
+    - verify_low_motion_duration_evidence_preserved_when_relevant
     - verify_case_bundle_timestamps_and_retrieval_card_when_media_is_bound
     - verify_reconstructed_prompt_not_mislabeled_as_source_prompt
     - report_partial_status_if_one_branch_failed
@@ -181,6 +221,10 @@ rules:
   golden_prompt_source_verbatim_cannot_be_replaced_by_normalized_summary: true
   golden_prompt_exact_demo_case_cannot_be_sole_holdout_eval: true
   golden_prompt_case_replay_must_be_targeted_and_bounded: true
+  golden_case_director_pull_is_mandatory_for_explicit_golden_ingestion: true
+  golden_case_prompt_only_pull_must_be_prospective_not_observed: true
+  golden_case_low_motion_cannot_be_deduped_without_duration_check: true
+  golden_case_emotion_retrieval_must_use_mechanism_not_only_label: true
   golden_media_persistent_representation_is_temporal_evidence_bundle_by_default: true
   golden_media_source_video_is_not_required_for_default_persistence: true
   golden_media_seconds_are_primary_human_temporal_coordinate: true
