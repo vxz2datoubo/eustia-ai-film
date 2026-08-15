@@ -9,6 +9,10 @@ policy:
   serial_writes_same_path: true
   memory_is_canonical: false
   library_media_is_canonical_binary_source: true
+  golden_case_default_persistence: github_temporal_evidence_bundle
+  golden_case_source_video_default_retention: false
+  golden_case_human_time_coordinate: seconds
+  golden_case_reconstructed_prompt_must_preserve_inference_provenance: true
   old_file_search_rank_can_define_authority: false
   director_task_must_read_project_index_first: true
 
@@ -105,6 +109,7 @@ external_binary_sources:
     - pdf
     - official_raw_evidence
     - historical_snapshots
+  note: 该规则仍适用于正式二进制源与其他项目媒体；Golden Case 默认长期持久化例外由 golden_media_evidence_schema 控制为 GitHub 时间证据包。
 
 legacy_policy:
   default_action: reject_as_active
