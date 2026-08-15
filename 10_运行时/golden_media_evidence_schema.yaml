@@ -1,0 +1,364 @@
+schema_id: EUSTIA_GOLDEN_MEDIA_EVIDENCE
+version: 1.0.0
+status: active
+created_at: 2026-08-15
+scope: prompt_output_media_pairing_temporal_evidence_aesthetic_retrieval_and_eval
+
+canonical_relationship:
+  project_index: PROJECT_INDEX.yaml
+  golden_prompt_protocol: 08_系统学习/优秀提示词案例学习协议.md
+  learning_engine: 08_系统学习/反馈反推与系统反哺引擎.md
+  golden_case_registry: 11_验收/golden_prompt_cases.yaml
+  golden_regression: 11_验收/golden_prompt_regression_cases.yaml
+  model_feedback: 08_系统学习/C-DANCE2.5真实生成反馈库.md
+  external_evidence: 09_资料证据/优秀提示词案例学习证据索引.md
+
+purpose:
+  - 把提示词、真实生成视频/图像/音频、时序观察、用户评价和模型版本绑定为同一条可追溯证据链
+  - 让优秀案例既可作为导演先例，也可作为多模态参考、回归评测和模型行为学习证据
+  - 区分“视频本身好看”与“某句提示词导致该效果”的证据强度
+  - 支持未来按视觉机制、时序结构、动作节奏、摄影、灯光、声音和失败症状检索案例
+
+core_invariants:
+  raw_media_is_primary_binary_evidence: true
+  derived_frames_are_indexes_not_source_authority: true
+  original_audio_must_not_be_discarded_when_present: true
+  prompt_verbatim_must_not_be_reconstructed_from_output: true
+  prompt_output_causality_requires_an_actual_pair: true
+  model_version_and_generation_mode_should_be_recorded_when_known: true
+  user_verdict_has_final_authority_for_project_aesthetic_judgment: true
+  automatic_graders_are_diagnostic_only: true
+  media_storage_does_not_equal_model_weight_training: true
+  no_golden_registration_without_explicit_golden_intent: true
+  no_formal_asset_registration_without_explicit_asset_intent: true
+
+# 证据强度只描述“我们能说多强的话”，不自动等同 maturity。
+evidence_ladder:
+  M0_prompt_only:
+    evidence: prompt_text_without_verified_output
+    allowed_claim: 提示结构或文案本身被认可
+    forbidden_claim: 不能说该提示在真实模型中已实现某效果
+  M1_media_only:
+    evidence: video_image_or_audio_without_source_prompt
+    allowed_claim: 可学习可观察的美学、节奏、镜头、声音和结构先例
+    forbidden_claim: 不能反推某句提示词是效果原因
+  M2_prompt_media_pair:
+    evidence: source_prompt_plus_actual_output
+    allowed_claim: 可建立 prompt_clause_to_observed_effect 映射
+    forbidden_claim: 多变量同时变化时不能强行做单变量因果归因
+  M3_provenance_complete_pair:
+    evidence: prompt_plus_output_plus_model_version_mode_references_and_settings_when_available
+    allowed_claim: 可形成版本绑定模型行为候选经验
+    forbidden_claim: 单次成功仍不能证明跨场景稳定
+  M4_controlled_comparison:
+    evidence: A_B_or_A_B_C_with_verified_controls_and_user_verdict
+    allowed_claim: 可进行较强因果归因与反事实分析
+    forbidden_claim: 控制变量漂移时必须标 confounded
+  M5_reproduced_transfer:
+    evidence: repeated_runs_or_sibling_transfer_cases_across_distinct_content
+    allowed_claim: 可支持更高 maturity 评估
+    forbidden_claim: 仍需遵守项目 maturity gate 与模型版本重验证
+
+media_bundle_schema:
+  media_evidence_id: required
+  media_type: video | image | audio
+  role: raw_generation_output | reference_media | golden_precedent | regression_reference | comparative_output | failure_evidence
+  source_provenance: required
+  source_prompt_present: boolean
+  user_verdict_present: boolean
+  model: optional
+  model_version: optional
+  model_alias: optional
+  generation_mode: optional
+  generation_settings: optional
+  reference_inputs: optional
+  content_hash:
+    preferred: sha256
+    required_when_computable: true
+  technical_metadata:
+    duration_s: optional
+    fps: optional
+    frame_count: optional
+    width: optional
+    height: optional
+    audio_codec: optional
+    audio_sample_rate: optional
+    audio_channels: optional
+  locators:
+    allowed_types:
+      - chatgpt_file_id
+      - current_conversation_file
+      - file_library_title
+      - local_path
+      - external_uri
+      - derived_preview
+    each_locator_fields:
+      - type
+      - value
+      - status
+      - verified_at
+  persistence_status: verified_cross_session | current_session_only | unverified | unavailable
+
+binary_storage_policy:
+  preferred_primary_binary_source: ChatGPT Library
+  github_role: metadata_hash_annotations_rules_and_evals
+  raw_video_in_git_repository_default: false
+  reason:
+    - 二进制视频体积增长快
+    - Git 历史不适合作为媒体仓库
+    - GitHub canonical 更适合保存可审计的文字规则、索引与hash
+  derived_preview_storage:
+    default: transient_or_regenerable
+    may_persist_when:
+      - 某一帧是关键失败证据
+      - 某一帧是回归基准
+      - 未来视频解析能力不足而需要稳定视觉索引
+
+# 原视频是“母证据”，序列帧/关键帧是为检索和精确诊断服务的派生层。
+temporal_evidence_policy:
+  default_strategy: multi_resolution_temporal_sampling
+  level_0_whole_video:
+    preserve:
+      - original_video
+      - original_audio
+      - duration
+      - fps
+      - hash
+  level_1_shot_segmentation:
+    derive:
+      - shot_boundaries
+      - shot_duration
+      - representative_keyframe
+      - transition_type_when_observable
+  level_2_uniform_index:
+    default_interval_s: 0.5
+    purpose:
+      - 快速总览
+      - 美学与构图检索
+      - 防止只看首尾帧
+  level_3_dense_windows:
+    suggested_interval_s: 0.125
+    activate_on:
+      - complex_contact_action
+      - fast_transition
+      - identity_drift
+      - typography_change
+      - continuity_failure
+      - beat_sync_analysis
+      - user_points_to_subsecond_problem
+  level_4_frame_exact:
+    activate_only_when:
+      - 需要确认接触发生在哪一帧
+      - 需要确认闪烁/破碎/身份漂移的首个出现点
+      - 回归测试要求逐帧复现
+    frame_reference:
+      - timestamp_s
+      - frame_index_when_fps_is_reliable
+  full_frame_dump_default: false
+  reason:
+    - 默认逐帧保存造成巨大冗余
+    - 孤立图片会丢失运动与声音关系
+    - 关键帧加密集窗口通常比全帧永久存储更适合检索与审计
+
+prompt_effect_alignment:
+  unit: prompt_clause_or_control_intent
+  fields:
+    - clause_id
+    - source_text_verbatim
+    - intended_effect
+    - observable_dimension
+    - evidence_time_ranges
+    - observed_status
+    - observed_description
+    - confidence
+    - confounders
+    - alternative_explanations
+    - model_dependency
+  observed_status_values:
+    - satisfied
+    - partially_satisfied
+    - failed
+    - contradicted
+    - not_observable
+    - unknown
+  rule: 未提供源 prompt 时只允许建立 media_observation，不生成伪造的 clause mapping
+
+aesthetic_fingerprint:
+  principle: 记录可观察机制而不是只贴“高级感/电影感”标签
+  dimensions:
+    composition:
+      - shot_scale_pattern
+      - subject_placement
+      - negative_space
+      - foreground_midground_background
+      - crop_and_occlusion
+    color_and_tone:
+      - dominant_palette
+      - accent_palette
+      - saturation_structure
+      - contrast_structure
+      - black_and_highlight_behavior
+    lighting:
+      - source_motivation
+      - hardness
+      - direction
+      - key_fill_ratio_when_observable
+      - face_readability
+    camera:
+      - static_vs_moving
+      - movement_type
+      - movement_speed
+      - lens_intent_when_inferable
+      - framing_stability
+    subject_performance:
+      - gaze
+      - body_rhythm
+      - gesture_density
+      - pose_change
+      - micro_expression
+    motion_design:
+      - subject_motion
+      - graphic_motion
+      - environmental_motion
+      - acceleration_pattern
+      - motion_layer_separation
+    edit_rhythm:
+      - shot_length_distribution
+      - cut_pattern
+      - transition_pattern
+      - action_match
+      - graphic_match
+      - beat_relation
+    typography_and_graphics:
+      - font_family_class
+      - scale_behavior
+      - plane_or_3d_role
+      - occlusion_relation
+      - legibility
+      - texture
+      - layout_system
+    texture_and_material:
+      - grain
+      - sharpness
+      - surface_response
+      - analog_or_digital_artifact_language
+    sound_relation:
+      - dialogue_priority
+      - music_role
+      - onset_cut_alignment
+      - foley_sync
+      - audio_visual_contrast
+
+video_eval_dimensions:
+  project_core:
+    - instruction_following
+    - subject_identity
+    - costume_prop_consistency
+    - background_consistency
+    - spatial_relationship
+    - camera_orientation
+    - blocking
+    - performance_and_body_mechanics
+    - motion_smoothness
+    - temporal_stability
+    - physical_plausibility
+    - lighting_material
+    - audio_dialogue_sync
+    - narrative_function
+    - cross_shot_continuity
+  research_informed_optional:
+    - aesthetic_quality
+    - imaging_quality
+    - dynamic_degree
+    - temporal_flicker
+    - action_binding
+    - motion_binding
+    - object_interaction
+    - human_fidelity
+    - controllability
+    - commonsense
+    - creativity
+  evaluation_policy:
+    - 不要求每个案例打满所有维度
+    - 只启用与当前镜头目的相关的维度
+    - 自动分数必须与用户主观评价分开保存
+
+retrieval_and_reuse:
+  retrieval_unit: case_plus_temporal_segments
+  high_weight_signals:
+    - same_director_goal
+    - same_task_function
+    - same_temporal_structure
+    - same_motion_grammar
+    - same_camera_subject_contract
+    - same_graphic_or_typography_mechanism
+    - same_lighting_mechanism
+    - same_failure_symptom
+    - same_model_and_version
+  low_weight_signals:
+    - superficial_color_similarity_only
+    - genre_label_only
+    - same_character_without_same_function
+  output_modes:
+    analyze_as_precedent: true
+    retrieve_keyframes_for_reasoning: true
+    use_source_video_as_generation_reference_when_target_model_supports_it: true
+    copy_prompt_verbatim_by_default: false
+    copy_visual_style_wholesale_by_default: false
+  negative_transfer_guard:
+    - 检索到案例后必须说明迁移的是哪个机制
+    - 当前剧情角色空间资产 canonical 始终优先
+    - 表面风格相似但导演功能不同则降低权重
+
+embedding_policy:
+  status: candidate_future_capability
+  canonical_storage: false
+  recommended_units:
+    - whole_video_embedding
+    - shot_or_clip_embedding
+    - keyframe_embedding
+    - text_annotation_embedding
+    - audio_embedding_when_relevant
+  purpose:
+    - scalable_semantic_retrieval
+    - near_duplicate_detection
+    - cluster_visual_grammar
+  warning: embedding 只用于检索，不替代原媒体、人工标签或用户 verdict
+
+learning_and_maturity:
+  media_only_case:
+    default: precedent_candidate
+    cannot_promote_prompt_skill: true
+  verified_prompt_output_pair:
+    may_support: scene_verified_observation
+  controlled_repeated_evidence:
+    may_support: maturity_review
+  model_version_change:
+    action: mark_version_bound_lessons_needs_revalidation
+  conflict:
+    action: preserve_both_and_add_boundary
+
+registration_routing:
+  explicit_golden_case:
+    case_target: 11_验收/golden_prompt_cases.yaml
+    media_binding_target: same_case_entry_using_this_schema
+  version_bound_real_generation_behavior:
+    target: 08_系统学习/C-DANCE2.5真实生成反馈库.md
+  general_learning_trace:
+    target: 08_系统学习/反馈反推与系统反哺引擎.md
+  formal_visual_asset:
+    rule: 只有用户明确设为正式资产时才进入视觉资产登记事务
+  media_uploaded_only_for_test:
+    rule: 可以分析和形成临时观察，但不得自动登记为 Golden Case 或正式资产
+
+rights_and_provenance:
+  preserve_source_attribution_when_known: true
+  do_not_claim_ownership_from_upload: true
+  real_person_reference_may_require_platform_authorization: true
+  sensitive_credentials_never_persist: true
+
+unknowns:
+  - 不同视频理解模型/ChatGPT版本对长视频和细粒度时序判断的稳定上限需持续实测
+  - 最优 uniform sampling 间隔取决于动作速度与镜头复杂度，0.5s/0.125s只是默认策略不是硬规则
+  - 自动美学 grader 与用户导演审美的项目内相关性尚需数据校准
+  - C-DANCE 2.5 对参考视频中哪些属性可独立借用、哪些会连带迁移，需要版本绑定 A/B 测试
