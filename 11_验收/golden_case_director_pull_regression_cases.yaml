@@ -1,0 +1,163 @@
+suite:
+  id: GOLDEN_CASE_DIRECTOR_PULL_REGRESSION
+  status: active
+  created_at: 2026-08-15
+  schema: 10_运行时/golden_case_director_pull_schema.yaml
+  template: 11_验收/golden_case_templates/导演级拉片模板.md
+
+cases:
+  - id: REG-GCDP-MANDATORY-001
+    title: 每个显式 Golden Case 都必须生成导演级拉片
+    input_condition: 用户明确要求录入优秀 Prompt、优秀视频、优秀序列帧或优秀音视频案例
+    must_preserve:
+      - director_pull_created_or_updated
+      - pull_mode_declared
+      - dramatic_function_analyzed
+      - performance_beats_analyzed
+      - camera_edit_sound_analyzed_when_relevant
+      - retrieval_mechanisms_extracted
+      - boundaries_recorded
+
+  - id: REG-GCDP-PROMPT-ONLY-001
+    title: Prompt-only 只能做前瞻导演分析不能假装成片已发生
+    input_condition: 用户只提供优秀 Prompt，没有真实生成输出
+    must_preserve:
+      - pull_mode_prompt_prospective_director_analysis
+      - intended_mechanisms_allowed
+      - predicted_risks_allowed
+      - no_observed_expression_claim
+      - no_output_quality_claim
+      - no_prompt_causality_claim
+
+  - id: REG-GCDP-HYBRID-001
+    title: Prompt 与真实输出同时存在时必须比较意图与成片
+    input_condition: Golden Case 同时有 source prompt 与真实输出
+    must_preserve:
+      - source_prompt_verbatim_preserved
+      - seconds_based_output_evidence
+      - intended_vs_observed_analysis
+      - clause_to_timeline_alignment
+      - model_interpretation_or_omission_notes
+      - candidate_AB_variables
+
+  - id: REG-GCDP-STILLNESS-001
+    title: 长时间静止不得默认判为无信息或冗余
+    input_condition: 人物在高情绪压力场景中数秒几乎不动，后续出现微表情或明确释放动作
+    must_preserve:
+      - low_motion_high_information_detection
+      - hold_duration_recorded
+      - hold_start_middle_threshold_release_evidence
+      - why_stillness_is_information
+      - counterfactual_if_immediate_reaction
+      - no_dedup_of_duration_evidence
+
+  - id: REG-GCDP-MICROCHANGE-001
+    title: 微表演必须记录发生顺序和阈值而不是只写最终情绪
+    input_condition: 眼眶、嘴唇、视线、呼吸或肌肉张力缓慢变化
+    must_preserve:
+      - micro_change_sequence
+      - first_visible_change_time
+      - threshold_point
+      - expression_and_gaze_separated
+      - observation_separated_from_inner_state_inference
+      - confidence_recorded
+
+  - id: REG-GCDP-DURATION-001
+    title: 持续时间本身可成为一级戏剧证据
+    input_condition: hold、等待、犹豫、强撑、麻木或凝视的持续长度决定观众体验
+    must_preserve:
+      - duration_evidence
+      - why_this_duration_is_needed
+      - what_would_be_lost_if_shortened
+      - latency_before_visible_reaction
+      - no_result_frame_only_summary
+
+  - id: REG-GCDP-SOUND-PUNCTUATION-001
+    title: 强声音必须分析前后动态和叙事功能
+    input_condition: 长时间静默或低声密度后出现猛关门、撞击、音乐骤入等强声音
+    must_preserve:
+      - silence_or_reduced_density_context
+      - sound_onset_time
+      - dynamic_range_relation
+      - sound_punctuation_function
+      - audience_effect_hypothesis
+      - counterfactual_if_sound_weaker_or_earlier
+      - no_simple_loudness_only_description
+
+  - id: REG-GCDP-EMOTION-GRANULARITY-001
+    title: 召回不得只按“伤心”等粗情绪标签
+    input_condition: 用户说“伤心、难过、绝望”等宽泛情绪但给出更具体反应机制
+    must_preserve:
+      - trigger_type
+      - emotional_family
+      - regulation_strategy
+      - external_expression_level
+      - latency_pattern
+      - beat_arc
+      - release_action
+      - sound_punctuation_when_relevant
+      - dramatic_function_priority_over_surface_label
+
+  - id: REG-GCDP-FUZZY-RECALL-001
+    title: 模糊导演语言必须召回机制相似案例
+    input_condition: 用户说“不是马上哭，表面很稳，后劲很重，最后一个动作收掉”
+    must_preserve:
+      - expansion_to_restrained_hurt
+      - expansion_to_delayed_reaction
+      - expansion_to_containment
+      - expansion_to_low_motion_high_information
+      - expansion_to_micro_expression_leakage
+      - expansion_to_strong_action_release
+      - function_first_reranking
+
+  - id: REG-GCDP-OBSERVATION-INFERENCE-001
+    title: 屏幕事实与导演解释必须分离
+    input_condition: 从人物表情、停顿或动作推断内在情绪和决定
+    must_preserve:
+      - observable_fact_section
+      - director_interpretation_section
+      - alternative_explanations
+      - confidence
+      - no_private_state_as_confirmed_fact_without_context
+
+  - id: REG-GCDP-CAUSALITY-001
+    title: 时间先后不能直接升级成因果
+    input_condition: 拉片解释“为什么这个动作/声音有效”或“哪句 Prompt 导致效果”
+    must_preserve:
+      - world_causality_separate
+      - cinematic_perceptual_causality_separate
+      - prompt_control_causality_separate
+      - evidence_time_ranges
+      - alternatives_and_counterfactuals
+      - controlled_intervention_needed_for_strong_prompt_causality
+
+  - id: REG-GCDP-EDIT-RHYTHM-001
+    title: 拉片必须解释为什么此刻切或不切
+    input_condition: 镜头有明显长 hold、反应镜头、延迟切镜或突然加速
+    must_preserve:
+      - shot_duration_function
+      - hold_vs_cut_choice
+      - cut_motivation
+      - emotion_story_rhythm_relation
+      - why_not_earlier_or_later
+
+  - id: REG-GCDP-SURFACE-STYLE-001
+    title: 不得把表面风格复制当成导演机制学习
+    input_condition: 案例有明显颜色、服装、字体、镜头风格但核心价值来自表演/节奏/声音
+    must_preserve:
+      - transferable_mechanisms
+      - non_transferable_surface_traits
+      - negative_transfer_guard
+      - no_wholesale_style_copy
+
+  - id: REG-GCDP-FAILURE-BOUNDARY-001
+    title: 每条高价值机制必须写成立条件与失败边界
+    input_condition: 拉片抽出“静止蓄压后强动作释放”等可迁移机制
+    must_preserve:
+      - works_when
+      - fails_when
+      - performance_dependency
+      - context_dependency
+      - sound_dependency_when_relevant
+      - overuse_risk
+      - validation_needed
