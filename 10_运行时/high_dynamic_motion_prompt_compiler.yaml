@@ -1,0 +1,242 @@
+compiler_id: EUSTIA_HIGH_DYNAMIC_MOTION_PROMPT_COMPILER
+version: 1.0.0
+status: candidate
+name: HIGH-DYNAMIC-MOTION-001
+zh_name: 高动态动作提示编译器
+scope: expert_human_motion_parkour_climbing_combat_sport_and_other_high_dynamic_video_actions
+
+authority_boundary:
+  director_method: 01_AI电影系统/AI电影系统.md
+  existing_rules:
+    - MOTION-SIGNATURE-001
+    - SCREEN-EVIDENCE-001
+    - POSITIVE-SPEC-001
+    - SOAC-001
+  evidence: 09_资料证据/AI视频高动态动作提示证据索引.md
+  non_goal: 本文件是运行时编译支持，不是第二套导演总纲，也不覆盖人物、剧情、空间或模型私有adapter。
+
+triggers:
+  - 高手感弱
+  - 动作像普通人
+  - 跑酷像普通攀爬
+  - 武打动作泛化
+  - 动作越写越详细越僵
+  - 四肢长时间黏在墙面
+  - 缺少腾空或释放阶段
+  - 复杂运动被模型平均成安全动作
+  - 用户要求跑酷翻越墙跑转体连续技
+  - 同一高动态动作经过一次定向修复仍缺乏motion_signature
+
+core_principle:
+  summary: 只精确锁定决定动作身份和物理成立的少数节点，其余可替代微动作留给模型；先建立运动身份与动量，再追求局部花活。
+  compile_chain:
+    - ACTION_CLASS
+    - TRAJECTORY
+    - SIGNATURE_BEATS_2_TO_4
+    - IMPULSE_RELEASE_AIRBORNE_CATCH
+    - RHYTHM_AND_CONTACT_DURATION
+    - ENVIRONMENT_RESPONSE_AS_NEEDED
+    - CAMERA_RESPONSE
+    - FINAL_STATE
+
+input_scan:
+  required:
+    - dramatic_function
+    - character_motion_signature
+    - current_start_state
+    - desired_end_state
+    - spatial_route_and_available_supports
+    - movement_class_or_technical_identity
+    - required_story_contacts
+    - camera_plan
+    - model_and_generation_mode
+    - reference_assets_available
+  optional:
+    - motion_reference
+    - white_model_or_blocking_reference
+    - first_last_frame
+    - environment_response
+    - sound_punctuation
+
+constraint_budget:
+  HARD:
+    use_for:
+      - story_critical_event_order
+      - identity_and_topology
+      - required_contact_that_changes_story_state
+      - locked_camera_when_editorially_required
+      - final_state
+      - reveal_budget
+    rule: HARD不得扩张到所有手脚微动作。
+  GUIDED:
+    use_for:
+      - movement_style
+      - route_shape
+      - contact_release_rhythm
+      - signature_beat_family
+      - momentum_direction
+      - camera_follow_intensity
+  FREE:
+    use_for:
+      - left_vs_right_limb_when_not_story_critical
+      - exact_grip_shape
+      - small_body_corrections
+      - cloth_hair_dust_microvariation
+      - noncritical_support_choice
+      - natural_interbeat_timing
+
+motion_identity_rule:
+  bad_pattern:
+    - 只写高手轻盈敏捷快速
+    - 把高手感拆成大量可替换的左右手左右脚清单
+    - 同时要求多个“例如A或者B或者C”的复杂技巧
+  required_evidence:
+    - route_change_or_clear_trajectory
+    - short_contact_or_impulse
+    - release_from_support
+    - visible_center_of_mass_displacement
+    - airborne_or_unweighted_phase_when_motion_class_requires_it
+    - next_catch_or_landing
+  principle: 高手感由运动选择与动量链证明，而不是由形容词宣告。
+
+signature_beat_rule:
+  target_count: 2_to_4
+  selection:
+    - choose_only_beats_that_are_visually_distinctive
+    - each_beat_changes_direction_speed_support_or_body_state
+    - avoid_redundant_micro_steps
+  example_vertical_parkour:
+    - side_support_impulse_redirects_body_diagonally_upward
+    - body_fully_releases_from_facade_for_a_brief_airborne_crossing
+    - one_hand_high_catch_converts_lateral_momentum_into_upward_swing
+    - brief_upper_foothold_contact_immediately_launches_next_ascent
+
+impulse_release_rule:
+  formula: CONTACT -> IMPULSE -> RELEASE -> AIRBORNE_OR_UNWEIGHTED -> NEXT_CONTACT
+  purpose: 避免生成持续三点或四点贴墙的普通攀爬。
+  observable_signals:
+    - support_contact_is_brief
+    - center_of_mass_moves_past_support
+    - feet_or_body_release_visibly
+    - next_contact_occurs_after_clear_spatial_displacement
+  boundary: 对本来就需要持续挂点的真实攀岩动作不强行制造腾空。
+
+trajectory_rule:
+  prefer:
+    - diagonal_upward
+    - zigzag_upward
+    - lateral_redirect_then_upward
+    - arc_between_supports
+  avoid_when_unwanted:
+    - static_vertical_creep
+    - repeated_same_support_pattern
+  rule: 路径必须服务空间与角色，不为炫技擅自改变canonical可达路线。
+
+rhythm_rule:
+  expert_default: short_contact_longer_displacement_minimal_settle
+  promptable_form:
+    - contact_is_fractional_and_decisive
+    - each_push_immediately_releases_into_next_displacement
+    - no_pause_between_signature_beats_unless_story_requires
+  note: 不要求逐帧时间码；只有剧情/同步硬时序才锁时间。
+
+environment_response_rule:
+  budget: 0_to_2_signals_per_short_probe
+  examples:
+    - boot_strike_kicks_a_small_dust_puff
+    - timber_flexes_briefly_on_hard_contact
+    - cloth_snaps_out_during_airborne_redirect
+  purpose: 用结果证明速度、力量和离墙瞬间。
+  warning: 环境响应过多会抢动作权重。
+
+camera_rule:
+  must:
+    - preserve_full_body_trajectory_readability_for_key_beats
+    - keep_next_support_or_destination_legible_when_needed
+    - preserve_director_composition_and_scene_identity
+  may:
+    - smooth_vertical_track
+    - short_profile_or_three_quarter_view_for_lateral_displacement
+  must_not:
+    - auto_switch_to_generic_coverage_only_to_show_every_instruction
+    - crop_out_the_release_or_landing_that_proves_motion
+  relation: CAMERA_AESTHETIC_COVERAGE_DRIFT仍适用。
+
+prompt_compression:
+  model_independent_template:
+    - one_sentence_action_identity_and_goal
+    - one_sentence_trajectory
+    - two_to_four_signature_beats
+    - one_sentence_rhythm_or_physical_evidence
+    - one_camera_sentence
+    - final_state
+  remove:
+    - explanations_of_why_the_prompt_is_written_this_way
+    - repeated_synonyms
+    - noncritical_limb_assignments
+    - long_lists_of_optional_tricks
+    - static_scene_details_already_locked_by_reference
+
+iteration_protocol:
+  text_probe_1:
+    method: simplest_motion_identity_plus_trajectory_plus_2_signature_beats
+  text_probe_2:
+    method: change_only_the_failed_motion_dimension_or_add_one_missing_physical_evidence
+  escalation_gate:
+    trigger:
+      - two_targeted_text_probes_still_return_generic_motion
+      - required_signature_beat_is_nonstandard_or_high_precision
+      - model_repeatedly_converts_release_into_sustained_contact
+    action:
+      - stop_adding_prose
+      - prefer_motion_reference_or_V2V
+      - consider_green_screen_action_reference
+      - consider_white_model_or_blocking_reference
+      - use_first_last_frame_or_keyframe_control_when_supported
+    principle: 文本控制饱和后升级控制模态，而不是继续增加自然语言约束。
+
+model_adapter_boundary:
+  H3:
+    current_public_evidence: natural_language_multimodal_and_V2V_motion_transfer_supported
+    rule: 使用H3-native自然语言和其当前官方能力，不引入旧Hailuo私有camera command除非H3官方明确支持。
+  C_DANCE_2_5:
+    rule: 使用当前C-DANCE/Seedance适配器；高精度动作可优先考虑视频动作参考、绿幕动作或白模参考，具体能力每次按当前版本资料与项目实测核验。
+  cross_model:
+    - H3_proxy_success_does_not_equal_C_DANCE_final_success
+    - shared_motion_failure_can_inform_structure_but_model_specific_behavior_remains_version_bound
+
+current_case_candidate:
+  work_item: KAIM-HIGH-SEARCH-30S
+  target_motion: expert_vertical_parkour
+  current_failure:
+    - sustained_multi_limb_wall_contact
+    - weak_airborne_release
+    - lateral_creep_instead_of_redirect
+    - micro_choreography_averaged_into_generic_climb
+  next_probe:
+    duration: 4_to_6_seconds
+    isolate: Kaim_motion_only
+    action_class: professional_vertical_parkour_wall_run_ascent
+    trajectory: diagonal_or_zigzag_upward
+    signature_beats:
+      - side_support_impulse_and_full_release
+      - one_hand_high_catch_with_momentum_swing
+      - immediate_upper_relaunch
+    keep_free:
+      - exact_left_right_limb_choice
+      - minor_support_selection
+      - micro_rotation_angle
+    success_checks:
+      - visible_airborne_or_unweighted_phase
+      - clear_lateral_redirect
+      - contact_duration_short
+      - center_of_mass_continues_upward
+      - motion_reads_as_expert_not_survival_climb
+
+maturity:
+  current: candidate
+  promotion_gate:
+    - real_generation_improves_motion_signature_in_targeted_test
+    - no_material_camera_aesthetic_degradation
+    - no_major_physical_or_spatial_error_added
+    - cross_scene_evidence_required_for_project_verified
