@@ -1,0 +1,448 @@
+schema_id: EUSTIA_GOLDEN_CASE_DIRECTOR_PULL
+version: 1.0.0
+status: active
+created_at: 2026-08-15
+last_updated: 2026-08-15
+scope: director_grade_case_breakdown_performance_beats_sound_editing_retrieval_and_learning
+
+canonical_relationship:
+  project_index: PROJECT_INDEX.yaml
+  golden_prompt_protocol: 08_系统学习/优秀提示词案例学习协议.md
+  golden_media_schema: 10_运行时/golden_media_evidence_schema.yaml
+  learning_engine: 08_系统学习/反馈反推与系统反哺引擎.md
+  golden_case_registry: 11_验收/golden_prompt_cases.yaml
+  template: 11_验收/golden_case_templates/导演级拉片模板.md
+  regression: 11_验收/golden_case_director_pull_regression_cases.yaml
+  evidence: 09_资料证据/导演级拉片与低运动表演证据索引.md
+
+purpose:
+  - 每次录入优秀 Prompt、视频、序列帧或音视频案例时，强制执行一次导演级拉片，而不是只做标签、摘要或素材存档
+  - 解释案例为什么在剧情、人物、表演、摄影、场面调度、剪辑、声音和观众认知上成立
+  - 把“表面几乎没动作但内心戏持续发生”的低运动高信息表演识别为高价值时间证据
+  - 将可观察证据、导演解释、因果假设、Prompt 控制假设和用户审美判断分层保存
+  - 把拉片结果转成可模糊召回的导演机制，而不是只存“伤心、时尚、电影感”等粗标签
+
+core_invariants:
+  every_explicit_golden_case_requires_director_pull: true
+  media_backed_case_uses_observed_evidence: true
+  prompt_only_case_uses_prospective_analysis: true
+  prospective_analysis_must_not_be_reported_as_observed_output: true
+  stillness_can_be_high_information: true
+  low_motion_must_not_equal_low_salience: true
+  duration_itself_can_be_evidence: true
+  repeated_frames_may_be_semantically_nonredundant: true
+  user_verdict_is_authoritative_for_case_excellence: true
+  director_interpretation_must_be_separated_from_observation: true
+  temporal_order_must_not_be_claimed_as_causality_without_support: true
+  transferable_mechanism_must_be_separated_from_surface_style: true
+
+pull_modes:
+  observed_director_pull:
+    activate_when:
+      - actual_video_available
+      - verified_image_sequence_available
+      - audio_visual_output_evidence_available
+    evidence_basis:
+      - seconds_based_visual_timeline
+      - audio_timeline
+      - keyframes_contact_sheets_dense_windows
+    claims_allowed:
+      - what_is_observable
+      - timing_and_duration
+      - performance_progression
+      - camera_edit_sound_relations_when_supported
+      - bounded_director_interpretation_with_confidence
+  prompt_prospective_director_analysis:
+    activate_when:
+      - source_prompt_exists_but_no_verified_output_media
+    claims_allowed:
+      - intended_dramatic_function
+      - intended_performance_beats
+      - intended_camera_sound_editing_mechanisms
+      - predicted_strengths_and_failure_risks
+    claims_forbidden:
+      - claiming_an_unseen_expression_actually_happened
+      - claiming_prompt_clause_caused_an_output_effect
+      - upgrading_output_quality_without_real_output
+  hybrid_pull:
+    activate_when:
+      - source_prompt_and_verified_output_both_exist
+    additional_required_analysis:
+      - intended_vs_observed
+      - prompt_clause_to_timeline_alignment
+      - omissions_surprises_and_model_interpretation
+      - candidate_control_variables_for_AB_test
+
+mandatory_pull_pipeline:
+  - establish_context_and_provenance
+  - determine_pull_mode
+  - identify_story_trigger_and_scene_function
+  - identify_audience_knowledge_and_reveal_state
+  - identify_character_goal_subtext_and_internal_pressure
+  - segment_performance_beats
+  - analyze_duration_holds_latency_thresholds_and_release
+  - analyze_blocking_camera_composition_and_spatial_attention
+  - analyze_editing_rhythm_and_shot_duration_function
+  - analyze_sound_dialogue_silence_bgm_sfx_ambience_and_punctuation
+  - separate_observation_inference_and_unknown
+  - build_director_mechanism_graph
+  - build_retrieval_features
+  - extract_transferable_mechanisms_and_failure_boundaries
+  - link_prompt_controls_when_true_prompt_exists
+  - run_edcm_scan
+  - assign_maturity_and_validation_needs
+
+# ---------- 导演级拉片结构 ----------
+director_pull_structure:
+  section_01_context_and_trigger:
+    fields:
+      - preceding_event_or_trigger
+      - scene_entry_state
+      - known_context_source
+      - missing_context
+      - confidence
+    rule: 未提供前置剧情时，不得把可能的情绪原因写成 confirmed fact
+
+  section_02_dramatic_function:
+    fields:
+      - scene_or_beat_purpose
+      - information_function
+      - emotional_function
+      - relationship_function
+      - decision_or_state_change
+      - why_this_duration_is_needed
+      - what_would_be_lost_if_shortened
+    questions:
+      - 这段为什么值得存在
+      - 它不是在传递台词信息时，观众实际上在读取什么
+      - 剪短、加速或提前爆发会损失什么
+
+  section_03_audience_cognition:
+    fields:
+      - audience_knows_before
+      - audience_is_waiting_for
+      - withheld_information
+      - attention_target
+      - inference_invited
+      - reveal_or_realization_point
+    principle: 分析观众如何从等待、停顿、视线、声响和动作中主动补全意义
+
+  section_04_character_inner_action:
+    fields:
+      - external_goal
+      - immediate_need
+      - obstacle
+      - subtext
+      - emotional_pressure
+      - internal_action_hypothesis
+      - decision_formation
+      - confidence
+    rule: 内在状态属于解释层；必须与屏幕可观察证据绑定
+
+  section_05_performance_beats:
+    beat_fields:
+      - beat_id
+      - start_s
+      - end_s
+      - beat_label
+      - external_behavior
+      - gaze
+      - expression
+      - micro_expression
+      - breath_and_body_tension_when_observable
+      - internal_action_hypothesis
+      - transition_trigger
+      - evidence_refs
+      - confidence
+    canonical_beat_vocabulary_examples:
+      - receive
+      - freeze
+      - hold
+      - contain
+      - search
+      - resist
+      - leak
+      - crack
+      - decide
+      - release
+      - cut_off
+      - recover
+    rule: vocabulary 是检索辅助，不要求强行把所有表演塞进固定分类
+
+  section_06_low_motion_high_information:
+    concept_id: LOW_MOTION_HIGH_INFORMATION_PERFORMANCE
+    aliases:
+      zh:
+        - 静止中的戏
+        - 外静内烈
+        - 强忍型反应
+        - 延迟情绪反应
+        - 蓄压后释放
+      en:
+        - low_motion_high_information_performance
+        - restrained_reaction_beat
+        - emotional_latency
+        - hold_and_release_performance
+        - containment_and_leakage
+    detect_when:
+      - little_body_motion_but_context_implies_high_stakes
+      - sustained_gaze_or_posture
+      - gradual_eye_mouth_breath_or_tension_change
+      - long_hold_precedes_clear_release_action
+      - silence_or_reduced_sound_precedes_sound_punctuation
+    required_fields:
+      - hold_start_s
+      - hold_end_s
+      - hold_duration_s
+      - apparent_stability
+      - micro_change_sequence
+      - threshold_point_s
+      - release_or_resolution
+      - why_stillness_is_information
+      - counterfactual_if_immediate_reaction
+    anti_dedup_rule:
+      - 保留 hold 的起点、中段证明、首次微变、阈值点和释放点，即使视觉相似度很高
+      - 若近重复帧用于证明“持续忍住了多久”，不得作为普通冗余删除
+      - contact sheet 必须保留时间标签，使观众可直接读出 latency 与 hold duration
+
+  section_07_blocking_camera_composition:
+    fields:
+      - subject_blocking
+      - foreground_midground_background
+      - shot_size
+      - camera_angle
+      - camera_distance_relationship
+      - camera_motion
+      - framing_stability
+      - negative_space
+      - eyeline
+      - occlusion
+      - attention_management
+      - why_camera_choice_serves_performance
+      - alternatives_and_tradeoffs
+
+  section_08_editing_rhythm:
+    fields:
+      - shot_length_pattern
+      - hold_vs_cut_choice
+      - reaction_timing
+      - cut_motivation
+      - rhythm_curve
+      - acceleration_deceleration
+      - withheld_cut
+      - action_or_sound_bridge
+      - why_cut_now_not_earlier_or_later
+    priority_order:
+      - emotion
+      - story
+      - rhythm
+      - attention_and_spatial_continuity
+    note: 该优先序作为专业分析启发，不冒充唯一剪辑定律
+
+  section_09_sound_strategy:
+    fields:
+      - dialogue_function
+      - silence_or_reduced_density
+      - ambience
+      - bgm_role
+      - sfx_role
+      - foley
+      - onset_and_peak_times
+      - dynamic_range_relation
+      - sound_pre_lap_or_post_lap_when_present
+      - sound_punctuation
+      - audio_visual_counterpoint
+      - subjective_or_objective_sound_when_inferable
+      - why_this_sound_at_this_moment
+    sound_punctuation_examples:
+      - door_slam_as_emotional_period
+      - impact_after_silence_as_release
+      - breath_as_threshold_marker
+      - music_drop_as_attention_reframe
+    rule: 不只描述“声音很响”，必须解释前后动态关系、叙事功能和观众效果
+
+  section_10_mise_en_scene_and_visual_design:
+    fields:
+      - production_design_function
+      - lighting_function
+      - color_function
+      - texture_material_function
+      - background_activity
+      - graphic_or_typography_function
+      - environmental_motion
+      - contrast_with_performance
+
+  section_11_causal_layers:
+    layers:
+      observation:
+        question: 屏幕和声音直接证明了什么
+      director_interpretation:
+        question: 这些选择最可能在观众身上产生什么效果，为什么
+      world_causality:
+        question: 角色动作、接触、状态变化之间的世界内因果是什么
+      prompt_control:
+        question: 哪些 Prompt 控制项可能导致结果，证据强度到哪一级
+    required:
+      - alternatives
+      - counterfactuals
+      - confidence
+      - evidence_time_ranges
+
+  section_12_why_it_works_synthesis:
+    fields:
+      - core_mechanism_one_sentence
+      - build_up_mechanism
+      - release_mechanism
+      - emotion_story_rhythm_interaction
+      - strongest_observable_evidence
+      - strongest_interpretive_inference
+      - biggest_unknown
+
+  section_13_transfer_and_retrieval:
+    fields:
+      - emotional_family
+      - performance_mode
+      - beat_arc
+      - dramatic_function
+      - camera_mechanism
+      - editing_mechanism
+      - sound_mechanism
+      - visual_mechanism
+      - transferable_mechanisms
+      - non_transferable_surface_traits
+      - retrieval_aliases_zh
+      - retrieval_aliases_en
+      - negative_retrieval_examples
+    retrieval_priority:
+      - same_dramatic_function
+      - same_character_response_mechanism
+      - same_performance_mode
+      - same_beat_arc
+      - same_sound_or_editing_release_mechanism
+      - same_camera_attention_contract
+      - surface_style_last
+
+  section_14_prompt_distillation:
+    when_source_prompt_exists:
+      - preserve_verbatim
+      - align_clauses_to_director_mechanisms
+      - identify_effective_combination_vs_unverified_single_clause
+    when_source_prompt_absent:
+      - create_reconstructed_prompt_only_if_useful
+      - mark_inferred_from_media
+      - separate_screen_description_from_director_mechanism_from_executable_prompt
+    output_goal: 形成可在未来导演任务中调用的控制语言，而不是机械复制整个案例
+
+  section_15_boundaries_and_failure_modes:
+    fields:
+      - works_when
+      - fails_when
+      - overuse_risk
+      - genre_or_tone_boundary
+      - performance_dependency
+      - sound_dependency
+      - context_dependency
+      - model_dependency
+      - validation_needed
+
+# ---------- 时间证据对拉片的特殊要求 ----------
+temporal_semantics:
+  seconds_are_director_coordinate: true
+  required_duration_features:
+    - latency_before_visible_reaction
+    - hold_duration
+    - micro_change_onset
+    - threshold_to_release_delay
+    - release_duration
+    - post_release_hold_when_relevant
+  persistence_rule:
+    - 不能只保留状态变化后的结果帧
+    - 必须保存足以证明“之前持续没有明显变化”的时间证据
+    - 若压抑、等待、犹豫、麻木、凝视本身是戏剧动作，则 duration evidence 是一级证据
+
+# ---------- 召回语义 ----------
+retrieval_semantics:
+  emotion_label_is_insufficient: true
+  required_granularity:
+    - trigger_type
+    - emotional_family
+    - regulation_strategy
+    - external_expression_level
+    - latency_pattern
+    - beat_arc
+    - release_action
+    - sound_punctuation
+    - audience_effect
+  example:
+    vague_query: 被伤到以后很平静，后劲很重，最后用一个动作收掉
+    desired_expansion:
+      - restrained_hurt
+      - delayed_reaction
+      - containment
+      - low_motion_high_information
+      - micro_expression_leakage
+      - decision_formation
+      - strong_action_release
+      - sound_punctuation
+
+# ---------- 质量门 ----------
+quality_gate:
+  fail_if:
+    - only_summarizes_plot
+    - only_lists_camera_moves
+    - only_labels_emotion_without_mechanism
+    - treats_stillness_as_empty_by_default
+    - deletes_duration_evidence_as_redundancy
+    - describes_sound_without_timing_or_function
+    - infers_private_emotion_without_evidence_or_confidence
+    - claims_prompt_causality_from_media_only
+    - copies_surface_style_without_functional_analysis
+    - cannot_state_why_the_choice_works_and_when_it_fails
+  pass_requires:
+    - evidence_grounding
+    - dramatic_function
+    - performance_beats
+    - temporal_duration_logic
+    - camera_blocking_relation
+    - editing_rhythm_relation
+    - sound_function
+    - audience_effect
+    - retrieval_mechanisms
+    - boundaries_and_counterfactuals
+
+# ---------- EDCM ----------
+edcm_mapping:
+  K0:
+    - user_named_strengths
+    - actual_prompt
+    - actual_timestamps_and_observations
+    - explicit_context
+  K1:
+    - inferred_director_preference_from_repeated_verdicts
+    - inferred_subtext_or_function_with_evidence
+  K2:
+    - performance_beats
+    - emotional_latency
+    - duration_evidence
+    - sound_punctuation
+    - temporal_grounding
+    - mechanism_level_retrieval
+    - contrastive_and_counterfactual_analysis
+  K3:
+    - ambiguous_internal_state
+    - uncertain_micro_expression_meaning
+    - unknown_prompt_causality
+    - model_specific_behavior_without_AB
+
+learning_and_maturity:
+  director_pull_itself_does_not_promote_skill: true
+  observed_case_can_support_scene_verified_only_under_existing_maturity_rules: true
+  prompt_only_case_defaults_to_candidate_lessons: true
+  repeated_mechanism_success_across_distinct_cases_required_for_higher_promotion: true
+  negative_transfer_must_refine_retrieval_boundary: true
+
+bundle_output:
+  required_file_for_each_case: director_pull.md
+  recommended_machine_readable_file: director_pull.yaml
+  template_source: 11_验收/golden_case_templates/导演级拉片模板.md
+  registry_link_required: true
