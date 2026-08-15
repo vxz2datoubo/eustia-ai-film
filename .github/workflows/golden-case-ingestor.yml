@@ -14,8 +14,14 @@ on:
 
 jobs:
   golden-case-ingestor:
-    name: unit-yaml-fixture-e2e-validator-negative
-    runs-on: ubuntu-latest
+    name: ${{ matrix.os }}-unit-yaml-fixture-e2e-validator-negative
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
     defaults:
       run:
         working-directory: tools/golden_case_ingestor
@@ -27,13 +33,6 @@ jobs:
       - name: Install tool dependencies
         run: python -m pip install -r requirements.txt
       - name: Parse tool and project YAML
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          import yaml
-          for path in Path('../..').rglob('*.yaml'):
-              yaml.safe_load(path.read_text(encoding='utf-8'))
-          print('YAML_PARSE=PASS')
-          PY
+        run: python -c "from pathlib import Path; import yaml; [yaml.safe_load(p.read_text(encoding='utf-8')) for p in Path('../..').rglob('*.yaml')]; print('YAML_PARSE=PASS')"
       - name: Unit, validator-negative, and ffmpeg fixture E2E tests
         run: python -m unittest discover -s tests -v

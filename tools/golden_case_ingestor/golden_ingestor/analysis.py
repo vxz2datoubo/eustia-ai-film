@@ -67,16 +67,17 @@ def infer_shots(samples: list[FrameSample], duration_s: float, reader=None, loca
     boundaries = [0.0]
     refined_samples: list[FrameSample] = []
     for index, sample in enumerate(samples[1:], 1):
-        # The first baseline interval has no preceding change interval, so it
-        # cannot establish an editorial discontinuity rather than startup motion.
-        if index < 2:
-            continue
         before_score = _cut_score(samples[index - 1])
         after_score = _cut_score(samples[index + 1]) if index + 1 < len(samples) else 0.0
         score = _cut_score(sample)
-        if not _is_coarse_cut(sample, score, before_score, after_score):
+        if index == 1:
+            if not _is_opening_coarse_cut(sample, score, after_score):
+                continue
+        elif not _is_coarse_cut(sample, score, before_score, after_score):
             continue
-        boundary, _, local = _refine_boundary(reader, samples[index - 1].timestamp_s, sample.timestamp_s, local_interval_s, sample)
+        boundary, refined_score, local = _refine_boundary(reader, samples[index - 1].timestamp_s, sample.timestamp_s, local_interval_s, sample)
+        if index == 1 and not _is_isolated_opening_cut(local, refined_score):
+            continue
         if boundary > boundaries[-1] + 1e-6 and boundary < duration_s - 1e-6:
             boundaries.append(boundary)
             refined_samples.extend(local)
@@ -132,6 +133,22 @@ def _is_coarse_cut(sample: FrameSample, score: float, before_score: float, after
     return is_global_discontinuity and is_local_peak
 
 
+def _is_opening_coarse_cut(sample: FrameSample, score: float, after_score: float) -> bool:
+    """Permit a real early cut while rejecting unresolved startup motion."""
+    is_global_discontinuity = sample.histogram_distance >= 0.35 and sample.changed_block_ratio >= 0.65
+    return is_global_discontinuity and score >= 0.55 and score >= after_score * 1.2
+
+
+def _is_isolated_opening_cut(local: list[FrameSample], refined_score: float) -> bool:
+    if refined_score < 0.65 or len(local) < 4:
+        return False
+    strongest_index = max(range(1, len(local)), key=lambda index: _cut_score(local[index]))
+    if strongest_index == 0 or strongest_index >= len(local) - 1:
+        return False
+    neighbouring_scores = [_cut_score(sample) for index, sample in enumerate(local[1:], 1) if index != strongest_index]
+    return all(score <= 0.35 for score in neighbouring_scores)
+
+
 def _refine_boundary(reader, start_s: float, end_s: float, interval_s: float, fallback: FrameSample) -> tuple[float, float, list[FrameSample]]:
     if reader is None or interval_s <= 0:
         return fallback.timestamp_s, _cut_score(fallback), [fallback]
@@ -158,12 +175,20 @@ def dense_timestamps(samples: list[FrameSample], shots: list[dict], dense_interv
     return points
 
 
-def duration_evidence_guard(samples: list[FrameSample], shot: dict) -> tuple[dict[float, str], dict]:
-    inside = [s for s in samples if shot["start_s"] <= s.timestamp_s <= shot["end_s"]]
+def owned_samples(samples: list[FrameSample], shot: dict, is_final_shot: bool) -> list[FrameSample]:
+    return [
+        sample
+        for sample in samples
+        if shot["start_s"] <= sample.timestamp_s and (sample.timestamp_s <= shot["end_s"] if is_final_shot else sample.timestamp_s < shot["end_s"])
+    ]
+
+
+def duration_evidence_guard(samples: list[FrameSample], shot: dict, is_final_shot: bool) -> tuple[dict[float, str], dict]:
+    inside = owned_samples(samples, shot, is_final_shot)
     if not inside:
         return {}, {"status": "not_observed"}
-    start, end = shot["start_s"], shot["end_s"]
-    middle = round((start + end) / 2, 6)
+    start, end = shot["start_s"], inside[-1].timestamp_s
+    middle = inside[len(inside) // 2].timestamp_s
     changes = [s for s in inside if s.visual_delta >= 3.0]
     first = changes[0].timestamp_s if changes else None
     threshold = max(inside, key=lambda s: s.visual_delta).timestamp_s if changes else None
@@ -175,6 +200,7 @@ def duration_evidence_guard(samples: list[FrameSample], shot: dict) -> tuple[dic
     if not low_motion_candidate:
         return {start: "temporal_anchor", middle: "temporal_anchor", end: "temporal_anchor"}, {
             "status": "generic_temporal_anchor",
+            "interval_ownership": "[start,end]" if is_final_shot else "[start,end)",
             "anchor_start_s": start,
             "anchor_middle_s": middle,
             "anchor_end_s": end,
@@ -186,6 +212,7 @@ def duration_evidence_guard(samples: list[FrameSample], shot: dict) -> tuple[dic
             protected[value] = "duration_evidence"
     return protected, {
         "status": "low_motion_hold_candidate",
+        "interval_ownership": "[start,end]" if is_final_shot else "[start,end)",
         "hold_start_s": start,
         "hold_middle_s": middle,
         "first_micro_change_s": first,

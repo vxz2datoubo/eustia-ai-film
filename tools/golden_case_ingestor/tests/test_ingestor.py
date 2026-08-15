@@ -78,6 +78,36 @@ class GoldenCaseIngestorTests(unittest.TestCase):
             result = validate_bundle(output)
             self.assertTrue(result.passed, result.errors)
 
+    def test_cut_frame_is_owned_only_by_new_shot_and_precut_evidence_survives(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            sequence = root / "ownership-cut"
+            sequence.mkdir()
+            for index in range(48):
+                Image.new("RGB", (160, 90), "black" if index < 19 else "white").save(sequence / f"input_{index:03d}.png")
+            output = ingest(IngestOptions("GPC-TEST-OWNERSHIP", root / "bundles", image_dir=sequence, image_fps=16.0), "unused")
+            timeline = load_yaml(output / "timeline.yaml")
+            previous, next_shot = timeline["segments"][:2]
+            self.assertEqual(previous["frame_ownership"], "[start_s,end_s)")
+            self.assertEqual(next_shot["frame_ownership"], "[start_s,end_s]")
+            self.assertFalse(any("__t_1.188s__" in reference for reference in previous["frame_refs"]))
+            self.assertTrue(any("__t_1.125s__" in reference for reference in previous["frame_refs"]), "pre-cut evidence must survive")
+            self.assertTrue(any("__t_1.188s__" in reference for reference in next_shot["frame_refs"]))
+            self.assertTrue(validate_bundle(output).passed)
+
+    def test_opening_interval_hard_cut_is_refined(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            sequence = root / "opening-cut"
+            sequence.mkdir()
+            for index in range(48):
+                Image.new("RGB", (160, 90), "black" if index < 3 else "white").save(sequence / f"input_{index:03d}.png")
+            output = ingest(IngestOptions("GPC-TEST-OPENING-CUT", root / "bundles", image_dir=sequence, image_fps=16.0), "unused")
+            timeline = load_yaml(output / "timeline.yaml")
+            cut = next(segment for segment in timeline["segments"] if segment["transition_candidate"] == "hard_cut_candidate")
+            self.assertLessEqual(abs(cut["start_s"] - 0.1875), 0.0625)
+            self.assertTrue(validate_bundle(output).passed)
+
     def test_shot_segmentation_detects_hard_cut_candidate(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -90,7 +120,8 @@ class GoldenCaseIngestorTests(unittest.TestCase):
             self.assertGreaterEqual(len(timeline["segments"]), 2)
             self.assertIn("hard_cut_candidate", [segment["transition_candidate"] for segment in timeline["segments"]])
             self.assertAlmostEqual(timeline["segments"][1]["start_s"], 2.0, places=3)
-            self.assertTrue(validate_bundle(output).passed)
+            result = validate_bundle(output)
+            self.assertTrue(result.passed, result.errors)
 
     def test_prompt_boundary_and_validator(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -110,7 +141,8 @@ class GoldenCaseIngestorTests(unittest.TestCase):
                 ),
                 "unused",
             )
-            self.assertTrue(validate_bundle(output).passed)
+            result = validate_bundle(output)
+            self.assertTrue(result.passed, result.errors)
             case = load_yaml(output / "case.yaml")
             self.assertEqual(case["prompt_provenance"]["source_prompt_provenance"], "user_supplied_verbatim")
             self.assertEqual(case["prompt_provenance"]["reconstructed_prompt"]["provenance"], "inferred_from_media")
@@ -137,7 +169,8 @@ class GoldenCaseIngestorTests(unittest.TestCase):
             )
             case = load_yaml(output / "case.yaml")
             self.assertEqual(case["evidence_ladder"], "M2_prompt_output_pair")
-            self.assertTrue(validate_bundle(output).passed)
+            result = validate_bundle(output)
+            self.assertTrue(result.passed, result.errors)
 
     def test_validator_rejects_third_party_without_rights_status(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -173,9 +206,10 @@ class GoldenCaseIngestorTests(unittest.TestCase):
                 ),
                 "unused",
             )
-            self.assertTrue(validate_bundle(output).passed)
+            result = validate_bundle(output)
+            self.assertTrue(result.passed, result.errors)
 
-    def test_video_fixture_audio_evidence(self) -> None:
+    def test_continuous_startup_motion_does_not_cut(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             video = root / "fixture.mp4"
@@ -201,6 +235,19 @@ class GoldenCaseIngestorTests(unittest.TestCase):
             self.assertIn("unclassified_visual_change_candidates", timeline["segments"][0])
             self.assertEqual(timeline["segments"][0]["duration_evidence_guard"]["status"], "generic_temporal_anchor")
             self.assertFalse(any("duration_evidence" in path.name for path in (output / "frames" / "keyframes").glob("*.webp")))
+
+    def test_validator_prevents_persistent_local_absolute_paths(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            output = ingest(IngestOptions("GPC-TEST-PRIVACY", root / "bundles", image_dir=self._image_sequence(root), image_fps=2.0), "unused")
+            persistent_text = "\n".join(path.read_text(encoding="utf-8") for path in output.rglob("*") if path.suffix.lower() in {".yaml", ".md", ".txt"})
+            self.assertNotIn(str(root), persistent_text)
+            case = load_yaml(output / "case.yaml")
+            case["source"]["source_uri"] = r"C:\Users\Example\private.mp4"
+            dump_yaml(output / "case.yaml", case)
+            result = validate_bundle(output)
+            self.assertFalse(result.passed)
+            self.assertTrue(any("persistent bundle contains local absolute path" in error for error in result.errors))
 
     def test_validator_rejects_missing_referenced_frame(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

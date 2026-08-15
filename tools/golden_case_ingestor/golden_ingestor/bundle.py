@@ -19,6 +19,7 @@ from .analysis import (
     duration_evidence_guard,
     infer_shots,
     make_contact_sheet,
+    owned_samples,
     refresh_metrics,
 )
 from .media import decode_audio_to_wav, extract_video_frame, probe_video
@@ -98,8 +99,8 @@ def ingest(options: IngestOptions, ffmpeg: str) -> Path:
         all_samples = _refresh_deltas(_sample(get_frame, sorted(candidate_times)))
         duration_guards: dict[str, dict] = {}
         protected_roles: dict[float, str] = {}
-        for shot in shots:
-            roles, guard = duration_evidence_guard(all_samples, shot)
+        for index, shot in enumerate(shots):
+            roles, guard = duration_evidence_guard(all_samples, shot, index == len(shots) - 1)
             duration_guards[shot["shot_id"]] = guard
             for point, role in roles.items():
                 if role == "duration_evidence" or point not in protected_roles:
@@ -287,16 +288,17 @@ def _persist_frames(case_id: str, output: Path, samples: list[FrameSample], prot
 
 
 def _persist_contact_sheets(case_id: str, output: Path, shots: list[dict], samples: list[FrameSample]) -> None:
-    for shot in shots:
-        selected = [sample for sample in samples if shot["start_s"] - 1e-6 <= sample.timestamp_s <= shot["end_s"] + 1e-6]
+    for index, shot in enumerate(shots):
+        selected = owned_samples(samples, shot, index == len(shots) - 1)
         target = output / "frames" / "contact_sheets" / interval_filename(case_id, shot["start_s"], shot["end_s"], "shot_contactsheet")
         make_contact_sheet(selected, target)
 
 
 def _timeline(case_id: str, shots: list[dict], samples: list[FrameSample], refs: dict[float, str], audio: dict, guards: dict[str, dict]) -> dict:
     segments = []
-    for shot in shots:
-        in_shot = [sample for sample in samples if shot["start_s"] - 1e-6 <= sample.timestamp_s <= shot["end_s"] + 1e-6]
+    for index, shot in enumerate(shots):
+        is_final_shot = index == len(shots) - 1
+        in_shot = owned_samples(samples, shot, is_final_shot)
         changes = [
             {
                 "timestamp_s": sample.timestamp_s,
@@ -314,7 +316,12 @@ def _timeline(case_id: str, shots: list[dict], samples: list[FrameSample], refs:
             {
                 "segment_id": f"SEG-{shot['shot_id'].split('-')[-1]}",
                 **shot,
+                "frame_ownership": "[start_s,end_s]" if is_final_shot else "[start_s,end_s)",
                 "frame_refs": [refs[sample.timestamp_s] for sample in in_shot],
+                "frame_evidence": [
+                    {"timestamp_s": sample.timestamp_s, "ref": refs[sample.timestamp_s]}
+                    for sample in in_shot
+                ],
                 "unclassified_visual_change_candidates": changes,
                 "audio_events": audio_events,
                 "duration_evidence_guard": guards[shot["shot_id"]],
@@ -347,8 +354,8 @@ def _persist_prompts(options: IngestOptions, output: Path) -> dict:
 def _source_provenance(options: IngestOptions, input_type: str, path: str, source_hash: str) -> dict:
     return {
         "input_type": input_type,
-        "path": path,
-        "sha256": source_hash,
+        "source_display_filename": Path(path).name,
+        "source_hash": source_hash,
         "source_origin_type": options.source_origin_type,
         "source_uri": options.source_uri,
         "source_rights_status": options.source_rights_status,

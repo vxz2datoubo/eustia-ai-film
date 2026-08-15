@@ -11,7 +11,7 @@ automatic_coverage:
     test: test_image_sequence_preserves_duration_evidence
     assertion: duration evidence guard records a seconds-based hold structure
   - regression_id: REG-GCDP-SOUND-PUNCTUATION-001
-    test: test_video_fixture_audio_evidence
+    test: test_continuous_startup_motion_does_not_cut
     assertion: audio onset, peak, silence or low-density evidence shares the video seconds timeline
   - regression_id: REG-GCDP-PROMPT-ONLY-001
     coverage: deferred_out_of_scope_for_media_ingestor
@@ -30,7 +30,13 @@ additional_engineering_contracts:
     assertion: third-party provenance cannot omit rights and persistence status
   - test: test_exact_non_grid_cut_is_refined_locally
     assertion: a non-0.5s cut is refined with local frame-interval search
-  - test: test_video_fixture_audio_evidence
+  - test: test_continuous_startup_motion_does_not_cut
     assertion: continuous high-motion video does not become multiple hard-cut shots
+  - test: test_opening_interval_hard_cut_is_refined
+    assertion: an isolated real cut in the opening 0.5s interval is accepted and refined
+  - test: test_cut_frame_is_owned_only_by_new_shot_and_precut_evidence_survives
+    assertion: non-final shot ownership is half-open and pre-cut evidence is retained
+  - test: test_validator_prevents_persistent_local_absolute_paths
+    assertion: persistent bundle metadata cannot contain local absolute paths
   - test: test_image_sequence_preserves_duration_evidence
     assertion: perceptual dedup guard retains semantically necessary hold evidence

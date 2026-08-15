@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+import re
 from typing import Any
 
 from .util import filename_timestamps, load_yaml
@@ -74,6 +75,7 @@ def validate_bundle(bundle: Path) -> ValidationResult:
     _check_timeline(bundle, timeline, duration_s, errors)
     _check_frame_filenames(bundle, duration_s, errors)
     _check_audio(audio, duration_s, errors)
+    _check_persistent_path_privacy(bundle, errors)
     return ValidationResult(errors, warnings)
 
 
@@ -82,9 +84,11 @@ def _check_timeline(bundle: Path, timeline: dict[str, Any], duration_s: float, e
     if not isinstance(segments, list) or not segments:
         errors.append("timeline has no segments")
         return
-    for segment in segments:
+    owned_timestamps: set[float] = set()
+    for index, segment in enumerate(segments):
         start, end = segment.get("start_s"), segment.get("end_s")
         label = segment.get("segment_id", "unknown segment")
+        is_final = index == len(segments) - 1
         if not _valid_range(start, end, duration_s):
             errors.append(f"{label} has timestamp outside video range")
         for ref in segment.get("frame_refs", []):
@@ -95,6 +99,19 @@ def _check_timeline(bundle: Path, timeline: dict[str, Any], duration_s: float, e
             parsed = filename_timestamps(frame)
             if parsed and not _in_filename_range(parsed[0], duration_s):
                 errors.append(f"frame timestamp outside video range: {ref}")
+        evidence = segment.get("frame_evidence", [])
+        if not evidence:
+            errors.append(f"{label} lacks machine-readable frame ownership evidence")
+        for item in evidence:
+            timestamp = item.get("timestamp_s")
+            if not isinstance(timestamp, (float, int)) or timestamp < start or (timestamp > end if is_final else timestamp >= end):
+                errors.append(f"{label} owns a frame outside its declared interval")
+                continue
+            if timestamp in owned_timestamps:
+                errors.append(f"frame timestamp is owned by more than one shot: {timestamp}")
+            owned_timestamps.add(timestamp)
+        if index > 0 and not any(abs(item.get("timestamp_s", -1) - start) < 1e-6 for item in evidence):
+            errors.append(f"{label} does not own its cut-point frame")
         if "motion_candidates" in segment:
             errors.append(f"{label} must not label pixel deltas as motion candidates")
         guard = segment.get("duration_evidence_guard", {})
@@ -135,7 +152,7 @@ def _check_audio(audio: dict[str, Any], duration_s: float, errors: list[str]) ->
 
 
 def _check_source_provenance(source: dict[str, Any], errors: list[str]) -> None:
-    for field in ("source_origin_type", "source_rights_status", "persistence_permission_status"):
+    for field in ("source_display_filename", "source_hash", "source_origin_type", "source_rights_status", "persistence_permission_status"):
         if not source.get(field):
             errors.append(f"source provenance lacks {field}")
     if source.get("source_origin_type") in {"third_party", "third_party_public", "external"}:
@@ -143,6 +160,18 @@ def _check_source_provenance(source: dict[str, Any], errors: list[str]) -> None:
             errors.append("third-party source requires explicit source_rights_status")
         if source.get("persistence_permission_status") in {None, "", "not_provided", "unknown"}:
             errors.append("third-party source requires explicit persistence_permission_status")
+
+
+_LOCAL_ABSOLUTE_PATH = re.compile(r"(?:(?<![A-Za-z])[A-Za-z]:[\\/]|file://(?:/[A-Za-z]:|/)?|/(?:home|Users)/)", re.IGNORECASE)
+
+
+def _check_persistent_path_privacy(bundle: Path, errors: list[str]) -> None:
+    for path in bundle.rglob("*"):
+        if not path.is_file() or path.suffix.lower() not in {".yaml", ".yml", ".md", ".txt"}:
+            continue
+        content = path.read_text(encoding="utf-8")
+        if _LOCAL_ABSOLUTE_PATH.search(content):
+            errors.append(f"persistent bundle contains local absolute path: {path.relative_to(bundle)}")
 
 
 def _in_range(value: Any, duration_s: float) -> bool:
