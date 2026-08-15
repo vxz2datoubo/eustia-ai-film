@@ -1,5 +1,5 @@
 schema_id: EUSTIA_SCREEN_OBSERVABLE_AUDIBLE_IR
-version: 1.0.0
+version: 1.0.1
 status: candidate
 scope: story_to_shot_compilation_observable_audible_contracts_and_reverse_evaluation
 purpose:
@@ -11,6 +11,7 @@ non_goals:
   - 不复制声音导演系统的声音方法
   - 不直接规定任一模型的私有prompt语法
   - 不声明自动视觉或音频验收已经实现
+  - 不以可观察性为理由自动把摄影机退化成只求记录完整的coverage机位
 
 authority_and_interfaces:
   canonical_facts:
@@ -25,12 +26,14 @@ authority_and_interfaces:
   sound_method: 01_AI电影系统/声音导演系统.md
   asset_identity: 10_运行时/scene_asset_identity_schema.yaml
   feedback_learning: 08_系统学习/反馈反推与系统反哺引擎.md
+  model_version_real_generation_feedback: 08_系统学习/C-DANCE2.5真实生成反馈库.md
   regressions: 11_验收/director_regression_cases.yaml#REG-SOAC-001
   constraints:
     - SHOT-SCOPE-001 controls per-shot camera_state_visible_set_audible_set_and_in_shot_reveal
     - SEQUENCE-CONTEXT-001 may supply a constrained segment prior but grants no visual embodiment
     - SoundDirectorIR remains the unique sound-method authority
     - model_adapter_capability_changes_require_needs_revalidation
+    - observable_readability_does_not_override_director_camera_design
 
 compiler_chain:
   - CanonicalFacts
@@ -66,12 +69,14 @@ ir_layers:
   ShotPlanIR:
     shot_fields: [shot_id, dramatic_function, audience_knowledge_before, audience_knowledge_after, entry_state, events, camera_state, cut_in_reason, cut_out_reason, exit_state, next_shot_contract]
     rule: shot_without_information_relationship_space_emotion_rhythm_or_state_change_requires_necessity_review
+    camera_design_guard: Blocking_and_visible_readability_may_inform_camera_but_must_not_replace_the_director_camera_plan_with_a_convenience_coverage_angle
   VisibleIR:
     camera_fields: [position, orientation, shot_size, camera_height, lens_intent, camera_motion]
     frame_fields: [foreground, midground, background]
     entity_fields: [identity, screen_region, depth_layer, visibility, occlusion, relative_position, body_orientation, gaze_target, body_state, current_action, support_or_contact, expression_evidence, performance_evidence]
     environment_fields: [visible_objects, visible_geometry, environmental_response, lighting_evidence, material_evidence]
     rule: current_camera_state_only_and_SHOT-SCOPE-001_is_binding
+    camera_aesthetic_boundary: visible_set_completeness_cannot_by_itself_authorize_camera_position_orientation_shot_size_or_composition_changes
   PerformanceIR:
     fields: [objective, hidden_objective, subtext, gaze, breath, pause, posture, center_of_mass, hand_behavior, facial_behavior, distance_change, suppression_or_release, preparation, aftershock]
     rule: psychological_intent_compiles_to_task_body_choice_and_visible_evidence_without_fixed_emotion_gesture_formulas
@@ -90,11 +95,13 @@ ir_layers:
 model_adapter:
   model_fields: [model, version, generation_mode, image_reference, video_reference, audio_reference, first_frame, last_frame, camera_control, motion_control, native_audio, dialogue_support, editing_support, extension_support, negative_prompt_semantics, known_failure_modes, last_revalidated]
   rule: adapters_compile_SOAC_to_model_capabilities_without_making_a_model_behavior_a_director_core_rule
+  empirical_feedback_rule: model_version_specific_prompt_output_observations_may_inform_known_failure_modes_only_when_they_are_recorded_with_scope_boundary_and_maturity
 
 minimal_execution_compiler:
   pipeline: [RichDirectorIR, RelevanceFilter, ModelCapabilityFilter, ReferenceResponsibilitySplit, ConstraintBudget, MinimalSufficientExecutionPrompt]
   output_only: [shot_purpose, current_visible_set, current_audible_set, subject_action, key_event_order, camera, key_sound, hard_invariants, autonomy, final_state, catastrophic_local_exclusions]
   forbidden_output: [full_internal_analysis, matrices, compiler_metadata, future_shot_entities]
+  camera_preservation_guard: when_a_director_camera_plan_is_locked_or_used_as_an_AB_control_the_compiler_must_preserve_it_instead_of_selecting_a_more_convenient_coverage_view
 
 static_checks:
   ERROR:
@@ -114,6 +121,8 @@ static_checks:
     - ABSTRACT_WITHOUT_EVIDENCE
     - CONSTRAINT_OVERLOAD
     - REFERENCE_CONFLICT
+    - EVAL_CONTROL_VARIABLE_DRIFT
+    - CAMERA_AESTHETIC_COVERAGE_DRIFT
   INFO:
     - NEEDS_MODEL_ADAPTER_REVALIDATION
     - REVERSE_OBSERVATION_MANUAL_OR_AI_ASSISTED
@@ -129,6 +138,13 @@ static_checks:
       non_trigger: actions_whose_physical_validity_does_not_depend_on_a_specific_support_or_contact_relation
       severity_when_triggered: ERROR
       guard: applicability_limits_do_not_reduce_check_strength_for_physical_actions_that_require_the_relation
+    EVAL_CONTROL_VARIABLE_DRIFT:
+      trigger: controlled_eval_changes_a_non_target_variable_that_can_materially_explain_output_difference
+      examples: [camera_position_changed, camera_orientation_changed, shot_size_changed, lens_intent_changed, camera_motion_changed, reference_responsibility_changed, duration_changed]
+      severity_when_triggered: WARNING_AND_MARK_EVAL_CONFOUNDED
+    CAMERA_AESTHETIC_COVERAGE_DRIFT:
+      trigger: compiler_changes_camera_to_keep_more_actions_visible_but_weakens_director_composition_or_visual_priority
+      severity_when_triggered: WARNING
   gate: severe_ERROR_must_not_enter_formal_generation_without_targeted_repair_or_explicit_override
 
 reverse_compiler:
@@ -142,4 +158,17 @@ reverse_compiler:
 validation:
   candidate_maturity_required: true
   required_links: [SHOT-SCOPE-001, SCREEN-EVIDENCE-001, SoundDirectorIR, scene_asset_identity_schema, feedback_engine]
+  controlled_eval_requirements:
+    - same_screenplay
+    - same_assets_and_reference_responsibilities
+    - same_model_version
+    - same_generation_settings_when_available
+    - same_duration
+    - same_story_goal
+    - same_camera_position_orientation_shot_size_height_lens_intent_and_motion_unless_camera_is_the_variable_under_test
+    - similar_final_prompt_information_budget_when_prompt_method_is_the_variable_under_test
+  controlled_eval_result_policy:
+    clean: target_variable_is_the_only_material_difference
+    confounded: one_or_more_material_non_target_variables_changed
+    maturity_rule: confounded_result_may_generate_learning_hypotheses_but_cannot_support_SOAC_maturity_promotion
   required_before_promotion: [controlled_generation_evidence, REG-SOAC-001, no_material_increase_in_scope_leaks_or_constraint_overload]
