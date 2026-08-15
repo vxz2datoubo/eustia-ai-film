@@ -11,6 +11,7 @@ routes:
   scene_topology_map_movement: 05_场景与空间/00_项目地图文件.md
   scene_asset_identity_schema: 10_运行时/scene_asset_identity_schema.yaml
   scene_media_version_locator_resolution: 10_运行时/scene_media_resolver_manifest.yaml
+  golden_media_evidence_schema: 10_运行时/golden_media_evidence_schema.yaml
   screen_observable_audible_method: 01_AI电影系统/AI电影系统.md
   screen_observable_audible_ir_schema: 10_运行时/screen_observable_audible_ir_schema.yaml
   formal_visual_asset: 06_视觉资产/视觉资产登记库.md
@@ -60,6 +61,32 @@ scene_media_transaction_policy:
       - supersession_state
   atomicity_rule: Asset职责与Version/Locator同时变化时必须串行写入两个唯一主档并最终共同回读；任一分支失败不得宣布完整替换完成。
 
+golden_media_evidence_policy:
+  schema: 10_运行时/golden_media_evidence_schema.yaml
+  raw_binary_default_authority: ChatGPT Library
+  github_stores:
+    - prompt_verbatim
+    - provenance
+    - content_hash
+    - locators
+    - technical_metadata
+    - temporal_annotations
+    - prompt_effect_alignment
+    - aesthetic_fingerprint
+    - user_verdict
+    - eval_results
+  raw_video_git_storage_default: false
+  media_only_without_prompt:
+    may_record_observation: true
+    may_claim_prompt_causality: false
+  explicit_golden_case:
+    case_target: 11_验收/golden_prompt_cases.yaml
+  version_bound_generation_behavior:
+    target: 08_系统学习/C-DANCE2.5真实生成反馈库.md
+  formal_asset_boundary:
+    require_explicit_asset_intent: true
+    golden_evidence_does_not_auto_become_asset: true
+
 canonical_learning_gate:
   principle: maturity_controls_promotion_not_registration
   candidate_registration_allowed: true
@@ -108,12 +135,14 @@ golden_prompt_ingestion_gate:
   register_case_verbatim:
     - preserve_source_prompt_verbatim
     - distinguish_prompt_approval_from_output_verification
+    - when_media_exists_bind_using_golden_media_evidence_schema
     - write_or_update_golden_prompt_case
     - preserve_model_version_asset_and_provenance_when_known
   verification:
     - fetch_target_domain_canonical_if_lesson_written
     - fetch_golden_prompt_cases
     - verify_case_and_lesson_references
+    - verify_media_hash_locator_and_temporal_evidence_when_media_is_bound
     - report_partial_status_if_one_branch_failed
 
 rules:
@@ -130,6 +159,10 @@ rules:
   golden_prompt_source_verbatim_cannot_be_replaced_by_normalized_summary: true
   golden_prompt_exact_demo_case_cannot_be_sole_holdout_eval: true
   golden_prompt_case_replay_must_be_targeted_and_bounded: true
+  golden_media_raw_binary_is_primary_evidence: true
+  golden_media_derived_frames_cannot_replace_raw_video: true
+  golden_media_without_prompt_cannot_generate_prompt_causality_claim: true
+  golden_media_storage_does_not_imply_model_weight_training: true
   scene_asset_identity_schema_controls_scene_camera_view_asset_version_relation_identifiers: true
   scene_media_resolver_manifest_controls_scene_asset_current_version_and_locator_resolution: true
   model_version_feedback_cannot_override_general_directing_method_or_canonical_story_character_scene_asset_facts: true
