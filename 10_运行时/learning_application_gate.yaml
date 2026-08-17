@@ -1,0 +1,231 @@
+schema_version: "1.0"
+runtime_id: LEARNING_APPLICATION_GATE
+status: active
+purpose:
+  - "把真实反馈从表面手段上卷到导演意图、因果机制与条件化策略，而不是把一次性镜头限制误学成永久规则"
+  - "在学习越来越多时按上下文、证据、成熟度和版本裁决冲突；无法安全裁决时主动向用户提出最小必要问题"
+  - "在合适且低成本的生产机会中，把 candidate / conflicted 假设转成受控 A/B 验证"
+  - "每次正式导演输出前强制召回并应用相关学习，阻止已知错误重复出现"
+authority:
+  feedback_engine: "08_系统学习/反馈反推与系统反哺引擎.md"
+  maturity_model: "10_运行时/maturity_model.yaml"
+  project_index: "PROJECT_INDEX.yaml"
+  regression_suite: "11_验收/learning_application_gate_regression_cases.yaml"
+  evidence_index: "09_资料证据/学习应用与冲突裁决证据索引.md"
+
+core_principles:
+  means_are_not_goals: true
+  episodic_surface_constraints_are_scope_bounded: true
+  omission_is_not_revocation_inside_live_scope: true
+  expired_episode_constraints_must_not_leak_to_new_work_items: true
+  learn_intent_and_mechanism_before_generalizing_tactic: true
+  newest_wins_default: false
+  frequency_wins_default: false
+  nearest_text_similarity_wins_default: false
+  single_success_can_be_universalized: false
+  unresolved_material_conflict_requires_human_deferral: true
+  candidate_rule_may_be_applied_as_fact: false
+  proxy_model_pass_equals_target_model_pass: false
+  pre_output_gate_failure_requires_self_revision: true
+
+knowledge_abstraction_ladder:
+  L0_observation:
+    meaning: "用户评价、真实生成现象、客观验收结果；只描述发生了什么"
+    default_scope: evidence_record
+  L1_surface_tactic:
+    meaning: "当前镜头的具体做法、限制或动作安排"
+    required_fields: [scope, expiration_condition]
+    default_scope: work_item_or_scene
+  L2_director_intent:
+    meaning: "用户真正想让观众感受到、理解或担心什么，以及价值排序"
+    generalization_rule: "必须有明确用户表达或有证据的推断；推断不确定时保留置信度"
+  L3_causal_mechanism:
+    meaning: "为什么某种手段可能产生该导演效果；保留替代解释和反事实"
+    generalization_rule: "单次相关性不得冒充因果"
+  L4_contextual_policy:
+    meaning: "在什么条件下优先采用何种策略，以及有哪些可替代手段"
+    required_fields: [applicable_context, non_applicable_context, boundaries, failure_conditions]
+  L5_transferable_principle:
+    meaning: "跨场景仍稳定有效的可迁移原则"
+    promotion_rule: "必须经过成熟度门、目标验证与回归，不得由单场直接晋级"
+
+scope_and_expiration:
+  classes:
+    - EPISODIC_WORK_ITEM
+    - SCENE_LOCAL
+    - CHARACTER_OR_RELATION
+    - PROJECT_CANONICAL
+    - MODEL_VERSION_BOUND
+    - TRANSFERABLE_METHOD
+  rules:
+    - "L1 具体手段默认绑定 work_item / scene，必须记录 expiration_condition"
+    - "work item 结束后，L1 不再自动注入新镜头，除非它同时属于当前 canonical 连续性或被验证提升为更高层知识"
+    - "L2-L5 只有在证据、边界和成熟度允许时才可跨 work item 复用"
+    - "同一规则可在不同模型版本或导演目的下拥有不同有效边界，不要求强行合并成全局真理"
+
+conflict_model:
+  conflict_types:
+    CONTEXTUAL_COEXISTENCE: "两条经验在不同场景、目的、模型、版本或约束下都成立"
+    TEMPORAL_SUPERSESSION: "同一条件下的新证据更强，旧结论被后续证据替代"
+    MODEL_VERSION_SPLIT: "不同模型或版本行为不同"
+    EVIDENCE_QUALITY_CONFLICT: "结论冲突来自证据强弱、控制变量污染或样本质量差异"
+    USER_PREFERENCE_EVOLUTION: "用户的稳定价值排序或创作目标发生真实变化"
+    TRUE_CONTRADICTION: "同一条件下两条规则不能同时为真"
+    UNKNOWN_CONFLICT: "现有证据不足以判断冲突性质"
+  relations:
+    - SUPPORTS
+    - REFINES
+    - BOUNDS
+    - CONTEXTUALIZES
+    - CONTRADICTS
+    - SUPERSEDES
+    - INVALIDATES
+    - DEPENDS_ON
+  adjudication_order:
+    - "当前用户明确意图与当前 work item 目标"
+    - "剧情、身份、空间拓扑、正式资产等 canonical 硬不变量"
+    - "导演功能、观众信息状态、人物目标、场景类型、模型/工具/版本、资产与生产约束的上下文匹配"
+    - "真实生成与可复现证据质量；严格受控测试高于混杂样本"
+    - "maturity 成熟度与明确的适用/失效边界"
+    - "反例、失败条件、needs_revalidation / conflicted / deprecated 状态"
+    - "只有确认存在真实时间、版本或用户偏好变化时才使用 recency 作为裁决因素"
+  unresolved_policy:
+    ask_when:
+      - "两个最高优先候选在过滤上下文后仍会造成实质不同的创作结果"
+      - "用户真实导演意图存在多个合理解释且选择会改变剧情功能"
+      - "冲突会影响高成本目标生成、canonical 决策或高成熟度规则"
+    ask_style:
+      - "只问能最大幅度区分候选解释的一条最小问题"
+      - "优先用具体 A/B 或价值取舍让用户判断，而不是让用户理解内部术语"
+      - "能由现有证据安全解决时不得打扰用户"
+
+confidence_vector:
+  dimensions:
+    observation_confidence: "对事实/用户评价是否真实发生的把握"
+    intent_inference_confidence: "对用户深层目标和价值排序推断的把握"
+    causal_attribution_confidence: "对改动导致结果变化的因果归因把握"
+    context_match_confidence: "旧经验与当前任务条件匹配的把握"
+    transfer_confidence: "经验可跨场景迁移的把握"
+    model_version_confidence: "经验对当前模型/工具/版本仍有效的把握"
+  allowed_values: [HIGH, MEDIUM, LOW, UNKNOWN]
+  rules:
+    - "不得把多维置信度压成伪精确单一概率"
+    - "observation HIGH 不代表 causal_attribution 或 transfer HIGH"
+    - "LOW/UNKNOWN 且会改变重要创作决策时不得静默晋级或强制应用"
+
+active_validation:
+  principle: "在真实生产自然出现的低成本机会中，用信息增益高、控制变量清晰的试验验证候选知识，而不是为了研究打断创作"
+  propose_when:
+    - "存在 candidate / conflicted / needs_revalidation 假设"
+    - "当前镜头天然可以形成对照"
+    - "测试能显著降低未来重复错误或高成本失败"
+    - "额外成本可接受且不影响用户当前主任务"
+  control_requirements:
+    - same_story_goal
+    - same_reference_assets
+    - same_model_and_version
+    - same_duration
+    - same_camera_contract_when_camera_is_not_the_test_variable
+    - same_generation_settings_when_available
+    - "除目标变量外，其他足以解释结果的变量尽量锁定"
+  result_states:
+    - SUPPORTED
+    - NOT_SUPPORTED
+    - CONFOUNDED_INCONCLUSIVE
+    - NEEDS_REVALIDATION
+  rules:
+    - "若多个关键变量同时变化且都足以解释结果，必须标记 CONFOUNDED_INCONCLUSIVE"
+    - "便宜代理模型可用于探索，但代理模型 PASS 不得升级为目标模型 PASS"
+    - "不得静默触发高成本生成；应把 A/B 作为自然可选方案告诉用户"
+    - "A/B 两版尽量都保持可用的生产价值，避免为了实验制造无意义版本"
+
+pre_directing_gate:
+  required: true
+  steps:
+    - "读取当前 work item / 剧情 / 连续性 / 相关角色场景与模型版本"
+    - "召回与当前导演功能、症状、模型版本和失败模式相关的学习、Golden Cases、真实生成反馈与回归"
+    - "把召回内容按 L0-L5、scope、maturity、model/version、failure conditions 分类"
+    - "剔除已过期的 EPISODIC_WORK_ITEM / SCENE_LOCAL 表面限制，保留仍在当前 scope 内的 LOCK"
+    - "同时检索反例、冲突、superseded、deprecated、needs_revalidation 记录，禁止只召回支持证据"
+    - "运行 conflict_model，形成 ApplicableLearningSet"
+    - "若存在 material unresolved conflict，先向用户提出最小必要问题；否则继续导演"
+  applicable_learning_set:
+    - hard_canonical_invariants
+    - live_work_item_locks
+    - director_intents
+    - causal_mechanisms
+    - contextual_policies
+    - model_version_lessons
+    - known_failure_modes
+    - relevant_counterexamples
+    - open_hypotheses_and_optional_ab_opportunities
+
+pre_output_gate:
+  required: true
+  checks:
+    - "当前稿是否实现剧情目的与观众信息设计，而不是只满足表面格式"
+    - "所有 applicable hard invariants 和 live locks 是否满足"
+    - "是否重复了已知且当前适用的失败模式"
+    - "是否把已过期的旧镜头手段错误带入新 work item"
+    - "是否把 candidate / conflicted / needs_revalidation 当成稳定事实"
+    - "是否误用其他模型或旧版本经验"
+    - "是否存在已召回但被忽略且足以改变结果的高置信经验"
+  on_fail:
+    - "在发送给用户前自行修订并重新检查"
+    - "若失败来自无法裁决的用户意图或规则冲突，停止猜测并主动提问"
+  receipt:
+    persistence: lightweight_trace_when_material
+    fields:
+      - work_item_id
+      - retrieved_learning_refs
+      - applied_learning_refs
+      - rejected_learning_refs_with_reason
+      - expired_episode_constraints
+      - conflicts_and_disposition
+      - user_question_if_any
+      - validation_opportunity
+      - pre_output_status
+    user_visibility: "默认不把内部清单堆给用户；只有存在冲突、风险、验证机会或用户要求审计时才说明"
+
+post_feedback_loop:
+  steps:
+    - Micro_Capture
+    - Step_Delta
+    - Global_Final_Delta
+    - Intent_Inference
+    - Mechanism_Attribution
+    - Alternative_Explanations
+    - Counterfactual
+    - Knowledge_Abstraction_L0_to_L5
+    - Scope_And_Expiration
+    - Conflict_Graph_Update
+    - Confidence_Vector_Update
+    - Maturity_Decision
+    - Validation_Opportunity_Scan
+    - Canonical_Writeback
+    - Regression_Update
+
+worked_example:
+  id: KAIM_WINDOW_NEAR_DETECTION
+  observed_surface_constraint:
+    text: "妇女不能提前看到凯姆"
+    layer: L1_surface_tactic
+    scope: "KAIM-HIGH-SEARCH-30S / window micro-sequence"
+    expiration_condition: "该窗口近失误镜头结束"
+  inferred_persistent_intent:
+    layer: L2_director_intent
+    candidate: "凯姆在侦查/潜行时制造接近暴露的危险，让观众担心他会被发现，形成悬念与张力"
+  candidate_mechanism:
+    layer: L3_causal_mechanism
+    candidate: "让观众能够读懂暴露风险与可能后果，同时让画内人物的注意/知情存在错位，通过近失误而非直接发现维持期待"
+  alternative_means:
+    - "窗户晚一拍打开"
+    - "脚步或窗框震动几乎暴露他"
+    - "影子短暂掠过但未被确认"
+    - "巡逻者转身差一点看见"
+    - "环境物体被触碰后引发接近发现的反应"
+  forbidden_generalization:
+    - "不得把‘妇女永远不能看到凯姆’提升为跨场景规则"
+    - "不得把‘配角不能发现主角’提升为通用导演原则"
+  clarification_trigger:
+    - "若无法判断用户真正优先的是悬念、现实性、潜行逻辑、节奏还是别的价值，应主动问一个能区分这些目标的问题"

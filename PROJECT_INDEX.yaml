@@ -17,6 +17,10 @@ policy:
   golden_case_low_motion_high_information_must_preserve_duration_evidence: true
   old_file_search_rank_can_define_authority: false
   director_task_must_read_project_index_first: true
+  director_learning_application_gate_required: true
+  learning_conflict_resolution_contextual_not_latest_wins: true
+  episodic_constraints_scope_bounded: true
+  unresolved_material_learning_conflict_requires_user_deferral: true
 
 canonical:
   project_entry: 项目入口.md
@@ -40,6 +44,7 @@ canonical:
   high_dynamic_motion_prompt_evidence: 09_资料证据/AI视频高动态动作提示证据索引.md
   sound_evidence: 09_资料证据/声音导演与SUNO证据索引.md
   suno_user_prompt_evidence: 09_资料证据/SUNO用户提示词资料摄取记录.md
+  learning_application_and_conflict_evidence: 09_资料证据/学习应用与冲突裁决证据索引.md
   scene_asset_identity_schema: 10_运行时/scene_asset_identity_schema.yaml
   scene_media_resolver_manifest: 10_运行时/scene_media_resolver_manifest.yaml
   golden_media_evidence_schema: 10_运行时/golden_media_evidence_schema.yaml
@@ -47,6 +52,7 @@ canonical:
   screen_observable_audible_ir_schema: 10_运行时/screen_observable_audible_ir_schema.yaml
   proactive_execution_opportunity_router: 10_运行时/proactive_execution_opportunity_router.yaml
   high_dynamic_motion_prompt_compiler: 10_运行时/high_dynamic_motion_prompt_compiler.yaml
+  learning_application_gate: 10_运行时/learning_application_gate.yaml
   route_index: 10_运行时/director_route_index.yaml
   source_authority_rules: 10_运行时/source_authority.yaml
   read_sets: 10_运行时/read_sets.yaml
@@ -54,6 +60,7 @@ canonical:
   maturity_model: 10_运行时/maturity_model.yaml
   pending_canonical_writes: 10_运行时/pending_canonical_writes.yaml
   regression_cases: 11_验收/director_regression_cases.yaml
+  learning_application_gate_regression_cases: 11_验收/learning_application_gate_regression_cases.yaml
   golden_prompt_cases: 11_验收/golden_prompt_cases.yaml
   golden_case_director_pull_template: 11_验收/golden_case_templates/导演级拉片模板.md
   golden_prompt_regression_cases: 11_验收/golden_prompt_regression_cases.yaml
@@ -83,6 +90,7 @@ effective_sources:
   09_资料证据/AI视频高动态动作提示证据索引.md: github_verified
   09_资料证据/声音导演与SUNO证据索引.md: github_verified
   09_资料证据/SUNO用户提示词资料摄取记录.md: github_verified
+  09_资料证据/学习应用与冲突裁决证据索引.md: github_verified
   10_运行时/scene_asset_identity_schema.yaml: github_verified
   10_运行时/scene_media_resolver_manifest.yaml: github_verified
   10_运行时/golden_media_evidence_schema.yaml: github_verified
@@ -90,6 +98,7 @@ effective_sources:
   10_运行时/screen_observable_audible_ir_schema.yaml: github_verified
   10_运行时/proactive_execution_opportunity_router.yaml: github_verified
   10_运行时/high_dynamic_motion_prompt_compiler.yaml: github_verified
+  10_运行时/learning_application_gate.yaml: github_verified
   10_运行时/source_authority.yaml: github_verified
   10_运行时/read_sets.yaml: github_verified
   10_运行时/write_routes.yaml: github_verified
@@ -97,6 +106,7 @@ effective_sources:
   10_运行时/pending_canonical_writes.yaml: github_verified
   10_运行时/director_route_index.yaml: github_verified
   11_验收/director_regression_cases.yaml: github_verified
+  11_验收/learning_application_gate_regression_cases.yaml: github_verified
   11_验收/golden_prompt_cases.yaml: github_verified
   11_验收/golden_case_templates/导演级拉片模板.md: github_verified
   11_验收/golden_prompt_regression_cases.yaml: github_verified

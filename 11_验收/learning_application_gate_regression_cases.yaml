@@ -1,0 +1,106 @@
+schema_version: "1.0"
+suite_id: LEARNING_APPLICATION_GATE_REGRESSION
+status: active
+cases:
+  - id: LAG-REG-001-MEANS-VS-END
+    title: "一次性手段不得冒充永久学习"
+    setup:
+      work_item: "KAIM-HIGH-SEARCH-30S / window micro-sequence"
+      user_surface_constraint: "妇女不能提前看到凯姆"
+      inferred_intent_candidate: "制造侦查中的近失误悬念，让观众担心主角被发现"
+    must_preserve:
+      - "当前 work item 内 surface constraint 可作为 LOCK"
+      - "work item 结束后 surface constraint 自动失去跨镜头注入资格"
+      - "可保留带置信度和边界的导演意图/机制 candidate"
+      - "后续相似悬念场景允许使用不同手段实现同一目的"
+    must_not:
+      - "把妇女不能看到凯姆写成全项目永久规则"
+      - "把配角不能发现主角写成通用原则"
+
+  - id: LAG-REG-002-CONTEXTUAL-CONFLICT
+    title: "表面矛盾经验可按条件共存"
+    setup:
+      lesson_a: "主提示尽量用正向动作规格，避免全局绝对否定"
+      lesson_b: "身份、揭示预算、空间拓扑等灾难性错误允许局部硬排除"
+    expected:
+      conflict_type: CONTEXTUAL_COEXISTENCE
+      action: "按风险与作用域选择，不删除任一经验"
+
+  - id: LAG-REG-003-TRUE-SUPERSESSION
+    title: "更强证据可替代旧错误结论但保留历史"
+    setup:
+      old_lesson: "candidate / single-sample"
+      new_evidence: "多次真实生成 + 控制变量更完整 + 反例能解释旧结论"
+    expected:
+      relation: SUPERSEDES
+      old_state: deprecated_or_bounded
+      history_preserved: true
+      silent_overwrite: false
+
+  - id: LAG-REG-004-UNRESOLVED-DEFER
+    title: "高影响意图冲突无法裁决时必须问用户"
+    setup:
+      plausible_intents:
+        - "优先悬念"
+        - "优先现实隐蔽性"
+      consequence: "两种选择会产生明显不同调度"
+    expected:
+      action: ASK_MINIMUM_DISCRIMINATIVE_QUESTION
+      arbitrary_choice_forbidden: true
+
+  - id: LAG-REG-005-PREOUTPUT-SELF-REVISION
+    title: "已知适用经验被草稿违反时不得直接交卷"
+    setup:
+      retrieved_rule: "当前 shot 画外音角色不得因名字出现而视觉实体化"
+      draft_violation: "草稿把 VO 角色放进可见人群"
+    expected:
+      pre_output_status: FAIL_THEN_SELF_REVISE
+      user_receives_known_bad_draft: false
+
+  - id: LAG-REG-006-EXPIRED-EPISODE
+    title: "旧镜头局部限制不得污染新镜头"
+    setup:
+      expired_constraint: "妇女不能提前看到凯姆"
+      next_work_item: "无该妇女、无窗口、无近失误功能的新场景"
+    expected:
+      injected_as_lock: false
+      deeper_mechanism_may_retrieve_only_if_functionally_relevant: true
+
+  - id: LAG-REG-007-OPPORTUNISTIC-AB
+    title: "低成本自然机会可主动提出 A/B 验证"
+    setup:
+      candidate_lesson: "互斥屏幕状态可能比继续堆先后词更利于 C-DANCE 2.5 执行时序"
+      natural_test_opportunity: true
+      incremental_cost: low
+    expected:
+      action: OFFER_CONTROLLED_AB
+      expensive_target_generation_auto_triggered: false
+      versions_should_both_be_usable: true
+
+  - id: LAG-REG-008-CONFOUNDED-AB
+    title: "A/B 同时改关键摄影变量必须判混杂"
+    setup:
+      target_variable: "prompt structure"
+      uncontrolled_change: "camera orientation / composition"
+    expected:
+      result: CONFOUNDED_INCONCLUSIVE
+      maturity_promotion_allowed: false
+
+  - id: LAG-REG-009-CONFIDENCE-VECTOR
+    title: "用户偏好事实高置信不等于因果与迁移高置信"
+    setup:
+      fact: "用户明确说 A 的电影感比 B 好"
+    expected:
+      observation_confidence: HIGH
+      causal_attribution_confidence: "not_automatically_HIGH"
+      transfer_confidence: "not_automatically_HIGH"
+      universal_promotion_allowed: false
+
+  - id: LAG-REG-010-MODEL-VERSION
+    title: "模型版本变化后版本绑定经验必须重验"
+    setup:
+      old_lesson_scope: "C-DANCE 2.5 / Seedance 2.5"
+      current_model_or_version: changed
+    expected:
+      state: needs_revalidation
+      silent_reuse_as_stable_fact: false
