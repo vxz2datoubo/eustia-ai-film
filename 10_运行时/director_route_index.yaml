@@ -182,6 +182,7 @@ routes:
     mandatory_reads:
       - 10_运行时/scene_asset_identity_schema.yaml
       - 10_运行时/scene_media_resolver_manifest.yaml#when_formal_scene_pixels_are_called
+      - 10_运行时/asset_retrieval_policy.yaml#when_actual_formal_pixels_are_needed
     mandatory_scans:
       - map_authority
       - world_cardinal_frame
@@ -191,9 +192,53 @@ routes:
       - relation_resolution
       - asset_direction_tags
       - current_media_version_resolution
+      - retrieval_readiness
       - pixel_verification_state
       - adjacency_and_height
       - no_legacy_id_direction_inference
+
+  - id: FORMAL_ASSET_AUTO_RETRIEVAL
+    symptoms:
+      - 用户只描述剧情但剧情发生在已有正式场景
+      - 生图时应该自动参考正式场景母图
+      - 新会话自动取正式母图
+      - 已知道Asset但不确定当前会话能否实际打开图片
+      - File ID存在但是否跨会话可解引用未知
+      - file_library_title已登记但未证明可以打开像素
+      - resolver能找到locator但没有实际binary retrieval证据
+      - 正式母图调用状态容易被误报为成功
+      - current Media Version更新后需要自动跟随新版
+      - pinned Media Version必须保持可复现
+    maturity: candidate
+    mandatory_reads:
+      - 10_运行时/scene_asset_identity_schema.yaml
+      - 10_运行时/scene_media_resolver_manifest.yaml
+      - 10_运行时/asset_retrieval_policy.yaml
+      - 06_视觉资产/视觉资产登记库.md#bound_assets
+      - 12_未知项/UNKNOWN_REGISTRY.yaml#U-ASSET-RETRIEVAL-001
+    mandatory_scans:
+      - natural_language_scene_resolution
+      - camera_anchor_resolution
+      - view_resolution
+      - relation_resolution_if_needed
+      - asset_resolution
+      - current_vs_pinned_media_version_resolution
+      - locator_candidate_collection
+      - current_tool_availability
+      - actual_binary_retrieval
+      - pixel_open
+      - pixel_identity_verification
+      - stale_locator_fallback
+      - semantic_substitution_guard
+      - generation_reference_binding
+      - false_green_check
+    candidate_axes:
+      - cross_session_file_library_title
+      - cross_session_chatgpt_file_id
+      - multi_locator_fallback
+      - explicit_unavailable_state
+      - same_hash_republish_as_new_locator
+      - new_chat_regression
 
   - id: SOUND_DIRECTOR_INVOCATION
     symptoms:
@@ -310,6 +355,7 @@ routes:
     mandatory_reads:
       - 10_运行时/scene_asset_identity_schema.yaml#when_scene_asset
       - 10_运行时/scene_media_resolver_manifest.yaml#when_scene_asset
+      - 10_运行时/asset_retrieval_policy.yaml#cross_session_readiness_initialization
     mandatory_scans:
       - asset_identity
       - source_authority
@@ -323,6 +369,7 @@ routes:
       - media_locator
       - content_hash
       - pixel_verification
+      - cross_session_retrieval_initial_state
       - continuity_binding
       - referential_integrity
       - old_reference_zero_after_migration
@@ -342,6 +389,7 @@ routes:
     mandatory_reads:
       - 10_运行时/scene_asset_identity_schema.yaml#formal_asset_replacement
       - 10_运行时/scene_media_resolver_manifest.yaml
+      - 10_运行时/asset_retrieval_policy.yaml
       - 06_视觉资产/视觉资产登记库.md#target_asset
     mandatory_scans:
       - target_asset_resolution
@@ -354,6 +402,7 @@ routes:
       - current_version_pointer
       - locator_refresh
       - pixel_verification
+      - cross_session_retrieval_reset_or_refresh
       - supersession_state
       - pinned_media_version_references
       - default_pointer_resolution
