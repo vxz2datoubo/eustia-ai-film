@@ -35,6 +35,7 @@ canonical:
   asset_registry: 06_视觉资产/视觉资产登记库.md
   continuity: 07_连续性与生产状态/连续性与当前生产状态.md
   feedback_engine: 08_系统学习/反馈反推与系统反哺引擎.md
+  director_feedback_learning_cases: 08_系统学习/导演反馈学习案例.yaml
   cdance25_real_generation_feedback: 08_系统学习/C-DANCE2.5真实生成反馈库.md
   golden_prompt_protocol: 08_系统学习/优秀提示词案例学习协议.md
   evidence_index: 09_资料证据/官方资料与证据索引.md
@@ -81,6 +82,7 @@ effective_sources:
   06_视觉资产/视觉资产登记库.md: github_verified
   07_连续性与生产状态/连续性与当前生产状态.md: github_verified
   08_系统学习/反馈反推与系统反哺引擎.md: github_verified
+  08_系统学习/导演反馈学习案例.yaml: github_verified
   08_系统学习/C-DANCE2.5真实生成反馈库.md: github_verified
   08_系统学习/优秀提示词案例学习协议.md: github_verified
   09_资料证据/官方资料与证据索引.md: github_verified
