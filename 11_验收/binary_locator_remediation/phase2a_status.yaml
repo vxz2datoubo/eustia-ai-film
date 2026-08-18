@@ -1,0 +1,74 @@
+task_id: REG-ASSET-BINARY-LOCATOR-REMEDIATION-001
+phase: PHASE_2A_R2_SYNTHETIC_RUNTIME_POC
+status: STOP_FOR_EXTERNAL_CAPABILITY
+
+review_and_authority:
+  phase_0_1_review: 4962321299
+  phase_0_1_verdict: ACCEPT_PHASE_0_1
+  user_full_authorization_comment: 5330299639
+  selected_backend: r2_object
+
+current_executor_capability:
+  cloudflare_r2_connector_available: false
+  cloudflare_r2_plugin_discovery_result: no_matching_cloudflare_or_r2_plugin
+  github_secret_management_action_available: false
+  can_create_r2_account_or_subscription: false
+  can_create_r2_bucket_or_api_token_directly_from_current_tool_surface: false
+  can_commit_and_run_secret-aware_r2_harness: true
+
+implemented_in_pr9:
+  - r2_object adapter candidate
+  - strict locator namespace validation
+  - durable presigned URL rejection
+  - credential missing fail-closed
+  - wrong SHA-256 fail-closed
+  - corrupt/non-image fail-closed
+  - same-version all-locator-fail helper
+  - secret-aware GitHub Actions capability gate
+  - live authenticated R2 provider-runtime harness ready for execution when external credentials exist
+
+phase_2a_pass_gate:
+  actual_private_r2_object_retrieval: NOT_EXECUTED
+  exact_binary_bytes: NOT_EXECUTED
+  sha256_match: NOT_EXECUTED
+  image_decode_and_pixel_open: NOT_EXECUTED
+  dimensions: NOT_EXECUTED
+  second_retrieval_identical_sha256: NOT_EXECUTED
+  actual_chatgpt_runtime_binary_transport: NOT_EXECUTED
+  result: NOT_PASSED
+
+phase_2b: BLOCKED_BY_PHASE_2A
+phase_2c: BLOCKED_BY_PHASE_2A
+phase_2d: BLOCKED_BY_PHASE_2A
+
+formal_pilot_versions:
+  - EUS-VER-000002
+  - EUS-VER-000011
+  - EUS-VER-000008
+formal_bytes_republished: false
+formal_r2_locators_added: false
+media_version_identity_changed: false
+cross_session_status_changed: false
+generation_reference_binding_tested: false
+
+human_external_capability_needed:
+  minimum:
+    - Cloudflare account with R2 enabled
+    - one private test bucket
+    - bucket-scoped minimum-permission R2 S3 Access Key ID and Secret Access Key
+    - endpoint URL for the account
+    - ability to place the values into GitHub Actions secrets without exposing them in Git or chat
+  required_secret_names:
+    - EUSTIA_R2_POC_ENABLED
+    - EUSTIA_R2_ENDPOINT_URL
+    - EUSTIA_R2_ACCESS_KEY_ID
+    - EUSTIA_R2_SECRET_ACCESS_KEY
+    - EUSTIA_R2_BUCKET
+  required_gate_value:
+    EUSTIA_R2_POC_ENABLED: "true"
+  secret_values_must_not_be_pasted_into_chat_or_committed_to_git: true
+
+next_action_after_external_capability:
+  - rerun PR9 workflow
+  - require real authenticated R2 live step PASS
+  - separately verify actual intended ChatGPT runtime binary/file transport before Phase 2B
