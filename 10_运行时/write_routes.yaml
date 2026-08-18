@@ -11,6 +11,7 @@ routes:
   scene_topology_map_movement: 05_场景与空间/00_项目地图文件.md
   scene_asset_identity_schema: 10_运行时/scene_asset_identity_schema.yaml
   scene_media_version_locator_resolution: 10_运行时/scene_media_resolver_manifest.yaml
+  formal_asset_retrieval_policy: 10_运行时/asset_retrieval_policy.yaml
   golden_media_evidence_schema: 10_运行时/golden_media_evidence_schema.yaml
   golden_case_director_pull_schema: 10_运行时/golden_case_director_pull_schema.yaml
   screen_observable_audible_method: 01_AI电影系统/AI电影系统.md
@@ -66,7 +67,32 @@ scene_media_transaction_policy:
       - locator_set
       - pixel_verification
       - supersession_state
+      - cross_session_retrieval_state
+  retrieval_method_or_failure_semantics_change:
+    target: 10_运行时/asset_retrieval_policy.yaml
+    includes:
+      - retrieval_state_machine
+      - locator_priority_policy
+      - fail_closed_rules
+      - generation_reference_gate
+      - cross_session_pass_condition
   atomicity_rule: Asset职责与Version/Locator同时变化时必须串行写入两个唯一主档并最终共同回读；任一分支失败不得宣布完整替换完成。
+
+asset_retrieval_write_policy:
+  policy_definition_target: 10_运行时/asset_retrieval_policy.yaml
+  per_version_retrieval_state_target: 10_运行时/scene_media_resolver_manifest.yaml
+  identity_semantics_target: 10_运行时/scene_asset_identity_schema.yaml
+  routing_trigger_target: 10_运行时/director_route_index.yaml
+  read_gate_target: 10_运行时/read_sets.yaml
+  regression_target: 11_验收/director_regression_cases.yaml
+  unknown_and_capability_evidence_target: 12_未知项/UNKNOWN_REGISTRY.yaml
+  current_readiness_target: 07_连续性与生产状态/连续性与当前生产状态.md
+  duplication_rules:
+    - 不在视觉资产登记库复制每个Version的cross-session状态
+    - 不在continuity复制完整locator集合
+    - 不建立第二套Asset或Version resolver
+    - policy只定义方法与状态语义，manifest保存每个Version的实际状态
+  completion_rule: 只有目标文件分别回读验证且真实新会话验收完成后，才允许把跨会话取图报告为已完全闭环。
 
 golden_media_evidence_policy:
   schema: 10_运行时/golden_media_evidence_schema.yaml
@@ -233,5 +259,6 @@ rules:
   golden_media_storage_does_not_imply_model_weight_training: true
   scene_asset_identity_schema_controls_scene_camera_view_asset_version_relation_identifiers: true
   scene_media_resolver_manifest_controls_scene_asset_current_version_and_locator_resolution: true
+  asset_retrieval_policy_controls_cross_session_binary_pixel_and_generation_reference_gate: true
   model_version_feedback_cannot_override_general_directing_method_or_canonical_story_character_scene_asset_facts: true
   confounded_ab_result_cannot_promote_maturity: true
