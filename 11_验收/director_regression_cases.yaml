@@ -304,10 +304,12 @@ cases:
   - id: REG-ASSET-RETRIEVAL-001
     title: 新会话只给自然语言剧情也必须解析并实际打开正确正式母图
     maturity: candidate
+    execution_status: BLOCKED_PENDING_STRUCTURAL_REREVIEW
     preconditions:
       - fresh_new_chat_session
       - target_asset_not_reuploaded_in_new_chat
       - PROJECT_INDEX_and_required_runtime_read_fresh
+      - current_attempt_initialized_NOT_ATTEMPTED
     positive_cases:
       - input: 凯姆从绯灯街出来，经过蔷薇酒馆，抬头看向桥和远处的钟楼。
         expected_scene: EUS-SCN-000001
@@ -330,22 +332,24 @@ cases:
     must_preserve:
       - identity resolved不能替代binary retrieval
       - locator found不能替代pixel open
-      - cross_session_verified必须来自新会话实际取回和像素核验
+      - durable registration_evidence不能把当前attempt推进出NOT_ATTEMPTED
+      - CROSS_SESSION_VERIFIED必须来自新会话实际取回和像素核验
       - 正式母图取回失败时不得拿语义相似图顶替
-      - 如果用户同时要求生图只有reference真正绑定到生成工具后才算generation_reference_success
+      - 如果用户同时要求生图只有存在有效binding receipt且outcome=BOUND才算generation_reference_success
     checks:
       - natural_language_scene_resolution
       - camera_anchor_resolution
       - view_resolution
       - asset_resolution
       - current_media_version_resolution
+      - attempt_state_isolation
       - actual_binary_retrieval
       - pixel_open
       - pixel_identity_verification
-      - cross_session_status_update
+      - authoritative_cross_session_status_update
       - no_semantic_substitution
-      - generation_reference_binding_when_requested
-    pass_condition: 三个positive case均在独立新会话从自然语言命中正确Asset/Version并实际取回打开核验目标像素；如请求生成则reference binding也成功。
+      - generation_reference_binding_receipt_when_requested
+    pass_condition: 结构Review通过后，三个positive case均在独立新会话从自然语言命中正确Asset/Version并实际取回打开核验目标像素；如请求生成则还必须有有效reference binding receipt。
 
   - id: REG-ASSET-RETRIEVAL-002
     title: 同方向多个Camera Anchor时不得只按方向选择正式母图
@@ -366,33 +370,84 @@ cases:
       - fail_closed_on_material_anchor_ambiguity
 
   - id: REG-ASSET-RETRIEVAL-003
-    title: 多Locator失效时必须顺序fallback且不制造false-green
+    title: 多Locator失效时必须在同一Media Version内顺序fallback且可证伪
     maturity: candidate
-    setup:
-      - target_media_version_has_two_or_more_locator_candidates
-      - first_locator_is_stale_or_unavailable
-      - later_locator_is_retrievable
+    evidence_class: STRUCTURAL_FIXTURE_ONLY
+    production_cross_session_proof: false
+    fixture:
+      target_asset_id: EUS-AST-000008
+      target_media_version_id: EUS-VER-000008
+      expected_content_hash: sha256:abb31820580e02d8b3abe7b44fd73a75e01bd74ba2e5824c7376022e9c1b706b
+      expected_locator_order: [file_library_title, chatgpt_file_id]
+      locator_A:
+        type: file_library_title
+        value: 200贫民区-后街.png
+        forced_fixture_outcome: STALE
+      locator_B:
+        type: chatgpt_file_id
+        value: file_00000000e3a881fd8ae4afc022e5dd4f
+        forced_fixture_outcome: RETRIEVED
+      expected_trace:
+        - [file_library_title, STALE]
+        - [chatgpt_file_id, RETRIEVED]
+      expected_final_media_version_id: EUS-VER-000008
+      expected_final_hash: sha256:abb31820580e02d8b3abe7b44fd73a75e01bd74ba2e5824c7376022e9c1b706b
+      expected_final_attempt_state: PIXELS_VERIFIED
     must_preserve:
-      - first locator失败必须记录stale或failure而不是继续标记本次成功
-      - 可以继续尝试同一Media Version的下一eligible locator
-      - 后续locator成功仍然解析同一Media Version
+      - locator A失败必须记录STALE而不是把本attempt视为已经成功
+      - 只允许继续尝试同一EUS-VER-000008的下一eligible locator
+      - locator B成功后仍必须核验最终hash对应EUS-VER-000008
       - locator fallback不得创建新Asset或新Version
-      - 所有locator都失败时状态必须为retrieval_failed而不是pixel_verified
+    all_fail_negative_fixture:
+      target_media_version_id: EUS-VER-000008
+      locator_A_outcome: UNAVAILABLE
+      locator_B_outcome: UNAVAILABLE
+      expected_attempt_state: FAILED
+      expected_failure_code: BINARY_NOT_RETRIEVED
+      pixels_verified_must_be: false
+      forbidden:
+        - semantic_similar_image_substitution
+        - switch_to_other_media_version
+        - switch_to_other_asset
     checks:
+      - concrete_locator_identity_matches_resolver
       - locator_priority
       - stale_locator_detection
       - same_version_fallback
+      - final_hash_matches_target_version
       - no_false_green
       - no_identity_churn
       - all_fail_is_fail_closed
+    promotion_boundary: 本fixture只证明结构逻辑，不能作为真实跨会话成功证据，也不能把EUS-VER-000008标记为CROSS_SESSION_VERIFIED。
 
   - id: REG-ASSET-RETRIEVAL-004
     title: current Version更新与pinned Version复现必须同时正确
     maturity: candidate
+    production_execution_status: NOT_EXECUTABLE_YET
+    revalidation_status: NEEDS_REVALIDATION
+    reason: 当前12个已迁移production Asset均只有revision 1/current，没有真实superseded旧Version可供pinned-old实测；禁止为了回归伪造正式production版本历史。
+    synthetic_fixture:
+      evidence_class: NON_PRODUCTION_STRUCTURAL_FIXTURE_ONLY
+      asset_id: TEST-AST-PIN-001
+      current_version_id: TEST-VER-002
+      versions:
+        - {version_id: TEST-VER-001, lifecycle_status: superseded, locator_status: retrievable}
+        - {version_id: TEST-VER-002, lifecycle_status: current, locator_status: retrievable}
+      cases:
+        - input_binding: unpinned_asset
+          expected_version: TEST-VER-002
+          expected_result: PASS_STRUCTURAL
+        - input_binding: pinned_TEST-VER-001
+          expected_version: TEST-VER-001
+          expected_result: PASS_STRUCTURAL
+        - input_binding: pinned_TEST-VER-001_with_locator_unavailable
+          expected_result: FAILED
+          expected_failure_code: BINARY_NOT_RETRIEVED
+          forbidden_fallback_version: TEST-VER-002
     must_preserve:
       - 默认导演调用绑定Asset并解析current_version_id
       - current指针更新后未pin任务自动使用新版
-      - 已生成镜头回归复现任务若pin旧media_version_id则继续解析旧Version
+      - pin旧media_version_id时只解析被pin版本
       - pinned旧Version locator失败时不得偷偷改用current新版
       - same_pixels_new_locator只补locator不改变Version身份
     checks:
@@ -401,6 +456,99 @@ cases:
       - pinned_failure_no_current_fallback
       - same_hash_locator_refresh
       - reproducibility_boundary
+      - synthetic_fixture_not_written_into_production_manifest
+    promotion_boundary: synthetic fixture只证明结构逻辑；真实production pinned-old能力保持NEEDS_REVALIDATION直至自然出现真实superseded版本并独立验收。
+
+  - id: REG-ASSET-RETRIEVAL-005
+    title: 历史登记像素证据不得污染新的retrieval attempt
+    maturity: candidate
+    fixture:
+      target_media_version_id: EUS-VER-000008
+      durable_registration_evidence:
+        evidence_scope: registration_session
+        binary_retrieved: true
+        pixels_opened: true
+        pixels_verified: true
+      new_attempt_initial_expected:
+        state: NOT_ATTEMPTED
+        binary_retrieved: UNKNOWN
+        pixels_opened: UNKNOWN
+        pixels_verified: UNKNOWN
+        reference_bound: UNKNOWN
+    forbidden_in_manifest:
+      - current_session_binary_retrieved
+      - current_session_pixels_opened
+      - current_session_pixels_verified
+      - current_attempt_state
+    checks:
+      - historical_observation_is_durable
+      - invocation_state_is_not_durable_current_truth
+      - new_attempt_does_not_inherit_registration_true
+      - NOT_ATTEMPTED_before_tool_execution
+    pass_condition: registration evidence保留为历史事实，同时新attempt在任何工具执行前保持NOT_ATTEMPTED/UNKNOWN。
+
+  - id: REG-ASSET-RETRIEVAL-006
+    title: cross-session durable state必须单一权威且矛盾组合fail closed
+    maturity: candidate
+    authoritative_field: cross_session_status
+    legal_example:
+      cross_session_status: UNVERIFIED
+    illegal_fixture:
+      cross_session_status: UNVERIFIED
+      cross_session_verified: true
+      requires_new_chat_validation: false
+    expected_result:
+      validator: FAIL
+      failure_code: CROSS_SESSION_STATE_CONTRADICTION
+      silent_normalization: forbidden
+    checks:
+      - authoritative_single_state_source
+      - derived_fields_not_persisted
+      - contradiction_detected
+      - fail_closed
+
+  - id: REG-ASSET-RETRIEVAL-007
+    title: pixels_verified不足以证明generation reference已绑定
+    maturity: candidate
+    receipt_required_fields:
+      - receipt_id
+      - retrieval_attempt_id
+      - target_asset_id
+      - target_media_version_id
+      - retrieved_binary_identity
+      - generation_tool
+      - generation_action
+      - binding_target
+      - binding_outcome
+      - evidence_ref
+      - executed_at
+      - failure_code
+    cases:
+      A:
+        input: pixels_verified_true_but_no_generation_binding_evidence
+        expected_reference_bound: false
+        expected_outcome: REFERENCE_BIND_ATTESTATION_UNAVAILABLE
+      B:
+        input: prompt_text_only_no_generation_tool
+        expected_reference_bound: false
+        expected_outcome: REFERENCE_BIND_ATTESTATION_UNAVAILABLE
+      C:
+        input: generation_tool_called_but_target_binary_not_attested_in_reference_slot
+        expected_reference_bound: false
+        expected_outcome: REFERENCE_BIND_ATTESTATION_UNAVAILABLE
+      D:
+        input: target_binary_identity_matches_verified_version_and_tool_receipt_attests_reference_slot_binding
+        expected_reference_bound: true
+        expected_outcome: BOUND
+    checks:
+      - receipt_schema_complete
+      - target_asset_and_version_match_attempt
+      - binary_identity_proof_present_when_available
+      - tool_action_identity_present
+      - binding_target_present
+      - tool_return_evidence_ref_present
+      - no_self_report_only_pass
+    pass_condition: 只有D允许进入REFERENCE_BOUND；A/B/C均不得PASS。
 
   - id: REG-SOURCE-001
     title: 旧版总纲不得夺权
