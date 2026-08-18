@@ -223,14 +223,18 @@ routes:
       - relation_resolution_if_needed
       - asset_resolution
       - current_vs_pinned_media_version_resolution
+      - durable_registration_evidence_vs_current_attempt_separation
+      - current_attempt_initialization_NOT_ATTEMPTED
+      - authoritative_cross_session_status_validation
       - locator_candidate_collection
       - current_tool_availability
       - actual_binary_retrieval
       - pixel_open
       - pixel_identity_verification
-      - stale_locator_fallback
+      - stale_locator_fallback_same_version_only
       - semantic_substitution_guard
-      - generation_reference_binding
+      - generation_reference_binding_receipt_validation
+      - reference_binding_attestation_availability
       - false_green_check
     candidate_axes:
       - cross_session_file_library_title
