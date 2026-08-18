@@ -1,0 +1,166 @@
+document_id: EUSTIA-DIRECTOR-FEEDBACK-LEARNING-CASES
+status: active
+authority_role: learning_evidence_and_case_registry
+method_authority: 01_AI电影系统/AI电影系统.md
+learning_process_authority: 08_系统学习/反馈反推与系统反哺引擎.md
+created_at: 2026-08-18
+last_updated: 2026-08-18
+rules_not_authoritative_by_themselves: true
+
+cases:
+  - case_id: MOTIVE-FIRST-CROWD-001
+    work_item: 钟楼谒见仪式前广场群众反应
+    user_feedback:
+      - 贫苦居民处在恶劣生存环境中，不应因为“管理者/权威人物出现”就自动套用嘲讽、起哄、看不起的喜剧模板。
+      - 居民可能对猎羽、治安官等直接管理和执法者不满，但教会同时提供施粥、面包、精神寄托与圣女希望，因此居民对教会存在依赖、敬畏、希望投射和近乎畸形的尊重。
+      - 因此当前场景中，钟楼平台出现人影后，广场应由沸腾瞬间转为安静，而不是进入“怎么又是这个神官”的群体喜剧反应。
+    observed_problem:
+      - 旧导演方案先从类型化喜剧效果出发，再给群众安排反应，没有先解析群众的现实生存动机、资源依赖、信仰依赖和对机构的不同关系。
+      - 把“贫苦群众对权威不满”泛化成“群众会嘲讽教会”，忽略同一群体可同时憎恶执法压力、依赖救济、敬畏宗教并把希望投射给圣女。
+    inferred_intent:
+      - 群众行为必须由角色/群体当前动机、需求、依赖、恐惧、希望和既有关系推出，再决定语气与戏剧效果。
+      - 社会处境不是背景说明，而是群众表演和声音行为的因果源。
+    operational_candidate:
+      - 群众反应设计前先运行 motive_dependency_scan，再决定喜剧、敌意、敬畏、沉默、狂热、冷漠或混合反应。
+      - 对机构的态度不得只按“统治者/被统治者”二分；必须区分执法压力、物资供给、精神寄托、身份认同、救济依赖、希望投射和现实怨恨。
+      - 当机构同时掌握生存资源与超越性希望时，群众可能形成尊敬、依赖、恐惧、感激、狂热和怨恨并存的复杂关系。
+    mandatory_scan_fields:
+      - immediate_need
+      - material_dependency
+      - hope_dependency
+      - spiritual_dependency
+      - institutional_function
+      - grievance_target
+      - perceived_legitimacy
+      - fear_and_cost
+      - emotional_ambivalence
+      - group_heterogeneity
+    current_scene_application:
+      crowd_state_before: 广场沸腾、期待圣女出现
+      trigger: 钟楼敲钟平台出现人影
+      response: 整个广场从沸腾瞬间变得非常安静，形成集体注意力和宗教权威的屏幕/声音证据
+      interpretation: 安静不是普通“守规矩”，而是绝望环境中对教会、圣女和希望来源的依赖与敬畏外显
+    boundaries:
+      - 不把“贫民一定尊敬宗教机构”泛化为规则；若机构失去救济功能、合法性、希望投射或发生明确背叛，群众反应可完全不同。
+      - 不把所有群众做成同一表情；宏观声场可统一安静，个体仍可有紧张、敬畏、期待、疲惫、虔诚等差异。
+      - 喜剧不是禁用，而是必须在人物动机、社会关系与当前情境允许时成立。
+    maturity:
+      current_scene_application: scene_verified
+      transferable_rule: candidate
+    confidence:
+      user_intent: HIGH
+      scene_match: HIGH
+      cross_scene_transfer: MEDIUM
+
+  - case_id: EXPOSITION-MEDIA-DISTANCE-001
+    work_item: 达尔世界观布道与诺瓦斯起源说明
+    user_feedback:
+      - 前面较长章节一直没有完整介绍世界观，这里与教会、圣女、浮空都市的制度逻辑直接相关，是较早且自然的世界观入口，因此信息不能仅因“说明多”而默认大幅压缩。
+      - 若全程只看达尔讲话会枯燥，因此在达尔先说两句建立真人场景和说话者后，转入与画外音同步的羊皮纸手绘简笔画。
+      - 手绘画应展示天使、人类繁荣、遗忘天使、洪水、祈祷、都市漂浮、历代圣女维持城市等因果，并明确当前所处世界是一座漂浮的天空城。
+      - 羊皮纸/手绘具有宗教历史感和时间距离，不容易让观众误以为这些画面是“不久以前的真实回忆”。相较之下，后来的大崩落等更接近角色/社会记忆的事件可以用写实真实画面回忆。
+      - 同时希望保留一个“真实历史画面切回”的A/B版本，与羊皮纸简笔画版本真实比较。
+    observed_problem:
+      - 旧策略倾向把世界观说明视为节奏风险后优先压缩、穿插凯姆或群众现实行动，虽能降低听课感，但可能削弱本段作为早期世界观入口和教会制度因果说明的职责。
+      - 若直接使用写实历史闪回，影像语法容易提高“客观历史事实/近期真实记忆”的感觉，并提前锁定大量古代世界视觉事实与资产。
+    first_principle:
+      - 说明信息是否保留，先按未来因果价值、制度合法性、角色信念、主题预埋和当前放置位置判断，而不是按字数判断。
+      - 当重要信息必须保留但持续真人讲话会停滞时，可以改变视觉表达介质，而不是只删信息或强行用无关行动盖住信息。
+      - 历史说明的视觉介质同时决定观众如何理解其“真实性、时间距离、文化归属和叙述来源”。
+    operational_candidate:
+      - exposition_value_scan: 判断该信息是否承担后续剧情因果、制度解释、角色信念或主题预埋；高价值信息允许保留。
+      - placement_scan: 世界观尽量在与其最相关的场景、机构、人物和行动中较早出现，避免开场硬讲，也避免拖到观众已需要理解时仍缺失。
+      - medium_selection: 可在真人讲话、羊皮纸/壁画/宗教图像、风格化动画、写实闪回、现实行动并行之间选择，介质应服务信息性质而非只为“好看”。
+      - epistemic_distance_scan: 先决定观众应把该段理解为客观事实、角色亲历回忆、历史记录、宗教教义、共同神话还是未证实传说，再选视觉介质。
+      - return_to_present: 说明段结束必须重新落回现实行动/仪式，使信息成为当前剧情的一部分。
+    current_scene_structure:
+      - 广场由沸腾瞬间安静
+      - 凯姆向远处望去
+      - 手持观察钟楼敲钟平台的人影
+      - 放大确认走出的是中年神官达尔
+      - 达尔以有空间回音的声音宣布谒见仪式并开始解释诺瓦斯存在意义
+      - 达尔说出前两句后转入羊皮纸手绘动画
+      - 手绘动画与画外音严格同步，展示完整因果链和漂浮天空城
+      - 达尔越说越投入，现实/手绘之间最终回到现实
+      - 达尔张开双手，以“感谢圣女大人，同时，向她献上祈祷”结束并推动下一仪式行为
+    medium_A_B_experiment:
+      status: OPEN_EXPERIMENT
+      A:
+        name: 羊皮纸彩色简笔画历史叙述
+        expected_strengths:
+          - 宗教历史与共同神话感
+          - 更强时间距离
+          - 不轻易把教义叙事拍成客观历史录像
+          - 可以低成本统一表现跨时代、大洪水、城市升空与历代圣女
+      B:
+        name: 写实真人历史闪回
+        expected_strengths:
+          - 更强沉浸和灾难规模
+          - 更直接的情绪冲击与历史具象
+        dependencies:
+          - 必须先建立初代圣女伊莲的高质量角色设定与视觉资产，且需要非常强的神圣感
+          - 需要古代时代、天使、洪水、城市升空等额外视觉设计，避免临时生成造成世界观锁死或廉价感
+      control_variables:
+        - same_core_dialogue_information
+        - same_story_function
+        - comparable_duration
+        - same_return_to_present_and_final_prayer
+      compare_dimensions:
+        - worldbuilding_comprehension
+        - religious_history_feeling
+        - temporal_distance
+        - perceived_objectivity_of_history
+        - emotional_engagement
+        - exposition_fatigue
+        - visual_coherence
+        - production_cost
+        - premature_worldbuilding_lock_risk
+      promotion_rule: A/B真实结果出来前，不把“羊皮纸一定优于写实闪回”晋级为稳定规则
+    boundaries:
+      - 羊皮纸不等于“古代历史默认画法”；如果导演明确要给观众客观、亲历、强沉浸的历史事实，写实闪回可能更适合。
+      - 写实闪回不天然意味着近期事件，但会提高影像的直接现实感，需要用上下文和风格控制其时间/知识地位。
+      - 现实行动并行仍是有效工具，尤其当说明内容本身不值得完整占据注意力时；本案例不是撤销叙事并行化，而是增加“先判断信息价值与介质”的上位门。
+    maturity:
+      current_scene_placement_and_need: scene_verified
+      medium_choice: candidate
+      transferable_rule: candidate
+    confidence:
+      user_intent: HIGH
+      causal_mechanism: MEDIUM_HIGH
+      medium_A_vs_B: UNKNOWN_UNTIL_TEST
+
+  - case_id: VN-TO-FILM-DIALOGUE-001
+    work_item: Galgame文字剧本到电影对白的转换
+    user_feedback:
+      - 原始母本属于日本GAL/文字游戏表达，书面说明和长句结构不应直接当作电影口语。
+      - 当前达尔台词应保留世界观与宗教逻辑，但改写成更适合真人说出口、听众一次听懂、能配合表演节奏的电影对白。
+    operational_candidate:
+      - adaptation_preserves_dramatic_information_not_source_sentence_shape
+      - 把叙述性书面句拆成可呼吸、可重音、可表演、可一次听懂的口语句组
+      - 保留角色身份与用词层级，避免为口语化把高阶神官写成现代随意说话
+      - 世界观术语首次出现时优先让语义关系清楚，再追求文采
+    boundaries:
+      - 原作有强识别度、剧情关键或用户明确锁定的台词不可只因“口语化”擅自改写
+      - 角色语言时代感与社会身份仍须保留
+    maturity:
+      current_scene_application: scene_verified
+      transferable_rule: candidate
+
+learning_checkpoint:
+  checkpoint_id: BELL-TOWER-EXPOSITION-20260818
+  work_item: 钟楼谒见仪式与世界观说明
+  locked_or_accepted:
+    - 教会在底层居民心中同时承担救济、信仰与希望来源，群众宏观反应必须从这种依赖关系推出
+    - 钟楼平台出现人影时，广场由沸腾瞬间转为非常安静
+    - 达尔真人先建立仪式与世界观开头，再进入历史视觉化说明
+    - 世界观在此处较早出现，原因是前段尚未完整介绍且本场与教会/圣女制度因果高度相关
+    - 达尔台词按电影口语重写，不机械沿用GAL文字句法
+  experiments:
+    - 羊皮纸彩色简笔画版本 vs 写实真人历史闪回版本
+  not_canonicalized_here:
+    - 初代圣女伊莲的最终视觉设计
+    - 写实历史闪回版本是否采用
+    - 本轮新增世界观细节是否全部进入正式改编剧本
+  next_validation:
+    - 先制作/生成两种历史视觉介质的可比版本，重点比较理解、宗教历史感、时间距离、真实感、节奏与制作代价
+    - 若测试写实闪回版本，先建立初代圣女伊莲角色设定与高质量神圣视觉资产
