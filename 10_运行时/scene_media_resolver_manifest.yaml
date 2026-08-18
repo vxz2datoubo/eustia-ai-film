@@ -1,21 +1,21 @@
 manifest_id: EUSTIA_SCENE_MEDIA_RESOLVER
-version: 1.2.0
+version: 1.3.0
 status: active
 confirmed_by_user: 2026-08-18
-scope: formal_scene_media_asset_version_and_locator_resolution
+scope: formal_scene_media_asset_version_locator_and_durable_retrieval_readiness
 
 authority:
   identity_schema: 10_运行时/scene_asset_identity_schema.yaml
   retrieval_policy: 10_运行时/asset_retrieval_policy.yaml
   logical_asset_registry: 06_视觉资产/视觉资产登记库.md
-  this_file: scene_asset_current_version_version_history_locators_and_per_version_retrieval_readiness
+  this_file: scene_asset_current_version_version_history_locators_historical_observations_and_authoritative_cross_session_status
 
 purpose:
   - 为正式场景媒体提供稳定的 Asset → Current Media Version → Locator 解析层
   - 允许同一正式资产被反复修改而不改变上层 Asset 身份、View、Camera Anchor 或 Relation 引用
-  - 把“图片内容版本”与“图片存放位置”分离，支持 ChatGPT Library、未来本地仓库、Git LFS、对象存储、Unreal、OpenUSD 等迁移
+  - 把图片内容版本与图片存放位置分离，支持 ChatGPT Library、未来本地仓库、Git LFS、对象存储、Unreal、OpenUSD 等迁移
   - 避免通过删除旧文件、同名覆盖或 old→new→newer 映射链维持系统正确性
-  - 单独记录每个Media Version的跨会话retrieval readiness，避免把locator metadata存在误报成实际可取回
+  - 只保存 durable historical evidence 与单一 authoritative cross-session status，不把某个旧会话的执行状态伪装成本轮 retrieval truth
 
 identity_rules:
   asset_id_role: stable_logical_media_slot
@@ -50,21 +50,58 @@ locator_model:
     - 同一个Media Version可以有多个locator
     - locator变化不创建新Media Version
     - 同一像素被重新上传且content_hash相同，只增加或更新locator，不创建新版本
-    - 无法从某个locator解引用时，尝试同版本其他verified locator
+    - 无法从某个locator解引用时，只能尝试同版本其他eligible locator
     - 不得用语义相近候选图替代目标version
 
 locator_verification_semantics:
-  rule: locator.status=verified 只表示该locator在登记或核验时被确认属于目标Media Version，不自动证明跨会话可解引用。
-  cross_session_truth_source: retrieval_readiness
-  dimensions:
-    identity_association_verified: locator_status_verified
-    current_session_binary_retrieved: retrieval_readiness.current_session_binary_retrieved
-    current_session_pixels_opened: retrieval_readiness.current_session_pixels_opened
-    cross_session_retrievable: retrieval_readiness.cross_session_status
+  rule: locator.status=verified 只表示该locator在登记或核验时被确认属于目标Media Version，不自动证明当前会话或跨会话可解引用。
   false_green_forbidden:
     - file_id_exists_but_binary_not_retrieved
     - file_library_title_recorded_but_search_not_opened_to_pixels
+    - historical_registration_pixels_opened_but_current_attempt_not_started
     - current_conversation_file_opened_but_reported_as_cross_session_verified
+
+version_pixel_verification_semantics:
+  rule: media_version.pixel_verified=true 是该不可变像素版本在正式登记/修订事务中曾完成身份核验的 durable version fact，不代表任意后续 retrieval attempt 已打开或已核验像素。
+  current_attempt_truth_source: invocation_local_retrieval_attempt
+
+cross_session_state_model:
+  authoritative_field: cross_session_status
+  enum: [UNVERIFIED, CROSS_SESSION_VERIFIED, STALE, UNAVAILABLE, REQUIRES_REPUBLISH]
+  derived_fields_not_persisted:
+    - cross_session_verified
+    - requires_new_chat_validation
+  derived_rules:
+    cross_session_verified: cross_session_status == CROSS_SESSION_VERIFIED
+    requires_new_chat_validation: cross_session_status in [UNVERIFIED, STALE]
+  validation:
+    - 禁止在retrieval_readiness中持久化cross_session_verified或requires_new_chat_validation作为第二truth
+    - 若发现禁止字段或互相矛盾的重复truth，必须CROSS_SESSION_STATE_CONTRADICTION并fail closed
+    - CROSS_SESSION_VERIFIED必须存在至少一条符合asset_retrieval_policy的independent_new_chat_session cross_session_evidence
+
+historical_observation_model:
+  registration_evidence_required_fields:
+    - observed_at
+    - evidence_scope
+    - binary_retrieved
+    - pixels_opened
+    - pixels_verified
+    - evidence_ref
+  rule: registration_evidence是历史观察，不得用于初始化当前attempt的binary_retrieved/pixels_opened/pixels_verified。
+
+attempt_state_boundary:
+  persistence: invocation_local_not_in_manifest
+  initial_state: NOT_ATTEMPTED
+  initial_execution_values:
+    binary_retrieved: UNKNOWN
+    pixels_opened: UNKNOWN
+    pixels_verified: UNKNOWN
+    reference_bound: UNKNOWN
+  forbidden_persisted_fields:
+    - current_session_binary_retrieved
+    - current_session_pixels_opened
+    - current_session_pixels_verified
+    - current_attempt_state
 
 content_identity:
   preferred_hash: sha256
@@ -103,12 +140,12 @@ replacement_transaction:
     - 核验Scene、Camera Anchor、View、方向、地标、构图和媒体职责
     - 核验通过后把新version设为current并把旧current设为superseded
     - 检查默认指针、Relation、连续性和当前镜头绑定不因版本切换失效
-    - 初始化或更新该version的retrieval_readiness；新locator不得自动获得cross_session_verified
+    - 记录本次登记/修订的registration_evidence；cross_session_status默认UNVERIFIED且不得从旧version继承
     - COMMIT serially
-    - FETCH AGAIN验证current_version_id、version状态、locator与retrieval_readiness可解析
+    - FETCH AGAIN验证current_version_id、version状态、locator、registration_evidence与authoritative cross_session_status可解析
   failure_policy:
     - 事务中途失败时不得切换current_version_pointer
-    - 若已部分写入则在连续性记录blocked transaction并优先恢复
+    - 若已部分写入则记录blocked事务并优先恢复
     - 不得宣布正式替换完成
 
 garbage_collection:
@@ -128,17 +165,19 @@ runtime_resolution:
   order:
     - resolve_asset_id_from_view_and_continuity
     - lookup_current_version_id_in_this_manifest_unless_explicit_version_is_pinned
+    - initialize_invocation_local_attempt_as_NOT_ATTEMPTED
     - collect_eligible_locators_for_target_version
     - rank_locators_using_current_tool_availability_and_policy
     - resolve_actual_binary
     - open_pixels
     - verify_pixel_identity_against_target_version
-    - bind_reference_to_generation_when_generation_requires_formal_reference
+    - when_generation_requires_formal_reference_require_binding_receipt_before_REFERENCE_BOUND
   failure_behavior:
     - if_current_version_missing: report_formal_asset_version_unresolved
     - if_all_locators_fail: report_identity_found_but_pixels_unavailable
     - if_pixels_not_opened: do_not_claim_formal_pixels_seen
     - if_pixel_identity_mismatch: fail_closed_and_do_not_bind_reference
+    - if_binding_attestation_unavailable: do_not_claim_REFERENCE_BOUND
     - never_substitute_semantically_similar_candidate
 
 shot_binding_policy:
@@ -390,113 +429,93 @@ assets:
 
 retrieval_readiness:
   EUS-VER-000001:
-    cross_session_status: current_session_only
+    cross_session_status: UNVERIFIED
     preferred_locator_type: chatgpt_file_id
     persistent_locator_candidates: [chatgpt_file_id]
-    current_session_binary_retrieved: true
-    current_session_pixels_opened: true
-    current_session_pixels_verified: true
-    cross_session_verified: false
-    requires_new_chat_validation: true
+    registration_evidence: {observed_at: '2026-08-18', evidence_scope: registration_session, binary_retrieved: true, pixels_opened: true, pixels_verified: true, evidence_ref: 'formal_asset_registration:EUS-VER-000001:2026-08-18'}
+    cross_session_evidence: []
   EUS-VER-000002:
-    cross_session_status: current_session_only
+    cross_session_status: UNVERIFIED
     preferred_locator_type: chatgpt_file_id
     persistent_locator_candidates: [chatgpt_file_id]
-    current_session_binary_retrieved: true
-    current_session_pixels_opened: true
-    current_session_pixels_verified: true
-    cross_session_verified: false
-    requires_new_chat_validation: true
+    registration_evidence: {observed_at: '2026-08-18', evidence_scope: registration_session, binary_retrieved: true, pixels_opened: true, pixels_verified: true, evidence_ref: 'formal_asset_registration:EUS-VER-000002:2026-08-18'}
+    cross_session_evidence: []
   EUS-VER-000003:
-    cross_session_status: current_session_only
+    cross_session_status: UNVERIFIED
     preferred_locator_type: file_library_title
     persistent_locator_candidates: [file_library_title, chatgpt_file_id]
-    current_session_binary_retrieved: true
-    current_session_pixels_opened: true
-    current_session_pixels_verified: true
-    cross_session_verified: false
-    requires_new_chat_validation: true
+    registration_evidence: {observed_at: '2026-08-18', evidence_scope: registration_session, binary_retrieved: true, pixels_opened: true, pixels_verified: true, evidence_ref: 'formal_asset_registration:EUS-VER-000003:2026-08-18'}
+    cross_session_evidence: []
   EUS-VER-000004:
-    cross_session_status: current_session_only
+    cross_session_status: UNVERIFIED
     preferred_locator_type: file_library_title
     persistent_locator_candidates: [file_library_title, chatgpt_file_id]
-    current_session_binary_retrieved: true
-    current_session_pixels_opened: true
-    current_session_pixels_verified: true
-    cross_session_verified: false
-    requires_new_chat_validation: true
+    registration_evidence: {observed_at: '2026-08-18', evidence_scope: registration_session, binary_retrieved: true, pixels_opened: true, pixels_verified: true, evidence_ref: 'formal_asset_registration:EUS-VER-000004:2026-08-18'}
+    cross_session_evidence: []
   EUS-VER-000005:
-    cross_session_status: current_session_only
+    cross_session_status: UNVERIFIED
     preferred_locator_type: file_library_title
     persistent_locator_candidates: [file_library_title, chatgpt_file_id]
-    current_session_binary_retrieved: true
-    current_session_pixels_opened: true
-    current_session_pixels_verified: true
-    cross_session_verified: false
-    requires_new_chat_validation: true
+    registration_evidence: {observed_at: '2026-08-18', evidence_scope: registration_session, binary_retrieved: true, pixels_opened: true, pixels_verified: true, evidence_ref: 'formal_asset_registration:EUS-VER-000005:2026-08-18'}
+    cross_session_evidence: []
   EUS-VER-000006:
-    cross_session_status: current_session_only
+    cross_session_status: UNVERIFIED
     preferred_locator_type: file_library_title
     persistent_locator_candidates: [file_library_title, chatgpt_file_id]
-    current_session_binary_retrieved: true
-    current_session_pixels_opened: true
-    current_session_pixels_verified: true
-    cross_session_verified: false
-    requires_new_chat_validation: true
+    registration_evidence: {observed_at: '2026-08-18', evidence_scope: registration_session, binary_retrieved: true, pixels_opened: true, pixels_verified: true, evidence_ref: 'formal_asset_registration:EUS-VER-000006:2026-08-18'}
+    cross_session_evidence: []
   EUS-VER-000007:
-    cross_session_status: current_session_only
+    cross_session_status: UNVERIFIED
     preferred_locator_type: file_library_title
     persistent_locator_candidates: [file_library_title, chatgpt_file_id]
-    current_session_binary_retrieved: true
-    current_session_pixels_opened: true
-    current_session_pixels_verified: true
-    cross_session_verified: false
-    requires_new_chat_validation: true
+    registration_evidence: {observed_at: '2026-08-18', evidence_scope: registration_session, binary_retrieved: true, pixels_opened: true, pixels_verified: true, evidence_ref: 'formal_asset_registration:EUS-VER-000007:2026-08-18'}
+    cross_session_evidence: []
   EUS-VER-000008:
-    cross_session_status: current_session_only
+    cross_session_status: UNVERIFIED
     preferred_locator_type: file_library_title
     persistent_locator_candidates: [file_library_title, chatgpt_file_id]
-    current_session_binary_retrieved: true
-    current_session_pixels_opened: true
-    current_session_pixels_verified: true
-    cross_session_verified: false
-    requires_new_chat_validation: true
+    registration_evidence: {observed_at: '2026-08-18', evidence_scope: registration_session, binary_retrieved: true, pixels_opened: true, pixels_verified: true, evidence_ref: 'formal_asset_registration:EUS-VER-000008:2026-08-18'}
+    cross_session_evidence: []
   EUS-VER-000009:
-    cross_session_status: current_session_only
+    cross_session_status: UNVERIFIED
     preferred_locator_type: file_library_title
     persistent_locator_candidates: [file_library_title, chatgpt_file_id]
-    current_session_binary_retrieved: true
-    current_session_pixels_opened: true
-    current_session_pixels_verified: true
-    cross_session_verified: false
-    requires_new_chat_validation: true
+    registration_evidence: {observed_at: '2026-08-18', evidence_scope: registration_session, binary_retrieved: true, pixels_opened: true, pixels_verified: true, evidence_ref: 'formal_asset_registration:EUS-VER-000009:2026-08-18'}
+    cross_session_evidence: []
   EUS-VER-000010:
-    cross_session_status: current_session_only
+    cross_session_status: UNVERIFIED
     preferred_locator_type: file_library_title
     persistent_locator_candidates: [file_library_title, chatgpt_file_id]
-    current_session_binary_retrieved: true
-    current_session_pixels_opened: true
-    current_session_pixels_verified: true
-    cross_session_verified: false
-    requires_new_chat_validation: true
+    registration_evidence: {observed_at: '2026-08-18', evidence_scope: registration_session, binary_retrieved: true, pixels_opened: true, pixels_verified: true, evidence_ref: 'formal_asset_registration:EUS-VER-000010:2026-08-18'}
+    cross_session_evidence: []
   EUS-VER-000011:
-    cross_session_status: current_session_only
+    cross_session_status: UNVERIFIED
     preferred_locator_type: chatgpt_file_id
     persistent_locator_candidates: [chatgpt_file_id]
-    current_session_binary_retrieved: true
-    current_session_pixels_opened: true
-    current_session_pixels_verified: true
-    cross_session_verified: false
-    requires_new_chat_validation: true
+    registration_evidence: {observed_at: '2026-08-18', evidence_scope: registration_session, binary_retrieved: true, pixels_opened: true, pixels_verified: true, evidence_ref: 'formal_asset_registration:EUS-VER-000011:2026-08-18'}
+    cross_session_evidence: []
   EUS-VER-000012:
-    cross_session_status: current_session_only
+    cross_session_status: UNVERIFIED
     preferred_locator_type: chatgpt_file_id
     persistent_locator_candidates: [chatgpt_file_id]
-    current_session_binary_retrieved: true
-    current_session_pixels_opened: true
-    current_session_pixels_verified: true
-    cross_session_verified: false
-    requires_new_chat_validation: true
+    registration_evidence: {observed_at: '2026-08-18', evidence_scope: registration_session, binary_retrieved: true, pixels_opened: true, pixels_verified: true, evidence_ref: 'formal_asset_registration:EUS-VER-000012:2026-08-18'}
+    cross_session_evidence: []
+
+retrieval_readiness_validation:
+  authoritative_cross_session_field: cross_session_status
+  forbidden_persisted_fields:
+    - cross_session_verified
+    - requires_new_chat_validation
+    - current_session_binary_retrieved
+    - current_session_pixels_opened
+    - current_session_pixels_verified
+  contradiction_failure_code: CROSS_SESSION_STATE_CONTRADICTION
+  rules:
+    - 任一retrieval_readiness记录出现forbidden_persisted_fields即validator FAIL，不做silent normalization
+    - registration_evidence不属于当前attempt state
+    - 每个新的retrieval attempt从NOT_ATTEMPTED和UNKNOWN执行值开始
+    - CROSS_SESSION_VERIFIED必须有cross_session_evidence且evidence_scope为independent_new_chat_session
+    - 非CROSS_SESSION_VERIFIED状态不得被任何derived boolean覆盖或升级
 
 migration_state:
   first_new_identity_migration_completed: true
@@ -505,4 +524,5 @@ migration_state:
   remaining_legacy_scene_assets_require_pixel_reverification: true
   cross_session_retrieval_pilot_asset_count: 12
   cross_session_retrieval_real_new_chat_validation_pending: true
-  note: 已迁移资产不建立old→new长期映射；历史legacy身份仅保留于Git历史。当前12个Version已补retrieval readiness，但全部仍需独立新会话实测后才能晋级cross_session_verified。
+  production_pinned_old_version_case_available: false
+  note: 已迁移资产不建立old→new长期映射；历史legacy身份仅保留于Git历史。当前12个Version均为UNVERIFIED；registration_evidence只记录历史登记观察，未执行正式独立新会话validation，未产生任何CROSS_SESSION_VERIFIED状态。
