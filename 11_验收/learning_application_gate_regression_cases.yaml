@@ -104,3 +104,101 @@ cases:
     expected:
       state: needs_revalidation
       silent_reuse_as_stable_fact: false
+
+  - id: LAG-REG-011-MOTIVE-BEFORE-TONE
+    title: "群众反应必须先由动机与依赖关系推出"
+    setup:
+      scene: "极端贫困地区的教会施粥广场"
+      crowd_conditions:
+        - "生活恶劣且长期处于不安全感"
+        - "对直接执法和治安机构存在现实不满"
+        - "教会持续提供粥、面包、仪式和精神希望"
+        - "圣女被群众视为超越现实处境的希望来源"
+      trigger: "钟楼平台出现教会人物"
+    must_retrieve:
+      route: MOTIVATION_BEFORE_TONE
+      learning_case: MOTIVE-FIRST-CROWD-001
+    mandatory_reasoning:
+      - immediate_need
+      - material_dependency
+      - hope_dependency
+      - spiritual_dependency
+      - institutional_function
+      - grievance_target
+      - emotional_ambivalence
+      - group_heterogeneity
+    expected:
+      generic_anti_authority_comedy_allowed_without_motive_support: false
+      attitude_toward_police_may_be_copied_to_church_without_relation_scan: false
+      macro_silence_or_reverence_may_be_selected_when_motive_supports_it: true
+      individual_reactions_may_remain_heterogeneous: true
+
+  - id: LAG-REG-012-EXPOSITION-VALUE-BEFORE-COMPRESSION
+    title: "重要世界观说明先判断价值再决定是否压缩"
+    setup:
+      exposition:
+        topic: "浮空城市起源、圣女力量与教会制度合法性"
+        duration_risk: high
+        future_causal_value: high
+        earlier_worldbuilding_coverage: low
+        current_scene_relation: "教会仪式现场，由高阶神官公开讲述"
+    must_retrieve:
+      route: EXPOSITION_STALL
+      learning_case: EXPOSITION-MEDIA-DISTANCE-001
+    mandatory_reasoning:
+      - exposition_information_value
+      - placement_need
+      - representation_medium
+      - epistemic_status_of_history
+      - temporal_distance
+      - dialogue_speakability
+      - return_to_present
+      - asset_lock_cost
+    expected:
+      auto_compress_only_because_long: false
+      preserve_high_value_information_when_justified: true
+      visual_medium_must_match_history_epistemic_status: true
+      exposition_must_return_to_present_action_or_ritual: true
+
+  - id: LAG-REG-013-HISTORY-MEDIUM-AB-NO-PREMATURE-PROMOTION
+    title: "羊皮纸与写实历史闪回必须保持开放 A/B，不能提前判胜"
+    setup:
+      option_a: "羊皮纸彩色简笔画，宗教共同记忆/教义距离"
+      option_b: "写实真人历史闪回，强沉浸与现实感"
+      current_evidence: "尚无受控真实成片A/B"
+    must_retrieve:
+      learning_case: EXPOSITION-MEDIA-DISTANCE-001
+    expected:
+      parchment_declared_universal_best: false
+      realistic_flashback_declared_universal_best: false
+      state: candidate_or_open_experiment
+      compare:
+        - worldbuilding_comprehension
+        - religious_history_feeling
+        - temporal_distance
+        - perceived_objectivity_of_history
+        - emotional_engagement
+        - exposition_fatigue
+        - production_cost
+        - premature_worldbuilding_lock_risk
+      realistic_version_dependency:
+        - "初代圣女伊莲高质量神圣感角色设定/视觉资产"
+
+  - id: LAG-REG-014-VN-TO-FILM-DIALOGUE
+    title: "GAL/文字游戏原句结构不得机械复制为电影对白"
+    setup:
+      source_medium: "日本 GAL / 文字游戏脚本"
+      dialogue_function: "高阶神官讲述世界观和宗教制度"
+      source_problem: "书面说明句长、旁白化、阅读时成立但口头一次听懂较困难"
+    must_retrieve:
+      learning_case: VN-TO-FILM-DIALOGUE-001
+    expected:
+      preserve_dramatic_information: true
+      preserve_character_register: true
+      preserve_source_sentence_shape_by_default: false
+      dialogue_should_be:
+        - "可呼吸"
+        - "可重音"
+        - "可表演"
+        - "观众一次听懂"
+      locked_or_iconic_source_line_may_be_changed_without_authority: false
