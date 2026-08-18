@@ -13,6 +13,7 @@ read_sets:
       map: 00_项目地图文件#required_for_spatial_direction_camera_orientation_movement
       scene_asset_identity: scene_asset_identity_schema#formal_scene_asset_camera_anchor_view_pair_or_direction_sensitive
       scene_media_resolver: scene_media_resolver_manifest#formal_scene_pixel_version_locator_or_reproducibility_sensitive
+      asset_retrieval: asset_retrieval_policy#when_registered_formal_scene_pixels_may_be_used_as_reference_or_visually_verified
       assets: 视觉资产登记#bound_assets
       sound: 声音导演系统#sound_music_song_dialogue_foley_mix_relevant
       suno_lexicon: SUNO提示词词库与编译映射#when_suno_prompt_terms_vocal_structure_or_style_compilation
@@ -78,6 +79,7 @@ read_sets:
       - PROJECT_INDEX.yaml
       - scene_asset_identity_schema
       - scene_media_resolver_manifest
+      - asset_retrieval_policy
       - 视觉资产登记
     conditional:
       - 00_项目地图文件#direction_or_topology_sensitive_assets
@@ -90,6 +92,7 @@ read_sets:
       - PROJECT_INDEX.yaml
       - scene_asset_identity_schema
       - scene_media_resolver_manifest
+      - asset_retrieval_policy
       - 视觉资产登记
       - 连续性与当前生产状态#asset_binding_state
     conditional:
@@ -109,6 +112,7 @@ read_sets:
     conditional:
       scene_asset_identity: scene_asset_identity_schema#asset_identity_camera_anchor_view_relation_or_interop_research
       scene_media_resolver: scene_media_resolver_manifest#media_version_locator_migration_or_retrieval_research
+      asset_retrieval: asset_retrieval_policy#cross_session_binary_pixel_or_generation_reference_retrieval_research
       golden_media_evidence: golden_media_evidence_schema#when_prompt_output_media_pairing_temporal_video_evidence_aesthetic_retrieval_or_video_eval_is_researched
       golden_case_director_pull: golden_case_director_pull_schema#when_director_grade_case_breakdown_performance_beats_stillness_sound_or_retrieval_is_researched
       golden_case_director_pull_evidence: 导演级拉片与低运动表演证据索引#when_director_pull_or_low_motion_high_information_method_needs_external_evidence
@@ -150,6 +154,7 @@ read_sets:
       map: 00_项目地图文件#spatial_or_camera_direction_sensitive
       scene_asset_identity: scene_asset_identity_schema#formal_scene_asset_or_camera_anchor_sensitive
       scene_media_resolver: scene_media_resolver_manifest#formal_scene_media_version_or_locator_sensitive
+      asset_retrieval: asset_retrieval_policy#formal_scene_media_cross_session_retrieval_or_generation_reference_binding
       assets: 视觉资产登记#bound_assets
       continuity: 连续性与当前生产状态#relevant_work_item
       evidence: 优秀提示词案例学习证据索引#K2_K3_research_or_method_validation
@@ -178,6 +183,7 @@ rules:
   spatial_task_must_read_map: true
   formal_scene_asset_task_must_read_scene_asset_identity_schema: true
   formal_scene_media_resolution_must_read_resolver_manifest: true
+  formal_scene_reference_retrieval_must_read_asset_retrieval_policy: true
   formal_scene_asset_replacement_must_classify_version_variant_or_new_view: true
   sound_relevant_task_must_read_sound_director: true
   suno_prompt_compilation_must_read_lexicon: true
