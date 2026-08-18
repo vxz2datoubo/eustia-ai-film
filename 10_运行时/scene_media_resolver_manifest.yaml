@@ -1,19 +1,21 @@
 manifest_id: EUSTIA_SCENE_MEDIA_RESOLVER
-version: 1.1.0
+version: 1.2.0
 status: active
 confirmed_by_user: 2026-08-18
 scope: formal_scene_media_asset_version_and_locator_resolution
 
 authority:
   identity_schema: 10_运行时/scene_asset_identity_schema.yaml
+  retrieval_policy: 10_运行时/asset_retrieval_policy.yaml
   logical_asset_registry: 06_视觉资产/视觉资产登记库.md
-  this_file: scene_asset_current_version_version_history_and_locators
+  this_file: scene_asset_current_version_version_history_locators_and_per_version_retrieval_readiness
 
 purpose:
   - 为正式场景媒体提供稳定的 Asset → Current Media Version → Locator 解析层
   - 允许同一正式资产被反复修改而不改变上层 Asset 身份、View、Camera Anchor 或 Relation 引用
   - 把“图片内容版本”与“图片存放位置”分离，支持 ChatGPT Library、未来本地仓库、Git LFS、对象存储、Unreal、OpenUSD 等迁移
   - 避免通过删除旧文件、同名覆盖或 old→new→newer 映射链维持系统正确性
+  - 单独记录每个Media Version的跨会话retrieval readiness，避免把locator metadata存在误报成实际可取回
 
 identity_rules:
   asset_id_role: stable_logical_media_slot
@@ -51,6 +53,19 @@ locator_model:
     - 无法从某个locator解引用时，尝试同版本其他verified locator
     - 不得用语义相近候选图替代目标version
 
+locator_verification_semantics:
+  rule: locator.status=verified 只表示该locator在登记或核验时被确认属于目标Media Version，不自动证明跨会话可解引用。
+  cross_session_truth_source: retrieval_readiness
+  dimensions:
+    identity_association_verified: locator_status_verified
+    current_session_binary_retrieved: retrieval_readiness.current_session_binary_retrieved
+    current_session_pixels_opened: retrieval_readiness.current_session_pixels_opened
+    cross_session_retrievable: retrieval_readiness.cross_session_status
+  false_green_forbidden:
+    - file_id_exists_but_binary_not_retrieved
+    - file_library_title_recorded_but_search_not_opened_to_pixels
+    - current_conversation_file_opened_but_reported_as_cross_session_verified
+
 content_identity:
   preferred_hash: sha256
   rules:
@@ -79,7 +94,7 @@ replacement_transaction:
     - 这是修改后的正式图
     - 用这张覆盖当前正式版
   steps:
-    - FETCH PROJECT_INDEX、identity schema、logical asset registry、本manifest、相关连续性和活动引用
+    - FETCH PROJECT_INDEX、identity schema、retrieval policy、logical asset registry、本manifest、相关连续性和活动引用
     - 实际打开新上传像素
     - 解析目标Asset并判断same_pixels / new_revision / new_variant / new_view_or_anchor
     - 计算或记录content_hash；无法计算时明确hash_unknown并禁止自动去重
@@ -88,8 +103,9 @@ replacement_transaction:
     - 核验Scene、Camera Anchor、View、方向、地标、构图和媒体职责
     - 核验通过后把新version设为current并把旧current设为superseded
     - 检查默认指针、Relation、连续性和当前镜头绑定不因版本切换失效
+    - 初始化或更新该version的retrieval_readiness；新locator不得自动获得cross_session_verified
     - COMMIT serially
-    - FETCH AGAIN验证current_version_id、version状态和locator可解析性
+    - FETCH AGAIN验证current_version_id、version状态、locator与retrieval_readiness可解析
   failure_policy:
     - 事务中途失败时不得切换current_version_pointer
     - 若已部分写入则在连续性记录blocked transaction并优先恢复
@@ -108,15 +124,21 @@ garbage_collection:
   note: File Library或外部存储若当前工具无删除能力，系统只更新生命周期状态，不声称已物理删除。
 
 runtime_resolution:
+  policy: 10_运行时/asset_retrieval_policy.yaml
   order:
     - resolve_asset_id_from_view_and_continuity
-    - lookup_current_version_id_in_this_manifest
-    - collect_verified_locators_for_current_version
+    - lookup_current_version_id_in_this_manifest_unless_explicit_version_is_pinned
+    - collect_eligible_locators_for_target_version
+    - rank_locators_using_current_tool_availability_and_policy
     - resolve_actual_binary
-    - open_and_verify_pixels_when_visual_analysis_is_required
+    - open_pixels
+    - verify_pixel_identity_against_target_version
+    - bind_reference_to_generation_when_generation_requires_formal_reference
   failure_behavior:
     - if_current_version_missing: report_formal_asset_version_unresolved
     - if_all_locators_fail: report_identity_found_but_pixels_unavailable
+    - if_pixels_not_opened: do_not_claim_formal_pixels_seen
+    - if_pixel_identity_mismatch: fail_closed_and_do_not_bind_reference
     - never_substitute_semantically_similar_candidate
 
 shot_binding_policy:
@@ -126,6 +148,7 @@ shot_binding_policy:
     - 普通导演与长期场景连续性默认绑定asset_id，以便正式母图升级后自动使用current版本
     - 已生成镜头、回归案例、复现任务或需要精确追溯时可额外锁定media_version_id
     - 若镜头显式锁定media_version_id，不因current版本更新而自动重指向
+    - pinned version取回失败时不得偷偷改用current version
 
 assets:
   EUS-AST-000001:
@@ -365,9 +388,121 @@ assets:
           - {type: chatgpt_file_id, value: file_000000001cc081fda96a638247ac8fd0, status: verified}
           - {type: current_conversation_file, value: /mnt/data/fadf7185-0fb7-4301-baba-8d7b503dc2a7.png, status: verified}
 
+retrieval_readiness:
+  EUS-VER-000001:
+    cross_session_status: current_session_only
+    preferred_locator_type: chatgpt_file_id
+    persistent_locator_candidates: [chatgpt_file_id]
+    current_session_binary_retrieved: true
+    current_session_pixels_opened: true
+    current_session_pixels_verified: true
+    cross_session_verified: false
+    requires_new_chat_validation: true
+  EUS-VER-000002:
+    cross_session_status: current_session_only
+    preferred_locator_type: chatgpt_file_id
+    persistent_locator_candidates: [chatgpt_file_id]
+    current_session_binary_retrieved: true
+    current_session_pixels_opened: true
+    current_session_pixels_verified: true
+    cross_session_verified: false
+    requires_new_chat_validation: true
+  EUS-VER-000003:
+    cross_session_status: current_session_only
+    preferred_locator_type: file_library_title
+    persistent_locator_candidates: [file_library_title, chatgpt_file_id]
+    current_session_binary_retrieved: true
+    current_session_pixels_opened: true
+    current_session_pixels_verified: true
+    cross_session_verified: false
+    requires_new_chat_validation: true
+  EUS-VER-000004:
+    cross_session_status: current_session_only
+    preferred_locator_type: file_library_title
+    persistent_locator_candidates: [file_library_title, chatgpt_file_id]
+    current_session_binary_retrieved: true
+    current_session_pixels_opened: true
+    current_session_pixels_verified: true
+    cross_session_verified: false
+    requires_new_chat_validation: true
+  EUS-VER-000005:
+    cross_session_status: current_session_only
+    preferred_locator_type: file_library_title
+    persistent_locator_candidates: [file_library_title, chatgpt_file_id]
+    current_session_binary_retrieved: true
+    current_session_pixels_opened: true
+    current_session_pixels_verified: true
+    cross_session_verified: false
+    requires_new_chat_validation: true
+  EUS-VER-000006:
+    cross_session_status: current_session_only
+    preferred_locator_type: file_library_title
+    persistent_locator_candidates: [file_library_title, chatgpt_file_id]
+    current_session_binary_retrieved: true
+    current_session_pixels_opened: true
+    current_session_pixels_verified: true
+    cross_session_verified: false
+    requires_new_chat_validation: true
+  EUS-VER-000007:
+    cross_session_status: current_session_only
+    preferred_locator_type: file_library_title
+    persistent_locator_candidates: [file_library_title, chatgpt_file_id]
+    current_session_binary_retrieved: true
+    current_session_pixels_opened: true
+    current_session_pixels_verified: true
+    cross_session_verified: false
+    requires_new_chat_validation: true
+  EUS-VER-000008:
+    cross_session_status: current_session_only
+    preferred_locator_type: file_library_title
+    persistent_locator_candidates: [file_library_title, chatgpt_file_id]
+    current_session_binary_retrieved: true
+    current_session_pixels_opened: true
+    current_session_pixels_verified: true
+    cross_session_verified: false
+    requires_new_chat_validation: true
+  EUS-VER-000009:
+    cross_session_status: current_session_only
+    preferred_locator_type: file_library_title
+    persistent_locator_candidates: [file_library_title, chatgpt_file_id]
+    current_session_binary_retrieved: true
+    current_session_pixels_opened: true
+    current_session_pixels_verified: true
+    cross_session_verified: false
+    requires_new_chat_validation: true
+  EUS-VER-000010:
+    cross_session_status: current_session_only
+    preferred_locator_type: file_library_title
+    persistent_locator_candidates: [file_library_title, chatgpt_file_id]
+    current_session_binary_retrieved: true
+    current_session_pixels_opened: true
+    current_session_pixels_verified: true
+    cross_session_verified: false
+    requires_new_chat_validation: true
+  EUS-VER-000011:
+    cross_session_status: current_session_only
+    preferred_locator_type: chatgpt_file_id
+    persistent_locator_candidates: [chatgpt_file_id]
+    current_session_binary_retrieved: true
+    current_session_pixels_opened: true
+    current_session_pixels_verified: true
+    cross_session_verified: false
+    requires_new_chat_validation: true
+  EUS-VER-000012:
+    cross_session_status: current_session_only
+    preferred_locator_type: chatgpt_file_id
+    persistent_locator_candidates: [chatgpt_file_id]
+    current_session_binary_retrieved: true
+    current_session_pixels_opened: true
+    current_session_pixels_verified: true
+    cross_session_verified: false
+    requires_new_chat_validation: true
+
 migration_state:
   first_new_identity_migration_completed: true
   completed_at: 2026-08-18
   migrated_asset_count: 12
   remaining_legacy_scene_assets_require_pixel_reverification: true
-  note: 已迁移资产不建立old→new长期映射；历史legacy身份仅保留于Git历史。仍待用户重新提供的正交顶视图、钟楼朝西视图及其他pending_review历史图继续按单元迁移。
+  cross_session_retrieval_pilot_asset_count: 12
+  cross_session_retrieval_real_new_chat_validation_pending: true
+  note: 已迁移资产不建立old→new长期映射；历史legacy身份仅保留于Git历史。当前12个Version已补retrieval readiness，但全部仍需独立新会话实测后才能晋级cross_session_verified。
