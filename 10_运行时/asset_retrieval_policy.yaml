@@ -1,5 +1,5 @@
 policy_id: EUSTIA_FORMAL_ASSET_RETRIEVAL
-version: 1.1.0
+version: 1.1.1
 status: active_candidate
 confirmed_by_user: 2026-08-18
 scope: natural_language_scene_routing_to_actual_formal_pixel_retrieval_and_generation_reference_binding
@@ -275,6 +275,22 @@ generation_reference_gate:
   required_before_generation_reference_success:
     - valid_generation_reference_binding_receipt_with_outcome_BOUND
   fail_behavior: 不满足时可以继续做文字导演分析，但不得声称正式母图已经作为生成参考输入。
+
+# These fixtures are contract tests only. They do not call ChatGPT Library or a generation tool and cannot create production evidence.
+structural_fixture_execution:
+  evidence_class: STRUCTURAL_FIXTURE_ONLY
+  allowed_proof:
+    - state_machine_transition_logic
+    - contradiction_detection_logic
+    - same_media_version_fallback_logic
+    - pinned_vs_current_resolution_logic
+    - reference_binding_receipt_gate_logic
+  forbidden_claims:
+    - real_cross_session_binary_retrieval
+    - real_pixel_open_in_new_chat
+    - real_generation_reference_binding
+    - production_cross_session_status_promotion
+  execution_rule: fixture runner必须使用fixture声明的forced outcomes作为输入并比较expected state/hash/version/failure code；不能把规则文字存在本身当成fixture PASS。
 
 new_chat_regression_gate:
   requirement: true
