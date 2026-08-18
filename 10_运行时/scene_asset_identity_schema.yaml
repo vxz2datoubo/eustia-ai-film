@@ -1,7 +1,7 @@
 schema_id: EUSTIA_SCENE_ASSET_IDENTITY
-version: 1.1.0
+version: 1.2.0
 status: active
-confirmed_by_user: 2026-08-14
+confirmed_by_user: 2026-08-18
 scope: formal_scene_assets_camera_anchors_views_logical_media_assets_media_versions_locators_and_relations
 
 purpose:
@@ -68,17 +68,20 @@ id_namespaces:
 
 human_naming:
   scene_display_name: "{场景名}"
-  camera_anchor_display_name: "{场景名}·{绝对位置描述}·机位{NN}"
-  perspective_view_display_name: "{场景名}·{机位名}·朝{北|南|东|西}{视图职责}"
+  camera_anchor_display_name: "{场景名}·{语义机位名}"
+  camera_anchor_disambiguated_display_name: "{场景名}·{语义机位名}{NN}"
+  perspective_view_display_name: "{camera_anchor_display_name}·朝{北|南|东|西}{视图职责}"
   top_view_display_name: "{场景名}·{北|南|东|西}朝上{顶视职责}"
   media_asset_display_name: "{view_display_name}·{媒体角色或时间/天气/光照职责}"
   media_version_display_name: "{media_asset_display_name}·修订{revision_no}"
   rules:
+    - Camera Anchor中文名优先使用能直接说明摄影机实际位置的语义机位名，例如“前厅入口内侧机位”“广场南侧中央机位”“吧台前机位”
+    - 不默认使用“机位01/02/03”作为人类主名称；只有同一语义位置存在多个仍无法靠空间语义区分的机位时，才追加数字后缀消歧
     - 普通视图的方向描述摄影机光轴在水平面上的绝对朝向
     - 顶视图的方向描述画面顶部对应的世界绝对方位，不描述摄影机向下的光轴
     - “正打/反打/左视/右视”不得作为正式主方向名，只能作为关系或历史别名
     - “北侧机位”和“朝北视图”必须分开，前者是摄影机位置，后者是摄影机朝向
-    - 用户日常只需使用中文Asset显示名，不需要记Media Version编号
+    - 用户日常只需使用中文Scene/机位/View/Asset显示名，不需要记机器ID或Media Version编号
 
 cardinal_direction_model:
   perspective:
@@ -114,12 +117,14 @@ entities:
       - world_position_relation
       - status
     optional:
+      - semantic_anchor_name_zh
+      - disambiguation_index
       - map_xy_normalized
       - elevation_m
       - camera_height_m
       - exact_transform
       - visible_region_hint
-    rule: 同一场景同一朝向允许有多个不同机位，必须用不同camera_anchor_id区分。
+    rule: 同一场景同一朝向允许有多个不同机位，必须用不同camera_anchor_id区分；中文名优先说明实际空间位置而不是流水编号。
   view:
     required:
       - view_id
@@ -149,6 +154,8 @@ entities:
       - occlusion_notes
       - continuity_axis_id
       - default_media_asset_id
+      - direction_basis
+      - direction_confidence
     rule: view表示“从某个确定机位朝某个绝对方向看”的视觉槽，不等同具体PNG/JPG，也不等同某次修订版本。
   media_asset:
     meaning: stable_logical_media_slot
@@ -401,4 +408,5 @@ validation:
 research_basis:
   evidence_record: ASSET-IDENTITY-SYSTEM-2026-08-14
   versioning_extension_record: ASSET-VERSION-RESOLVER-2026-08-14
-  maturity_note: 用户确认的项目架构与版本解析扩展为active；外部标准只提供互操作设计依据，不自动把第三方具体实现变成本项目依赖。
+  semantic_anchor_naming_refinement: USER-CONFIRMED-2026-08-18
+  maturity_note: 用户确认的项目架构、版本解析扩展与语义机位命名规则为active；外部标准只提供互操作设计依据，不自动把第三方具体实现变成本项目依赖。
