@@ -1,0 +1,84 @@
+schema_id: EUSTIA_BINARY_LOCATOR_ADAPTER_CONTRACT_CANDIDATE
+version: 0.1.0
+status: candidate
+scope: machine_dereferenceable_binary_locator_adapter_contract
+parent_contract: 10_运行时/asset_retrieval_policy.yaml
+
+core_invariant:
+  - locator_identity != binary_retrieved
+  - provider_namespace_must_be_explicit
+  - provider_id_namespaces_must_not_be_cross_interpreted
+  - exact_bytes_must_match_target_media_version_content_sha256_before_pixel_verified
+  - same_pixels_new_locator_keeps_same_media_version_id
+
+machine_locator_namespaces:
+  github_blob:
+    classification: provider_protocol_machine_dereferenceable
+    required_fields:
+      - repo_full_name
+      - blob_sha
+      - expected_content_sha256
+    adapter_output:
+      - raw_bytes
+      - byte_count
+      - observed_sha256
+    auth_model:
+      public_repo: none
+      private_repo: repository_contents_read_credential
+    notes:
+      - Git blob SHA is provider locator identity and is not a substitute for the registered Media Version SHA-256.
+      - Production formal media must not be published to the current public eustia-ai-film repository.
+
+  openai_api_file_id:
+    classification: provider_protocol_machine_dereferenceable_candidate
+    required_fields:
+      - file_id
+      - expected_content_sha256
+    namespace_rule: must_never_interpret_chatgpt_file_id_as_openai_api_file_id
+    adapter_requirement: authenticated_openai_api_files_content_retrieval
+
+  r2_object:
+    classification: provider_protocol_machine_dereferenceable_candidate
+    required_fields:
+      - bucket_ref
+      - object_key
+      - expected_content_sha256
+    namespace_rule: durable_locator_must_not_persist_presigned_url_as_identity
+    adapter_requirement: authenticated_s3_compatible_get_object_or_runtime_presign
+
+non_machine_primary_locators_in_current_harness:
+  chatgpt_file_id:
+    classification: opaque_chatgpt_platform_locator
+    current_observation: no_direct_binary_dereference_action_in_validated_fresh_chat_tool_surface
+    forbidden_interpretation: openai_api_file_id
+  file_library_title:
+    classification: search_key
+    current_observation: exact_title_search_did_not_guarantee_target_image_binary_retrieval
+
+adapter_result_contract:
+  success_required:
+    - locator_namespace_validated
+    - bytes_obtained
+    - byte_count_observed
+    - sha256_observed
+    - sha256_matches_registered_media_version
+    - image_decoder_opened
+    - dimensions_observed
+  failure_codes:
+    - LOCATOR_NAMESPACE_MISMATCH
+    - LOCATOR_NOT_FOUND
+    - AUTH_UNAVAILABLE
+    - BINARY_TRANSPORT_UNAVAILABLE
+    - BINARY_NOT_RETRIEVED
+    - SHA256_MISMATCH
+    - IMAGE_DECODE_FAILED
+    - DIMENSION_MISMATCH
+
+security_and_scope_gates:
+  - no_credentials_committed_to_git
+  - no_presigned_bearer_urls_committed_to_git
+  - no_formal_mother_image_published_to_public_repo
+  - external_storage_creation_requires_user_approval
+  - formal_binary_republish_requires_user_approval
+  - credential_creation_or_secret_registration_requires_user_approval
+  - generation_reference_binding_deferred_until_binary_pixel_pass
