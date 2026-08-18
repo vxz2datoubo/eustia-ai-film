@@ -301,6 +301,107 @@ cases:
       - no_automatic_physical_delete
       - resolver_manifest_fetch_verify
 
+  - id: REG-ASSET-RETRIEVAL-001
+    title: 新会话只给自然语言剧情也必须解析并实际打开正确正式母图
+    maturity: candidate
+    preconditions:
+      - fresh_new_chat_session
+      - target_asset_not_reuploaded_in_new_chat
+      - PROJECT_INDEX_and_required_runtime_read_fresh
+    positive_cases:
+      - input: 凯姆从绯灯街出来，经过蔷薇酒馆，抬头看向桥和远处的钟楼。
+        expected_scene: EUS-SCN-000001
+        expected_camera_anchor: EUS-CAM-000001
+        expected_view: EUS-VIEW-000002
+        expected_asset: EUS-AST-000002
+        expected_version: EUS-VER-000002
+      - input: 站在市集广场南侧，回头看向中间桥和回接绯灯街的方向。
+        expected_scene: EUS-SCN-000005
+        expected_camera_anchor: EUS-CAM-000009
+        expected_view: EUS-VIEW-000011
+        expected_asset: EUS-AST-000011
+        expected_version: EUS-VER-000011
+      - input: 尤斯蒂娅刚过桥后右转进入雨夜窄巷逃跑。
+        expected_scene: EUS-SCN-000004
+        expected_camera_anchor: EUS-CAM-000007
+        expected_view: EUS-VIEW-000008
+        expected_asset: EUS-AST-000008
+        expected_version: EUS-VER-000008
+    must_preserve:
+      - identity resolved不能替代binary retrieval
+      - locator found不能替代pixel open
+      - cross_session_verified必须来自新会话实际取回和像素核验
+      - 正式母图取回失败时不得拿语义相似图顶替
+      - 如果用户同时要求生图只有reference真正绑定到生成工具后才算generation_reference_success
+    checks:
+      - natural_language_scene_resolution
+      - camera_anchor_resolution
+      - view_resolution
+      - asset_resolution
+      - current_media_version_resolution
+      - actual_binary_retrieval
+      - pixel_open
+      - pixel_identity_verification
+      - cross_session_status_update
+      - no_semantic_substitution
+      - generation_reference_binding_when_requested
+    pass_condition: 三个positive case均在独立新会话从自然语言命中正确Asset/Version并实际取回打开核验目标像素；如请求生成则reference binding也成功。
+
+  - id: REG-ASSET-RETRIEVAL-002
+    title: 同方向多个Camera Anchor时不得只按方向选择正式母图
+    maturity: candidate
+    setup:
+      - same_scene_or_adjacent_scene_has_multiple_views_with_same_facing_cardinal
+      - user_language_contains_position_or_blocking_context
+    must_preserve:
+      - 先解析camera_anchor再解析view
+      - 不能因为两个View都朝北就默认选择第一个或最近登记的Asset
+      - 缺少足够站位信息时保持UNKNOWN或请求最小必要澄清
+      - 不允许从文件名搜索排名决定anchor
+    checks:
+      - camera_anchor_before_view
+      - map_and_continuity_context
+      - ambiguity_detection
+      - no_search_rank_authority
+      - fail_closed_on_material_anchor_ambiguity
+
+  - id: REG-ASSET-RETRIEVAL-003
+    title: 多Locator失效时必须顺序fallback且不制造false-green
+    maturity: candidate
+    setup:
+      - target_media_version_has_two_or_more_locator_candidates
+      - first_locator_is_stale_or_unavailable
+      - later_locator_is_retrievable
+    must_preserve:
+      - first locator失败必须记录stale或failure而不是继续标记本次成功
+      - 可以继续尝试同一Media Version的下一eligible locator
+      - 后续locator成功仍然解析同一Media Version
+      - locator fallback不得创建新Asset或新Version
+      - 所有locator都失败时状态必须为retrieval_failed而不是pixel_verified
+    checks:
+      - locator_priority
+      - stale_locator_detection
+      - same_version_fallback
+      - no_false_green
+      - no_identity_churn
+      - all_fail_is_fail_closed
+
+  - id: REG-ASSET-RETRIEVAL-004
+    title: current Version更新与pinned Version复现必须同时正确
+    maturity: candidate
+    must_preserve:
+      - 默认导演调用绑定Asset并解析current_version_id
+      - current指针更新后未pin任务自动使用新版
+      - 已生成镜头回归复现任务若pin旧media_version_id则继续解析旧Version
+      - pinned旧Version locator失败时不得偷偷改用current新版
+      - same_pixels_new_locator只补locator不改变Version身份
+    checks:
+      - current_pointer_follow_for_unpinned
+      - explicit_pin_preserved
+      - pinned_failure_no_current_fallback
+      - same_hash_locator_refresh
+      - reproducibility_boundary
+
   - id: REG-SOURCE-001
     title: 旧版总纲不得夺权
     must_preserve:
