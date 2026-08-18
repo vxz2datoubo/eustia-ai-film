@@ -15,6 +15,36 @@ routes:
       - personality_specific_response
       - duty_and_relationship_filter
 
+  - id: MOTIVATION_BEFORE_TONE
+    symptoms:
+      - 群众反应像类型模板而不是从动机推出
+      - 贫苦群众被默认写成嘲讽权威或反机构
+      - 群众喜怒与救济信仰希望或现实依赖不匹配
+      - 角色当前需求与表演语气矛盾
+      - 同一群体对不同机构的态度被简单合并
+    maturity: candidate
+    mandatory_reads:
+      - 08_系统学习/导演反馈学习案例.yaml#MOTIVE-FIRST-CROWD-001
+    mandatory_scans:
+      - immediate_need
+      - material_dependency
+      - hope_dependency
+      - spiritual_dependency
+      - institutional_function
+      - grievance_target
+      - perceived_legitimacy
+      - fear_and_cost
+      - emotional_ambivalence
+      - group_heterogeneity
+      - motive_before_tone
+    candidate_axes:
+      - silence_as_reverence
+      - ritual_attention
+      - ambivalent_dependence
+      - institution_as_hope
+      - differentiated_group_reaction
+      - comedy_only_after_motive_validation
+
   - id: EXPOSITION_STALL
     symptoms:
       - 持续对白
@@ -22,15 +52,34 @@ routes:
       - 画外音
       - 节奏停滞
       - 信息很多但画面不推进
+      - 重要世界观不能简单删减但真人讲话过于枯燥
+      - 宗教历史传说或制度起源需要视觉化
+    mandatory_reads:
+      - 08_系统学习/导演反馈学习案例.yaml#EXPOSITION-MEDIA-DISTANCE-001
     mandatory_scans:
+      - exposition_information_value
+      - placement_need
       - narrative_multiplex
       - attention_budget
       - reveal_budget
+      - representation_medium
+      - epistemic_status_of_history
+      - temporal_distance
+      - religious_or_cultural_frame
+      - dialogue_speakability
+      - return_to_present
+      - asset_lock_cost
     candidate_axes:
       - compression
       - embodiment
       - temporal_parallel
       - deliberate_stillness
+      - illustrated_history
+      - parchment_animation
+      - cultural_iconography
+      - stylized_historical_visualization
+      - realistic_flashback
+      - medium_A_B_validation
 
   - id: SCREEN_EVIDENCE_GAP
     symptoms:
