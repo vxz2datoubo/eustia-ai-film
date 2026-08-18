@@ -1,0 +1,91 @@
+task_id: REG-ASSET-BINARY-LOCATOR-REMEDIATION-001
+phase: PHASE-1_SYNTHETIC_BINARY_DEREFERENCE_POC
+status: partial_pass_provider_protocol_blocked_current_chatgpt_connector_binary_transport
+
+parent_dependency:
+  pr: 8
+  exact_head: ba6133d4e2fe9ce165367b8fe75da2a86d8031d3
+
+stacked_task:
+  branch: gpt/reg-asset-binary-locator-remediation-001
+  draft_pr: 9
+
+synthetic_fixture:
+  path: 11_验收/binary_locator_remediation/synthetic_probe.png
+  github_blob_sha: 8251a66290e1619b2262fa2d6ac0429d134e4b23
+  expected_sha256: 36f1626eebe1985b0ac4bb691f40ebe586a47c5a1c442d2cfe12e8e4c8bfa3b3
+  expected_byte_count: 79
+  expected_dimensions: [2, 2]
+  expected_format: PNG
+
+provider_protocol_poc:
+  provider: github_blob_api
+  evidence_class: SYNTHETIC_PROVIDER_PROTOCOL_POC_ONLY
+  github_actions:
+    run_id: 32142275705
+    job_id: 95727543153
+    conclusion: success
+  observed:
+    binary_bytes_retrieved: true
+    byte_count: 79
+    sha256: 36f1626eebe1985b0ac4bb691f40ebe586a47c5a1c442d2cfe12e8e4c8bfa3b3
+    image_decoder_opened: true
+    image_format: PNG
+    dimensions: [2, 2]
+    second_retrieval_sha256_identical: true
+    unknown_blob_locator_404_fail_closed: true
+    namespace_collision_rejected:
+      - chatgpt_file_id
+      - openai_api_file_id
+  conclusion: GITHUB_BLOB_PROVIDER_PROTOCOL_CAN_DEREFERENCE_EXACT_BYTES
+
+current_chatgpt_github_connector_probe:
+  evidence_class: CURRENT_TOOL_SURFACE_OBSERVATION
+  target_blob_sha: 8251a66290e1619b2262fa2d6ac0429d134e4b23
+  attempts:
+    - action: GitHub.fetch_blob
+      outcome: FAILED
+      observed_error_class: UnicodeDecodeError
+      interpretation: current connector attempted UTF-8 decode of binary PNG and did not return a binary/file reference
+    - action: GitHub.fetch_on_git_blob_endpoint
+      outcome: FAILED
+      observed_error_class: UTF8_ONLY_TRANSPORT
+      interpretation: current connector only accepts UTF-8 text for this path
+  control_probe:
+    text_ppm_blob_sha: b3fd14ab93bc7bc086a6c15e25ca8eb623d3b881
+    text_blob_fetch: success
+    interpretation: connector can dereference text blob content but this does not prove arbitrary binary image transport
+  conclusion: GITHUB_PROVIDER_PROTOCOL_PASS_DOES_NOT_EQUAL_CURRENT_CHATGPT_CONNECTOR_BINARY_TRANSPORT_PASS
+
+backend_research_snapshot:
+  github_blob:
+    provider_protocol: supports_blob_content_retrieval
+    current_chatgpt_connector_binary_transport: failed_in_current_tool_surface
+    production_public_repo_use: forbidden_for_formal_mother_images
+    next: keep_as_protocol_reference_not_current_production_choice
+  openai_api_files:
+    provider_protocol: file_content_endpoint_exists
+    locator_namespace: openai_api_file_id
+    relation_to_chatgpt_file_id: unverified_and_must_remain_distinct
+    needs: credential_and_custom_adapter
+    user_approval_gate_before_real_pilot: true
+  r2_s3:
+    provider_protocol: GetObject_returns_bytes
+    durable_locator: bucket_ref_plus_object_key_plus_expected_sha256
+    presigned_url: runtime_capability_not_durable_identity
+    needs: account_bucket_credentials_and_custom_adapter
+    user_approval_gate_before_real_pilot: true
+
+formal_pilot_versions:
+  - EUS-VER-000002
+  - EUS-VER-000011
+  - EUS-VER-000008
+formal_bytes_republished: false
+formal_version_identity_changed: false
+production_cross_session_status_changed: false
+generation_reference_binding_tested: false
+
+next_gate:
+  - independent_review_of_phase_0_1_research_and_poc
+  - choose_next_real_backend_candidate_before_any_user_credential_or_storage_action
+  - do_not_republish_formal_pilot_bytes_without_explicit_user_approval
