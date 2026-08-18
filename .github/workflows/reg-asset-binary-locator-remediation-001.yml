@@ -27,3 +27,36 @@ jobs:
           python-version: '3.12'
       - run: python -m pip install --disable-pip-version-check Pillow
       - run: python '11_验收/binary_locator_remediation/github_blob_poc.py'
+
+  r2-phase2a-contract-and-capability:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      EUSTIA_R2_POC_ENABLED: ${{ secrets.EUSTIA_R2_POC_ENABLED }}
+      R2_ENDPOINT_URL: ${{ secrets.EUSTIA_R2_ENDPOINT_URL }}
+      R2_ACCESS_KEY_ID: ${{ secrets.EUSTIA_R2_ACCESS_KEY_ID }}
+      R2_SECRET_ACCESS_KEY: ${{ secrets.EUSTIA_R2_SECRET_ACCESS_KEY }}
+      R2_BUCKET: ${{ secrets.EUSTIA_R2_BUCKET }}
+      R2_TEST_PREFIX: eustia-binary-locator-poc
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install --disable-pip-version-check Pillow boto3
+      - name: Structural fail-closed contract tests
+        run: python '11_验收/binary_locator_remediation/r2_phase2a_poc.py' --structural
+      - name: Report external capability gate without leaking values
+        shell: bash
+        run: |
+          set +e
+          python '11_验收/binary_locator_remediation/r2_phase2a_poc.py' --capability-report
+          code=$?
+          if [ "$code" -eq 78 ]; then
+            echo 'PHASE_2A_LIVE_STATUS=STOP_FOR_EXTERNAL_CAPABILITY' >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          exit "$code"
+      - name: Real authenticated R2 provider runtime PoC
+        if: env.EUSTIA_R2_POC_ENABLED == 'true'
+        run: python '11_验收/binary_locator_remediation/r2_phase2a_poc.py' --live
