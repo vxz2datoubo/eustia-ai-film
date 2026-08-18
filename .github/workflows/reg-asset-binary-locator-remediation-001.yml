@@ -1,0 +1,29 @@
+name: REG Asset Binary Locator Remediation 001
+
+on:
+  pull_request:
+    branches:
+      - gpt/asset-retrieval-cross-session-v1
+    paths:
+      - '11_验收/binary_locator_remediation/**'
+      - '.github/workflows/reg-asset-binary-locator-remediation-001.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: reg-asset-binary-locator-remediation-001-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  github-blob-synthetic-poc:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install --disable-pip-version-check Pillow
+      - run: python '11_验收/binary_locator_remediation/github_blob_poc.py'
