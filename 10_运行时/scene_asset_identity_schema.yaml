@@ -1,5 +1,5 @@
 schema_id: EUSTIA_SCENE_ASSET_IDENTITY
-version: 1.3.0
+version: 1.4.0
 status: active
 confirmed_by_user: 2026-08-18
 scope: formal_scene_assets_camera_anchors_views_logical_media_assets_media_versions_locators_relations_and_retrieval_separation
@@ -11,7 +11,7 @@ purpose:
   - 允许正式母图被反复修改而不破坏上层Scene、Camera Anchor、View、Asset或Relation引用
   - 避免依赖文件名、左右称呼、正反打称呼、旧语义ID或同名覆盖猜方向和版本
   - 支持GitHub、ChatGPT Library、未来ComfyUI、Unreal、OpenUSD、OTIO及其他存储迁移
-  - 明确身份解析与二进制取回、像素打开、像素核验、生成参考绑定是不同层级，禁止false-green
+  - 明确身份解析、durable历史证据、当前attempt、二进制取回、像素打开、像素核验与生成参考绑定是不同层级，禁止false-green
 
 source_authority:
   world_topology: 05_场景与空间/00_项目地图文件.md
@@ -54,6 +54,8 @@ resolution_layer_separation:
     - media_asset_identity
     - media_version_identity
     - locator_metadata
+    - durable_historical_evidence
+    - invocation_local_retrieval_attempt
     - binary_retrieval
     - pixel_open
     - pixel_identity_verification
@@ -61,10 +63,11 @@ resolution_layer_separation:
   invariants:
     - identity_resolved_does_not_imply_binary_retrieved
     - locator_found_does_not_imply_locator_retrievable
+    - historical_registration_evidence_does_not_imply_current_attempt_execution
     - binary_retrieved_does_not_imply_pixels_opened
     - pixels_opened_does_not_imply_pixels_verified
     - pixels_verified_does_not_imply_generation_reference_bound
-  reporting_rule: 必须按实际到达层级报告，不得把“找到File ID/文件名”描述成“已经看到或调用正式母图”。
+  reporting_rule: 必须按本次attempt实际到达层级报告，不得把历史登记true、File ID或文件名描述成当前已经看到或调用正式母图。
 
 id_namespaces:
   scene:
@@ -239,6 +242,7 @@ entities:
       - version_id一旦分配不可复用到不同像素内容
       - 一个active asset最多一个current版本
       - current版本切换必须在新版本像素核验完成后进行
+      - media_version.pixel_verified是版本登记时的durable身份核验事实，不是任意后续attempt的current execution truth
       - 同一像素重新上传且content_hash相同，只更新locator，不创建新version
       - 像素改变但Scene、Camera Anchor、View、media_role和variant职责不变时创建新version
       - 时间、天气、光照职责或media_role发生有意变化时优先建立独立asset variant，而不是把并列变体伪装成版本修订
@@ -286,10 +290,11 @@ resolver:
     - 若用户要求正反打/互看/对位，查询relation，不自行猜反向资产
     - 根据当前连续性的时间、天气、光照、损伤和媒体职责选择media_asset
     - 在resolver manifest中读取该asset的current_version_id，除非任务显式pin旧media_version_id
+    - 为本次调用创建invocation-local retrieval attempt并从NOT_ATTEMPTED开始
     - 收集目标version的eligible locators
     - 按asset_retrieval_policy与当前工具能力尝试实际二进制取回
     - 打开正式像素并核验content hash、尺寸与必要视觉身份
-    - 只有真实绑定到生成工具后才能声明“正式母图已作为生成参考调用”
+    - 生图时只有存在有效Generation Reference Binding Receipt且outcome=BOUND才能声明正式母图已作为生成参考调用
   forbidden_shortcuts:
     - 从storage_filename推断世界方向
     - 从legacy Asset ID中的NORTH/SOUTH/LEFT/RIGHT推断世界方向
@@ -297,6 +302,7 @@ resolver:
     - 在同方向存在多个机位时跳过camera_anchor
     - 把File ID或文件名当作Asset身份
     - 把File ID存在或file_library_title存在当作已成功跨会话取回
+    - 把registration_evidence中的历史true当作当前attempt已执行
     - 把locator found当作binary retrieved
     - 把binary retrieved当作pixels verified
     - 把pixels verified当作generation reference bound
@@ -377,7 +383,7 @@ legacy_scene_asset_migration:
     - 分配新的opaque scene/camera_anchor/view/asset/relation ID（仅对本单元需要的实体）
     - 为当前实际像素分配media_version_id并记录content_hash、pixel_verified和verified locator
     - 把asset_id的current_version_id写入resolver manifest
-    - 初始化该version的cross-session retrieval readiness，默认不超过current_session_only
+    - 写入registration_evidence并把该version的authoritative cross_session_status初始化为UNVERIFIED
     - 写入中文display_name_zh和完整空间元数据
     - 全仓搜索旧ID、旧正式名和旧方向别名的活动引用
     - 串行更新所有活动canonical引用
@@ -401,7 +407,7 @@ formal_asset_replacement:
     - 核验像素、空间、方向、职责和连续性
     - 核验通过后原子式切换current_version指针并把旧current标记superseded
     - 检查默认指针、Relation、当前镜头与回归绑定
-    - 对新current version初始化或更新retrieval readiness；不得因版本切换自动继承旧version的cross_session_verified
+    - 对新current version写入registration_evidence并初始化authoritative cross_session_status=UNVERIFIED；不得因版本切换自动继承旧version的CROSS_SESSION_VERIFIED
     - FETCH AGAIN验证
   deletion_policy:
     - 普通替换不物理删除旧版本
@@ -430,9 +436,12 @@ validation:
     - no_direction_inference_from_opaque_id
     - no_active_reference_to_retired_legacy_id_after_transaction_close
   retrieval_integrity:
-    - locator_metadata_does_not_imply_cross_session_success
-    - cross_session_verified_requires_real_new_chat_binary_retrieval_and_pixel_verification
-    - generation_reference_claim_requires_reference_binding_success
+    - registration_evidence_must_not_initialize_new_attempt
+    - new_attempt_starts_NOT_ATTEMPTED_with_UNKNOWN_execution_values
+    - authoritative_cross_session_truth_is_cross_session_status_only
+    - forbidden_derived_cross_session_fields_cause_CROSS_SESSION_STATE_CONTRADICTION
+    - CROSS_SESSION_VERIFIED_requires_real_new_chat_binary_retrieval_and_pixel_verification_evidence
+    - generation_reference_claim_requires_valid_binding_receipt_outcome_BOUND
     - failed_pinned_version_cannot_fallback_to_current_version
     - failed_formal_asset_retrieval_cannot_fallback_to_semantically_similar_candidate
   duplicate_guard:
@@ -442,11 +451,11 @@ validation:
     - 涉及正反打、空间方向、道路、桥上下、人物或摄影机移动时必须读取地图
     - 涉及正式场景图时必须读取本schema、视觉资产登记库、resolver manifest与asset_retrieval_policy
     - 调用资产前先解析camera_anchor与view，再解析media_asset和目标media_version
-    - 如果任务需要实际参考正式母图，必须继续完成binary retrieval→pixel open→pixel verification；生图时还必须完成reference binding
+    - 如果任务需要实际参考正式母图，必须为本次调用新建attempt并继续完成binary retrieval→pixel open→pixel verification；生图时还必须完成binding receipt
 
 research_basis:
   evidence_record: ASSET-IDENTITY-SYSTEM-2026-08-14
   versioning_extension_record: ASSET-VERSION-RESOLVER-2026-08-14
   semantic_anchor_naming_refinement: USER-CONFIRMED-2026-08-18
   cross_session_retrieval_extension: USER-CONFIRMED-2026-08-18
-  maturity_note: 用户确认的项目架构、版本解析扩展与语义机位命名规则为active；跨会话retrieval方法已进入candidate实施，必须经真实新会话验收后才可晋级。
+  maturity_note: 用户确认的项目架构、版本解析扩展与语义机位命名规则为active；跨会话retrieval方法已进入candidate实施，必须经结构复审与真实新会话验收后才可晋级。
