@@ -5,6 +5,7 @@ read_sets:
       - AI电影系统#relevant_sections_only
       - 当前改编剧本#hit_range
       - 连续性与当前生产状态#relevant_work_item
+      - director_route_index#symptom_scan+mandatory_reads
       - learning_application_gate#pre_directing_gate+pre_output_gate
       - proactive_execution_opportunity_router#next_step_scan
     conditional:
@@ -22,6 +23,7 @@ read_sets:
       evidence: 官方资料与证据索引#only_if_research_or_tool_uncertain
       proactive_evidence: 主动协作与成本路由证据索引#when_proactive_intervention_cost_routing_or_next_step_behavior_is_being_evaluated
       learning: 反馈反推与系统反哺引擎#relevant_lessons
+      director_feedback_learning_cases: 导演反馈学习案例#when_route_or_learning_gate_matches_case
       learning_conflict_evidence: 学习应用与冲突裁决证据索引#only_if_conflict_revalidation_or_learning_system_question
       model_real_generation_feedback: C-DANCE2.5真实生成反馈库#when_cdance_seedance_2_5_prompting_generation_reverse_observation_or_version_bound_behavior_is_relevant
       high_dynamic_motion: high_dynamic_motion_prompt_compiler#when_expert_motion_parkour_climbing_combat_sport_dynamic_vitality_or_generic_motion_failure_is_relevant
@@ -50,6 +52,7 @@ read_sets:
       sound_regression: sound_director_regression_cases#targeted_eval_or_regression
       suno_prompt_regression: suno_prompt_regression_cases#A_B_or_version_revalidation
       learning: 反馈反推与系统反哺引擎#relevant_sound_lessons
+      director_feedback_learning_cases: 导演反馈学习案例#when_sound_or_dialogue_case_is_relevant
       golden_prompt_cases: 优秀提示词案例库#only_if_a_sound_or_suno_precedent_is_relevant
       golden_media_evidence: golden_media_evidence_schema#when_audio_or_video_output_evidence_is_part_of_the_case
       golden_case_director_pull: golden_case_director_pull_schema#when_golden_case_sound_performance_or_editing_analysis_is_relevant
@@ -107,6 +110,7 @@ read_sets:
       - 官方资料与证据索引
       - UNKNOWN_REGISTRY
     conditional:
+      director_feedback_learning_cases: 导演反馈学习案例#when_researching_or_revalidating_feedback-derived_director_knowledge
       scene_asset_identity: scene_asset_identity_schema#asset_identity_camera_anchor_view_relation_or_interop_research
       scene_media_resolver: scene_media_resolver_manifest#media_version_locator_migration_or_retrieval_research
       golden_media_evidence: golden_media_evidence_schema#when_prompt_output_media_pairing_temporal_video_evidence_aesthetic_retrieval_or_video_eval_is_researched
@@ -161,6 +165,7 @@ rules:
   local_targeted_retrieval_default: true
   global_expand_on_route_uncertainty: true
   director_task_must_read_project_index: true
+  directing_must_scan_director_route_index: true
   directing_learning_application_gate_required: true
   learning_retrieval_must_resolve_scope_and_conflicts_before_application: true
   episodic_surface_constraints_must_expire_outside_scope_unless_promoted: true
