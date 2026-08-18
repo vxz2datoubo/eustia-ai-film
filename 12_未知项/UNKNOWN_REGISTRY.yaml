@@ -69,20 +69,41 @@ unknowns:
 
   - id: U-ASSET-RETRIEVAL-001
     question: GitHub正式Scene/Camera Anchor/View/Asset/Media Version能否在独立新ChatGPT会话中稳定解析到正确Library/File ID locator，并实际取回、打开、核验正式图片像素，再在生图时真正绑定为参考图
-    impact: Source Authority、空间身份和Asset→current Media Version→locator可以正确路由，但 locator metadata 存在不等于新会话可解引用；若把File ID、Library title或resolver命中误报成正式像素已经取回，会产生高风险false-green并导致生图引用错误资产。
+    impact: Source Authority、空间身份和Asset→current Media Version→locator可以正确路由，但 locator metadata、历史登记像素证据与真实当前attempt是不同事实层；若把任一前置层误报为本轮binary/pixel/reference成功，会产生高风险false-green并导致生图引用错误资产。
     implementation:
       branch: gpt/asset-retrieval-cross-session-v1
       draft_pr: 8
+      predecessor_reviewed_head: daa16c9686b9e42cf877035093351f8364820cde
+      independent_review: 4957441560
+      independent_review_verdict: CHANGES_REQUIRED
       policy: 10_运行时/asset_retrieval_policy.yaml
-      identity_schema_version: 1.3.0
-      resolver_manifest_version: 1.2.0
+      policy_version: 1.1.0
+      identity_schema_version: 1.4.0
+      resolver_manifest_version: 1.3.0
       pilot_media_version_count: 12
-      architecture_state: implemented_on_review_branch_not_yet_accepted
+      architecture_state: structural_blockers_remediated_pending_independent_rereview
+    structural_remediation:
+      AIF-R8-B01:
+        status: structurally_addressed_pending_rereview
+        change: 删除durable current_session_* execution true；12个Version只保留registration_evidence，明确evidence_scope=registration_session。每个新attempt固定从NOT_ATTEMPTED与UNKNOWN执行值开始。
+      AIF-R8-B02:
+        status: structurally_addressed_pending_rereview
+        change: durable跨会话能力只允许cross_session_status一个authoritative truth；cross_session_verified与requires_new_chat_validation仅为derived projection且禁止持久化。矛盾字段触发CROSS_SESSION_STATE_CONTRADICTION并fail closed。
+      AIF-R8-B03:
+        status: structurally_addressed_pending_rereview
+        change: 新增Generation Reference Binding Receipt合同；REFERENCE_BOUND必须有目标Asset/Version、binary identity、tool/action、binding slot/outcome、tool evidence、attempt identity和failure code等可审计证据。工具无法提供attestation时保持REFERENCE_BIND_ATTESTATION_UNAVAILABLE。
+      AIF-R8-B04:
+        status: structurally_addressed_pending_rereview
+        change: REG-ASSET-RETRIEVAL-003绑定真实EUS-VER-000008及其两个locator和正式hash，作为STRUCTURAL_FIXTURE_ONLY测试stale→same-version fallback与all-fail；REG-ASSET-RETRIEVAL-004明确production pinned-old为NOT_EXECUTABLE_YET / NEEDS_REVALIDATION，只用非production synthetic graph验证结构逻辑。
     evidence:
       historical_failure: 2026-08-11 对钟楼正面、左右侧视图和桥南立面使用正式 File ID 检索时，只稳定命中资产总表与相关历史图片，未能直接打开对应正式图片卡；不得把语义相近候选图冒充正式资产。
-      current_session_registration: 2026-08-18 当前12个新体系正式Media Version在登记时均完成实际像素打开/核验，因此可记录current_session_only；这不构成cross_session_verified。
+      registration_observation: 2026-08-18 当前12个新体系正式Media Version在登记事务中均完成实际像素打开/核验；该事实现在只作为registration_evidence持久化，不构成任何新会话current attempt或CROSS_SESSION_VERIFIED证据。
       retrieval_state_rule: identity_resolved != version_resolved != locator_found != binary_retrieved != pixels_opened != pixels_verified != reference_bound
-      regression_cases: [REG-ASSET-RETRIEVAL-001, REG-ASSET-RETRIEVAL-002, REG-ASSET-RETRIEVAL-003, REG-ASSET-RETRIEVAL-004]
+      current_cross_session_status: 所有12个pilot Version仍为UNVERIFIED
+      production_new_chat_validation_performed: false
+      production_reference_binding_validation_performed: false
+      production_pinned_old_case_available: false
+      regression_cases: [REG-ASSET-RETRIEVAL-001, REG-ASSET-RETRIEVAL-002, REG-ASSET-RETRIEVAL-003, REG-ASSET-RETRIEVAL-004, REG-ASSET-RETRIEVAL-005, REG-ASSET-RETRIEVAL-006, REG-ASSET-RETRIEVAL-007]
     known_locator_risks:
       - EUS-VER-000001目前只有chatgpt_file_id作为跨会话候选，没有file_library_title
       - EUS-VER-000002目前只有chatgpt_file_id作为跨会话候选，没有file_library_title
@@ -90,14 +111,16 @@ unknowns:
       - EUS-VER-000011目前只有chatgpt_file_id作为跨会话候选，没有file_library_title
       - EUS-VER-000012目前只有chatgpt_file_id作为跨会话候选，没有file_library_title
       - 其余当前已有file_library_title与chatgpt_file_id的版本也仍未经过独立新会话真实dereference验证
-    safe_default: 继续以GitHub Asset Registry和resolver决定目标Asset与Media Version；实际正式母图调用必须按asset_retrieval_policy继续完成binary retrieval→pixel open→pixel identity verification。任一层失败时fail closed，明确报告最高成功层级与failure code，不得以语义相似候选图替代。生图只有reference确实绑定到生成工具后才能声明“已调用正式母图”。
+    safe_default: 继续以GitHub Asset Registry和resolver决定目标Asset与Media Version；每次实际母图调用都新建invocation-local attempt，从NOT_ATTEMPTED开始，按asset_retrieval_policy完成binary retrieval→pixel open→pixel identity verification。任一层失败时fail closed，不得以语义相似候选图替代。生图只有有效Generation Reference Binding Receipt证明目标binary进入generation reference input后才能声明REFERENCE_BOUND。
     next_action:
-      - 先完成Draft PR #8独立review，不把结构实现本身当成问题已解决
-      - 独立新ChatGPT会话执行REG-ASSET-RETRIEVAL-001三个positive case，禁止重新上传目标图
-      - 至少执行一次REG-ASSET-RETRIEVAL-003多locator stale→fallback负例
+      - 对修复后的新exact head执行独立GPT re-review，目标verdict为ACCEPT_FOR_NEW_CHAT_VALIDATION或继续CHANGES_REQUIRED
+      - 在结构复审通过前禁止执行REG-ASSET-RETRIEVAL-001正式production new-chat validation
+      - 结构复审通过后再在独立新ChatGPT会话执行三个positive case，禁止重新上传目标图
+      - 至少执行一次真实多locator fallback；STRUCTURAL_FIXTURE_ONLY不能冒充平台真实跨会话证据
       - 对无法跨会话取回的同一像素，优先按same_pixels_new_locator补稳定Library locator；只有确有必要时重新发布同像素，不创建新Media Version
-      - 真实通过后才把对应Version标记cross_session_verified；在足够场景通过前本Unknown保持open
-    status: open_implementation_candidate
+      - production自然出现真实superseded版本后再执行pinned-old真实验收；此前保持NEEDS_REVALIDATION
+      - 真实通过后才可把对应Version的cross_session_status改为CROSS_SESSION_VERIFIED
+    status: open_structural_remediation_ready_for_rereview
 
   - id: U-SEEDANCE-NEGATION-001
     question: Seedance 2.5 对主提示文本中的自然语言否定、否定作用域、绝对否定强度以及是否存在独立 negative-prompt 控制通道的官方精确定义是什么
