@@ -65,7 +65,6 @@ locator_priority:
     - current_conversation_file 可用于当前会话实际像素核验，但不能单独证明跨会话能力
     - derived_preview 只能承担预览或身份辅助，不得替代正式 color_master，除非该 Asset 本身的 media_role 就是 derived_preview
 
-# Durable canonical evidence and invocation-local execution state are deliberately separated.
 durable_vs_attempt_state:
   durable_manifest_may_store:
     - asset_and_media_version_identity
@@ -144,7 +143,6 @@ retrieval_state_machine:
     generation_reference_success: [REFERENCE_BOUND]
   reporting_rule: 只有本 attempt 到达对应层级后才能使用“已解析 / 已取回 / 已打开 / 已核验 / 已作为参考调用”等陈述。
 
-# Single authoritative durable cross-session truth. No duplicate writable booleans.
 cross_session_status:
   authoritative_field: cross_session_status
   enum:
@@ -276,7 +274,6 @@ generation_reference_gate:
     - valid_generation_reference_binding_receipt_with_outcome_BOUND
   fail_behavior: 不满足时可以继续做文字导演分析，但不得声称正式母图已经作为生成参考输入。
 
-# These fixtures are contract tests only. They do not call ChatGPT Library or a generation tool and cannot create production evidence.
 structural_fixture_execution:
   evidence_class: STRUCTURAL_FIXTURE_ONLY
   allowed_proof:
