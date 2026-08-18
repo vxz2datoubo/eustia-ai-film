@@ -100,6 +100,35 @@ read_sets:
       scene: 场景与空间设定库#when_scene_design_or_view_duty_may_change
       regression: director_regression_cases#when_existing_version_is_pinned_by_eval_or_reproducibility
 
+  formal_asset_retrieval:
+    always:
+      - PROJECT_INDEX.yaml
+      - scene_asset_identity_schema
+      - scene_media_resolver_manifest
+      - asset_retrieval_policy
+      - 视觉资产登记#bound_asset
+      - UNKNOWN_REGISTRY#U-ASSET-RETRIEVAL-001
+    conditional:
+      map: 00_项目地图文件#when_scene_position_direction_camera_orientation_or_relation_resolution_is_needed
+      scene: 场景与空间设定库#when_scene_semantics_are_needed_for_natural_language_resolution
+      continuity: 连续性与当前生产状态#when_time_weather_damage_or_active_binding_affects_asset_choice
+      regression: director_regression_cases#when_new_chat_fallback_pin_or_reference_binding_validation_is_being_evaluated
+    attempt_boundary:
+      durable_inputs:
+        - media_version_identity
+        - locator_metadata
+        - registration_evidence_as_historical_only
+        - authoritative_cross_session_status
+      invocation_local_outputs:
+        - attempt_id
+        - state
+        - locator_trace
+        - binary_retrieved
+        - pixels_opened
+        - pixels_verified
+        - generation_reference_binding_receipt
+      rule: 读取registration_evidence不得初始化或推进本轮attempt；本轮attempt始终从NOT_ATTEMPTED开始。
+
   system_research:
     always:
       - PROJECT_INDEX.yaml
@@ -154,7 +183,6 @@ read_sets:
       map: 00_项目地图文件#spatial_or_camera_direction_sensitive
       scene_asset_identity: scene_asset_identity_schema#formal_scene_asset_or_camera_anchor_sensitive
       scene_media_resolver: scene_media_resolver_manifest#formal_scene_media_version_or_locator_sensitive
-      asset_retrieval: asset_retrieval_policy#formal_scene_media_cross_session_retrieval_or_generation_reference_binding
       assets: 视觉资产登记#bound_assets
       continuity: 连续性与当前生产状态#relevant_work_item
       evidence: 优秀提示词案例学习证据索引#K2_K3_research_or_method_validation
@@ -183,8 +211,10 @@ rules:
   spatial_task_must_read_map: true
   formal_scene_asset_task_must_read_scene_asset_identity_schema: true
   formal_scene_media_resolution_must_read_resolver_manifest: true
-  formal_scene_reference_retrieval_must_read_asset_retrieval_policy: true
   formal_scene_asset_replacement_must_classify_version_variant_or_new_view: true
+  formal_asset_retrieval_must_initialize_attempt_NOT_ATTEMPTED: true
+  historical_registration_evidence_must_not_initialize_current_attempt: true
+  formal_generation_reference_claim_requires_binding_receipt_BOUND: true
   sound_relevant_task_must_read_sound_director: true
   suno_prompt_compilation_must_read_lexicon: true
   golden_prompt_explicit_user_verdict_must_run_two_step_ingestion: true
