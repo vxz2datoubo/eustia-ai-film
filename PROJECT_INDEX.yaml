@@ -132,6 +132,9 @@ review_branch_state:
   predecessor_verdict: CHANGES_REQUIRED
   structural_remediation_status: ready_for_independent_rereview
   production_new_chat_validation_allowed: false
+  production_reference_binding_validation_performed: false
+  production_cross_session_versions_promoted: 0
+  production_pinned_old_case_available: false
   merge_allowed: false
 
 external_binary_sources:
