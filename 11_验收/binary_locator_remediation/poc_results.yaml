@@ -1,6 +1,5 @@
 task_id: REG-ASSET-BINARY-LOCATOR-REMEDIATION-001
-phase: PHASE-1_SYNTHETIC_BINARY_DEREFERENCE_POC
-status: partial_pass_provider_protocol_blocked_current_chatgpt_connector_binary_transport
+status: phase_0_1_accepted_phase_2a_blocked_external_capability
 
 parent_dependency:
   pr: 8
@@ -9,6 +8,18 @@ parent_dependency:
 stacked_task:
   branch: gpt/reg-asset-binary-locator-remediation-001
   draft_pr: 9
+
+phase_0_1_review:
+  review_id: 4962321299
+  verdict: ACCEPT_PHASE_0_1
+  github_blob_provider_protocol: PASS
+  current_chatgpt_github_connector_arbitrary_binary_transport: NOT_AVAILABLE_IN_TESTED_ACTIONS
+  selected_next_backend: r2_object
+
+user_authorization:
+  comment_id: 5330299639
+  staged_execution_authorized: true
+  fail_closed_and_independent_review_still_required: true
 
 synthetic_fixture:
   path: 11_验收/binary_locator_remediation/synthetic_probe.png
@@ -21,9 +32,9 @@ synthetic_fixture:
 provider_protocol_poc:
   provider: github_blob_api
   evidence_class: SYNTHETIC_PROVIDER_PROTOCOL_POC_ONLY
-  github_actions:
-    run_id: 32142275705
-    job_id: 95727543153
+  exact_head_validation:
+    run_id: 32142427859
+    job_id: 95728039587
     conclusion: success
   observed:
     binary_bytes_retrieved: true
@@ -34,9 +45,7 @@ provider_protocol_poc:
     dimensions: [2, 2]
     second_retrieval_sha256_identical: true
     unknown_blob_locator_404_fail_closed: true
-    namespace_collision_rejected:
-      - chatgpt_file_id
-      - openai_api_file_id
+    namespace_collision_rejected: [chatgpt_file_id, openai_api_file_id]
   conclusion: GITHUB_BLOB_PROVIDER_PROTOCOL_CAN_DEREFERENCE_EXACT_BYTES
 
 current_chatgpt_github_connector_probe:
@@ -54,38 +63,29 @@ current_chatgpt_github_connector_probe:
   control_probe:
     text_ppm_blob_sha: b3fd14ab93bc7bc086a6c15e25ca8eb623d3b881
     text_blob_fetch: success
-    interpretation: connector can dereference text blob content but this does not prove arbitrary binary image transport
   conclusion: GITHUB_PROVIDER_PROTOCOL_PASS_DOES_NOT_EQUAL_CURRENT_CHATGPT_CONNECTOR_BINARY_TRANSPORT_PASS
 
-backend_research_snapshot:
-  github_blob:
-    provider_protocol: supports_blob_content_retrieval
-    current_chatgpt_connector_binary_transport: failed_in_current_tool_surface
-    production_public_repo_use: forbidden_for_formal_mother_images
-    next: keep_as_protocol_reference_not_current_production_choice
-  openai_api_files:
-    provider_protocol: file_content_endpoint_exists
-    locator_namespace: openai_api_file_id
-    relation_to_chatgpt_file_id: unverified_and_must_remain_distinct
-    needs: credential_and_custom_adapter
-    user_approval_gate_before_real_pilot: true
-  r2_s3:
-    provider_protocol: GetObject_returns_bytes
-    durable_locator: bucket_ref_plus_object_key_plus_expected_sha256
-    presigned_url: runtime_capability_not_durable_identity
-    needs: account_bucket_credentials_and_custom_adapter
-    user_approval_gate_before_real_pilot: true
+phase_2a_r2:
+  selected_backend: r2_object
+  adapter_code_ready: true
+  structural_fail_closed_tests_ready: true
+  secret_aware_ci_gate_ready: true
+  live_private_r2_provider_runtime_poc: NOT_EXECUTED
+  actual_chatgpt_runtime_binary_transport: NOT_EXECUTED
+  phase_status: STOP_FOR_EXTERNAL_CAPABILITY
+  blocker: current_executor_has_no_cloudflare_r2_account_bucket_credential_or_secret_management_connector
+  pass_gate: provider_runtime_plus_actual_chatgpt_binary_transport_plus_sha_and_pixel_open
 
 formal_pilot_versions:
   - EUS-VER-000002
   - EUS-VER-000011
   - EUS-VER-000008
 formal_bytes_republished: false
+formal_r2_locator_added: false
 formal_version_identity_changed: false
 production_cross_session_status_changed: false
 generation_reference_binding_tested: false
 
-next_gate:
-  - independent_review_of_phase_0_1_research_and_poc
-  - choose_next_real_backend_candidate_before_any_user_credential_or_storage_action
-  - do_not_republish_formal_pilot_bytes_without_explicit_user_approval
+phase_2b: BLOCKED_BY_PHASE_2A
+phase_2c: BLOCKED_BY_PHASE_2A
+phase_2d: BLOCKED_BY_PHASE_2A
