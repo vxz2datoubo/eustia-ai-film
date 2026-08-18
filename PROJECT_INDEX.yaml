@@ -47,6 +47,7 @@ canonical:
   learning_application_and_conflict_evidence: 09_资料证据/学习应用与冲突裁决证据索引.md
   scene_asset_identity_schema: 10_运行时/scene_asset_identity_schema.yaml
   scene_media_resolver_manifest: 10_运行时/scene_media_resolver_manifest.yaml
+  asset_retrieval_policy: 10_运行时/asset_retrieval_policy.yaml
   golden_media_evidence_schema: 10_运行时/golden_media_evidence_schema.yaml
   golden_case_director_pull_schema: 10_运行时/golden_case_director_pull_schema.yaml
   screen_observable_audible_ir_schema: 10_运行时/screen_observable_audible_ir_schema.yaml
@@ -93,6 +94,7 @@ effective_sources:
   09_资料证据/学习应用与冲突裁决证据索引.md: github_verified
   10_运行时/scene_asset_identity_schema.yaml: github_verified
   10_运行时/scene_media_resolver_manifest.yaml: github_verified
+  10_运行时/asset_retrieval_policy.yaml: github_branch_candidate
   10_运行时/golden_media_evidence_schema.yaml: github_verified
   10_运行时/golden_case_director_pull_schema.yaml: github_verified
   10_运行时/screen_observable_audible_ir_schema.yaml: github_verified
