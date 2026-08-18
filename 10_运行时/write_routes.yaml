@@ -20,6 +20,7 @@ routes:
   revision_checkpoint_current_state: 07_连续性与生产状态/连续性与当前生产状态.md
   revision_trace_and_learning: 08_系统学习/反馈反推与系统反哺引擎.md
   learning_evidence_and_outcome: 08_系统学习/反馈反推与系统反哺引擎.md
+  director_feedback_learning_case: 08_系统学习/导演反馈学习案例.yaml
   model_version_real_generation_feedback: 08_系统学习/C-DANCE2.5真实生成反馈库.md
   golden_prompt_learning_protocol: 08_系统学习/优秀提示词案例学习协议.md
   official_research_evidence: 09_资料证据/官方资料与证据索引.md
@@ -121,6 +122,7 @@ canonical_learning_gate:
     - sound_directing_method
     - suno_music_method
     - suno_prompt_lexicon
+    - director_feedback_learning_case
     - model_version_real_generation_feedback
   candidate_registration_requires:
     - operational_rule
@@ -133,6 +135,7 @@ canonical_learning_gate:
     - decide_maturity
     - write_operational_rule_to_target_canonical_or_mark_pending
     - keep_evidence_and_revision_trace_in_feedback_engine
+    - when_reusable_director_feedback_case_exists_record_or_update_director_feedback_learning_case
     - when_model_version_specific_store_real_generation_input_output_observation_in_model_feedback_library
     - create_or_update_targeted_eval_when_needed
     - fetch_again_and_verify_target_canonical
