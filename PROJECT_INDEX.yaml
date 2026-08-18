@@ -92,9 +92,9 @@ effective_sources:
   09_资料证据/声音导演与SUNO证据索引.md: github_verified
   09_资料证据/SUNO用户提示词资料摄取记录.md: github_verified
   09_资料证据/学习应用与冲突裁决证据索引.md: github_verified
-  10_运行时/scene_asset_identity_schema.yaml: github_verified
-  10_运行时/scene_media_resolver_manifest.yaml: github_verified
-  10_运行时/asset_retrieval_policy.yaml: github_verified
+  10_运行时/scene_asset_identity_schema.yaml: github_branch_candidate
+  10_运行时/scene_media_resolver_manifest.yaml: github_branch_candidate
+  10_运行时/asset_retrieval_policy.yaml: github_branch_candidate
   10_运行时/golden_media_evidence_schema.yaml: github_verified
   10_运行时/golden_case_director_pull_schema.yaml: github_verified
   10_运行时/screen_observable_audible_ir_schema.yaml: github_verified
@@ -102,12 +102,12 @@ effective_sources:
   10_运行时/high_dynamic_motion_prompt_compiler.yaml: github_verified
   10_运行时/learning_application_gate.yaml: github_verified
   10_运行时/source_authority.yaml: github_verified
-  10_运行时/read_sets.yaml: github_verified
-  10_运行时/write_routes.yaml: github_verified
+  10_运行时/read_sets.yaml: github_branch_candidate
+  10_运行时/write_routes.yaml: github_branch_candidate
   10_运行时/maturity_model.yaml: github_verified
   10_运行时/pending_canonical_writes.yaml: github_verified
-  10_运行时/director_route_index.yaml: github_verified
-  11_验收/director_regression_cases.yaml: github_verified
+  10_运行时/director_route_index.yaml: github_branch_candidate
+  11_验收/director_regression_cases.yaml: github_branch_candidate
   11_验收/learning_application_gate_regression_cases.yaml: github_verified
   11_验收/golden_prompt_cases.yaml: github_verified
   11_验收/golden_case_templates/导演级拉片模板.md: github_verified
@@ -117,7 +117,7 @@ effective_sources:
   11_验收/suno_prompt_regression_cases.yaml: github_verified
   11_验收/legacy_authority_regression_cases.yaml: github_verified
   11_验收/canonical_migration_integrity_audit.md: github_verified
-  12_未知项/UNKNOWN_REGISTRY.yaml: github_verified
+  12_未知项/UNKNOWN_REGISTRY.yaml: github_branch_candidate
   12_未知项/SOUND_UNKNOWN_REGISTRY.yaml: github_verified
   01_AI电影系统/AI电影系统.md: github_verified
   01_AI电影系统/声音导演系统.md: github_verified
