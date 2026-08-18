@@ -116,7 +116,6 @@ effective_sources:
   11_验收/sound_director_regression_cases.yaml: github_verified
   11_验收/suno_prompt_regression_cases.yaml: github_verified
   11_验收/legacy_authority_regression_cases.yaml: github_verified
-  11_验收/canonical_migration_integrity_audit.md: github_verified
   12_未知项/UNKNOWN_REGISTRY.yaml: github_branch_candidate
   12_未知项/SOUND_UNKNOWN_REGISTRY.yaml: github_verified
   01_AI电影系统/AI电影系统.md: github_verified
@@ -124,6 +123,16 @@ effective_sources:
   01_AI电影系统/SUNO提示词词库与编译映射.md: github_verified
   02_AI电影项目记忆/AI电影项目记忆.md: github_verified
   05_场景与空间/场景与空间设定库.md: github_verified
+
+review_branch_state:
+  draft_pr: 8
+  branch: gpt/asset-retrieval-cross-session-v1
+  predecessor_reviewed_head: daa16c9686b9e42cf877035093351f8364820cde
+  independent_review: 4957441560
+  predecessor_verdict: CHANGES_REQUIRED
+  structural_remediation_status: ready_for_independent_rereview
+  production_new_chat_validation_allowed: false
+  merge_allowed: false
 
 external_binary_sources:
   primary: ChatGPT Library
