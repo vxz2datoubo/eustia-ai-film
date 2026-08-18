@@ -81,6 +81,35 @@ routes:
       - realistic_flashback
       - medium_A_B_validation
 
+  - id: VN_TO_FILM_DIALOGUE
+    symptoms:
+      - GAL
+      - galgame
+      - 文字游戏台词
+      - 原作对白太书面
+      - 小说式对白
+      - 长句读起来成立但说出来不像真人
+      - 原作说明句需要电影化
+      - 台词需要更能表演和一次听懂
+    maturity: candidate
+    mandatory_reads:
+      - 08_系统学习/导演反馈学习案例.yaml#VN-TO-FILM-DIALOGUE-001
+    mandatory_scans:
+      - source_medium
+      - dramatic_information_to_preserve
+      - character_register
+      - dialogue_speakability
+      - breath_grouping
+      - emphasis_and_stress
+      - listener_one_pass_comprehension
+      - source_line_lock_status
+    candidate_axes:
+      - preserve_information_not_sentence_shape
+      - spoken_phrase_grouping
+      - playable_emphasis
+      - character_register_preservation
+      - terminology_clarity
+
   - id: SCREEN_EVIDENCE_GAP
     symptoms:
       - 提示词太概念
