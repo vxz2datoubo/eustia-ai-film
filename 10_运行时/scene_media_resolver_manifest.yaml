@@ -1,7 +1,7 @@
 manifest_id: EUSTIA_SCENE_MEDIA_RESOLVER
-version: 1.0.0
+version: 1.1.0
 status: active
-confirmed_by_user: 2026-08-14
+confirmed_by_user: 2026-08-18
 scope: formal_scene_media_asset_version_and_locator_resolution
 
 authority:
@@ -33,13 +33,7 @@ id_namespace:
     example: EUS-VER-000001
 
 version_lifecycle:
-  states:
-    - pending_verification
-    - current
-    - superseded
-    - archived
-    - missing_binary
-    - rejected
+  states: [pending_verification, current, superseded, archived, missing_binary, rejected]
   invariants:
     - 一个active正式Asset最多一个current版本
     - current版本必须属于同一asset_id
@@ -48,19 +42,8 @@ version_lifecycle:
     - 物理删除不作为普通替换流程的一部分
 
 locator_model:
-  allowed_types:
-    - chatgpt_file_id
-    - file_library_title
-    - current_conversation_file
-    - local_path
-    - github_content_url
-    - external_uri
-    - derived_preview
-  locator_status:
-    - verified
-    - unverified
-    - stale
-    - unavailable
+  allowed_types: [chatgpt_file_id, file_library_title, current_conversation_file, local_path, github_content_url, external_uri, derived_preview]
+  locator_status: [verified, unverified, stale, unavailable]
   rules:
     - 同一个Media Version可以有多个locator
     - locator变化不创建新Media Version
@@ -77,45 +60,17 @@ content_identity:
 
 classification_on_new_upload:
   same_pixels_new_locator:
-    condition:
-      - content_hash_equal
-      - logical_asset_same
-    action:
-      - keep_same_version_id
-      - add_or_refresh_locator
-      - do_not_move_asset_identity
+    condition: [content_hash_equal, logical_asset_same]
+    action: [keep_same_version_id, add_or_refresh_locator, do_not_move_asset_identity]
   same_asset_new_revision:
-    condition:
-      - content_hash_changed
-      - scene_same
-      - camera_anchor_same
-      - view_same
-      - media_role_same
-      - variant_dimensions_same
-    action:
-      - create_new_media_version
-      - verify_pixels
-      - set_previous_current_to_superseded
-      - move_current_version_pointer_after_verification
+    condition: [content_hash_changed, scene_same, camera_anchor_same, view_same, media_role_same, variant_dimensions_same]
+    action: [create_new_media_version, verify_pixels, set_previous_current_to_superseded, move_current_version_pointer_after_verification]
   new_variant_asset:
-    condition_examples:
-      - time_state_intentionally_changed
-      - lighting_state_intentionally_changed
-      - weather_state_intentionally_changed
-      - media_role_changed_from_color_master_to_depth_or_white_model
-    action:
-      - keep_same_view_when_spatial_view_is_same
-      - create_or_resolve_separate_asset_id
-      - version_inside_that_asset_separately
+    condition_examples: [time_state_intentionally_changed, lighting_state_intentionally_changed, weather_state_intentionally_changed, media_role_changed_from_color_master_to_depth_or_white_model]
+    action: [keep_same_view_when_spatial_view_is_same, create_or_resolve_separate_asset_id, version_inside_that_asset_separately]
   new_view_or_anchor:
-    condition_examples:
-      - camera_position_changed_materially
-      - camera_facing_changed_to_another_view
-      - projection_or_top_orientation_defines_new_view_duty
-    action:
-      - create_or_resolve_new_camera_anchor_or_view
-      - create_separate_asset_id
-      - do_not_treat_as_revision_of_old_asset
+    condition_examples: [camera_position_changed_materially, camera_facing_changed_to_another_view, projection_or_top_orientation_defines_new_view_duty]
+    action: [create_or_resolve_new_camera_anchor_or_view, create_separate_asset_id, do_not_treat_as_revision_of_old_asset]
 
 replacement_transaction:
   trigger_examples:
@@ -172,9 +127,247 @@ shot_binding_policy:
     - 已生成镜头、回归案例、复现任务或需要精确追溯时可额外锁定media_version_id
     - 若镜头显式锁定media_version_id，不因current版本更新而自动重指向
 
-assets: {}
+assets:
+  EUS-AST-000001:
+    display_name_zh: 平民区·绯灯街·蔷薇酒馆门前街段机位·朝南主视图·阴天日间彩色母图
+    current_version_id: EUS-VER-000001
+    versions:
+      - version_id: EUS-VER-000001
+        asset_id: EUS-AST-000001
+        revision_no: 1
+        lifecycle_status: current
+        content_hash: sha256:c02cfb9760f2c1b99ebe9dfa57f6fd513c74dd70c50df52a2d209b68bcc35c5f
+        pixel_verified: true
+        created_at: 2026-08-18
+        source_file_id: file_0000000017dc81fd81fe510f39aef09a
+        storage_filename: EUS-VER-000001.png
+        mime_type: image/png
+        dimensions: [1448, 1086]
+        provenance: user_uploaded_and_user_confirmed_formal_asset
+        locators:
+          - {type: chatgpt_file_id, value: file_0000000017dc81fd81fe510f39aef09a, status: verified}
+          - {type: current_conversation_file, value: /mnt/data/d9f8d0a8-77a2-4ba7-97b9-0a1637dde047.png, status: verified}
+  EUS-AST-000002:
+    display_name_zh: 平民区·绯灯街·蔷薇酒馆门前街段机位·朝北主视图·阴天日间彩色母图
+    current_version_id: EUS-VER-000002
+    versions:
+      - version_id: EUS-VER-000002
+        asset_id: EUS-AST-000002
+        revision_no: 1
+        lifecycle_status: current
+        content_hash: sha256:2fe51963d592a2189e6390ab92a3173d00b3a9d9af0cd4e56162ba01360a3828
+        pixel_verified: true
+        created_at: 2026-08-18
+        source_file_id: file_00000000e9ac81fdb734e021f5bcb5df
+        storage_filename: EUS-VER-000002.png
+        mime_type: image/png
+        dimensions: [1448, 1086]
+        provenance: user_uploaded_and_user_confirmed_formal_asset
+        locators:
+          - {type: chatgpt_file_id, value: file_00000000e9ac81fdb734e021f5bcb5df, status: verified}
+          - {type: current_conversation_file, value: /mnt/data/b021b4d7-6260-4809-a387-92718d9c724e.png, status: verified}
+  EUS-AST-000003:
+    display_name_zh: 平民区·绯灯街·莉莉会所·前厅入口内侧机位·朝西主视图·暖光室内彩色母图
+    current_version_id: EUS-VER-000003
+    versions:
+      - version_id: EUS-VER-000003
+        asset_id: EUS-AST-000003
+        revision_no: 1
+        lifecycle_status: current
+        content_hash: sha256:93e2cc81d9e79639671990b2229fb7a51fd61a7f32fbc6ad65731d8bae426706
+        pixel_verified: true
+        created_at: 2026-08-18
+        source_file_id: file_0000000020f881fd8bdfa46e2d4a9ca8
+        storage_filename: EUS-VER-000003.png
+        mime_type: image/png
+        dimensions: [1448, 1086]
+        provenance: user_uploaded_formal_asset_direction_derived_from_locked_entry_axis
+        locators:
+          - {type: chatgpt_file_id, value: file_0000000020f881fd8bdfa46e2d4a9ca8, status: verified}
+          - {type: file_library_title, value: 210平民区-红灯区-莉莉会所-吧台.png, status: verified}
+          - {type: current_conversation_file, value: /mnt/data/210平民区-红灯区-莉莉会所-吧台.png, status: verified}
+  EUS-AST-000004:
+    display_name_zh: 平民区·绯灯街·莉莉会所·主大厅帘幕内侧机位·朝西总览视图·暖光室内彩色母图
+    current_version_id: EUS-VER-000004
+    versions:
+      - version_id: EUS-VER-000004
+        asset_id: EUS-AST-000004
+        revision_no: 1
+        lifecycle_status: current
+        content_hash: sha256:086dfc0243875097fe6ec6e1199c5e986aca5776c3d674f03ef4d9bb3db12799
+        pixel_verified: true
+        created_at: 2026-08-18
+        source_file_id: file_0000000068a081fd8e3d04c9f681d7af
+        storage_filename: EUS-VER-000004.png
+        mime_type: image/png
+        dimensions: [1448, 1086]
+        provenance: user_uploaded_formal_asset_direction_derived_from_locked_entry_axis
+        locators:
+          - {type: chatgpt_file_id, value: file_0000000068a081fd8e3d04c9f681d7af, status: verified}
+          - {type: file_library_title, value: 210平民区-红灯区-莉莉会所-大厅.png, status: verified}
+          - {type: current_conversation_file, value: /mnt/data/210平民区-红灯区-莉莉会所-大厅.png, status: verified}
+  EUS-AST-000005:
+    display_name_zh: 平民区·绯灯街·莉莉会所·主大厅卡座区机位·朝西主视图·暖光室内彩色母图
+    current_version_id: EUS-VER-000005
+    versions:
+      - version_id: EUS-VER-000005
+        asset_id: EUS-AST-000005
+        revision_no: 1
+        lifecycle_status: current
+        content_hash: sha256:67cc2232681cc06837fa929c3bb2a581c942a938c401b8bd87a0e2d95a8e9919
+        pixel_verified: true
+        created_at: 2026-08-18
+        source_file_id: file_00000000c66881fdaab0a6cef4d69146
+        storage_filename: EUS-VER-000005.png
+        mime_type: image/png
+        dimensions: [1448, 1086]
+        provenance: user_uploaded_formal_asset_direction_derived_from_locked_entry_axis
+        locators:
+          - {type: chatgpt_file_id, value: file_00000000c66881fdaab0a6cef4d69146, status: verified}
+          - {type: file_library_title, value: 210平民区-红灯区-莉莉会所-卡座.png, status: verified}
+          - {type: current_conversation_file, value: /mnt/data/210平民区-红灯区-莉莉会所-卡座.png, status: verified}
+  EUS-AST-000006:
+    display_name_zh: 平民区·绯灯街·莉莉会所·二楼回廊办公区机位·朝西主视图·暖光室内彩色母图
+    current_version_id: EUS-VER-000006
+    versions:
+      - version_id: EUS-VER-000006
+        asset_id: EUS-AST-000006
+        revision_no: 1
+        lifecycle_status: current
+        content_hash: sha256:8e79565bfb24caf2b1fd4ba39613bdf2bb4e1c31d072a599a0352d52e941d116
+        pixel_verified: true
+        created_at: 2026-08-18
+        source_file_id: file_00000000145081fdac5978473cdc4ff4
+        storage_filename: EUS-VER-000006.png
+        mime_type: image/png
+        dimensions: [1448, 1086]
+        provenance: user_uploaded_formal_asset_direction_medium_inference_pending_reverse_view_revalidation
+        locators:
+          - {type: chatgpt_file_id, value: file_00000000145081fdac5978473cdc4ff4, status: verified}
+          - {type: file_library_title, value: 210平民区-红灯区-莉莉会所-二楼.png, status: verified}
+          - {type: current_conversation_file, value: /mnt/data/210平民区-红灯区-莉莉会所-二楼.png, status: verified}
+  EUS-AST-000007:
+    display_name_zh: 平民区·主街与高架石桥·北朝上鸟瞰顶视图·日间彩色母图
+    current_version_id: EUS-VER-000007
+    versions:
+      - version_id: EUS-VER-000007
+        asset_id: EUS-AST-000007
+        revision_no: 1
+        lifecycle_status: current
+        content_hash: sha256:be0e5f16f2111b9ad42b3a5f46ce062150c68a8f772fb9ed36338afc5871f334
+        pixel_verified: true
+        created_at: 2026-08-18
+        source_file_id: file_00000000179c81fdbea440e911464ac9
+        storage_filename: EUS-VER-000007.png
+        mime_type: image/png
+        dimensions: [1448, 1086]
+        provenance: user_uploaded_and_user_confirmed_north_up_top_view
+        locators:
+          - {type: chatgpt_file_id, value: file_00000000179c81fdbea440e911464ac9, status: verified}
+          - {type: file_library_title, value: 204平民区-主街道-顶视图.png, status: verified}
+          - {type: current_conversation_file, value: /mnt/data/204平民区-主街道-顶视图.png, status: verified}
+  EUS-AST-000008:
+    display_name_zh: 平民区·桥北东侧后街窄巷·巷口内侧机位·朝东主视图·夜雨彩色母图
+    current_version_id: EUS-VER-000008
+    versions:
+      - version_id: EUS-VER-000008
+        asset_id: EUS-AST-000008
+        revision_no: 1
+        lifecycle_status: current
+        content_hash: sha256:abb31820580e02d8b3abe7b44fd73a75e01bd74ba2e5824c7376022e9c1b706b
+        pixel_verified: true
+        created_at: 2026-08-18
+        source_file_id: file_00000000e3a881fd8ae4afc022e5dd4f
+        storage_filename: EUS-VER-000008.png
+        mime_type: image/png
+        dimensions: [1672, 941]
+        provenance: user_uploaded_and_user_confirmed_formal_asset
+        locators:
+          - {type: chatgpt_file_id, value: file_00000000e3a881fd8ae4afc022e5dd4f, status: verified}
+          - {type: file_library_title, value: 200贫民区-后街.png, status: verified}
+          - {type: current_conversation_file, value: /mnt/data/200贫民区-后街.png, status: verified}
+  EUS-AST-000009:
+    display_name_zh: 平民区·桥北东侧后街窄巷·逃跑主观机位·朝东主观视图·夜雨彩色母图
+    current_version_id: EUS-VER-000009
+    versions:
+      - version_id: EUS-VER-000009
+        asset_id: EUS-AST-000009
+        revision_no: 1
+        lifecycle_status: current
+        content_hash: sha256:18aaf3af6864f3973b9b167428f35b893e8ec4ff0b0d2e33e2a2e7000c0fa369
+        pixel_verified: true
+        created_at: 2026-08-18
+        source_file_id: file_00000000b8d481fdbf9ce93eef7a60fa
+        storage_filename: EUS-VER-000009.png
+        mime_type: image/png
+        dimensions: [2048, 877]
+        provenance: user_uploaded_and_user_confirmed_formal_asset
+        locators:
+          - {type: chatgpt_file_id, value: file_00000000b8d481fdbf9ce93eef7a60fa, status: verified}
+          - {type: file_library_title, value: 200贫民区-后街-主观视角.png, status: verified}
+          - {type: current_conversation_file, value: /mnt/data/200贫民区-后街-主观视角.png, status: verified}
+  EUS-AST-000010:
+    display_name_zh: 平民区·市集广场与钟楼·广场南侧中央机位·朝北主视图·日间彩色母图
+    current_version_id: EUS-VER-000010
+    versions:
+      - version_id: EUS-VER-000010
+        asset_id: EUS-AST-000010
+        revision_no: 1
+        lifecycle_status: current
+        content_hash: sha256:270ba936142c6048bd41cdc64cb2dd6a49bf4daee0433a7b688f388b4721ca08
+        pixel_verified: true
+        created_at: 2026-08-18
+        source_file_id: file_00000000e44081fd8bdbb2df39756d44
+        storage_filename: EUS-VER-000010.png
+        mime_type: image/png
+        dimensions: [1672, 941]
+        provenance: user_uploaded_and_user_confirmed_formal_asset
+        locators:
+          - {type: chatgpt_file_id, value: file_00000000e44081fd8bdbb2df39756d44, status: verified}
+          - {type: file_library_title, value: gpt.png, status: verified}
+          - {type: current_conversation_file, value: /mnt/data/gpt.png, status: verified}
+  EUS-AST-000011:
+    display_name_zh: 平民区·市集广场与钟楼·广场南侧中央机位·朝南主视图·日间彩色母图
+    current_version_id: EUS-VER-000011
+    versions:
+      - version_id: EUS-VER-000011
+        asset_id: EUS-AST-000011
+        revision_no: 1
+        lifecycle_status: current
+        content_hash: sha256:7ade2b22ef371b510b92fbc0f3cb5c3048ee4887915f09f38c1f7f9d809c14ce
+        pixel_verified: true
+        created_at: 2026-08-18
+        source_file_id: file_00000000592881fdbeb206fb3b668940
+        storage_filename: EUS-VER-000011.png
+        mime_type: image/png
+        dimensions: [1672, 941]
+        provenance: user_uploaded_and_user_confirmed_same_anchor_180_reverse_view
+        locators:
+          - {type: chatgpt_file_id, value: file_00000000592881fdbeb206fb3b668940, status: verified}
+          - {type: current_conversation_file, value: /mnt/data/4439ec95-1976-4783-af86-ed79e91a780d.png, status: verified}
+  EUS-AST-000012:
+    display_name_zh: 平民区·市集广场与钟楼·广场南侧中央机位·朝东主视图·日间彩色母图
+    current_version_id: EUS-VER-000012
+    versions:
+      - version_id: EUS-VER-000012
+        asset_id: EUS-AST-000012
+        revision_no: 1
+        lifecycle_status: current
+        content_hash: sha256:00118e5221e0e0f6566915b7aa35d6fd830ce6ca9a67b72320a279c29225792b
+        pixel_verified: true
+        created_at: 2026-08-18
+        source_file_id: file_000000001cc081fda96a638247ac8fd0
+        storage_filename: EUS-VER-000012.png
+        mime_type: image/png
+        dimensions: [1672, 941]
+        provenance: user_uploaded_and_user_confirmed_same_anchor_east_view
+        locators:
+          - {type: chatgpt_file_id, value: file_000000001cc081fda96a638247ac8fd0, status: verified}
+          - {type: current_conversation_file, value: /mnt/data/fadf7185-0fb7-4301-baba-8d7b503dc2a7.png, status: verified}
 
 migration_state:
-  legacy_scene_assets_have_not_entered_this_manifest: true
-  reason: 现有SCN-*场景图仍需按用户要求逐张重新上传或实际打开后完成像素核验与身份迁移
-  next_step: 用户逐张提供正式场景图；每张按identity schema与本manifest完成Scene/Camera/View/Asset/Version/Locator登记
+  first_new_identity_migration_completed: true
+  completed_at: 2026-08-18
+  migrated_asset_count: 12
+  remaining_legacy_scene_assets_require_pixel_reverification: true
+  note: 已迁移资产不建立old→new长期映射；历史legacy身份仅保留于Git历史。仍待用户重新提供的正交顶视图、钟楼朝西视图及其他pending_review历史图继续按单元迁移。
