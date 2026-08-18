@@ -1,5 +1,5 @@
 policy_id: EUSTIA_FORMAL_ASSET_RETRIEVAL
-version: 1.0.0
+version: 1.1.0
 status: active_candidate
 confirmed_by_user: 2026-08-18
 scope: natural_language_scene_routing_to_actual_formal_pixel_retrieval_and_generation_reference_binding
@@ -7,7 +7,7 @@ scope: natural_language_scene_routing_to_actual_formal_pixel_retrieval_and_gener
 purpose:
   - 把现有 Scene → Camera Anchor → View → Asset → Media Version → Locator 身份链升级为可执行的跨会话正式母图取回链
   - 严格区分 identity resolved、version resolved、locator found、binary retrieved、pixels opened、pixels verified、reference bound
-  - 防止“知道该用哪张图”被误报成“已经实际调用正式母图”
+  - 防止历史登记证据、locator metadata 或自报成功被误当成本轮 retrieval / generation execution evidence
   - 新会话中用户只提供自然语言剧情时，自动尝试解析并取回对应正式母图
 
 source_authority:
@@ -25,9 +25,10 @@ hard_invariants:
   - binary_retrieved_does_not_imply_pixels_opened
   - pixels_opened_does_not_imply_pixels_verified
   - pixels_verified_does_not_imply_reference_bound_to_generation
+  - durable_historical_observation_does_not_initialize_current_attempt_state
   - semantic_similarity_is_never_a_valid_substitute_for_formal_pixel_identity
   - current_conversation_path_is_ephemeral_and_cannot_by_itself_prove_cross_session_retrievability
-  - a_generation_reference_claim_requires_reference_binding_status_bound
+  - a_generation_reference_claim_requires_machine_auditable_binding_attestation
 
 resolution_pipeline:
   - parse_user_natural_language_story_or_directing_request
@@ -39,12 +40,14 @@ resolution_pipeline:
   - resolve_media_version:
       default: current_version_id
       pinned_override: explicit_media_version_id_when_reproducibility_is_required
+  - create_invocation_local_retrieval_attempt
   - collect_locators_from_resolver_manifest
   - rank_locators_by_context_and_persistence
   - attempt_actual_binary_retrieval
   - open_pixels
   - verify_pixel_identity_against_registered_version
-  - bind_verified_binary_as_generation_reference_when_generation_requires_reference
+  - when_generation_requires_reference_create_generation_reference_binding_receipt
+  - bind_verified_binary_as_generation_reference_only_when_attested
 
 locator_priority:
   principle: prefer_retrievable_persistent_locator_over_session_ephemeral_locator
@@ -58,42 +61,128 @@ locator_priority:
     - derived_preview
   notes:
     - 实际可用顺序必须服从当前工具能力；不能因为类型排序靠前就宣称可调用
-    - file_library_title 和 chatgpt_file_id 都只是 locator metadata，未经真实取回不得标记 cross_session_verified
-    - current_conversation_file 可用于当前会话实际像素核验，但跨会话状态最多为 current_session_only
+    - file_library_title 和 chatgpt_file_id 都只是 locator metadata，未经真实取回不得标记 CROSS_SESSION_VERIFIED
+    - current_conversation_file 可用于当前会话实际像素核验，但不能单独证明跨会话能力
     - derived_preview 只能承担预览或身份辅助，不得替代正式 color_master，除非该 Asset 本身的 media_role 就是 derived_preview
+
+# Durable canonical evidence and invocation-local execution state are deliberately separated.
+durable_vs_attempt_state:
+  durable_manifest_may_store:
+    - asset_and_media_version_identity
+    - locator_metadata
+    - immutable_historical_observations
+    - authoritative_cross_session_status
+    - cross_session_evidence_refs
+  durable_manifest_must_not_store_as_current_truth:
+    - current_session_binary_retrieved
+    - current_session_pixels_opened
+    - current_session_pixels_verified
+    - current_attempt_state
+  historical_observation_contract:
+    required:
+      - observed_at
+      - evidence_scope
+      - binary_retrieved
+      - pixels_opened
+      - pixels_verified
+      - evidence_ref
+    rules:
+      - evidence_scope 必须说明 registration_session、cross_session_validation_session 或其他已结束的观察范围
+      - 历史 true 只证明该次历史观察，不能推出当前 invocation 已执行任何 retrieval step
+  current_attempt_initialization:
+    state: NOT_ATTEMPTED
+    binary_retrieved: UNKNOWN
+    pixels_opened: UNKNOWN
+    pixels_verified: UNKNOWN
+    reference_bound: UNKNOWN
+    rule: 每次 retrieval invocation 都重新初始化，不从 durable historical evidence 继承 execution booleans
+
+retrieval_attempt_contract:
+  persistence: invocation_local_by_default
+  required:
+    - attempt_id
+    - session_scope_id
+    - started_at
+    - target_asset_id
+    - target_media_version_id
+    - version_resolution_mode
+    - state
+    - locator_trace
+  version_resolution_mode_enum: [CURRENT, PINNED]
+  state_enum:
+    - NOT_ATTEMPTED
+    - LOCATOR_FOUND
+    - BINARY_RETRIEVED
+    - PIXELS_OPENED
+    - PIXELS_VERIFIED
+    - REFERENCE_BOUND
+    - FAILED
+  locator_trace_item:
+    required: [locator_type, locator_value_or_redacted_identity, outcome]
+    outcome_enum: [NOT_TRIED, FOUND, STALE, UNAVAILABLE, RETRIEVED, FAILED]
+  rules:
+    - 新 attempt 默认 NOT_ATTEMPTED
+    - durable manifest 中 registration_evidence 的 true 不得改变新 attempt 初始状态
+    - 每次状态推进必须来自本 attempt 的真实工具或像素证据
+    - FAILED 必须记录 failure_code
 
 retrieval_state_machine:
   states:
-    - identity_unresolved
-    - identity_resolved
-    - version_resolved
-    - locator_found
+    - NOT_ATTEMPTED
+    - IDENTITY_RESOLVED
+    - VERSION_RESOLVED
+    - LOCATOR_FOUND
+    - BINARY_RETRIEVED
+    - PIXELS_OPENED
+    - PIXELS_VERIFIED
+    - REFERENCE_BOUND
+    - FAILED
+  success_definition:
+    routing_success: [IDENTITY_RESOLVED, VERSION_RESOLVED]
+    binary_success: [BINARY_RETRIEVED]
+    pixel_success: [PIXELS_OPENED, PIXELS_VERIFIED]
+    generation_reference_success: [REFERENCE_BOUND]
+  reporting_rule: 只有本 attempt 到达对应层级后才能使用“已解析 / 已取回 / 已打开 / 已核验 / 已作为参考调用”等陈述。
+
+# Single authoritative durable cross-session truth. No duplicate writable booleans.
+cross_session_status:
+  authoritative_field: cross_session_status
+  enum:
+    - UNVERIFIED
+    - CROSS_SESSION_VERIFIED
+    - STALE
+    - UNAVAILABLE
+    - REQUIRES_REPUBLISH
+  derived_projections:
+    cross_session_verified:
+      formula: cross_session_status == CROSS_SESSION_VERIFIED
+      persistence: forbidden
+    requires_new_chat_validation:
+      formula: cross_session_status in [UNVERIFIED, STALE]
+      persistence: forbidden
+  rules:
+    - 新登记正式资产默认 UNVERIFIED，除非确实完成独立新会话实测
+    - CROSS_SESSION_VERIFIED 必须有独立新会话 actual binary retrieval + pixel open + pixel identity verification evidence
+    - 曾成功但当前持久 locator 失效可转 STALE
+    - 所有可用持久 locator 均不可取回时按证据转 UNAVAILABLE 或 REQUIRES_REPUBLISH
+    - 如果 durable record 同时出现 authoritative field 与禁止持久化的 derived truth 字段，validator 必须以 CROSS_SESSION_STATE_CONTRADICTION fail closed，禁止 silent normalize
+
+cross_session_evidence_contract:
+  required_for_CROSS_SESSION_VERIFIED:
+    - evidence_id
+    - observed_at
+    - evidence_scope
+    - session_scope_id_or_equivalent
+    - media_version_id
+    - successful_locator_type
     - binary_retrieved
     - pixels_opened
     - pixels_verified
-    - reference_bound
-    - retrieval_failed
-  success_definition:
-    routing_success: [identity_resolved, version_resolved]
-    binary_success: [binary_retrieved]
-    pixel_success: [pixels_opened, pixels_verified]
-    generation_reference_success: [reference_bound]
-  reporting_rule: 只有到达对应层级后才能使用“已解析 / 已取回 / 已打开 / 已核验 / 已作为参考调用”等陈述。
-
-cross_session_status:
-  enum:
-    - unverified
-    - current_session_only
-    - cross_session_verified
-    - stale
-    - unavailable
-    - requires_republish
+    - content_identity_proof
+    - evidence_ref
   rules:
-    - 新登记正式资产默认 unverified，除非本次确实完成跨会话实测
-    - 当前会话路径成功只能证明 current_session_only
-    - cross_session_verified 必须来自新的独立会话实际 binary retrieval + pixel open/verification
-    - locator 曾经成功但当前失败时转 stale，不静默保持 verified
-    - 所有 locator 失败但正式身份仍存在时转 unavailable 或 requires_republish
+    - evidence_scope 必须是 independent_new_chat_session 或等价独立会话范围
+    - registration_session 证据不能用于 CROSS_SESSION_VERIFIED
 
 pixel_identity_verification:
   required_checks_when_available:
@@ -120,23 +209,57 @@ fail_closed:
     - PIXEL_IDENTITY_MISMATCH
     - TOOL_UNAVAILABLE
     - REFERENCE_BIND_FAILED
+    - REFERENCE_BIND_ATTESTATION_UNAVAILABLE
+    - CROSS_SESSION_STATE_CONTRADICTION
   forbidden_fallbacks:
     - use_semantically_similar_library_image
     - infer_formal_pixels_from_filename_or_old_asset_id
     - report_reference_used_when_only_metadata_was_resolved
     - silently_use_previous_version_when_current_version_failed
+    - silently_use_current_version_when_pinned_version_failed
   user_facing_behavior:
-    - 明确报告已经解析到的最高层级
+    - 明确报告本 attempt 已经到达的最高层级
     - 明确指出失败层级与 failure_code
     - 如果需要用户操作，优先要求重新提供目标正式图本体或可直接访问 locator，而不是让用户重新解释整个场景
 
 current_vs_pinned_version:
   default_directing_behavior: resolve_current_version
   reproducibility_behavior: honor_explicit_pinned_media_version_id
+  production_pinned_old_case_status: NEEDS_REVALIDATION
   rules:
     - current_version 切换后，未 pin 的长期导演调用自动解析到新版
     - 已 pin 的历史镜头、回归案例、复现任务继续解析原 Media Version
     - pinned Version locator 失效时不得偷偷改用 current Version
+    - 当前12个 migrated production assets 尚无 superseded old Version，不得伪造正式版本历史来让 pinned regression 看似可执行
+
+generation_reference_binding_receipt:
+  receipt_id_namespace: EUSTIA-REFBIND-ATTEMPT-LOCAL
+  persistence: attempt_evidence_or_regression_evidence
+  required:
+    - receipt_id
+    - retrieval_attempt_id
+    - target_asset_id
+    - target_media_version_id
+    - retrieved_binary_identity
+    - generation_tool
+    - generation_action
+    - binding_target
+    - binding_outcome
+    - evidence_ref
+    - executed_at
+    - failure_code
+  retrieved_binary_identity:
+    required_when_available: [content_hash, locator_type, locator_identity_or_redacted_identity]
+  binding_outcome_enum:
+    - BOUND
+    - FAILED
+    - REFERENCE_BIND_ATTESTATION_UNAVAILABLE
+  evidence_rules:
+    - BOUND 必须有真实 generation tool/action 的返回证据或等价可审计 tool-return evidence_ref
+    - receipt 的 target_asset_id 与 target_media_version_id 必须等于本 retrieval attempt 的目标
+    - retrieved_binary_identity 必须能够与已核验的目标 Media Version 建立同一性证明
+    - 只有文字 Prompt、只有 tool call、只有 pixels_verified、或 tool 没有证明目标 binary 进入 reference slot，均不能得到 BOUND
+    - 如果工具不暴露足够 binding attestation，则 binding_outcome=REFERENCE_BIND_ATTESTATION_UNAVAILABLE，attempt 不能进入 REFERENCE_BOUND
 
 generation_reference_gate:
   applies_when:
@@ -150,29 +273,35 @@ generation_reference_gate:
     - pixels_opened
     - pixels_verified
   required_before_generation_reference_success:
-    - generation_tool_received_or_was_explicitly_bound_to_the_verified_binary
+    - valid_generation_reference_binding_receipt_with_outcome_BOUND
   fail_behavior: 不满足时可以继续做文字导演分析，但不得声称正式母图已经作为生成参考输入。
 
 new_chat_regression_gate:
   requirement: true
+  structural_review_gate: BLOCKED_UNTIL_B01_B04_ACCEPTED
   pass_condition:
     - new_chat_session
     - no_reupload_of_target_asset
     - natural_language_only_input
     - correct_scene_anchor_view_asset_version_resolution
+    - current_attempt_initialized_NOT_ATTEMPTED
     - actual_binary_retrieval
     - actual_pixel_open_and_verification
   generation_extension_pass:
-    - when_generation_is_requested_reference_is_actually_bound_to_generation
+    - valid_generation_reference_binding_receipt_with_outcome_BOUND
   negative_tests:
+    - historical_registration_pixel_verification_must_not_initialize_current_attempt
+    - contradictory_cross_session_truth_fields_must_fail_closed
     - same_direction_multiple_camera_anchors_must_not_choose_by_direction_only
     - all_locators_fail_must_not_substitute_similar_image
     - pinned_old_version_must_not_follow_current_pointer
     - stale_first_locator_must_try_next_eligible_locator_without_false_green
+    - pixels_verified_without_binding_attestation_must_not_be_reference_bound
 
 writeback:
   retrieval_policy: 10_运行时/asset_retrieval_policy.yaml
-  version_locator_and_retrieval_state: 10_运行时/scene_media_resolver_manifest.yaml
+  version_locator_and_durable_cross_session_state: 10_运行时/scene_media_resolver_manifest.yaml
+  attempt_execution_state: invocation_local_not_canonical_manifest
   identity_semantics: 10_运行时/scene_asset_identity_schema.yaml
   director_route_trigger: 10_运行时/director_route_index.yaml
   read_routing: 10_运行时/read_sets.yaml
