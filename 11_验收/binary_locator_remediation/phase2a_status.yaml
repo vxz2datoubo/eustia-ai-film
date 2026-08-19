@@ -61,6 +61,7 @@ implemented_in_pr9:
   - secret-aware GitHub Actions capability gate
   - live authenticated Workers KV synthetic provider-runtime harness
   - private one-day workflow artifact bridge for current ChatGPT runtime transport probe
+  - branch-scoped push trigger for the remediation branch in addition to the stacked pull_request trigger
 
 phase_2a_structural:
   status: READY_FOR_CI
@@ -84,9 +85,11 @@ phase_2a_chatgpt_runtime_transport:
   provider_runtime_pass_alone_unlocks_phase_2b: false
 
 workflow_execution_note:
-  automatic_pull_request_run_observed_for_current_kv_commits: false
-  current_connector_can_dispatch_workflow: false
-  allowed_manual_fallback: run the existing workflow on branch gpt/reg-asset-binary-locator-remediation-001 using GitHub Actions workflow_dispatch, then return only the run id; no secret values need to be exposed
+  pull_request_run_for_recent_connector_commits_observed_via_current_connector: false
+  branch_scoped_push_trigger_added: true
+  workflow_dispatch_note: workflow_dispatch is not relied upon because this workflow is not present on the repository default branch
+  current_connector_can_list_push_triggered_workflow_runs: false
+  minimal_external_observability_fallback: WorkBuddy may report only the latest run id for this workflow/branch using GitHub UI or gh run list; no secret value or log content needs to be exposed
 
 phase_2b: BLOCKED_BY_PHASE_2A_FULL_GATE
 phase_2c: BLOCKED_BY_PHASE_2A_FULL_GATE
