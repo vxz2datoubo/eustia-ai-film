@@ -1,5 +1,5 @@
 task_id: REG-ASSET-BINARY-LOCATOR-REMEDIATION-001
-status: phase_0_1_accepted_phase_2a_blocked_external_capability
+status: phase_0_1_accepted_phase_2a_kv_runtime_validation_in_progress
 
 parent_dependency:
   pr: 8
@@ -14,12 +14,19 @@ phase_0_1_review:
   verdict: ACCEPT_PHASE_0_1
   github_blob_provider_protocol: PASS
   current_chatgpt_github_connector_arbitrary_binary_transport: NOT_AVAILABLE_IN_TESTED_ACTIONS
-  selected_next_backend: r2_object
+  selected_next_backend_at_review: r2_object
 
 user_authorization:
   comment_id: 5330299639
   staged_execution_authorized: true
   fail_closed_and_independent_review_still_required: true
+
+backend_substitution:
+  current: cloudflare_kv
+  source: user_supplied_WorkBuddy_report_2026_08_19
+  rationale: R2 could not be enabled in the user's current billing environment; Workers KV private PoC namespace and GitHub Actions secrets were provisioned instead
+  evidence_quality: USER_PROVIDED_EXTERNAL_EXECUTION_REPORT_PENDING_RUNTIME_REPRODUCTION
+  formal_asset_storage_authority_changed: false
 
 synthetic_fixture:
   path: 11_验收/binary_locator_remediation/synthetic_probe.png
@@ -65,27 +72,41 @@ current_chatgpt_github_connector_probe:
     text_blob_fetch: success
   conclusion: GITHUB_PROVIDER_PROTOCOL_PASS_DOES_NOT_EQUAL_CURRENT_CHATGPT_CONNECTOR_BINARY_TRANSPORT_PASS
 
-phase_2a_r2:
-  selected_backend: r2_object
+phase_2a_r2_historical_attempt:
+  selected_backend_at_review: r2_object
+  adapter_code_ready: true
+  structural_fail_closed_tests: PASS
+  secret_aware_ci_gate: PASS
+  live_private_r2_provider_runtime_poc: NOT_EXECUTED
+  reason: external_R2_enablement_not_available_in_current_user_environment
+  conclusion: retained_as_future_candidate_not_current_phase2a_backend
+
+phase_2a_cloudflare_kv:
+  locator_namespace: cloudflare_kv
+  durable_locator: namespace_ref_plus_key_plus_expected_sha256
+  provider_secret_coordinates_persisted: false
+  api_token_persisted: false
+  workbuddy_environment_report:
+    private_namespace_reported: true
+    github_actions_secrets_reported_present: true
+    dedicated_kv_token_reported: true
+    formal_media_uploaded: false
   adapter_code_ready: true
   structural_fail_closed_tests_ready: true
-  secret_aware_ci_gate_ready: true
-  live_private_r2_provider_runtime_poc: NOT_EXECUTED
-  actual_chatgpt_runtime_binary_transport: NOT_EXECUTED
-  phase_status: STOP_FOR_EXTERNAL_CAPABILITY
-  blocker: current_executor_has_no_cloudflare_r2_account_bucket_credential_or_secret_management_connector
-  pass_gate: provider_runtime_plus_actual_chatgpt_binary_transport_plus_sha_and_pixel_open
+  authenticated_provider_runtime_execution: PENDING_CI
+  actual_chatgpt_runtime_binary_transport: NOT_YET_VERIFIED
+  phase_2a_full_gate: NOT_PASSED_YET
 
 formal_pilot_versions:
   - EUS-VER-000002
   - EUS-VER-000011
   - EUS-VER-000008
 formal_bytes_republished: false
-formal_r2_locator_added: false
+formal_kv_locator_added: false
 formal_version_identity_changed: false
 production_cross_session_status_changed: false
 generation_reference_binding_tested: false
 
-phase_2b: BLOCKED_BY_PHASE_2A
-phase_2c: BLOCKED_BY_PHASE_2A
-phase_2d: BLOCKED_BY_PHASE_2A
+phase_2b: BLOCKED_BY_PHASE_2A_FULL_GATE
+phase_2c: BLOCKED_BY_PHASE_2A_FULL_GATE
+phase_2d: BLOCKED_BY_PHASE_2A_FULL_GATE
