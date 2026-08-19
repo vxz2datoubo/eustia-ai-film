@@ -1,6 +1,12 @@
 name: REG Asset Binary Locator Remediation 001
 
 on:
+  push:
+    branches:
+      - gpt/reg-asset-binary-locator-remediation-001
+    paths:
+      - '11_验收/binary_locator_remediation/**'
+      - '.github/workflows/reg-asset-binary-locator-remediation-001.yml'
   pull_request:
     branches:
       - gpt/asset-retrieval-cross-session-v1
