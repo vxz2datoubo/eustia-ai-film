@@ -1,6 +1,6 @@
 task_id: REG-ASSET-BINARY-LOCATOR-REMEDIATION-001
 phase: PHASE_2A_SYNTHETIC_RUNTIME_POC
-status: KV_ENVIRONMENT_REPORTED_READY_PENDING_REAL_RUNTIME_VERIFICATION
+status: PASS_SYNTHETIC_POC_PENDING_INDEPENDENT_REVIEW_BEFORE_FORMAL_KV_REPUBLISH
 
 review_and_authority:
   phase_0_1_review: 4962321299
@@ -10,11 +10,13 @@ review_and_authority:
   current_user_environment_backend: cloudflare_kv
   substitution_source: user_supplied_WorkBuddy_report_2026_08_19
   substitution_reason: R2_enablement_requires_payment_card_unavailable_to_user; Workers_KV_free_path_provisioned_instead
+  backend_substitution_independently_reviewed_for_formal_phase_2b: false
 
 fresh_control_plane:
   pr8_exact_head: ba6133d4e2fe9ce165367b8fe75da2a86d8031d3
   pr8_must_remain_unchanged: true
   pr9_branch: gpt/reg-asset-binary-locator-remediation-001
+  workflow_exact_head: b0c27bf1c3599825d9467f2c62575aa33b7e2b87
   main_observed: 88102339f6a1718384f0d26bc1e299ce5ce66c90
 
 workbuddy_environment_report:
@@ -34,7 +36,6 @@ workbuddy_environment_report:
     - EUSTIA_KV_NAMESPACE
   secret_values_persisted_in_git: false
   formal_mother_images_uploaded: false
-  note: report is accepted as external setup provenance but does not itself prove this PR runtime can consume the secrets or binary bytes
 
 cloudflare_kv_contract:
   durable_locator_namespace: cloudflare_kv
@@ -47,7 +48,8 @@ cloudflare_kv_contract:
     - namespace_id
     - api_token
   provider_value_limit_bytes: 26214400
-  official_api_model: authenticated_REST_value_GET_returns_value_body
+  public_url_required: false
+  presigned_url_model: not_used
 
 implemented_in_pr9:
   - cloudflare_kv binary locator adapter candidate
@@ -61,39 +63,59 @@ implemented_in_pr9:
   - secret-aware GitHub Actions capability gate
   - live authenticated Workers KV synthetic provider-runtime harness
   - private one-day workflow artifact bridge for current ChatGPT runtime transport probe
-  - branch-scoped push trigger for the remediation branch in addition to the stacked pull_request trigger
 
 phase_2a_structural:
-  status: READY_FOR_CI
+  status: PASS
 
 phase_2a_kv_provider_runtime:
-  authenticated_private_value_write_read: PENDING_CI
-  exact_binary_bytes: PENDING_CI
-  sha256_match: PENDING_CI
-  image_decode_and_pixel_open_in_runner: PENDING_CI
-  dimensions: PENDING_CI
-  second_retrieval_identical_sha256: PENDING_CI
-  unknown_key_fail_closed: PENDING_CI
-  invalid_credential_fail_closed: PENDING_CI
-  wrong_hash_fail_closed: PENDING_CI
-  corrupt_binary_fail_closed: PENDING_CI
-  all_locators_fail_closed: PENDING_CI
+  workflow_run_id: 32233495817
+  workflow_event: workflow_dispatch
+  workflow_conclusion: success
+  kv_job_id: 96008287435
+  kv_job_conclusion: success
+  authenticated_private_value_write_read: PASS
+  exact_binary_bytes: PASS
+  byte_count: 79
+  sha256_match: PASS
+  observed_sha256: 36f1626eebe1985b0ac4bb691f40ebe586a47c5a1c442d2cfe12e8e4c8bfa3b3
+  image_decode_and_pixel_open_in_runner: PASS
+  dimensions: [2, 2]
+  second_retrieval_identical_sha256: PASS
+  unknown_key_fail_closed: PASS
+  invalid_credential_fail_closed: PASS
+  wrong_hash_fail_closed: PASS
+  corrupt_binary_fail_closed: PASS
+  all_locators_fail_closed: PASS
 
 phase_2a_chatgpt_runtime_transport:
-  status: NOT_YET_VERIFIED
-  planned_probe: download private workflow artifact created from bytes retrieved from Workers KV, then require actual current ChatGPT file/binary access and pixel open
-  provider_runtime_pass_alone_unlocks_phase_2b: false
+  status: PASS_VIA_PRIVATE_GITHUB_ACTIONS_ARTIFACT_BRIDGE
+  source_artifact_id: 9358095598
+  source_artifact_name: kv-runtime-binary-probe-32233495817
+  artifact_zip_sha256: d386700b92d3c852c689996b7892f48918d22a6706d55a403b2a738cbf80fc33
+  artifact_downloaded_as_actual_file_in_current_chatgpt_runtime: true
+  extracted_png_opened: true
+  extracted_png_byte_count: 79
+  extracted_png_sha256: 36f1626eebe1985b0ac4bb691f40ebe586a47c5a1c442d2cfe12e8e4c8bfa3b3
+  expected_sha256_match: true
+  extracted_png_dimensions: [2, 2]
+  pixel_identity_observed: red_green_blue_white_2x2_fixture
+  artifact_is_durable_locator: false
+  direct_chatgpt_to_cloudflare_http_verified: false
 
-workflow_execution_note:
-  pull_request_run_for_recent_connector_commits_observed_via_current_connector: false
-  branch_scoped_push_trigger_added: true
-  workflow_dispatch_note: workflow_dispatch is not relied upon because this workflow is not present on the repository default branch
-  current_connector_can_list_push_triggered_workflow_runs: false
-  minimal_external_observability_fallback: WorkBuddy may report only the latest run id for this workflow/branch using GitHub UI or gh run list; no secret value or log content needs to be exposed
+phase_2a_full_gate:
+  result: PASS_SYNTHETIC_POC
+  evidence_file: 11_验收/binary_locator_remediation/phase2a_kv_runtime_evidence.yaml
+  does_not_promote_production_cross_session_status: true
+  does_not_authorize_formal_kv_republish_by_itself: true
 
-phase_2b: BLOCKED_BY_PHASE_2A_FULL_GATE
-phase_2c: BLOCKED_BY_PHASE_2A_FULL_GATE
-phase_2d: BLOCKED_BY_PHASE_2A_FULL_GATE
+workflow_design_note:
+  optional_backend_missing_config_may_fail_closed_without_failing_unrelated_jobs: true
+  aggregate_green_must_not_be_interpreted_as_optional_backend_pass: true
+  explicit_per_backend_capability_and_gate_status_required: true
+
+phase_2b: BLOCKED_PENDING_INDEPENDENT_REVIEW_OF_KV_BACKEND_SUBSTITUTION_AND_FORMAL_REPUBLISH_SCOPE
+phase_2c: BLOCKED_BY_PHASE_2B
+phase_2d: BLOCKED_BY_PHASE_2C
 
 formal_pilot_versions:
   - EUS-VER-000002
