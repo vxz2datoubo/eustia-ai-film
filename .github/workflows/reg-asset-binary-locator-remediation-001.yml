@@ -53,10 +53,52 @@ jobs:
           python '11_验收/binary_locator_remediation/r2_phase2a_poc.py' --capability-report
           code=$?
           if [ "$code" -eq 78 ]; then
-            echo 'PHASE_2A_LIVE_STATUS=STOP_FOR_EXTERNAL_CAPABILITY' >> "$GITHUB_STEP_SUMMARY"
+            echo 'PHASE_2A_R2_LIVE_STATUS=STOP_FOR_EXTERNAL_CAPABILITY' >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
           exit "$code"
       - name: Real authenticated R2 provider runtime PoC
         if: env.EUSTIA_R2_POC_ENABLED == 'true'
         run: python '11_验收/binary_locator_remediation/r2_phase2a_poc.py' --live
+
+  kv-phase2a-contract-and-live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      EUSTIA_KV_POC_ENABLED: ${{ secrets.EUSTIA_KV_POC_ENABLED }}
+      EUSTIA_KV_API_TOKEN: ${{ secrets.EUSTIA_KV_API_TOKEN }}
+      EUSTIA_KV_ACCOUNT_ID: ${{ secrets.EUSTIA_KV_ACCOUNT_ID }}
+      EUSTIA_KV_NAMESPACE_ID: ${{ secrets.EUSTIA_KV_NAMESPACE_ID }}
+      EUSTIA_KV_NAMESPACE: ${{ secrets.EUSTIA_KV_NAMESPACE }}
+      KV_TEST_PREFIX: eustia-binary-locator-poc
+      EUSTIA_KV_OUTPUT_DIR: ${{ runner.temp }}/eustia-kv-poc
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install --disable-pip-version-check Pillow
+      - name: Workers KV structural fail-closed contract tests
+        run: python '11_验收/binary_locator_remediation/kv_phase2a_poc.py' --structural
+      - name: Report Workers KV capability gate without leaking values
+        shell: bash
+        run: |
+          set +e
+          python '11_验收/binary_locator_remediation/kv_phase2a_poc.py' --capability-report
+          code=$?
+          if [ "$code" -eq 78 ]; then
+            echo 'PHASE_2A_KV_LIVE_STATUS=STOP_FOR_EXTERNAL_CAPABILITY' >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          exit "$code"
+      - name: Real authenticated Workers KV provider runtime PoC
+        if: env.EUSTIA_KV_POC_ENABLED == 'true'
+        run: python '11_验收/binary_locator_remediation/kv_phase2a_poc.py' --live
+      - name: Upload private synthetic binary bridge artifact
+        if: env.EUSTIA_KV_POC_ENABLED == 'true' && success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kv-runtime-binary-probe-${{ github.run_id }}
+          path: ${{ runner.temp }}/eustia-kv-poc
+          if-no-files-found: error
+          retention-days: 1
