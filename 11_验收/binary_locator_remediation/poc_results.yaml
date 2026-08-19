@@ -1,5 +1,5 @@
 task_id: REG-ASSET-BINARY-LOCATOR-REMEDIATION-001
-status: phase_0_1_accepted_phase_2a_kv_runtime_validation_in_progress
+status: phase_0_1_accepted_phase_2a_kv_synthetic_runtime_pass_pending_independent_review
 
 parent_dependency:
   pr: 8
@@ -25,8 +25,9 @@ backend_substitution:
   current: cloudflare_kv
   source: user_supplied_WorkBuddy_report_2026_08_19
   rationale: R2 could not be enabled in the user's current billing environment; Workers KV private PoC namespace and GitHub Actions secrets were provisioned instead
-  evidence_quality: USER_PROVIDED_EXTERNAL_EXECUTION_REPORT_PENDING_RUNTIME_REPRODUCTION
+  evidence_quality: PROVIDER_RUNTIME_REPRODUCED_AND_CURRENT_CHATGPT_ARTIFACT_TRANSPORT_VERIFIED
   formal_asset_storage_authority_changed: false
+  independently_reviewed_for_formal_phase_2b: false
 
 synthetic_fixture:
   path: 11_验收/binary_locator_remediation/synthetic_probe.png
@@ -92,10 +93,44 @@ phase_2a_cloudflare_kv:
     dedicated_kv_token_reported: true
     formal_media_uploaded: false
   adapter_code_ready: true
-  structural_fail_closed_tests_ready: true
-  authenticated_provider_runtime_execution: PENDING_CI
-  actual_chatgpt_runtime_binary_transport: NOT_YET_VERIFIED
-  phase_2a_full_gate: NOT_PASSED_YET
+  structural_fail_closed_tests: PASS
+  authenticated_provider_runtime:
+    workflow_run_id: 32233495817
+    workflow_event: workflow_dispatch
+    workflow_exact_head: b0c27bf1c3599825d9467f2c62575aa33b7e2b87
+    workflow_conclusion: success
+    kv_job_id: 96008287435
+    kv_job_conclusion: success
+    live_step_conclusion: success
+    byte_count: 79
+    observed_sha256: 36f1626eebe1985b0ac4bb691f40ebe586a47c5a1c442d2cfe12e8e4c8bfa3b3
+    image_format: PNG
+    dimensions: [2, 2]
+    pixels_opened_in_runner: true
+    second_retrieval_sha256_identical: true
+    provider_runtime_status: PROVIDER_RUNTIME_POC_PASS
+  private_artifact_bridge:
+    artifact_id: 9358095598
+    artifact_name: kv-runtime-binary-probe-32233495817
+    artifact_size_bytes: 760
+    artifact_zip_sha256: d386700b92d3c852c689996b7892f48918d22a6706d55a403b2a738cbf80fc33
+    retention_days: 1
+    durable_locator_role: forbidden
+  actual_chatgpt_runtime_binary_transport:
+    outcome: PASS_VIA_PRIVATE_GITHUB_ACTIONS_ARTIFACT_BRIDGE
+    actual_zip_downloaded: true
+    zip_opened: true
+    extracted_image: kv_retrieved_synthetic.png
+    extracted_image_byte_count: 79
+    extracted_image_sha256: 36f1626eebe1985b0ac4bb691f40ebe586a47c5a1c442d2cfe12e8e4c8bfa3b3
+    hash_match: true
+    pixels_opened_in_current_chatgpt_runtime: true
+    dimensions: [2, 2]
+    image_mode: RGB
+    observed_fixture_pixels: [red, green, blue, white]
+    direct_chatgpt_to_cloudflare_http_verified: false
+  phase_2a_full_gate: PASS_SYNTHETIC_POC
+  evidence_file: 11_验收/binary_locator_remediation/phase2a_kv_runtime_evidence.yaml
 
 formal_pilot_versions:
   - EUS-VER-000002
@@ -107,6 +142,11 @@ formal_version_identity_changed: false
 production_cross_session_status_changed: false
 generation_reference_binding_tested: false
 
-phase_2b: BLOCKED_BY_PHASE_2A_FULL_GATE
-phase_2c: BLOCKED_BY_PHASE_2A_FULL_GATE
-phase_2d: BLOCKED_BY_PHASE_2A_FULL_GATE
+phase_2b: BLOCKED_PENDING_INDEPENDENT_REVIEW_OF_KV_BACKEND_SUBSTITUTION_AND_FORMAL_REPUBLISH_SCOPE
+phase_2c: BLOCKED_BY_PHASE_2B
+phase_2d: BLOCKED_BY_PHASE_2C
+
+workflow_design_lesson:
+  optional_backend_graceful_skip_is_valid_only_if_per_backend_status_is_explicit: true
+  aggregate_workflow_success_must_not_be_used_as_backend_success: true
+  preferred_pattern_for_future_optional_backends: capability_probe_plus_explicit_status_plus_fail_closed_required_gate
