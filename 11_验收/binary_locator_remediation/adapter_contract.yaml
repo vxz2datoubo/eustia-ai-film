@@ -1,5 +1,5 @@
 schema_id: EUSTIA_BINARY_LOCATOR_ADAPTER_CONTRACT_CANDIDATE
-version: 0.2.0
+version: 0.3.0
 status: candidate
 scope: machine_dereferenceable_binary_locator_adapter_contract
 parent_contract: 10_运行时/asset_retrieval_policy.yaml
@@ -7,6 +7,7 @@ parent_contract: 10_运行时/asset_retrieval_policy.yaml
 execution_authority:
   user_full_authorization_comment: 5330299639
   independent_phase_0_1_review: 4962321299
+  workbuddy_environment_report_date: 2026-08-19
   staged_execution: [PHASE_2A, PHASE_2B_AFTER_2A_PASS, PHASE_2C_AFTER_2B_PASS, PHASE_2D_AFTER_2C_PASS]
   fail_closed_gates_remain_mandatory: true
 
@@ -18,6 +19,7 @@ core_invariant:
   - exact_bytes_must_match_target_media_version_content_sha256_before_pixel_verified
   - same_pixels_new_locator_keeps_same_media_version_id
   - durable_locator_must_not_contain_ephemeral_bearer_capability
+  - secret_bound_provider_coordinates_must_not_be_persisted_when_a_stable_alias_is_sufficient
 
 machine_locator_namespaces:
   github_blob:
@@ -41,7 +43,7 @@ machine_locator_namespaces:
     adapter_requirement: authenticated_openai_api_files_content_retrieval
 
   r2_object:
-    classification: selected_phase_2_candidate
+    classification: conditional_candidate_paused_external_billing_enablement_unavailable
     durable_required_fields:
       - bucket_ref
       - object_key
@@ -53,18 +55,52 @@ machine_locator_namespaces:
       - secret_key
     namespace_rule: durable_locator_must_not_persist_presigned_url_as_identity
     provider_adapter_requirement: authenticated_s3_compatible_get_object
+    current_status:
+      structural_contract: READY
+      live_provider_runtime: NOT_EXECUTED
+      reason: external_R2_enablement_not_available_in_current_user_environment
+    notes:
+      - R2 remains a valid future object-store candidate; it is not selected for the current synthetic PoC after the user-provided WorkBuddy environment report.
+
+  cloudflare_kv:
+    classification: selected_phase_2a_synthetic_candidate_after_user_environment_substitution
+    durable_required_fields:
+      - namespace_ref
+      - key
+      - expected_content_sha256
+    durable_forbidden_fields:
+      - account_id
+      - namespace_id
+      - api_token
+      - bearer_token
+      - bearer_url
+      - url
+      - secret
+    runtime_secret_binding:
+      namespace_ref_resolves_via: EUSTIA_KV_NAMESPACE
+      account_id: EUSTIA_KV_ACCOUNT_ID
+      namespace_id: EUSTIA_KV_NAMESPACE_ID
+      api_token: EUSTIA_KV_API_TOKEN
+      enable_gate: EUSTIA_KV_POC_ENABLED
+    provider_adapter_requirement: authenticated_cloudflare_workers_kv_rest_value_get
     expected_runtime_output:
       - actual_binary_bytes_or_usable_file_reference
       - byte_count
       - observed_sha256
       - image_decode_result
       - observed_dimensions
-    runtime_capability_boundary:
-      presigned_url: short_lived_runtime_capability_only
-      credential_storage: secret_store_only
-      secret_or_bearer_value_in_git: forbidden
+    provider_limits_relevant_to_pilot:
+      max_value_bytes: 26214400
+      formal_asset_eligibility_rule: media_version_bytes_must_fit_provider_value_limit
+    security_boundary:
+      namespace_ref_is_stable_alias_not_provider_secret_coordinate: true
+      api_token_in_git: forbidden
+      account_id_in_git_locator: forbidden
+      namespace_id_in_git_locator: forbidden
+      public_url_required: false
+      presigned_url_model: not_used
     phase_2a_pass_requires:
-      - authenticated_private_synthetic_object_retrieval
+      - authenticated_private_synthetic_value_write_and_read
       - actual_binary_bytes_or_usable_file_reference
       - byte_count_observed
       - sha256_observed_and_expected_match
@@ -72,13 +108,13 @@ machine_locator_namespaces:
       - dimensions_observed
       - second_retrieval_sha256_identical
       - wrong_namespace_fail_closed
-      - unknown_object_fail_closed
+      - namespace_ref_mismatch_fail_closed
+      - unknown_key_fail_closed
       - credential_unavailable_or_invalid_fail_closed
       - wrong_sha256_fail_closed
       - corrupt_non_image_fail_closed
       - all_locators_fail_closed
-      - no_presigned_url_persisted
-      - no_credential_or_bearer_value_committed
+      - no_credential_or_provider_coordinate_committed
       - actual_chatgpt_runtime_binary_transport_verified
     critical_gate: provider_runtime_or_ci_success_without_actual_chatgpt_runtime_binary_transport_does_not_unlock_phase_2b
 
@@ -102,6 +138,7 @@ adapter_result_contract:
     - dimensions_observed
   failure_codes:
     - LOCATOR_NAMESPACE_MISMATCH
+    - LOCATOR_NAMESPACE_REF_MISMATCH
     - LOCATOR_NOT_FOUND
     - AUTH_UNAVAILABLE
     - BINARY_TRANSPORT_UNAVAILABLE
@@ -116,12 +153,15 @@ phase_2b_formal_pilot_gate:
   same_hash_action: ADD_LOCATOR_TO_EXISTING_VERSION
   different_hash_action: FAIL_CLOSED_STOP_AND_ROUTE_TO_VERSION_GOVERNANCE
   new_version_creation_for_same_hash: forbidden
+  provider_value_size_gate_must_pass_before_upload: true
 
 security_and_scope_gates:
   no_credentials_committed_to_git: true
+  no_provider_account_or_namespace_ids_committed_as_durable_locator: true
   no_presigned_bearer_urls_committed_to_git: true
   no_formal_mother_image_published_to_public_repo: true
   external_storage_creation_authorized_by_user_comment: 5330299639
+  current_kv_environment_provisioned_by_user_agent: WorkBuddy
   formal_binary_republish_authorized_only_after_phase_2a_pass: true
   credential_creation_or_secret_registration_authorized_by_user_comment: 5330299639
   generation_reference_binding_deferred_until_phase_2c_binary_pixel_pass: true
