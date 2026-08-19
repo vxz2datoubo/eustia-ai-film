@@ -1,74 +1,105 @@
 task_id: REG-ASSET-BINARY-LOCATOR-REMEDIATION-001
-phase: PHASE_2A_R2_SYNTHETIC_RUNTIME_POC
-status: STOP_FOR_EXTERNAL_CAPABILITY
+phase: PHASE_2A_SYNTHETIC_RUNTIME_POC
+status: KV_ENVIRONMENT_REPORTED_READY_PENDING_REAL_RUNTIME_VERIFICATION
 
 review_and_authority:
   phase_0_1_review: 4962321299
   phase_0_1_verdict: ACCEPT_PHASE_0_1
   user_full_authorization_comment: 5330299639
-  selected_backend: r2_object
+  original_selected_backend: r2_object
+  current_user_environment_backend: cloudflare_kv
+  substitution_source: user_supplied_WorkBuddy_report_2026_08_19
+  substitution_reason: R2_enablement_requires_payment_card_unavailable_to_user; Workers_KV_free_path_provisioned_instead
 
-current_executor_capability:
-  cloudflare_r2_connector_available: false
-  cloudflare_r2_plugin_discovery_result: no_matching_cloudflare_or_r2_plugin
-  github_secret_management_action_available: false
-  can_create_r2_account_or_subscription: false
-  can_create_r2_bucket_or_api_token_directly_from_current_tool_surface: false
-  can_commit_and_run_secret-aware_r2_harness: true
+fresh_control_plane:
+  pr8_exact_head: ba6133d4e2fe9ce165367b8fe75da2a86d8031d3
+  pr8_must_remain_unchanged: true
+  pr9_branch: gpt/reg-asset-binary-locator-remediation-001
+  main_observed: 88102339f6a1718384f0d26bc1e299ce5ce66c90
+
+workbuddy_environment_report:
+  evidence_class: USER_PROVIDED_EXTERNAL_EXECUTION_REPORT
+  storage_service: Cloudflare Workers KV
+  namespace_alias: eustia-asset-locator-poc
+  private_no_public_url_reported: true
+  dedicated_kv_api_token_reported: true
+  token_scope_reported: Workers_KV_Storage_Write_read_write_list_semantics
+  cross_service_negative_403_reported: true
+  github_actions_secrets_reported_present: true
+  reported_secret_names:
+    - EUSTIA_KV_POC_ENABLED
+    - EUSTIA_KV_API_TOKEN
+    - EUSTIA_KV_ACCOUNT_ID
+    - EUSTIA_KV_NAMESPACE_ID
+    - EUSTIA_KV_NAMESPACE
+  secret_values_persisted_in_git: false
+  formal_mother_images_uploaded: false
+  note: report is accepted as external setup provenance but does not itself prove this PR runtime can consume the secrets or binary bytes
+
+cloudflare_kv_contract:
+  durable_locator_namespace: cloudflare_kv
+  durable_fields:
+    - namespace_ref
+    - key
+    - expected_content_sha256
+  runtime_only_secret_bound_fields:
+    - account_id
+    - namespace_id
+    - api_token
+  provider_value_limit_bytes: 26214400
+  official_api_model: authenticated_REST_value_GET_returns_value_body
 
 implemented_in_pr9:
-  - r2_object adapter candidate
-  - strict locator namespace validation
-  - durable presigned URL rejection
+  - cloudflare_kv binary locator adapter candidate
+  - strict namespace validation
+  - secret/provider-coordinate rejection from durable locator
+  - namespace_ref-to-secret-bound-namespace validation
   - credential missing fail-closed
   - wrong SHA-256 fail-closed
   - corrupt/non-image fail-closed
   - same-version all-locator-fail helper
   - secret-aware GitHub Actions capability gate
-  - live authenticated R2 provider-runtime harness ready for execution when external credentials exist
+  - live authenticated Workers KV synthetic provider-runtime harness
+  - private one-day workflow artifact bridge for current ChatGPT runtime transport probe
 
-phase_2a_pass_gate:
-  actual_private_r2_object_retrieval: NOT_EXECUTED
-  exact_binary_bytes: NOT_EXECUTED
-  sha256_match: NOT_EXECUTED
-  image_decode_and_pixel_open: NOT_EXECUTED
-  dimensions: NOT_EXECUTED
-  second_retrieval_identical_sha256: NOT_EXECUTED
-  actual_chatgpt_runtime_binary_transport: NOT_EXECUTED
-  result: NOT_PASSED
+phase_2a_structural:
+  status: READY_FOR_CI
 
-phase_2b: BLOCKED_BY_PHASE_2A
-phase_2c: BLOCKED_BY_PHASE_2A
-phase_2d: BLOCKED_BY_PHASE_2A
+phase_2a_kv_provider_runtime:
+  authenticated_private_value_write_read: PENDING_CI
+  exact_binary_bytes: PENDING_CI
+  sha256_match: PENDING_CI
+  image_decode_and_pixel_open_in_runner: PENDING_CI
+  dimensions: PENDING_CI
+  second_retrieval_identical_sha256: PENDING_CI
+  unknown_key_fail_closed: PENDING_CI
+  invalid_credential_fail_closed: PENDING_CI
+  wrong_hash_fail_closed: PENDING_CI
+  corrupt_binary_fail_closed: PENDING_CI
+  all_locators_fail_closed: PENDING_CI
+
+phase_2a_chatgpt_runtime_transport:
+  status: NOT_YET_VERIFIED
+  planned_probe: download private workflow artifact created from bytes retrieved from Workers KV, then require actual current ChatGPT file/binary access and pixel open
+  provider_runtime_pass_alone_unlocks_phase_2b: false
+
+phase_2b: BLOCKED_BY_PHASE_2A_FULL_GATE
+phase_2c: BLOCKED_BY_PHASE_2A_FULL_GATE
+phase_2d: BLOCKED_BY_PHASE_2A_FULL_GATE
 
 formal_pilot_versions:
   - EUS-VER-000002
   - EUS-VER-000011
   - EUS-VER-000008
 formal_bytes_republished: false
-formal_r2_locators_added: false
+formal_kv_locators_added: false
 media_version_identity_changed: false
 cross_session_status_changed: false
 generation_reference_binding_tested: false
 
-human_external_capability_needed:
-  minimum:
-    - Cloudflare account with R2 enabled
-    - one private test bucket
-    - bucket-scoped minimum-permission R2 S3 Access Key ID and Secret Access Key
-    - endpoint URL for the account
-    - ability to place the values into GitHub Actions secrets without exposing them in Git or chat
-  required_secret_names:
-    - EUSTIA_R2_POC_ENABLED
-    - EUSTIA_R2_ENDPOINT_URL
-    - EUSTIA_R2_ACCESS_KEY_ID
-    - EUSTIA_R2_SECRET_ACCESS_KEY
-    - EUSTIA_R2_BUCKET
-  required_gate_value:
-    EUSTIA_R2_POC_ENABLED: "true"
-  secret_values_must_not_be_pasted_into_chat_or_committed_to_git: true
-
-next_action_after_external_capability:
-  - rerun PR9 workflow
-  - require real authenticated R2 live step PASS
-  - separately verify actual intended ChatGPT runtime binary/file transport before Phase 2B
+security:
+  account_id_committed: false
+  namespace_id_committed: false
+  api_token_committed: false
+  bearer_url_committed: false
+  public_formal_media_created: false
