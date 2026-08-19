@@ -1,0 +1,101 @@
+evidence_id: EVID-REG-ASSET-BINARY-LOCATOR-2A-KV-20260819-001
+task_id: REG-ASSET-BINARY-LOCATOR-REMEDIATION-001
+phase: PHASE_2A_SYNTHETIC_RUNTIME_POC
+status: PASS_SYNTHETIC_PROVIDER_AND_CURRENT_CHATGPT_RUNTIME_VIA_PRIVATE_ARTIFACT_BRIDGE
+
+control_plane:
+  repository: vxz2datoubo/eustia-ai-film
+  pr: 9
+  branch: gpt/reg-asset-binary-locator-remediation-001
+  stacked_base_branch: gpt/asset-retrieval-cross-session-v1
+  stacked_base_exact_head: ba6133d4e2fe9ce165367b8fe75da2a86d8031d3
+  workflow_exact_head: b0c27bf1c3599825d9467f2c62575aa33b7e2b87
+  pr8_unchanged: true
+
+backend:
+  provider: Cloudflare Workers KV
+  locator_namespace: cloudflare_kv
+  durable_locator_shape:
+    - namespace_ref
+    - key
+    - expected_content_sha256
+  provider_secret_coordinates_in_durable_locator: false
+  public_url_used: false
+  formal_media_used: false
+
+provider_runtime_evidence:
+  workflow_run_id: 32233495817
+  workflow_event: workflow_dispatch
+  workflow_conclusion: success
+  kv_job_id: 96008287435
+  kv_job_conclusion: success
+  live_step: Real authenticated Workers KV provider runtime PoC
+  live_step_conclusion: success
+  artifact_upload_step_conclusion: success
+  observed:
+    byte_count: 79
+    sha256: 36f1626eebe1985b0ac4bb691f40ebe586a47c5a1c442d2cfe12e8e4c8bfa3b3
+    image_format: PNG
+    dimensions: [2, 2]
+    pixels_opened_in_runner: true
+    second_retrieval_sha256_identical: true
+    provider_runtime_status: PROVIDER_RUNTIME_POC_PASS
+    unknown_object_fail_closed: true
+    invalid_credential_fail_closed: true
+    wrong_sha256_fail_closed: true
+    corrupt_non_image_fail_closed: true
+    all_locators_fail_closed: true
+  note: GitHub log secret masking redacted literal boolean values in some JSON fields because the enabled secret value was 'true'; job success plus harness assertions and unmasked status/hash/dimension fields are the operative evidence.
+
+private_artifact_bridge:
+  artifact_id: 9358095598
+  artifact_name: kv-runtime-binary-probe-32233495817
+  artifact_size_bytes: 760
+  artifact_zip_sha256: d386700b92d3c852c689996b7892f48918d22a6706d55a403b2a738cbf80fc33
+  artifact_expiry: 2026-08-20T08:37:37Z
+  retention_days: 1
+  durable_locator_role: forbidden
+  role: current_runtime_transport_probe_only
+
+current_chatgpt_runtime_evidence:
+  retrieval_action: GitHub.download_workflow_artifact
+  artifact_downloaded_as_actual_zip_file: true
+  zip_opened: true
+  extracted_files:
+    - kv_provider_runtime_evidence.json
+    - kv_retrieved_synthetic.png
+  extracted_image_byte_count: 79
+  extracted_image_sha256: 36f1626eebe1985b0ac4bb691f40ebe586a47c5a1c442d2cfe12e8e4c8bfa3b3
+  expected_synthetic_sha256: 36f1626eebe1985b0ac4bb691f40ebe586a47c5a1c442d2cfe12e8e4c8bfa3b3
+  hash_match: true
+  image_decoder_opened_in_current_chatgpt_runtime: true
+  dimensions_observed: [2, 2]
+  image_mode: RGB
+  pixel_values_observed:
+    - [255, 0, 0]
+    - [0, 255, 0]
+    - [0, 0, 255]
+    - [255, 255, 255]
+  pixels_verified_for_synthetic_probe: true
+  current_session_file_reference_persisted_as_durable_locator: false
+
+phase_2a_gate:
+  authenticated_provider_dereference: PASS
+  exact_binary_bytes: PASS
+  byte_count: PASS
+  sha256_match: PASS
+  image_decode: PASS
+  pixel_open: PASS
+  dimensions: PASS
+  second_retrieval_same_sha256: PASS
+  fail_closed_negatives: PASS
+  actual_current_chatgpt_binary_file_transport: PASS_VIA_PRIVATE_GITHUB_ACTIONS_ARTIFACT_BRIDGE
+  result: PASS_SYNTHETIC_POC
+
+limitations:
+  - This proves a mediated runtime chain: Cloudflare KV -> authenticated GitHub Actions adapter -> private workflow artifact -> current ChatGPT runtime -> actual PNG bytes/pixels.
+  - It does not prove direct ChatGPT-to-Cloudflare authenticated HTTP access.
+  - The workflow artifact is ephemeral transport evidence, not a durable Media Version locator.
+  - No formal mother image was uploaded or exposed.
+  - No production cross-session Version status may be promoted from this synthetic evidence.
+  - Formal Phase 2B use of Cloudflare KV is a backend substitution from the independently reviewed conditional R2 choice and should receive independent scope/review confirmation before formal republish.
