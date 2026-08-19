@@ -83,6 +83,11 @@ phase_2a_chatgpt_runtime_transport:
   planned_probe: download private workflow artifact created from bytes retrieved from Workers KV, then require actual current ChatGPT file/binary access and pixel open
   provider_runtime_pass_alone_unlocks_phase_2b: false
 
+workflow_execution_note:
+  automatic_pull_request_run_observed_for_current_kv_commits: false
+  current_connector_can_dispatch_workflow: false
+  allowed_manual_fallback: run the existing workflow on branch gpt/reg-asset-binary-locator-remediation-001 using GitHub Actions workflow_dispatch, then return only the run id; no secret values need to be exposed
+
 phase_2b: BLOCKED_BY_PHASE_2A_FULL_GATE
 phase_2c: BLOCKED_BY_PHASE_2A_FULL_GATE
 phase_2d: BLOCKED_BY_PHASE_2A_FULL_GATE
