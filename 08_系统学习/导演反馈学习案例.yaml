@@ -4,7 +4,7 @@ authority_role: learning_evidence_and_case_registry
 method_authority: 01_AI电影系统/AI电影系统.md
 learning_process_authority: 08_系统学习/反馈反推与系统反哺引擎.md
 created_at: 2026-08-18
-last_updated: 2026-08-18
+last_updated: 2026-08-21
 rules_not_authoritative_by_themselves: true
 
 cases:
@@ -146,12 +146,94 @@ cases:
       current_scene_application: scene_verified
       transferable_rule: candidate
 
+  - case_id: NOVUS-30S-REAL-OUTPUT-001
+    work_item: 达尔世界观布道与诺瓦斯写实历史闪回30秒
+    model_scope: C-DANCE 2.5 / Seedance 2.5 project alias
+    evidence:
+      source_prompt_supplied_by_user: true
+      generated_video_supplied_by_user: true
+      current_conversation_video_file_id: file_0000000005f081fd9a153d76eefb4b9e
+      assistant_temporal_review: sampled_frames_and_contact_sheets
+      user_output_verdict: mixed_with_specific_failures_and_one_clear_success
+    user_feedback:
+      - 开头天空之城与提示基本对得上，但美感只算“还可以”，没有达到很美、很惊艳的水平。
+      - 初代圣女画面下方群众的行为动机不真实，实际看起来有点像在跳舞。
+      - 历代圣女段把“假小子”直接理解成了小孩子；用户本意是“成年女性圣女具有假小子气质”，假小子属性必须与圣女成人身份合并理解。
+      - 后半再次使用天空之城拉远大全景，与开头视觉职责重复，信息密度下降。
+      - 临近结尾的天空之城拉远镜头在云层下方出现地面火光，严重违反当前世界观：诺瓦斯下方世界仍长期处于大洪水状态，不应出现暴露陆地上的火光/城市灯火。
+      - 最后达尔激动地张开双手这一表演效果是好的。
+      - 但结尾回到达尔时，上一镜头状态中跟在他后面的四名修女消失，形成跨镜头连续性穿帮。
+    observed_output:
+      opening_novus:
+        result: SEMANTIC_PASS_AESTHETIC_MEDIUM
+        note: 天空之城、云海、尺度与神圣光基本成立，但构图与美感未达到用户期望的记忆级视觉。
+      historical_elen_crowd:
+        result: CROWD_MOTION_MOTIVE_MISMATCH
+        note: 逐帧可见多个群众动作缺乏统一现实任务方向，存在抬臂、摇摆、节律性位移的读感，容易被观众解释为舞蹈/仪式舞蹈而非灾难中的求生、聚集或祈祷行为。
+      successive_saints:
+        result: SEMANTIC_ENTITY_CLASS_DRIFT
+        note: 约14.5至15.5秒出现明显儿童体态角色，说明“假小子”自由描述压过了“历代圣女=成年女性”的实体类别、年龄和社会身份约束。
+      second_novus_wide:
+        result: SEQUENCE_FUNCTION_REDUNDANCY
+        note: 后半再次长时间承担“天空城大全景+拉远”的近似视觉职责，较少提供新的世界机制、人物、空间或因果信息。
+      lower_world_background:
+        result: CANONICAL_WORLD_STATE_VIOLATION
+        note: 约24.5秒云层下方可见明显橙红火光/地面灯火读感；与用户确认的“大洪水持续覆盖下方世界”冲突。
+      final_daal:
+        result: PERFORMANCE_PASS_CONTINUITY_FAIL
+        note: 达尔激动张开双臂的表演成立；但画面没有延续此前跟随达尔的四名修女，缺少明确离场事件，属于 inherited state 丢失。
+    final_delta:
+      preserved_strengths:
+        - 天空之城世界级尺度与云海总体语义可用
+        - 达尔最后激动张开双手的仪式高潮继续保留
+      failures_to_repair:
+        - 群众运动必须从当前动机与现实任务推出，不能把高自由度背景动作交给模型随机补全
+        - 形容词必须绑定到既有实体身份，不能允许“假小子”等风格词改变年龄、性别、社会身份或角色类别
+        - 30秒序列必须检查镜头功能重复，重复构图只有在产生新的信息、情绪或主题递进时才保留
+        - 大景别不仅检查主体，还必须检查背景世界状态是否违反canonical，例如洪水世界、生态、地表、远景灯火
+        - 同一时间地点连续镜头必须继承未发生离场的角色、道具、服装、位置和状态；提示词省略不等于角色消失
+    operational_candidates:
+      - motive_to_motion_scan: 群众/配角不仅检查“为什么这样想”，还要把动机编译成可观察动作包络；例如逃难、祈祷、等待、围观、抢救各自有不同重心、方向、速度和手部行为，禁止无因节律性摇摆成为默认背景动作。
+      - semantic_attribute_binding_gate: 先锁定实体类别、性别、年龄段、身份、关系与canonical不变量，再把“假小子、可爱、神秘、冷酷”等描述只作用于允许变化的气质、发型、姿态、服装细节与表演，不得自动改写实体身份。
+      - sequence_function_redundancy_scan: 在多镜头段内比较每镜 dramatic_function / audience_new_information / composition_role；若后镜只是重复前镜的建立功能且没有新增信息，优先改成新的视角、关系、细节、因果或删减。
+      - canonical_background_integrity_scan: 大全景、远景、拉远、鸟瞰等会暴露大量背景时，必须把不可变世界状态加入hard invariants并验收背景层，不允许模型用“漂亮末日地表、火光城市、飞鸟生态”等泛奇幻补全覆盖项目世界观。
+      - inherited_scene_state_scan: 同一场景连续镜头在编译前读取上一镜exit_state与当前WorldState，未发生exit/remove/state_change的实体继续存在；若构图理应可见却缺失，判定连续性错误。
+      - aesthetic_quality_separation: 指令遵循与“画面是否美、构图是否高级、是否达到记忆级视觉”必须分开验收；语义PASS不得自动等于美学PASS。
+    candidate_functions_to_integrate:
+      - Semantic Attribute Binding Gate
+      - Persistent Scene State Carry-Forward
+      - Canonical Background World-State Integrity
+      - Sequence Shot-Function Redundancy Scan
+      - Crowd Motive-to-Motion Compiler
+    boundaries:
+      - “假小子”并不在所有语境下都代表成年人；只有当canonical实体已明确为成年女性圣女时，描述词必须服从该实体身份。
+      - 重复镜头并非绝对禁用；若重复构图承担对照、主题回环、时间变化或情绪升级，并产生新信息，则可以成立。
+      - 群众不需要动作完全一致；需要的是个体差异仍处于同一社会情境可解释的运动范围内。
+      - 四名修女的连续性要求绑定当前钟楼场景与当前时间链；若后续明确离场、被遮挡或镜头景别裁切不包含其位置，不应机械强塞进每一帧。
+      - 大洪水下方世界状态属于项目世界事实，不应只作为本模型的负面提示词技巧。
+    maturity:
+      output_observations: scene_verified
+      current_work_item_repairs: scene_verified
+      transferable_methods: candidate
+      model_version_behavior: candidate
+    confidence:
+      user_feedback: HIGH
+      video_observation: HIGH
+      causal_attribution: MEDIUM
+      cross_scene_transfer: MEDIUM
+    validation:
+      - 下次历代圣女提示使用“所有历代圣女均为成年女性”作为身份硬锚，再仅改变气质与造型，验证儿童化是否显著下降。
+      - 同一群众镜头A/B：自由背景动作 vs 动机约束动作包络，比较舞蹈化/随机手势率与现实可信度。
+      - 同一30秒序列在第二个诺瓦斯镜头改成提供新信息的视角，比较信息密度与重复感。
+      - 所有大全景增加world-state background checklist，检查洪水、地表、远景灯火、生态和天空状态。
+      - 达尔回切镜头显式继承四名修女并与不写继承状态版本比较连续性。
+
 learning_checkpoint:
   checkpoint_id: BELL-TOWER-EXPOSITION-20260818
   work_item: 钟楼谒见仪式与世界观说明
   locked_or_accepted:
     - 教会在底层居民心中同时承担救济、信仰与希望来源，群众宏观反应必须从这种依赖关系推出
-    - 钟楼平台出现人影时，广场由沸腾瞬间转为非常安静
+    - 钟楼平台出现人影时，广场由沸腾瞬间变得非常安静，形成集体注意力和宗教权威的屏幕/声音证据
     - 达尔真人先建立仪式与世界观开头，再进入历史视觉化说明
     - 世界观在此处较早出现，原因是前段尚未完整介绍且本场与教会/圣女制度因果高度相关
     - 达尔台词按电影口语重写，不机械沿用GAL文字句法
