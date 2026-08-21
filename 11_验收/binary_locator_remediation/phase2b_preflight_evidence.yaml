@@ -1,0 +1,162 @@
+evidence_id: EVID-REG-ASSET-BINARY-LOCATOR-2B-PREFLIGHT-20260821-001
+task_id: REG-ASSET-BINARY-LOCATOR-REMEDIATION-001
+phase: PHASE_2B_FORMAL_3_VERSION_PILOT
+status: PHASE_2B_PARTIAL_PASS_USER_FILE_INPUT_REQUIRED
+observed_at: '2026-08-21T13:44+08:00'
+
+control_plane:
+  repository: vxz2datoubo/eustia-ai-film
+  draft_pr: 9
+  branch: gpt/reg-asset-binary-locator-remediation-001
+  phase_2b_starting_exact_head: cd59dbcfa9ec0692444c4d1ca7f165cc89faad13
+  stacked_base_branch: gpt/asset-retrieval-cross-session-v1
+  pr8_exact_head: ba6133d4e2fe9ce165367b8fe75da2a86d8031d3
+  pr8_must_remain_unchanged: true
+  main_observed: dadf4bed2665349b8c0fa2423e529fe42b050bd3
+  phase_2a_independent_verdict: ACCEPT_PHASE_2A_KV_FOR_FORMAL_3_VERSION_PILOT
+  phase_2b_architecture_release_review: 4989991097
+  no_successor_pr_or_task_created: true
+
+scope:
+  allowed_media_versions:
+    - EUS-VER-000002
+    - EUS-VER-000011
+    - EUS-VER-000008
+  fourth_formal_asset_forbidden: true
+  formal_locator_write_allowed_only_after_exact_original_bytes_size_hash_kv_readback_pixel_pass: true
+
+preflight_method:
+  objective: obtain_exact_original_registered_bytes_before_any_formal_locator_change
+  searched_sources:
+    - current ChatGPT File Library search surface
+    - canonical resolver locator metadata
+    - historical migration evidence only for locator clues
+  prohibited_inputs_respected:
+    - screenshot
+    - regeneration
+    - reexport
+    - compression
+    - resize
+    - transcode
+    - semantic_similarity_substitute
+  result_summary: >-
+    Current File Library searches resolve text/evidence records containing the registered File IDs,
+    hashes, and historical filenames, but do not return any of the three target image binaries/cards.
+    The current tool surface has no direct chatgpt_file_id-to-binary dereference action for these targets.
+    Therefore exact byte count and observed pre-upload SHA-256 cannot be measured in this invocation.
+
+versions:
+  EUS-VER-000002:
+    asset_id: EUS-AST-000002
+    display_duty_zh: 平民区·绯灯街·蔷薇酒馆门前街段机位·朝北主视图·阴天日间彩色母图
+    canonical_content_sha256: 2fe51963d592a2189e6390ab92a3173d00b3a9d9af0cd4e56162ba01360a3828
+    canonical_dimensions: [1448, 1086]
+    canonical_known_locator:
+      type: chatgpt_file_id
+      value: file_00000000e9ac81fdb734e021f5bcb5df
+    historical_migration_locator_clue:
+      filename: 贫民区主街道_蔷薇酒馆街段_南向反打_v01.png
+      file_id: file_00000000a9988230b319edca93f325c9
+      note: legacy semantic label is historical evidence only and must not override current canonical View/duty
+    exact_original_bytes_status: EXACT_ORIGINAL_BYTES_UNAVAILABLE
+    user_input_status: USER_FILE_INPUT_REQUIRED
+    byte_count: UNAVAILABLE
+    kv_size_limit_bytes: 26214400
+    size_gate: NOT_REACHED_NO_BYTES
+    observed_preupload_sha256: UNAVAILABLE
+    canonical_sha_comparison: NOT_REACHED_NO_BYTES
+    kv_upload: NOT_EXECUTED
+    kv_key: NOT_ASSIGNED
+    kv_readback_sha256: NOT_EXECUTED
+    image_decode_pixel_open: NOT_EXECUTED
+    observed_dimensions: NOT_EXECUTED
+    second_retrieval_same_sha256: NOT_EXECUTED
+    durable_locator_added: false
+    media_version_id_preserved: true
+    semantic_substitution_used: false
+
+  EUS-VER-000011:
+    asset_id: EUS-AST-000011
+    display_duty_zh: 平民区·市集广场与钟楼·广场南侧中央机位·朝南主视图·日间彩色母图
+    canonical_content_sha256: 7ade2b22ef371b510b92fbc0f3cb5c3048ee4887915f09f38c1f7f9d809c14ce
+    canonical_dimensions: [1672, 941]
+    canonical_known_locator:
+      type: chatgpt_file_id
+      value: file_00000000592881fdbeb206fb3b668940
+    historical_migration_locator_clue:
+      filename: 高架石桥_南立面_钟楼机位北向反打_v01.png
+      file_id: file_000000000ccc81f7ad0efdc43f1d426e
+      note: legacy semantic label is historical evidence only and must not override current canonical View/duty
+    exact_original_bytes_status: EXACT_ORIGINAL_BYTES_UNAVAILABLE
+    user_input_status: USER_FILE_INPUT_REQUIRED
+    byte_count: UNAVAILABLE
+    kv_size_limit_bytes: 26214400
+    size_gate: NOT_REACHED_NO_BYTES
+    observed_preupload_sha256: UNAVAILABLE
+    canonical_sha_comparison: NOT_REACHED_NO_BYTES
+    kv_upload: NOT_EXECUTED
+    kv_key: NOT_ASSIGNED
+    kv_readback_sha256: NOT_EXECUTED
+    image_decode_pixel_open: NOT_EXECUTED
+    observed_dimensions: NOT_EXECUTED
+    second_retrieval_same_sha256: NOT_EXECUTED
+    durable_locator_added: false
+    media_version_id_preserved: true
+    semantic_substitution_used: false
+
+  EUS-VER-000008:
+    asset_id: EUS-AST-000008
+    display_duty_zh: 平民区·桥北东侧后街窄巷·巷口内侧机位·朝东主视图·夜雨彩色母图
+    canonical_content_sha256: abb31820580e02d8b3abe7b44fd73a75e01bd74ba2e5824c7376022e9c1b706b
+    canonical_dimensions: [1672, 941]
+    canonical_known_locators:
+      - type: file_library_title
+        value: 200贫民区-后街.png
+      - type: chatgpt_file_id
+        value: file_00000000e3a881fd8ae4afc022e5dd4f
+    historical_filename: 200贫民区-后街.png
+    exact_original_bytes_status: EXACT_ORIGINAL_BYTES_UNAVAILABLE
+    user_input_status: USER_FILE_INPUT_REQUIRED
+    byte_count: UNAVAILABLE
+    kv_size_limit_bytes: 26214400
+    size_gate: NOT_REACHED_NO_BYTES
+    observed_preupload_sha256: UNAVAILABLE
+    canonical_sha_comparison: NOT_REACHED_NO_BYTES
+    kv_upload: NOT_EXECUTED
+    kv_key: NOT_ASSIGNED
+    kv_readback_sha256: NOT_EXECUTED
+    image_decode_pixel_open: NOT_EXECUTED
+    observed_dimensions: NOT_EXECUTED
+    second_retrieval_same_sha256: NOT_EXECUTED
+    durable_locator_added: false
+    media_version_id_preserved: true
+    semantic_substitution_used: false
+
+fail_closed_result:
+  exact_original_bytes_required_before_upload: true
+  no_target_passed_exact_byte_preflight: true
+  no_hash_or_size_mismatch_observed: true
+  reason_no_mismatch_observed: bytes unavailable, therefore gates were not executable
+  no_formal_kv_upload_performed: true
+  no_formal_locator_modified: true
+  no_new_media_version_created: true
+  no_asset_view_camera_scene_identity_changed: true
+  no_cross_session_status_promoted: true
+  no_reference_binding_attempted: true
+  no_public_formal_binary_committed: true
+  no_secret_or_bearer_capability_committed: true
+
+user_file_input_required:
+  instruction: >-
+    Supply the exact original file bytes for each blocked Version. A candidate file must be hashed
+    before any upload; only an exact SHA-256 match to the registered Version may continue.
+  may_use_workbuddy_to_locate_by_sha256: true
+  do_not_select_by_visual_similarity: true
+
+downstream_gates:
+  phase_2c: BLOCKED_BY_PHASE_2B_EXACT_ORIGINAL_BYTES
+  phase_2d: BLOCKED_BY_PHASE_2C
+  U-ASSET-RETRIEVAL-001: REMAINS_OPEN
+  pr8_merge: FORBIDDEN
+  pr9_merge: FORBIDDEN
+  self_review: FORBIDDEN
