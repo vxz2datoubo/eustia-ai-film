@@ -1,17 +1,19 @@
 schema_id: EUSTIA_SCREEN_OBSERVABLE_AUDIBLE_IR
-version: 1.0.1
+version: 1.0.2
 status: candidate
 scope: story_to_shot_compilation_observable_audible_contracts_and_reverse_evaluation
 purpose:
   - 以模型无关的中间表示连接canonical事实导演分析镜头计划与最小执行提示
   - 将World Truth与Shot Observable Truth显式分层
   - 将VisibleIR与AudibleIR作为平级执行合同，并保留跨镜头连续性与反向验收接口
+  - 在多镜头与多模态生成中显式保护实体语义、持续场景状态、canonical背景世界状态、群众动机动作和序列镜头功能不被模型自由补全破坏
 non_goals:
   - 不替代AI电影系统的导演方法
   - 不复制声音导演系统的声音方法
   - 不直接规定任一模型的私有prompt语法
   - 不声明自动视觉或音频验收已经实现
   - 不以可观察性为理由自动把摄影机退化成只求记录完整的coverage机位
+  - 不把所有描述词冻结为硬约束；只保护canonical身份与当前work item真正不可漂移的语义
 
 authority_and_interfaces:
   canonical_facts:
@@ -34,6 +36,8 @@ authority_and_interfaces:
     - SoundDirectorIR remains the unique sound-method authority
     - model_adapter_capability_changes_require_needs_revalidation
     - observable_readability_does_not_override_director_camera_design
+    - omission_does_not_revoke_inherited_scene_state_without_an_explicit_state_change
+    - descriptive_attributes_cannot_override_canonical_entity_class_age_gender_role_or_relationship_without_explicit_user_change
 
 compiler_chain:
   - CanonicalFacts
@@ -55,10 +59,16 @@ compiler_chain:
 ir_layers:
   WorldStateIR:
     meaning: story_world_truth_not_a_per_shot_visual_authorization
-    required: [time, location, scene_operating_state, characters, objects, spatial_relations, light_sources, sound_sources]
-    character_fields: [identity, world_position, orientation, current_activity, current_goal, body_state, knowledge_or_belief, relationship_state]
-    object_fields: [identity, world_position, ownership, state]
+    required: [time, location, scene_operating_state, characters, objects, spatial_relations, light_sources, sound_sources, persistent_entities, world_invariants]
+    character_fields: [identity, entity_class, age_band, gender_identity_when_story_relevant, social_role, world_position, orientation, current_activity, current_goal, body_state, knowledge_or_belief, relationship_state, persistence_status]
+    object_fields: [identity, world_position, ownership, state, persistence_status]
+    persistent_entity_fields: [identity, entered_at, current_world_position, current_state, expected_visibility_if_camera_includes_position, exit_or_removal_event]
+    world_invariant_fields: [invariant_id, description, scope, visible_implications, forbidden_background_states, expiry_or_change_event]
     spatial_relation_fields: [doors_windows_roads_stairs_elevation_and_reachability]
+    rules:
+      - world_truth_may_remain_offscreen_but_must_constrain_any_shot_that_exposes_the_relevant_region
+      - persistent_entity_without_exit_or_removal_event_remains_in_world_state_even_if_omitted_from_a_later_prompt_draft
+      - canonical_entity_identity_fields_are_resolved_before_free_style_descriptors
   EventGraphIR:
     event_fields: [event_id, agent, action, target, instrument, support_or_contact, precondition, temporal_relation, state_change, result, reaction_trigger, reveal_effect, narrative_function]
     temporal_relation_enum: [BEFORE, AFTER, OVERLAP, UNTIL, INTERRUPTS, CAUSES, ENABLES]
@@ -67,30 +77,38 @@ ir_layers:
     fields: [initial_positions, relative_positions, orientations, distances, movement_paths, approach_or_retreat, crossing, occlusion, depth_relationship, power_center, forced_movement, prop_interaction, final_positions]
     rule: character_goal_relationship_and_spatial_causality_precede_camera_choice
   ShotPlanIR:
-    shot_fields: [shot_id, dramatic_function, audience_knowledge_before, audience_knowledge_after, entry_state, events, camera_state, cut_in_reason, cut_out_reason, exit_state, next_shot_contract]
+    shot_fields: [shot_id, dramatic_function, audience_knowledge_before, audience_knowledge_after, entry_state, events, camera_state, cut_in_reason, cut_out_reason, exit_state, next_shot_contract, sequence_function_signature, prior_function_overlap]
     rule: shot_without_information_relationship_space_emotion_rhythm_or_state_change_requires_necessity_review
     camera_design_guard: Blocking_and_visible_readability_may_inform_camera_but_must_not_replace_the_director_camera_plan_with_a_convenience_coverage_angle
+    sequence_redundancy_rule: repeated_composition_or_establishing_function_requires_new_information_contrast_escalation_temporal_change_or_theme_payoff_otherwise_route_to_necessity_review
   VisibleIR:
     camera_fields: [position, orientation, shot_size, camera_height, lens_intent, camera_motion]
     frame_fields: [foreground, midground, background]
     entity_fields: [identity, screen_region, depth_layer, visibility, occlusion, relative_position, body_orientation, gaze_target, body_state, current_action, support_or_contact, expression_evidence, performance_evidence]
-    environment_fields: [visible_objects, visible_geometry, environmental_response, lighting_evidence, material_evidence]
+    environment_fields: [visible_objects, visible_geometry, environmental_response, lighting_evidence, material_evidence, canonical_background_evidence]
     rule: current_camera_state_only_and_SHOT-SCOPE-001_is_binding
     camera_aesthetic_boundary: visible_set_completeness_cannot_by_itself_authorize_camera_position_orientation_shot_size_or_composition_changes
+    background_integrity_rule: wide_high_pullback_or_aerial_shots_must_validate_exposed_background_against_WorldStateIR_invariants_not_only_foreground_subjects
   PerformanceIR:
-    fields: [objective, hidden_objective, subtext, gaze, breath, pause, posture, center_of_mass, hand_behavior, facial_behavior, distance_change, suppression_or_release, preparation, aftershock]
+    fields: [objective, hidden_objective, subtext, gaze, breath, pause, posture, center_of_mass, hand_behavior, facial_behavior, distance_change, suppression_or_release, preparation, aftershock, motive_to_motion_envelope]
     rule: psychological_intent_compiles_to_task_body_choice_and_visible_evidence_without_fixed_emotion_gesture_formulas
+    crowd_rule: crowd_or_background_actor_motion_must_be_explainable_by_current_need_role_social_state_and_scene_activity_individual_variation_is_allowed_but_unmotivated_rhythmic_sway_or_dance_like_motion_is_not_a_default_fill_behavior
   AudibleIR:
     dialogue_fields: [speaker, addressee, text, speaker_visible, mouth_visible, lip_sync_required, diegesis, spatial_source, volume, pace, prosody, pause, breath, onset, offset]
     physical_sound_fields: [foley, sfx, source, visible_event, material, force, timing, spatial_position]
     environment_music_fields: [ambience, crowd, source_music, score, silence, acoustic_space, reverb, distance, occlusion]
     rule: audible_set_does_not_grant_visual_embodiment_and_VO_speaker_is_not_auto_visible
   TransitionContract:
-    fields: [from_shot, to_shot, inherited_state, changed_state, visual_match, eyeline_relation, action_relation, sound_relation, reveal_relation, continuity_requirement]
-    rule: shot_A_exit_state_must_resolve_to_shot_B_entry_state
+    fields: [from_shot, to_shot, inherited_state, changed_state, persistent_entities, explicit_exits_or_removals, world_invariants_carry, visual_match, eyeline_relation, action_relation, sound_relation, reveal_relation, continuity_requirement]
+    rules:
+      - shot_A_exit_state_must_resolve_to_shot_B_entry_state
+      - inherited_persistent_entities_continue_until_explicit_exit_removal_occlusion_or_camera_exclusion_is_resolved
+      - world_invariants_continue_across_shots_until_a_canonical_change_event
   ConstraintAutonomyContract:
-    fields: [hard_invariants, guided_choices, free_model_space, constraint_budget, final_state]
-    rule: hard_constraints_protect_canonical_facts_identity_topology_key_reveals_and_final_state_only
+    fields: [hard_invariants, semantic_entity_locks, guided_choices, free_model_space, constraint_budget, final_state]
+    rules:
+      - hard_constraints_protect_canonical_facts_identity_topology_key_reveals_world_state_persistent_scene_state_and_final_state_only
+      - semantic_entity_locks_resolve_entity_class_age_gender_role_relationship_before_style_traits_or_free_descriptors_are_applied
 
 model_adapter:
   model_fields: [model, version, generation_mode, image_reference, video_reference, audio_reference, first_frame, last_frame, camera_control, motion_control, native_audio, dialogue_support, editing_support, extension_support, negative_prompt_semantics, known_failure_modes, last_revalidated]
@@ -98,10 +116,12 @@ model_adapter:
   empirical_feedback_rule: model_version_specific_prompt_output_observations_may_inform_known_failure_modes_only_when_they_are_recorded_with_scope_boundary_and_maturity
 
 minimal_execution_compiler:
-  pipeline: [RichDirectorIR, RelevanceFilter, ModelCapabilityFilter, ReferenceResponsibilitySplit, ConstraintBudget, MinimalSufficientExecutionPrompt]
-  output_only: [shot_purpose, current_visible_set, current_audible_set, subject_action, key_event_order, camera, key_sound, hard_invariants, autonomy, final_state, catastrophic_local_exclusions]
+  pipeline: [RichDirectorIR, RelevanceFilter, ModelCapabilityFilter, ReferenceResponsibilitySplit, SemanticAttributeBinding, InheritedSceneStateCarry, CanonicalBackgroundIntegrity, ConstraintBudget, MinimalSufficientExecutionPrompt]
+  output_only: [shot_purpose, current_visible_set, current_audible_set, subject_action, key_event_order, camera, key_sound, inherited_state_when_material, semantic_entity_locks_when_material, hard_invariants, autonomy, final_state, catastrophic_local_exclusions]
   forbidden_output: [full_internal_analysis, matrices, compiler_metadata, future_shot_entities]
   camera_preservation_guard: when_a_director_camera_plan_is_locked_or_used_as_an_AB_control_the_compiler_must_preserve_it_instead_of_selecting_a_more_convenient_coverage_view
+  semantic_binding_rule: descriptive_traits_modify_only_allowed_attributes_after_canonical_entity_identity_is_resolved
+  state_carry_rule: prompt_omission_cannot_remove_a_persistent_entity_or_world_invariant_that_remains_live_in_the_transition_contract
 
 static_checks:
   ERROR:
@@ -117,12 +137,18 @@ static_checks:
     - MISSING_ENTRY_STATE
     - MISSING_EXIT_STATE
     - TRANSITION_DISCONTINUITY
+    - SEMANTIC_ENTITY_CLASS_DRIFT
+    - INHERITED_ENTITY_DROPPED
+    - CANONICAL_WORLD_STATE_VIOLATION
   WARNING:
     - ABSTRACT_WITHOUT_EVIDENCE
     - CONSTRAINT_OVERLOAD
     - REFERENCE_CONFLICT
     - EVAL_CONTROL_VARIABLE_DRIFT
     - CAMERA_AESTHETIC_COVERAGE_DRIFT
+    - SEQUENCE_FUNCTION_REDUNDANCY
+    - CROWD_MOTION_MOTIVE_MISMATCH
+    - AESTHETIC_QUALITY_NOT_SEPARATELY_EVALUATED
   INFO:
     - NEEDS_MODEL_ADAPTER_REVALIDATION
     - REVERSE_OBSERVATION_MANUAL_OR_AI_ASSISTED
@@ -145,13 +171,38 @@ static_checks:
     CAMERA_AESTHETIC_COVERAGE_DRIFT:
       trigger: compiler_changes_camera_to_keep_more_actions_visible_but_weakens_director_composition_or_visual_priority
       severity_when_triggered: WARNING
+    SEMANTIC_ENTITY_CLASS_DRIFT:
+      trigger: free_descriptor_or_style_trait_changes_canonical_entity_class_age_band_gender_role_relationship_or_other_locked_identity_field_without_explicit_user_change
+      examples:
+        - canonical_adult_female_saint_plus_tomboy_trait_becomes_a_child
+        - veteran_character_plus_youthful_energy_becomes_a_teenager
+      severity_when_triggered: ERROR
+    INHERITED_ENTITY_DROPPED:
+      trigger: same_scene_or_continuous_time_chain_has_a_persistent_entity_without_exit_removal_or_camera_exclusion_resolution_but_later_shot_world_or_visible_state_silently_deletes_it
+      severity_when_triggered: ERROR
+      guard: entity_need_not_be_visible_when_camera_framing_occlusion_or_explicit_blocking_places_it_outside_the_frame_but_it_must_remain_in_WorldStateIR
+    CANONICAL_WORLD_STATE_VIOLATION:
+      trigger: generated_or_planned_background_exposes_a_region_whose_visible_state_conflicts_with_a_live_world_invariant
+      examples:
+        - flooded_lower_world_is_rendered_as_exposed_burning_land
+        - forbidden_ecology_or_infrastructure_is_added_by_generic_fantasy_fill
+      severity_when_triggered: ERROR
+    SEQUENCE_FUNCTION_REDUNDANCY:
+      trigger: later_shot_repeats_prior_shot_dramatic_function_audience_information_and_composition_role_without_new_contrast_escalation_temporal_change_or_theme_payoff
+      severity_when_triggered: WARNING_AND_NECESSITY_REVIEW
+    CROWD_MOTION_MOTIVE_MISMATCH:
+      trigger: crowd_or_background_motion_reads_as_unmotivated_dance_rhythmic_sway_random_cheering_or_generic_activity_when_scene_state_requires_a_specific_social_task_response_or_survival_behavior
+      severity_when_triggered: WARNING_AND_TARGETED_PERFORMANCE_REPAIR
+    AESTHETIC_QUALITY_NOT_SEPARATELY_EVALUATED:
+      trigger: semantic_or_instruction_following_pass_is_used_as_evidence_that_composition_beauty_visual_hierarchy_or_memory_value_also_passed
+      severity_when_triggered: WARNING
   gate: severe_ERROR_must_not_enter_formal_generation_without_targeted_repair_or_explicit_override
 
 reverse_compiler:
   status: candidate_interface
-  observed_fields: [observed_visible_state, observed_audible_state, observed_event_order, observed_camera_state, observed_final_state]
+  observed_fields: [observed_visible_state, observed_audible_state, observed_event_order, observed_camera_state, observed_final_state, observed_world_background_state, observed_persistent_entities, observed_semantic_identity, observed_crowd_motion, observed_sequence_function]
   comparison: ExpectedSOACContract_vs_ObservedOutput
-  failure_categories: [identity, space, visibility, action_binding, contact, body_mechanics, event_order, performance, camera, lighting, dialogue, audio_source, AV_sync, transition, final_state]
+  failure_categories: [identity, semantic_entity_drift, space, world_state, continuity_state, visibility, action_binding, contact, body_mechanics, event_order, performance, crowd_behavior, camera, aesthetic_composition, sequence_redundancy, lighting, dialogue, audio_source, AV_sync, transition, final_state]
   current_input_mode: manual_or_AI_assisted_observation
   boundary: not_an_implemented_fully_automatic_vision_or_audio_grader
 
