@@ -11,6 +11,7 @@ routes:
   scene_topology_map_movement: 05_场景与空间/00_项目地图文件.md
   scene_asset_identity_schema: 10_运行时/scene_asset_identity_schema.yaml
   scene_media_version_locator_resolution: 10_运行时/scene_media_resolver_manifest.yaml
+  formal_asset_retrieval_policy: 10_运行时/asset_retrieval_policy.yaml
   golden_media_evidence_schema: 10_运行时/golden_media_evidence_schema.yaml
   golden_case_director_pull_schema: 10_运行时/golden_case_director_pull_schema.yaml
   screen_observable_audible_method: 01_AI电影系统/AI电影系统.md
@@ -29,6 +30,7 @@ routes:
   sound_research_evidence: 09_资料证据/声音导演与SUNO证据索引.md
   suno_user_prompt_evidence: 09_资料证据/SUNO用户提示词资料摄取记录.md
   golden_prompt_case: 11_验收/golden_prompt_cases.yaml
+  asset_retrieval_regression_case: 11_验收/asset_retrieval_regression_cases.yaml
   golden_case_bundle: 11_验收/golden_case_bundles/{case_id}/
   golden_case_director_pull: 11_验收/golden_case_bundles/{case_id}/director_pull.md
   golden_case_director_pull_machine: 11_验收/golden_case_bundles/{case_id}/director_pull.yaml
@@ -49,6 +51,8 @@ write_protocol:
   - report_committed_only_after_verification
 
 scene_media_transaction_policy:
+  retrieval_policy: 10_运行时/asset_retrieval_policy.yaml
+  binary_body_default_home: ChatGPT Library / Project
   logical_asset_change:
     target: 06_视觉资产/视觉资产登记库.md
     includes:
@@ -67,6 +71,18 @@ scene_media_transaction_policy:
       - locator_set
       - pixel_verification
       - supersession_state
+  default_locator_write_scope:
+    - chatgpt_file_id
+    - file_library_title
+    - current_conversation_file
+    - existing_compatible_locator_when_user_explicitly_supplies_it
+  forbidden_registration_side_effects:
+    - copy_media_body_to_github
+    - copy_media_body_to_cloudflare_kv
+    - copy_media_body_to_r2
+    - provision_external_object_storage
+    - create_api_token_or_github_secret
+    - require_payment_method
   atomicity_rule: Asset职责与Version/Locator同时变化时必须串行写入两个唯一主档并最终共同回读；任一分支失败不得宣布完整替换完成。
 
 golden_media_evidence_policy:
@@ -124,6 +140,7 @@ canonical_learning_gate:
     - suno_prompt_lexicon
     - director_feedback_learning_case
     - model_version_real_generation_feedback
+    - formal_asset_retrieval_policy
   candidate_registration_requires:
     - operational_rule
     - evidence_or_user_feedback
@@ -236,5 +253,8 @@ rules:
   golden_media_storage_does_not_imply_model_weight_training: true
   scene_asset_identity_schema_controls_scene_camera_view_asset_version_relation_identifiers: true
   scene_media_resolver_manifest_controls_scene_asset_current_version_and_locator_resolution: true
+  asset_retrieval_policy_cannot_create_second_asset_or_version_resolver: true
+  formal_asset_registration_cannot_imply_binary_replication: true
+  formal_asset_external_storage_is_exception_only: true
   model_version_feedback_cannot_override_general_directing_method_or_canonical_story_character_scene_asset_facts: true
   confounded_ab_result_cannot_promote_maturity: true
