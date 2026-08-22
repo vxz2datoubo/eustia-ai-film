@@ -14,6 +14,7 @@ read_sets:
       map: 00_项目地图文件#required_for_spatial_direction_camera_orientation_movement
       scene_asset_identity: scene_asset_identity_schema#formal_scene_asset_camera_anchor_view_pair_or_direction_sensitive
       scene_media_resolver: scene_media_resolver_manifest#formal_scene_pixel_version_locator_or_reproducibility_sensitive
+      asset_retrieval: asset_retrieval_policy#when_formal_asset_pixels_generation_reference_or_edit_binding_is_needed
       assets: 视觉资产登记#bound_assets
       sound: 声音导演系统#sound_music_song_dialogue_foley_mix_relevant
       suno_lexicon: SUNO提示词词库与编译映射#when_suno_prompt_terms_vocal_structure_or_style_compilation
@@ -79,6 +80,7 @@ read_sets:
   asset_registration:
     always:
       - PROJECT_INDEX.yaml
+      - asset_retrieval_policy
       - scene_asset_identity_schema
       - scene_media_resolver_manifest
       - 视觉资产登记
@@ -91,6 +93,7 @@ read_sets:
   asset_replacement:
     always:
       - PROJECT_INDEX.yaml
+      - asset_retrieval_policy
       - scene_asset_identity_schema
       - scene_media_resolver_manifest
       - 视觉资产登记
@@ -98,7 +101,7 @@ read_sets:
     conditional:
       map: 00_项目地图文件#when_camera_anchor_view_direction_or_topology_may_change
       scene: 场景与空间设定库#when_scene_design_or_view_duty_may_change
-      regression: director_regression_cases#when_existing_version_is_pinned_by_eval_or_reproducibility
+      regression: asset_retrieval_regression_cases#when_retrieval_version_pin_external_fallback_or_reference_binding_is_relevant
 
   system_research:
     always:
@@ -113,6 +116,8 @@ read_sets:
       director_feedback_learning_cases: 导演反馈学习案例#when_researching_or_revalidating_feedback-derived_director_knowledge
       scene_asset_identity: scene_asset_identity_schema#asset_identity_camera_anchor_view_relation_or_interop_research
       scene_media_resolver: scene_media_resolver_manifest#media_version_locator_migration_or_retrieval_research
+      asset_retrieval: asset_retrieval_policy#formal_asset_native_retrieval_external_storage_or_user_operation_cost_research
+      asset_retrieval_regression: asset_retrieval_regression_cases#when_asset_retrieval_policy_or_fail_closed_behavior_is_evaluated
       golden_media_evidence: golden_media_evidence_schema#when_prompt_output_media_pairing_temporal_video_evidence_aesthetic_retrieval_or_video_eval_is_researched
       golden_case_director_pull: golden_case_director_pull_schema#when_director_grade_case_breakdown_performance_beats_stillness_sound_or_retrieval_is_researched
       golden_case_director_pull_evidence: 导演级拉片与低运动表演证据索引#when_director_pull_or_low_motion_high_information_method_needs_external_evidence
@@ -154,6 +159,7 @@ read_sets:
       map: 00_项目地图文件#spatial_or_camera_direction_sensitive
       scene_asset_identity: scene_asset_identity_schema#formal_scene_asset_or_camera_anchor_sensitive
       scene_media_resolver: scene_media_resolver_manifest#formal_scene_media_version_or_locator_sensitive
+      asset_retrieval: asset_retrieval_policy#when_formal_media_pixels_or_reference_binding_is_needed
       assets: 视觉资产登记#bound_assets
       continuity: 连续性与当前生产状态#relevant_work_item
       evidence: 优秀提示词案例学习证据索引#K2_K3_research_or_method_validation
@@ -183,6 +189,9 @@ rules:
   spatial_task_must_read_map: true
   formal_scene_asset_task_must_read_scene_asset_identity_schema: true
   formal_scene_media_resolution_must_read_resolver_manifest: true
+  formal_asset_binary_or_reference_resolution_must_read_asset_retrieval_policy: true
+  formal_asset_external_fallback_default_forbidden: true
+  formal_asset_unavailable_must_fail_closed_without_semantic_substitute: true
   formal_scene_asset_replacement_must_classify_version_variant_or_new_view: true
   sound_relevant_task_must_read_sound_director: true
   suno_prompt_compilation_must_read_lexicon: true
