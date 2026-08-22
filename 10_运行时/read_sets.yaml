@@ -101,7 +101,8 @@ read_sets:
     conditional:
       map: 00_项目地图文件#when_camera_anchor_view_direction_or_topology_may_change
       scene: 场景与空间设定库#when_scene_design_or_view_duty_may_change
-      regression: asset_retrieval_regression_cases#when_retrieval_version_pin_external_fallback_or_reference_binding_is_relevant
+      regression: director_regression_cases#when_existing_version_is_pinned_by_eval_or_reproducibility
+      asset_retrieval_regression: asset_retrieval_regression_cases#when_retrieval_version_pin_external_fallback_or_reference_binding_is_relevant
 
   system_research:
     always:
