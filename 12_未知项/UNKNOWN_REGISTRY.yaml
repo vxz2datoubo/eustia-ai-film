@@ -68,12 +68,16 @@ unknowns:
     status: resolved
 
   - id: U-ASSET-RETRIEVAL-001
-    question: GitHub 视觉资产登记库中的正式 File ID 能否在当前 ChatGPT File Library 检索接口中被稳定反解为对应图片本体
-    impact: Source Authority 与资产身份可以正确路由，但在部分会话中 File Library 只能命中资产表/相关候选图，无法通过 opaque File ID 稳定打开正式图片本体，因此会影响基于正式图像像素的精确视觉分析。
-    evidence: 2026-08-11 对钟楼正面、左右侧视图和桥南立面使用正式 File ID 检索时，只稳定命中资产总表与相关历史图片，未能直接打开对应正式图片卡；不得把语义相近候选图冒充正式资产。
-    safe_default: 继续以 GitHub Asset Registry 决定应调用的 Asset ID / File ID；若当前接口无法解引用正式图片，则只做基于注册元数据、地图和已明确来源的结构分析，并明确标注“未实际看到正式像素”；需要像素级分析时要求用户在当前对话上传正式图或提供可直接访问的图像位置。
-    next_action: 为正式视觉资产增加可检索 filename/title/library_locator 或 GitHub 可访问缩略图/派生预览指针，并验证普通 Chat 能否 Asset ID → locator → image 完整闭环。
-    status: open
+    question: GitHub 视觉资产登记库中的正式 Asset / Media Version 能否在当前 ChatGPT Library / Project 检索接口中稳定反解为对应正式媒体本体
+    impact: Source Authority 与资产身份可以正确路由，但在部分会话中原生 Library / Project 检索可能只命中资产表或相关候选，无法稳定打开目标正式像素，因此会影响基于正式图像像素的精确视觉分析与生成参考绑定。
+    evidence:
+      - 2026-08-11 对钟楼正面、左右侧视图和桥南立面使用正式 File ID 检索时，只稳定命中资产总表与相关历史图片，未能直接打开对应正式图片卡；不得把语义相近候选图冒充正式资产。
+      - PR #8 的独立结构审查确认 identity/version/locator/binary/pixels/reference-bound 必须分层，历史登记证据不得 false-green 新会话。
+      - PR #9 的外部存储 PoC 虽证明 Cloudflare KV → GitHub Actions artifact → ChatGPT 的合成链可工作，但正式3-Version预检仍因原始正式字节在当前原生接口不可得而要求用户重新提供文件；该路线已由用户在2026-08-22明确停止，保留为历史实验而非生产 fallback。
+    safe_default: 服从 asset_retrieval_policy。先由 GitHub canonical 解析 Asset / Media Version，再只通过当前可用的 ChatGPT Library / Project / 当前会话 native locator 尝试取得目标媒体；若身份和版本已找到但正式像素当前不可得，报告 ASSET_FOUND_PIXELS_UNAVAILABLE，并明确“未实际看到正式像素”。不得自动绕到 GitHub binary、Cloudflare KV、R2、external_uri，也不得用语义相近候选图替代。需要像素级生成或编辑时，可让用户仅重新附上目标正式图本体，不要求重新解释资产身份或场景。
+    next_action: 在真实生产自然出现时，用 2–3 个已登记正式资产验证 Asset ID → current Media Version → native locator → exact media open 的最短闭环，并记录当前工具面的成功/失败证据。若原生失败只是会话或搜索偶发，保持本 Unknown；只有出现真实、可复现、生产级硬缺口且无更短原生方案时，才按 asset_retrieval_policy 的 external_storage_hard_gap_gate 重新评估外部方案。
+    superseded_path: GitHub可访问缩略图/派生预览、Cloudflare KV、R2 或其他外部对象存储不再是本 Unknown 的默认 remediation / fallback / upgrade path。
+    status: open_native_capability_observation
 
   - id: U-SEEDANCE-NEGATION-001
     question: Seedance 2.5 对主提示文本中的自然语言否定、否定作用域、绝对否定强度以及是否存在独立 negative-prompt 控制通道的官方精确定义是什么
@@ -145,7 +149,7 @@ unknowns:
     current_hypothesis:
       status: candidate_unvalidated
       safe_default: 只在完整导演、剧情转镜头、AI执行编译、可见可听诊断、反向验收或编译器回归时按需读取schema；最终模型提示只保留最小充分执行字段。
-    next_action: 在REG-SOAC-001及至少一个不同任务中比较最小必要IR、过细IR与直接提示的生成质量、scope leak、constraint overload、prompt complexity和repair iterations。
+    next_action: 在REG-SOAC-001及至少一个不同任务中比较最小必要IR、过细IR与直接提示的生成质量、scope leak、constraint overload、prompt complexity和repair_iterations。
     status: open
 
   - id: U-SOAC-ADAPTER-001
