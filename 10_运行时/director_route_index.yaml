@@ -503,3 +503,32 @@ routes:
       - reverse_observation
       - targeted_repair
       - controlled_A_B_validation
+
+  - id: MINIMAX_H3_PROMPT_COMPILATION
+    symptoms:
+      - MiniMax H3
+      - minimax h3
+      - H3提示词
+      - H3 prompt
+      - h3-prompt-writing
+      - 转成H3官方格式
+      - 按MiniMax官方格式
+    mandatory_reads:
+      - 10_运行时/minimax_h3_prompt_adapter.yaml
+      - .agents/skills/h3-prompt-writing/SKILL.md
+    mandatory_scans:
+      - target_model_explicit_or_router_selected
+      - prompt_compilation_only
+      - h3_mode
+      - reference_asset_role
+      - official_skill_version_pin
+      - official_field_order
+      - duration_range
+      - dialogue_language_preservation
+      - cross_model_contamination
+    candidate_axes:
+      - T2VA
+      - I2VA
+      - FL2VA
+      - L2VA
+      - Ref2VA

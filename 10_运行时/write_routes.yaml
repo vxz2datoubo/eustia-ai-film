@@ -4,6 +4,8 @@ routes:
   sound_directing_method: 01_AI电影系统/声音导演系统.md
   suno_music_method: 01_AI电影系统/声音导演系统.md
   suno_prompt_lexicon: 01_AI电影系统/SUNO提示词词库与编译映射.md
+  minimax_h3_prompt_adapter: 10_运行时/minimax_h3_prompt_adapter.yaml
+  minimax_h3_prompt_regression_case: 11_验收/minimax_h3_prompt_regression_cases.yaml
   project_long_term_fact: 02_AI电影项目记忆/AI电影项目记忆.md
   confirmed_story_change: 03_剧本与改编/当前改编剧本.md
   character_behavior_dialogue_relationship: 04_角色与表演/角色与表演设定库.md
@@ -49,6 +51,25 @@ write_protocol:
   - fetch_again
   - verify_new_content_and_status
   - report_committed_only_after_verification
+
+minimax_h3_official_skill_policy:
+  vendor_root: .agents/skills/h3-prompt-writing/
+  upstream_repository: MiniMax-AI/MiniMax-H3
+  upstream_skill_path: skills/h3-prompt-writing
+  project_adapter: 10_运行时/minimax_h3_prompt_adapter.yaml
+  regression_suite: 11_验收/minimax_h3_prompt_regression_cases.yaml
+  vendor_files_are_verbatim_official_mirror: true
+  project_rules_must_not_be_written_into_vendor_files: true
+  official_skill_controls_only_h3_prompt_structure_and_syntax: true
+  generic_generation_must_not_route_to_h3_skill: true
+  seedance_seedream_other_model_prompting_must_not_route_to_h3_skill: true
+  update_transaction:
+    - fresh_fetch_upstream
+    - compare_pinned_commit_and_source_blobs
+    - update_vendor_files_verbatim
+    - update_adapter_pin_and_project_index
+    - rerun_h3_regression
+    - fetch_again_and_verify
 
 scene_media_transaction_policy:
   retrieval_policy: 10_运行时/asset_retrieval_policy.yaml
@@ -237,6 +258,10 @@ rules:
   omitted_constraint_does_not_equal_revoked: true
   sound_subsystem_cannot_override_story_character_scene_or_map_canonical: true
   suno_lexicon_cannot_override_sound_director_or_current_official_model_capability: true
+  minimax_h3_vendor_files_must_remain_verbatim_official: true
+  minimax_h3_project_adapter_cannot_become_second_director_system: true
+  minimax_h3_official_skill_cannot_route_generic_generation: true
+  minimax_h3_official_skill_cannot_contaminate_seedance_seedream_or_other_model_prompts: true
   golden_prompt_case_registration_and_skill_promotion_are_separate: true
   golden_prompt_source_verbatim_cannot_be_replaced_by_normalized_summary: true
   golden_prompt_exact_demo_case_cannot_be_sole_holdout_eval: true

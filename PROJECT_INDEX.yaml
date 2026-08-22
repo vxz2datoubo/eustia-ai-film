@@ -26,6 +26,10 @@ policy:
   learning_conflict_resolution_contextual_not_latest_wins: true
   episodic_constraints_scope_bounded: true
   unresolved_material_learning_conflict_requires_user_deferral: true
+  minimax_h3_official_skill_scope_isolated: true
+  minimax_h3_official_skill_default_active: false
+  minimax_h3_official_skill_must_not_route_generic_generation: true
+  minimax_h3_official_format_authority_over_local_h3_syntax: true
 
 canonical:
   project_entry: 项目入口.md
@@ -59,6 +63,7 @@ canonical:
   screen_observable_audible_ir_schema: 10_运行时/screen_observable_audible_ir_schema.yaml
   proactive_execution_opportunity_router: 10_运行时/proactive_execution_opportunity_router.yaml
   high_dynamic_motion_prompt_compiler: 10_运行时/high_dynamic_motion_prompt_compiler.yaml
+  minimax_h3_prompt_adapter: 10_运行时/minimax_h3_prompt_adapter.yaml
   learning_application_gate: 10_运行时/learning_application_gate.yaml
   route_index: 10_运行时/director_route_index.yaml
   source_authority_rules: 10_运行时/source_authority.yaml
@@ -75,6 +80,7 @@ canonical:
   golden_case_director_pull_regression_cases: 11_验收/golden_case_director_pull_regression_cases.yaml
   sound_regression_cases: 11_验收/sound_director_regression_cases.yaml
   suno_prompt_regression_cases: 11_验收/suno_prompt_regression_cases.yaml
+  minimax_h3_prompt_regression_cases: 11_验收/minimax_h3_prompt_regression_cases.yaml
   legacy_authority_regression_cases: 11_验收/legacy_authority_regression_cases.yaml
   canonical_migration_integrity_audit: 11_验收/canonical_migration_integrity_audit.md
   unknown_registry: 12_未知项/UNKNOWN_REGISTRY.yaml
@@ -108,6 +114,7 @@ effective_sources:
   10_运行时/screen_observable_audible_ir_schema.yaml: github_verified
   10_运行时/proactive_execution_opportunity_router.yaml: github_verified
   10_运行时/high_dynamic_motion_prompt_compiler.yaml: github_verified
+  10_运行时/minimax_h3_prompt_adapter.yaml: github_verified
   10_运行时/learning_application_gate.yaml: github_verified
   10_运行时/source_authority.yaml: github_verified
   10_运行时/read_sets.yaml: github_verified
@@ -124,6 +131,7 @@ effective_sources:
   11_验收/golden_case_director_pull_regression_cases.yaml: github_verified
   11_验收/sound_director_regression_cases.yaml: github_verified
   11_验收/suno_prompt_regression_cases.yaml: github_verified
+  11_验收/minimax_h3_prompt_regression_cases.yaml: github_verified
   11_验收/legacy_authority_regression_cases.yaml: github_verified
   11_验收/canonical_migration_integrity_audit.md: github_verified
   12_未知项/UNKNOWN_REGISTRY.yaml: github_verified
@@ -133,6 +141,37 @@ effective_sources:
   01_AI电影系统/SUNO提示词词库与编译映射.md: github_verified
   02_AI电影项目记忆/AI电影项目记忆.md: github_verified
   05_场景与空间/场景与空间设定库.md: github_verified
+  .agents/skills/h3-prompt-writing/SKILL.md: official_vendor_pinned
+  .agents/skills/h3-prompt-writing/references/base-en.txt: official_vendor_pinned
+  .agents/skills/h3-prompt-writing/references/ref-en.txt: official_vendor_pinned
+  .agents/skills/h3-prompt-writing/agents/openai.yaml: official_vendor_pinned
+
+external_skills:
+  minimax_h3_prompt_writing:
+    status: active_pinned_vendor_mirror
+    scope: minimax_h3_prompt_compilation_only
+    default_active: false
+    activation: explicit_or_router_selected_minimax_h3_only
+    repo_local_path: .agents/skills/h3-prompt-writing/SKILL.md
+    upstream_repository: MiniMax-AI/MiniMax-H3
+    upstream_commit: d21241f0a4b3acbb34c97dae47fa417b7065e438
+    upstream_skill_path: skills/h3-prompt-writing
+    source_blobs:
+      SKILL.md: b6d9b2839384a588763a9c24315225dd8ce19d56
+      references/base-en.txt: 40cf586a634d677d6b7107b367cf0ec9621be728
+      references/ref-en.txt: 7ae1b2d07d743fd2392258a96449be9e9e322d35
+      agents/openai.yaml: 8151bd25e3dc29bdb67c8049e39c34c60c3f08f8
+    authority_role: h3_prompt_structure_and_syntax_only
+    cannot_override:
+      - project_story
+      - character
+      - scene
+      - map
+      - asset
+      - continuity
+      - ai_film_directing
+      - seedance_seedream_or_other_model_prompting
+    refresh_policy: compare_upstream_commit_and_source_blobs_before_update
 
 external_binary_sources:
   primary: ChatGPT Library / Project

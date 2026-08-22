@@ -1,0 +1,136 @@
+schema_version: "1.0"
+runtime_id: MINIMAX_H3_PROMPT_ADAPTER
+status: active
+purpose:
+  - "只在目标模型明确为 MiniMax H3 时，把上游已完成的导演/镜头/资产意图编译为 MiniMax 官方 H3 提示词结构。"
+  - "把官方 h3-prompt-writing 作为 H3 格式、字段、标签、模式与时间记法的权威，不让 H3 语法污染 Seedance、Seedream 或普通生成。"
+
+scope:
+  target_model: "MiniMax H3"
+  task_class: "prompt_compilation_only"
+  default_activation: false
+  not_a_general_generation_skill: true
+
+activation:
+  allowed_when_any:
+    - "用户当前明确要求 MiniMax H3 / H3 提示词 / H3 官方格式"
+    - "上游 AI电影导演路由已经明确选择 MiniMax H3 为本次目标视频模型"
+  forbidden_when:
+    - "目标模型未确定且只是普通生图/视频生成"
+    - "目标模型为 Seedance / C-DANCE / Seedream"
+    - "目标模型为其他非 MiniMax H3 视频模型"
+    - "只是讨论 H3、比较模型或研究资料而没有要求编译 H3 提示词"
+  file_presence_is_not_activation: true
+
+source_authority:
+  project_index: "PROJECT_INDEX.yaml"
+  directing_authority: "01_AI电影系统/AI电影系统.md"
+  h3_prompt_format_authority: ".agents/skills/h3-prompt-writing/SKILL.md"
+  h3_base_reference: ".agents/skills/h3-prompt-writing/references/base-en.txt"
+  h3_full_reference: ".agents/skills/h3-prompt-writing/references/ref-en.txt"
+  upstream_repository: "MiniMax-AI/MiniMax-H3"
+  upstream_commit: "d21241f0a4b3acbb34c97dae47fa417b7065e438"
+  upstream_skill_path: "skills/h3-prompt-writing"
+  upstream_source_blobs:
+    SKILL.md: "b6d9b2839384a588763a9c24315225dd8ce19d56"
+    references/base-en.txt: "40cf586a634d677d6b7107b367cf0ec9621be728"
+    references/ref-en.txt: "7ae1b2d07d743fd2392258a96449be9e9e322d35"
+    agents/openai.yaml: "8151bd25e3dc29bdb67c8049e39c34c60c3f08f8"
+
+precedence:
+  - "用户当前明确要求"
+  - "PROJECT_INDEX 与项目 canonical 剧情/角色/场景/地图/资产/连续性"
+  - "AI电影系统产生的导演意图、SOAC/镜头可见可听执行语义"
+  - "MiniMax 官方 h3-prompt-writing 对 H3 格式、字段顺序、标签和模式的规定"
+  - "项目 H3 实测经验，但只在不冲突官方格式且模型版本仍匹配时应用"
+
+hard_isolation_rules:
+  official_skill_is_h3_syntax_authority_only: true
+  official_skill_cannot_choose_or_rewrite_project_story_facts: true
+  official_skill_cannot_override_character_scene_map_asset_or_continuity: true
+  official_skill_cannot_replace_ai_film_directing: true
+  h3_skill_default_inactive: true
+  generic_generation_must_not_activate_h3_skill: true
+  seedance_prompt_compilation_must_not_read_h3_skill: true
+  seedream_prompt_compilation_must_not_read_h3_skill: true
+  other_model_prompt_compilation_must_not_read_h3_skill: true
+  cross_model_syntax_contamination_forbidden: true
+  official_vendor_files_must_remain_verbatim: true
+  project_rules_must_not_be_written_into_official_vendor_files: true
+
+mode_selection:
+  principle: "由参考素材在目标视频中的职责决定模式，不由有没有上传图片决定。"
+  T2VA: "没有具体关键帧锚点，完整视听时间线由文本构建。"
+  I2VA: "图片明确作为目标视频 0.00 秒的真实首帧。"
+  FL2VA: "两张图片分别明确作为目标视频首帧与末帧。"
+  L2VA: "图片明确作为目标视频末帧。"
+  Ref2VA: "图片/视频/音频承担人物身份、场景、服装、动作、风格、镜头、声音等参考职责，或为混合全参考任务。"
+  rules:
+    - "图片只用于人物身份/服装/场景参考时不得因为上传了图片就误判 I2VA。"
+    - "视频存在不自动等于 video editing / continuation；按官方 ref-en 中真实职责判断。"
+    - "音频存在不自动创建 <Audio N>；按官方 ref-en 中音频是否实际复制/参考判断。"
+
+compile_pipeline:
+  - "确认 target_model = MiniMax H3；否则立即退出本适配器"
+  - "继承上游导演与项目 hard invariants，不在 H3 skill 内重新导演"
+  - "解析每个参考素材的职责，选择 T2VA / I2VA / FL2VA / L2VA / Ref2VA"
+  - "读取官方 SKILL.md"
+  - "Base 模式读取 references/base-en.txt；Ref2VA 读取 references/ref-en.txt"
+  - "按官方结构编译，不自行发明字段、标签、时间格式或替代结构"
+  - "执行静态检查：字段顺序、reference labels、speaker IDs、dialogue、时长与 keyframe 对齐"
+  - "输出 MiniMax H3 执行稿；H3 专属语法不得反向写入其他模型提示词"
+
+official_format_contract:
+  base_modes:
+    applies_to: [T2VA, I2VA, FL2VA, L2VA]
+    field_order:
+      - integrated_multimodal_description
+      - overall_soundscape
+      - non_diegetic_music
+  Ref2VA:
+    field_order:
+      - subject_definitions
+      - summary
+      - retention_analysis
+      - detailed_description
+      - overall_soundscape
+      - non_diegetic_music
+  language:
+    rewrite_sections: English
+    preserve_original_language_for:
+      - dialogue_inside_d_tags
+      - lyrics_inside_d_tags
+      - visible_scene_text
+  current_official_duration_seconds:
+    min: 4
+    max: 15
+    outside_range_action: needs_revalidation
+
+static_validation:
+  fail_closed_on:
+    - "未确认目标模型为 MiniMax H3"
+    - "Base/Ref2VA 官方字段顺序被改变"
+    - "存在未解析 reference label"
+    - "引用标签前后含义漂移"
+    - "关键帧职责与模式不一致"
+    - "要求时长与描述时间线不匹配"
+    - "把用户原始对白擅自翻译或改写"
+    - "H3 专属结构被输出给非 H3 模型"
+
+versioning:
+  model_and_skill_are_version_bound: true
+  pinned_upstream_commit: "d21241f0a4b3acbb34c97dae47fa417b7065e438"
+  needs_revalidation_when:
+    - "MiniMax H3 模型/接口更新"
+    - "官方 h3-prompt-writing upstream commit 或 source blob 变化"
+    - "项目实测出现与当前官方 skill 明显不一致的格式/行为"
+  refresh_protocol:
+    - "fresh fetch MiniMax-AI/MiniMax-H3"
+    - "compare upstream commit and four pinned source blobs"
+    - "更新 repo-local 官方镜像，不在镜像内混入项目规则"
+    - "更新本 adapter 的 pin"
+    - "运行 minimax_h3_prompt_regression_cases"
+    - "真实生成行为差异仍按 learning/maturity 流程单独验证"
+
+regression:
+  suite: "11_验收/minimax_h3_prompt_regression_cases.yaml"

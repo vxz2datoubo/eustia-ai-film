@@ -1,0 +1,138 @@
+schema_version: "1.0"
+suite_id: MINIMAX_H3_PROMPT_REGRESSION
+status: active
+adapter: "10_运行时/minimax_h3_prompt_adapter.yaml"
+official_skill: ".agents/skills/h3-prompt-writing/SKILL.md"
+
+cases:
+  - id: REG-H3-ROUTE-001
+    purpose: "普通生成不得误触发 H3 skill"
+    input: "帮我生成一段人物追逐的视频提示词。"
+    expected:
+      h3_skill_activated: false
+      reason: "target model 未指定为 MiniMax H3"
+
+  - id: REG-H3-ROUTE-002
+    purpose: "Seedance 提示词不得被 H3 语法污染"
+    input: "用 Seedance 2.5 做这段追逐，给我提示词。"
+    expected:
+      h3_skill_activated: false
+      forbidden_content:
+        - integrated_multimodal_description
+        - subject_definitions
+        - retention_analysis
+      reason: "target model = Seedance 2.5"
+
+  - id: REG-H3-ROUTE-003
+    purpose: "明确 H3 请求必须触发官方编译层"
+    input: "用 MiniMax H3，把这段自然语言转成官方格式。"
+    expected:
+      h3_skill_activated: true
+      official_skill_required: true
+
+  - id: REG-H3-MODE-001
+    purpose: "角色定妆图只做身份参考时不得误判 I2VA"
+    input_state:
+      target_model: "MiniMax H3"
+      picture_role: "character identity and wardrobe reference only"
+      picture_is_first_frame: false
+    expected:
+      mode: Ref2VA
+      mode_must_not_be: I2VA
+
+  - id: REG-H3-MODE-002
+    purpose: "真实首帧锚点选择 I2VA"
+    input_state:
+      target_model: "MiniMax H3"
+      picture_role: "actual target first frame at 0.00 seconds"
+    expected:
+      mode: I2VA
+      first_line_must_follow_official_base_guide: true
+
+  - id: REG-H3-MODE-003
+    purpose: "首尾帧锚点选择 FL2VA"
+    input_state:
+      target_model: "MiniMax H3"
+      picture_1_role: first_frame
+      picture_2_role: last_frame
+    expected:
+      mode: FL2VA
+      continuous_path_between_frames_required: true
+
+  - id: REG-H3-MODE-004
+    purpose: "仅末帧锚点选择 L2VA"
+    input_state:
+      target_model: "MiniMax H3"
+      picture_role: last_frame
+    expected:
+      mode: L2VA
+      converge_to_last_frame_required: true
+
+  - id: REG-H3-FORMAT-001
+    purpose: "Base 模式字段顺序必须与官方一致"
+    input_state:
+      target_model: "MiniMax H3"
+      mode: T2VA
+    expected:
+      exact_field_order:
+        - integrated_multimodal_description
+        - overall_soundscape
+        - non_diegetic_music
+      extra_project_wrapper_inside_final_h3_prompt: false
+
+  - id: REG-H3-FORMAT-002
+    purpose: "Ref2VA 六段顺序必须与官方一致"
+    input_state:
+      target_model: "MiniMax H3"
+      mode: Ref2VA
+    expected:
+      exact_field_order:
+        - subject_definitions
+        - summary
+        - retention_analysis
+        - detailed_description
+        - overall_soundscape
+        - non_diegetic_music
+
+  - id: REG-H3-LANGUAGE-001
+    purpose: "结构英文，但中文对白原文保留"
+    input_state:
+      target_model: "MiniMax H3"
+      dialogue: "别碰她。"
+    expected:
+      rewrite_sections_language: English
+      dialogue_verbatim: "别碰她。"
+      dialogue_translation_forbidden: true
+
+  - id: REG-H3-DURATION-001
+    purpose: "当前官方 skill 的 4–15 秒范围受版本约束"
+    input_state:
+      target_model: "MiniMax H3"
+      requested_duration_seconds: 30
+    expected:
+      silently_treat_as_official_supported_range: false
+      status: needs_revalidation
+      may_require_segmentation_or_current_official_capability_check: true
+
+  - id: REG-H3-VERSION-001
+    purpose: "官方 skill 漂移不得静默混入旧规则"
+    input_state:
+      upstream_source_blob_changed: true
+    expected:
+      status: needs_revalidation
+      actions:
+        - fresh_fetch_upstream
+        - compare_pinned_blobs
+        - update_vendor_mirror_verbatim
+        - update_adapter_pin
+        - rerun_regression
+      silent_merge_with_project_prompt_rules: false
+
+  - id: REG-H3-AUTHORITY-001
+    purpose: "官方 skill 管格式，不得反向改剧情导演"
+    input_state:
+      target_model: "MiniMax H3"
+      project_canonical_conflicts_with_generic_example_in_skill: true
+    expected:
+      project_canonical_story_character_scene_map_asset_continuity_wins: true
+      official_skill_wins_only_for_h3_prompt_structure_and_syntax: true

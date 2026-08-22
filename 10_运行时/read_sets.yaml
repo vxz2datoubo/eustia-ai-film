@@ -29,6 +29,7 @@ read_sets:
       model_real_generation_feedback: C-DANCE2.5真实生成反馈库#when_cdance_seedance_2_5_prompting_generation_reverse_observation_or_version_bound_behavior_is_relevant
       high_dynamic_motion: high_dynamic_motion_prompt_compiler#when_expert_motion_parkour_climbing_combat_sport_dynamic_vitality_or_generic_motion_failure_is_relevant
       high_dynamic_motion_evidence: AI视频高动态动作提示证据索引#when_high_dynamic_motion_prompting_reference_escalation_or_external_evidence_is_relevant
+      minimax_h3_prompt_adapter: minimax_h3_prompt_adapter#only_when_target_model_is_explicitly_or_router_selected_as_minimax_h3
       golden_prompt_cases: 优秀提示词案例库#only_if_a_relevant_precedent_or_regression_case_exists
       golden_media_evidence: golden_media_evidence_schema#when_video_image_audio_output_evidence_or_media_backed_golden_precedent_is_used
       golden_case_director_pull: golden_case_director_pull_schema#when_retrieving_or_using_a_golden_director_precedent
@@ -77,6 +78,30 @@ read_sets:
       golden_prompt_cases: 优秀提示词案例库#only_if_a_relevant_music_prompt_precedent_exists
       golden_media_evidence: golden_media_evidence_schema#when_generated_audio_or_video_is_bound_to_a_golden_case
 
+  minimax_h3_prompt_compilation:
+    activation: explicit_or_router_selected_minimax_h3_only
+    always:
+      - PROJECT_INDEX.yaml
+      - minimax_h3_prompt_adapter
+      - .agents/skills/h3-prompt-writing/SKILL.md
+    conditional:
+      base_reference: .agents/skills/h3-prompt-writing/references/base-en.txt#T2VA_I2VA_FL2VA_L2VA_only
+      full_reference: .agents/skills/h3-prompt-writing/references/ref-en.txt#Ref2VA_only
+      project_directing: AI电影系统#only_if_story_to_shot_or_director_reasoning_is_required_before_h3_compilation
+      story: 当前改编剧本#only_if_project_story_facts_are_needed
+      characters: 角色与表演设定库#only_if_named_project_characters_are_used
+      scenes: 场景与空间设定库#only_if_named_project_scenes_are_used
+      map: 00_项目地图文件#only_if_spatial_direction_camera_orientation_or_movement_is_relevant
+      scene_asset_identity: scene_asset_identity_schema#only_if_formal_scene_asset_identity_or_view_binding_is_relevant
+      scene_media_resolver: scene_media_resolver_manifest#only_if_formal_media_version_or_locator_resolution_is_relevant
+      asset_retrieval: asset_retrieval_policy#only_if_formal_media_pixels_or_generation_reference_binding_is_needed
+      assets: 视觉资产登记#only_if_formal_assets_are_bound
+      continuity: 连续性与当前生产状态#only_if_current_work_item_or_cross_shot_state_is_relevant
+      sound: 声音导演系统#only_if_dialogue_music_soundscape_or_audio_reference_requires_upstream_directing
+      learning: 反馈反推与系统反哺引擎#only_if_project_h3_real_generation_feedback_or_learning_is_relevant
+      evidence: 官方资料与证据索引#only_if_h3_model_or_official_skill_version_is_uncertain
+      regression: minimax_h3_prompt_regression_cases#when_h3_route_mode_format_isolation_or_version_pin_is_under_test
+
   asset_registration:
     always:
       - PROJECT_INDEX.yaml
@@ -102,7 +127,7 @@ read_sets:
       map: 00_项目地图文件#when_camera_anchor_view_direction_or_topology_may_change
       scene: 场景与空间设定库#when_scene_design_or_view_duty_may_change
       regression: director_regression_cases#when_existing_version_is_pinned_by_eval_or_reproducibility
-      asset_retrieval_regression: asset_retrieval_regression_cases#when_retrieval_version_pin_external_fallback_or_reference_binding_is_relevant
+      asset_retrieval_regression: asset_retrieval_regression_cases#when_asset_retrieval_policy_or_fail_closed_behavior_is_evaluated
 
   system_research:
     always:
@@ -122,9 +147,11 @@ read_sets:
       golden_media_evidence: golden_media_evidence_schema#when_prompt_output_media_pairing_temporal_video_evidence_aesthetic_retrieval_or_video_eval_is_researched
       golden_case_director_pull: golden_case_director_pull_schema#when_director_grade_case_breakdown_performance_beats_stillness_sound_or_retrieval_is_researched
       golden_case_director_pull_evidence: 导演级拉片与低运动表演证据索引#when_director_pull_or_low_motion_high_information_method_needs_external_evidence
-      golden_case_director_pull_regression: golden_case_director_pull_regression_cases#when_director_pull_protocol_or_retrieval_regression_is_being_evaluated
+      golden_case_director_pull_regression: golden_case_director_pull_regression_cases#when_protocol_or_retrieval_regression_is_being_evaluated
       high_dynamic_motion: high_dynamic_motion_prompt_compiler#when_high_dynamic_human_motion_prompting_or_reference_escalation_is_researched
       high_dynamic_motion_evidence: AI视频高动态动作提示证据索引#when_researching_parkour_climbing_combat_sport_or_dynamic_motion_prompting
+      minimax_h3_prompt_adapter: minimax_h3_prompt_adapter#when_h3_prompt_skill_routing_format_or_versioning_is_researched
+      minimax_h3_prompt_regression: minimax_h3_prompt_regression_cases#when_h3_isolation_or_official_skill_update_is_evaluated
       sound: 声音导演系统#when_sound_music_song_or_audio_domain
       suno_lexicon: SUNO提示词词库与编译映射#when_suno_prompt_or_music_generation_domain
       sound_evidence: 声音导演与SUNO证据索引#when_sound_music_song_or_audio_domain
@@ -196,6 +223,13 @@ rules:
   formal_scene_asset_replacement_must_classify_version_variant_or_new_view: true
   sound_relevant_task_must_read_sound_director: true
   suno_prompt_compilation_must_read_lexicon: true
+  minimax_h3_skill_default_inactive: true
+  minimax_h3_skill_requires_explicit_or_router_selected_target_model: true
+  minimax_h3_skill_cannot_trigger_from_generic_generation: true
+  minimax_h3_skill_cannot_contaminate_seedance_seedream_or_other_model_prompts: true
+  minimax_h3_official_skill_is_prompt_syntax_authority_only: true
+  minimax_h3_mode_selection_must_follow_reference_role_not_file_presence: true
+  minimax_h3_version_drift_requires_revalidation: true
   golden_prompt_explicit_user_verdict_must_run_two_step_ingestion: true
   golden_prompt_ingestion_must_execute_director_grade_pull: true
   golden_prompt_prompt_only_pull_must_remain_prospective: true
