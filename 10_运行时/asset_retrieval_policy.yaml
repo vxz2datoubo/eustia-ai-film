@@ -1,0 +1,170 @@
+policy_id: EUSTIA_FORMAL_ASSET_RETRIEVAL
+version: 1.0.0
+status: active
+confirmed_by_user: 2026-08-22
+scope: formal_visual_media_native_retrieval_and_generation_reference_binding
+
+purpose:
+  - 以 ChatGPT Library / Project / 当前会话可访问媒体作为 AI电影正式媒体本体的默认生产位置
+  - 保留 GitHub 对 Asset ID、Media Version、hash、provenance、Scene、Camera Anchor、View、Relation、continuity、默认指针与状态的逻辑权威
+  - 把 PR #8 已独立审查通过的 fail-closed 结构原则最小移植到当前 canonical，而不合并其旧实现或引入第二套 resolver
+  - 在原生媒体暂时不可访问时诚实停止，不自动搬运到 GitHub、Cloudflare、R2 或其他外部对象存储，也不使用语义相近候选图冒充正式资产
+
+authority:
+  project_index: PROJECT_INDEX.yaml
+  logical_asset_registry: 06_视觉资产/视觉资产登记库.md
+  identity_schema: 10_运行时/scene_asset_identity_schema.yaml
+  media_version_locator_resolver: 10_运行时/scene_media_resolver_manifest.yaml
+  continuity: 07_连续性与生产状态/连续性与当前生产状态.md
+
+architecture_principles:
+  native_first: true
+  shortest_valid_path: true
+  user_operation_cost_is_architecture_cost: true
+  library_project_is_default_binary_source: true
+  github_is_logical_registry_not_default_binary_store: true
+  external_storage_is_exception_not_fallback: true
+
+hard_invariants:
+  - identity_resolved_does_not_imply_version_resolved
+  - version_resolved_does_not_imply_locator_found
+  - locator_found_does_not_imply_binary_retrieved
+  - binary_retrieved_does_not_imply_pixels_opened
+  - pixels_opened_does_not_imply_pixels_verified
+  - pixels_verified_does_not_imply_generation_reference_bound
+  - durable_historical_observation_does_not_initialize_current_attempt_state
+  - semantic_similarity_is_never_a_valid_substitute_for_formal_pixel_identity
+  - locator_is_not_asset_identity
+  - pinned_media_version_failure_must_not_silently_fall_through_to_current_version
+  - current_media_version_failure_must_not_silently_fall_through_to_an_older_version
+
+locator_classes:
+  native_primary:
+    - chatgpt_file_id
+    - file_library_title
+    - current_conversation_file
+  compatibility_manual:
+    - local_path
+    - derived_preview
+  external_exception_only:
+    - github_content_url
+    - external_uri
+  rules:
+    - 普通导演、生图、编辑和正式资产调用默认只自动尝试 native_primary 中与当前工具面实际可用的 locator。
+    - current_conversation_file 只证明当前会话可用性，不自动证明跨会话可用。
+    - derived_preview 只能承担预览或身份辅助；除非目标 Asset 本身的 media_role 就是 derived_preview，否则不得替代正式 color_master。
+    - github_content_url 与 external_uri 仅保留历史兼容和显式例外表达能力，不属于默认或自动 fallback。
+    - native_primary 全部失败时不得自动尝试 Cloudflare KV、R2、GitHub binary、external_uri 或任何新外部对象存储。
+
+runtime_pipeline:
+  - resolve_scene_camera_anchor_view_relation_when_applicable
+  - resolve_asset_id_from_registry_and_continuity
+  - resolve_media_version:
+      default: current_version_id
+      pinned_override: explicit_media_version_id_when_reproducibility_is_required
+  - create_invocation_local_attempt_with_state_NOT_ATTEMPTED
+  - collect_eligible_native_primary_locators_for_target_version
+  - attempt_actual_binary_retrieval_using_current_chatgpt_native_capabilities
+  - open_pixels_when_visual_use_is_required
+  - verify_target_media_version_identity_when_evidence_is_available
+  - bind_verified_binary_to_generation_reference_only_when_actual_tool_binding_is evidenced
+
+attempt_state:
+  persistence: invocation_local_by_default
+  initial:
+    state: NOT_ATTEMPTED
+    binary_retrieved: UNKNOWN
+    pixels_opened: UNKNOWN
+    pixels_verified: UNKNOWN
+    reference_bound: UNKNOWN
+  rule: 历史登记时曾成功打开像素，只能作为历史证据；不得让新会话从已取回或已核验状态开始。
+
+failure_reporting:
+  if_asset_not_resolved: ASSET_UNRESOLVED
+  if_version_not_resolved: FORMAL_ASSET_VERSION_UNRESOLVED
+  if_asset_and_version_resolved_but_native_pixels_unavailable: ASSET_FOUND_PIXELS_UNAVAILABLE
+  if_pixel_identity_conflicts: PIXEL_IDENTITY_MISMATCH
+  if_generation_tool_binding_cannot_be_attested: REFERENCE_BIND_ATTESTATION_UNAVAILABLE
+  required_fields_when_pixels_unavailable:
+    - asset_resolution
+    - asset_id_when_known
+    - media_version_resolution
+    - media_version_id_when_known
+    - pixel_access
+    - native_locator_attempted
+    - external_fallback_attempted
+    - semantic_substitution_used
+  invariants:
+    - ASSET_FOUND_PIXELS_UNAVAILABLE 必须保持 external_fallback_attempted=false，除非用户本轮明确指定了一个既有 external locator 作为输入。
+    - ASSET_FOUND_PIXELS_UNAVAILABLE 必须保持 semantic_substitution_used=false。
+    - 用户可继续获得基于 canonical 元数据、地图和连续性的文字导演分析，但不得被告知“已经看到/已经使用正式像素”。
+
+formal_asset_registration:
+  trigger: 用户明确说登记资产、加入资产库、录入正式资产、设为正式资产或同义表达
+  default_binary_home: ChatGPT Library / Project
+  steps:
+    - actual_media_available_in_current_chatgpt_context
+    - open_and_inspect_media_when_required
+    - classify_scene_anchor_view_relation_asset_duty_and_version
+    - create_or_reuse_asset_id
+    - create_or_reuse_media_version_according_to_content_hash_and_duty
+    - record_hash_provenance_and_native_locator_metadata
+    - write_logical_asset_registry_and_resolver_manifest_by_write_routes
+    - update_continuity_only_when_binding_state_requires_it
+    - fetch_again_and_verify
+  forbidden_side_effects:
+    - registration_does_not_auto_copy_media_to_github
+    - registration_does_not_auto_copy_media_to_cloudflare
+    - registration_does_not_auto_create_r2_or_kv_storage
+    - registration_does_not_auto_create_api_tokens_or_github_secrets
+    - registration_does_not_require_payment_method
+
+generation_reference_binding:
+  rule: PIXELS_VERIFIED 不等于 REFERENCE_BOUND。
+  bound_claim_requires:
+    - target_asset_and_media_version_resolved
+    - actual_target_binary_retrieved
+    - pixels_opened_and_identity_checked_when_required
+    - actual_generation_or_edit_tool_invocation
+    - tool_return_or_equivalent evidence showing the intended target entered the reference input when the tool surface can attest it
+  when_attestation_unavailable: REFERENCE_BIND_ATTESTATION_UNAVAILABLE
+  reporting_rule: 工具无法提供足够绑定证据时，可以说像素已取得/已核验，但不得把“正式母图已作为生成参考输入”报告为已证明事实。
+
+external_storage_hard_gap_gate:
+  default_state: NOT_CANDIDATE
+  all_required_before_reconsideration:
+    - real_production_asset_is_blocked
+    - native_route_failure_is_reproducible
+    - failure_is_not_a_transient_search_or_session_condition
+    - no_shorter_native_workaround_meets_production_need
+    - blocked_capability_materially_affects_directing_generation_or_editing
+    - cost_benefit_and_user_operation_burden_are_explicitly_assessed
+    - account_payment_token_secret_sync_maintenance_privacy_and_failure_surface_costs_are_included
+    - expected_benefit_materially_exceeds_added_architecture_cost
+    - user_explicitly_approves_the_exception
+    - minimal_poc_precedes_any_production_wide_adoption
+  speculative_future_scale_is_not_sufficient: true
+
+historical_external_storage_experiments:
+  issue_10_REG_ASSET_BINARY_LOCATOR_REMEDIATION_001:
+    disposition: SUPERSEDED_BY_NATIVE_LIBRARY_ROUTE
+    evidence_retention: keep_history_do_not_delete
+  pr_9_binary_locator_remediation_poc:
+    disposition: HISTORICAL_EXPERIMENT_NO_MERGE
+    evidence_retention: keep_branch_and_discussion
+  pr_8_cross_session_formal_scene_asset_retrieval:
+    disposition: STRUCTURAL_LESSONS_MIGRATED_IMPLEMENTATION_SUPERSEDED_NO_MERGE
+    retained_lessons:
+      - layered_retrieval_truth
+      - invocation_local_attempt_state
+      - no_semantic_substitution
+      - pinned_version_fail_closed
+      - generation_reference_binding_attestation
+
+learning:
+  candidate_global_principle:
+    id: NATIVE_FIRST_SHORTEST_VALID_PATH_USER_OPERATION_COST_IS_ARCHITECTURE_COST
+    maturity: candidate
+    project_evidence_strength: high
+    transfer_status: candidate_not_general_stable
+    statement: 同等满足真实生产需求时，优先更原生、更短、跨服务更少、用户操作更少的路线；账号、支付方式、Token、Secret、外部云、跨服务复制、同步、维护与故障恢复都属于架构成本。复杂基础设施必须由真实、可复现、无法由原生路线满足的生产硬缺口证明必要性，而不能由假设性未来需求提前合理化。
