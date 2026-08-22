@@ -9,6 +9,11 @@ policy:
   serial_writes_same_path: true
   memory_is_canonical: false
   library_media_is_canonical_binary_source: true
+  formal_asset_native_first: true
+  formal_asset_shortest_valid_path: true
+  user_operation_cost_is_architecture_cost: true
+  formal_asset_external_storage_default: forbidden
+  external_storage_requires_observed_reproducible_hard_gap_and_user_approval: true
   golden_case_default_persistence: github_temporal_evidence_bundle
   golden_case_source_video_default_retention: false
   golden_case_human_time_coordinate: seconds
@@ -48,6 +53,7 @@ canonical:
   learning_application_and_conflict_evidence: 09_资料证据/学习应用与冲突裁决证据索引.md
   scene_asset_identity_schema: 10_运行时/scene_asset_identity_schema.yaml
   scene_media_resolver_manifest: 10_运行时/scene_media_resolver_manifest.yaml
+  asset_retrieval_policy: 10_运行时/asset_retrieval_policy.yaml
   golden_media_evidence_schema: 10_运行时/golden_media_evidence_schema.yaml
   golden_case_director_pull_schema: 10_运行时/golden_case_director_pull_schema.yaml
   screen_observable_audible_ir_schema: 10_运行时/screen_observable_audible_ir_schema.yaml
@@ -61,6 +67,7 @@ canonical:
   maturity_model: 10_运行时/maturity_model.yaml
   pending_canonical_writes: 10_运行时/pending_canonical_writes.yaml
   regression_cases: 11_验收/director_regression_cases.yaml
+  asset_retrieval_regression_cases: 11_验收/asset_retrieval_regression_cases.yaml
   learning_application_gate_regression_cases: 11_验收/learning_application_gate_regression_cases.yaml
   golden_prompt_cases: 11_验收/golden_prompt_cases.yaml
   golden_case_director_pull_template: 11_验收/golden_case_templates/导演级拉片模板.md
@@ -95,6 +102,7 @@ effective_sources:
   09_资料证据/学习应用与冲突裁决证据索引.md: github_verified
   10_运行时/scene_asset_identity_schema.yaml: github_verified
   10_运行时/scene_media_resolver_manifest.yaml: github_verified
+  10_运行时/asset_retrieval_policy.yaml: github_verified
   10_运行时/golden_media_evidence_schema.yaml: github_verified
   10_运行时/golden_case_director_pull_schema.yaml: github_verified
   10_运行时/screen_observable_audible_ir_schema.yaml: github_verified
@@ -108,6 +116,7 @@ effective_sources:
   10_运行时/pending_canonical_writes.yaml: github_verified
   10_运行时/director_route_index.yaml: github_verified
   11_验收/director_regression_cases.yaml: github_verified
+  11_验收/asset_retrieval_regression_cases.yaml: github_verified
   11_验收/learning_application_gate_regression_cases.yaml: github_verified
   11_验收/golden_prompt_cases.yaml: github_verified
   11_验收/golden_case_templates/导演级拉片模板.md: github_verified
@@ -126,7 +135,7 @@ effective_sources:
   05_场景与空间/场景与空间设定库.md: github_verified
 
 external_binary_sources:
-  primary: ChatGPT Library
+  primary: ChatGPT Library / Project
   categories:
     - images
     - video
@@ -135,7 +144,13 @@ external_binary_sources:
     - pdf
     - official_raw_evidence
     - historical_snapshots
-  note: 该规则仍适用于正式二进制源与其他项目媒体；Golden Case 默认长期持久化例外由 golden_media_evidence_schema 控制为 GitHub 时间证据包。
+  production_policy:
+    native_first: true
+    automatic_external_object_storage_fallback: forbidden
+    github_binary_copy_default: forbidden
+    cloudflare_kv_r2_default: forbidden
+    external_storage_reconsideration: only_after_observed_reproducible_production_hard_gap_and_user_approval
+  note: 正式生产媒体本体默认保留在 ChatGPT Library / Project 可访问位置；GitHub 维护逻辑身份、版本、hash、provenance、Scene/View/Relation/continuity 与默认指针。Golden Case 默认长期持久化例外仍由 golden_media_evidence_schema 控制为 GitHub 时间证据包。
 
 legacy_policy:
   default_action: reject_as_active
