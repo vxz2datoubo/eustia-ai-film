@@ -27,6 +27,8 @@ core_principles:
   candidate_rule_may_be_applied_as_fact: false
   proxy_model_pass_equals_target_model_pass: false
   pre_output_gate_failure_requires_self_revision: true
+  media_claim_without_actual_media_inspection_forbidden: true
+  sparse_sampling_cannot_be_described_as_full_frame_by_frame_review: true
 
 knowledge_abstraction_ladder:
   L0_observation:
@@ -139,6 +141,39 @@ active_validation:
     - "不得静默触发高成本生成；应把 A/B 作为自然可选方案告诉用户"
     - "A/B 两版尽量都保持可用的生产价值，避免为了实验制造无意义版本"
 
+media_evidence_analysis_gate:
+  id: MEDIA-EVIDENCE-ANALYSIS-GATE-001
+  trigger:
+    - "用户提供真实视频/图像/音频并要求分析、复盘、学习、验收、比较或据此修改提示词"
+    - "回答中的关键结论依赖实际生成媒体，而不是只依赖用户文字描述"
+  required_before_material_claim:
+    - "先确认媒体本体实际可访问；不可访问时必须明确说不能核验，不得凭用户描述冒充已看过"
+    - "视频先建立完整时序覆盖：读取总时长，并以足以覆盖全片的粗粒度采样检查从开头到结尾，不得只看首帧、尾帧或单张缩略图"
+    - "对用户点名的问题、动作转折、接触、朝向、表演、剪辑点或疑似穿帮，再进行更密的局部时间采样；短视频可默认使用约0.5秒级采样并在关键窗口继续加密，必要时逐帧"
+    - "先记录实际可观察事实，再做因果解释；observed 与 inferred 必须分开"
+    - "用户指出某个视觉现象时，先用实际画面验证现象是否存在、何时开始、持续多久、是否前后变化，再解释为什么"
+    - "空间/朝向问题必须同时核对目标位置、人物身体朝向、视线、摄影机侧与动作前后状态，不能只看单帧姿势"
+  reporting_rules:
+    - "如果只做了稀疏抽帧/contact sheet，必须明确称为 sampled review，不得称逐帧或完整时序审片"
+    - "如果已经做全时长覆盖但不是每一解码帧，称 temporal review / 秒级或0.5秒级复盘，并说明关键窗口是否加密"
+    - "逐帧只有在实际检查连续帧时才能使用该表述"
+    - "工具或媒体限制导致无法完成所需粒度时，降低 observation confidence，并把未核验部分标成 UNKNOWN"
+  default_receipt_fields:
+    - media_locator
+    - media_access_verified
+    - duration
+    - coarse_sampling_strategy
+    - dense_inspection_ranges
+    - observed_event_timestamps
+    - unverified_ranges
+    - observation_confidence
+  on_fail:
+    - "停止把媒体相关推断写成已观察事实"
+    - "先补做实际媒体检查，再给修正建议或学习结论"
+  maturity_boundary:
+    - "媒体检查流程本身可立即作为项目运行门使用"
+    - "由单个媒体样本抽象出的模型行为仍按candidate/scene_verified边界管理"
+
 pre_directing_gate:
   required: true
   steps:
@@ -170,6 +205,7 @@ pre_output_gate:
     - "是否把 candidate / conflicted / needs_revalidation 当成稳定事实"
     - "是否误用其他模型或旧版本经验"
     - "是否存在已召回但被忽略且足以改变结果的高置信经验"
+    - "若结论依赖用户提供的真实媒体，media_evidence_analysis_gate 是否已经满足"
   on_fail:
     - "在发送给用户前自行修订并重新检查"
     - "若失败来自无法裁决的用户意图或规则冲突，停止猜测并主动提问"
@@ -184,11 +220,13 @@ pre_output_gate:
       - conflicts_and_disposition
       - user_question_if_any
       - validation_opportunity
+      - media_evidence_receipt_when_used
       - pre_output_status
     user_visibility: "默认不把内部清单堆给用户；只有存在冲突、风险、验证机会或用户要求审计时才说明"
 
 post_feedback_loop:
   steps:
+    - Media_Evidence_Analysis_Gate_when_media_exists
     - Micro_Capture
     - Step_Delta
     - Global_Final_Delta
