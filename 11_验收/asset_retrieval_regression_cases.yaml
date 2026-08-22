@@ -1,0 +1,91 @@
+suite_id: EUSTIA_ASSET_RETRIEVAL_REGRESSION
+version: 1.0.0
+status: active
+policy: 10_运行时/asset_retrieval_policy.yaml
+resolver: 10_运行时/scene_media_resolver_manifest.yaml
+
+principle: Native-first 验收必须防止 false-green；结构规则 PASS 不等于当前 ChatGPT 会话已经成功取得某个正式资产像素。
+
+cases:
+  - id: REG-ASSET-NATIVE-FIRST-001
+    title: native locator success does not touch external storage
+    maturity: candidate
+    class: structural_plus_runtime_when_available
+    given:
+      - target Asset 与 Media Version 已由 canonical 唯一解析
+      - 至少一个 native_primary locator 在当前 ChatGPT 工具面实际可用
+    expect:
+      - actual target binary is retrieved through native route
+      - pixels are opened when visual use is required
+      - external_fallback_attempted=false
+      - no Cloudflare KV / R2 / GitHub binary copy is created
+
+  - id: REG-ASSET-NATIVE-FIRST-002
+    title: asset found but native pixels unavailable fails closed
+    maturity: candidate
+    class: mandatory_negative
+    given:
+      - asset_id resolved
+      - media_version_id resolved
+      - all eligible native_primary locators fail or are unavailable in the current invocation
+    expect:
+      - status=ASSET_FOUND_PIXELS_UNAVAILABLE
+      - external_fallback_attempted=false
+      - semantic_substitution_used=false
+      - assistant does not claim formal pixels were seen or used
+      - metadata-only directing may continue with the limitation stated
+
+  - id: REG-ASSET-NATIVE-FIRST-003
+    title: pinned version must not silently fall through to current
+    maturity: candidate
+    class: mandatory_negative
+    given:
+      - an explicit pinned media_version_id is required for reproducibility
+      - that pinned version pixels are unavailable
+    expect:
+      - do not use current_version_id as silent replacement
+      - report pinned version pixel unavailability
+    current_execution_note: 若项目尚无可实际执行的 superseded production version fixture，则保持 NOT_EXECUTABLE_YET / NEEDS_REVALIDATION，不得自报 PASS。
+
+  - id: REG-ASSET-NATIVE-FIRST-004
+    title: pixels verified does not equal generation reference bound
+    maturity: candidate
+    class: mandatory_negative
+    given:
+      - exact target pixels have been retrieved and verified
+      - generation/edit tool does not provide sufficient binding attestation
+    expect:
+      - reference_bound=false_or_unknown
+      - status=REFERENCE_BIND_ATTESTATION_UNAVAILABLE
+      - no claim that formal mother image entered the actual generation reference slot
+
+  - id: REG-ASSET-NATIVE-FIRST-005
+    title: formal registration creates logical identity without external replication
+    maturity: candidate
+    class: transaction_contract
+    given:
+      - user explicitly requests formal asset registration for media already available in ChatGPT Library / Project / current chat
+    expect:
+      - Asset ID and Media Version are created or reused according to canonical rules
+      - hash and provenance are recorded when obtainable
+      - native locator metadata is recorded
+      - logical registry and resolver are written and fetched again for verification
+      - no automatic copy to GitHub binary, Cloudflare KV, R2 or other object storage
+      - no new payment method, API token or GitHub Secret requirement
+
+  - id: REG-ASSET-NATIVE-FIRST-006
+    title: speculative future need cannot open external storage path
+    maturity: candidate
+    class: architecture_gate_negative
+    given:
+      - no reproducible production-blocking native hard gap exists
+      - proposed reason is future scale, theoretical portability or possible later need
+    expect:
+      - external_storage_hard_gap_gate=NOT_CANDIDATE
+      - no cloud provisioning or media replication is authorized
+
+runtime_evidence_policy:
+  current_chat_success_must_record_actual_tool_or_media_evidence: true
+  historical_success_cannot_initialize_new_attempt: true
+  exact_asset_identity_required_for_positive_pixel_claim: true
+  semantically_similar_candidate_never_counts_as_target_asset: true
