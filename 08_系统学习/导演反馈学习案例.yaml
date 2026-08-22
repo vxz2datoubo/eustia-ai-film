@@ -4,7 +4,7 @@ authority_role: learning_evidence_and_case_registry
 method_authority: 01_AI电影系统/AI电影系统.md
 learning_process_authority: 08_系统学习/反馈反推与系统反哺引擎.md
 created_at: 2026-08-18
-last_updated: 2026-08-21
+last_updated: 2026-08-23
 rules_not_authoritative_by_themselves: true
 
 cases:
@@ -227,6 +227,61 @@ cases:
       - 同一30秒序列在第二个诺瓦斯镜头改成提供新信息的视角，比较信息密度与重复感。
       - 所有大全景增加world-state background checklist，检查洪水、地表、远景灯火、生态和天空状态。
       - 达尔回切镜头显式继承四名修女并与不写继承状态版本比较连续性。
+
+  - case_id: CROWD-GAZE-BODY-CAMERA-BINDING-001
+    work_item: 圣女祈祷后广场群众仰望并下跪
+    model_scope: C-DANCE 2.5 / Seedance 2.5 project alias
+    evidence:
+      source_prompt_supplied_by_user: true
+      generated_video_supplied_by_user: true
+      current_conversation_video_file_id: file_0000000068cc81fd9a6b9438a0ac8940
+      assistant_temporal_review: full_duration_review_with_0_5s_sampling_and_targeted_dense_inspection
+      duration_s_approx: 15.07
+    user_feedback:
+      - 目标是钟楼下方领取施粥和面包的平民仰头认真听上方圣女，然后从靠近钟楼的人开始逐层下跪。
+      - 实际结果中群众面向镜头跪下，却把钟楼留在身后，空间关系严重错误。
+    observed_output:
+      opening_orientation:
+        result: GAZE_TARGET_SPATIAL_BINDING_FAIL
+        note: 约0至1秒群众正脸朝摄影机仰头，而钟楼建筑位于群众身后；因此“仰头”动作成立，但“注视钟楼平台上的圣女”没有被空间绑定。
+      kneeling_transition:
+        result: BODY_ORIENTATION_TARGET_FAIL
+        note: 约1.5至4.5秒群众开始下跪时继续正面朝摄影机，身体朝向未保持对钟楼平台的指向关系。
+      wide_readability:
+        result: CAMERA_SIDE_TARGET_CONFLICT
+        note: 约5至9.5秒拉开后更清楚暴露“群众面向摄影机、钟楼在背后”的穿帮；摄影机被放在目标侧而不是群众后方/斜后方。
+      saint_section:
+        result: GENERALLY_STABLE
+        note: 约10至15秒圣女居中、两侧重甲士兵存在，合掌、低头、闭眼祈祷基本成立；本轮主要失败集中在群众空间朝向合同。
+    first_principle:
+      - 对存在明确观察/跪拜/攻击/追逐目标的镜头，动作词本身不能替代空间关系；gaze_target、body_orientation、target_world_position、camera_side 与 action_end_orientation 必须同时可解。
+      - “抬头看上方”只给出垂直方向，不等于“看向身前钟楼平台上的圣女”。
+    operational_candidate:
+      - target_orientation_binding_scan: 在生成前把目标位置、人物身体朝向、视线朝向、摄影机所在侧与动作结束朝向绑定成一个空间合同。
+      - 对群众朝向性行为优先写“人物始终面对目标执行动作”，而不是只写“看、跪、听”等抽象动作。
+      - 若参考图构图天然是“群众正面 + 地标在背后”，但剧情要求群众面向地标，则必须显式重写摄影机到群众后方/斜后方，不能默认沿用参考图的展示构图。
+      - 镜头主要可见面也应与空间目标一致，例如需要群众面对钟楼时，允许主要看到背面、3/4背面和侧脸，而不是为了表演可读性自动转成正面群像。
+    candidate_check:
+      id: GAZE_BODY_TARGET_ORIENTATION_CONFLICT
+      proposed_severity: ERROR_WHEN_TARGET_RELATION_IS_STORY_MATERIAL
+      trigger: 明确目标行为中，人物 gaze/body/action-end 朝向与目标世界位置或摄影机侧关系互相矛盾。
+    boundaries:
+      - 不是所有“看上方”都需要绑定具体目标；只有剧情存在明确可定位目标时才触发。
+      - 人物可在动作过程中短暂转头或改变朝向，但必须有可观察事件解释，不能把随机转身当作默认自由度。
+      - 正面群众镜头不是禁用；如果摄影机本来就在目标位置、或剧情目标就是群众直面摄影机方向，则可以成立。
+    maturity:
+      current_output_observation: scene_verified
+      current_scene_repair: scene_verified
+      transferable_rule: candidate
+      model_version_behavior: candidate
+    confidence:
+      user_feedback: HIGH
+      video_observation: HIGH
+      causal_attribution: MEDIUM_HIGH
+      cross_scene_transfer: MEDIUM
+    next_validation:
+      - 同一参考资产下测试“只写抬头/下跪”与“目标位置+身体朝向+视线+摄影机侧+结束朝向”版本，比较目标朝向错误率。
+      - 若未来SOAC validator实现，加入正例/反例：群众面对钟楼跪拜应PASS；群众面镜头而钟楼在身后应BLOCK。
 
 learning_checkpoint:
   checkpoint_id: BELL-TOWER-EXPOSITION-20260818
