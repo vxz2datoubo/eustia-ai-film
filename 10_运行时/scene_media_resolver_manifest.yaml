@@ -1,18 +1,21 @@
 manifest_id: EUSTIA_SCENE_MEDIA_RESOLVER
-version: 1.1.0
+version: 1.2.0
 status: active
-confirmed_by_user: 2026-08-18
+confirmed_by_user: 2026-08-22
 scope: formal_scene_media_asset_version_and_locator_resolution
 
 authority:
   identity_schema: 10_运行时/scene_asset_identity_schema.yaml
   logical_asset_registry: 06_视觉资产/视觉资产登记库.md
+  retrieval_policy: 10_运行时/asset_retrieval_policy.yaml
   this_file: scene_asset_current_version_version_history_and_locators
 
 purpose:
   - 为正式场景媒体提供稳定的 Asset → Current Media Version → Locator 解析层
   - 允许同一正式资产被反复修改而不改变上层 Asset 身份、View、Camera Anchor 或 Relation 引用
-  - 把“图片内容版本”与“图片存放位置”分离，支持 ChatGPT Library、未来本地仓库、Git LFS、对象存储、Unreal、OpenUSD 等迁移
+  - 把“图片内容版本”与“图片存放位置”分离；正式生产媒体本体默认位于 ChatGPT Library / Project 可访问位置
+  - GitHub 只维护逻辑版本、hash、provenance 与 locator 元数据，不作为生产图片本体的默认存储或搬运中转
+  - 外部对象存储仅保留为显式例外能力；不得因原生 locator 暂时不可用而自动启用
   - 避免通过删除旧文件、同名覆盖或 old→new→newer 映射链维持系统正确性
 
 identity_rules:
@@ -43,12 +46,19 @@ version_lifecycle:
 
 locator_model:
   allowed_types: [chatgpt_file_id, file_library_title, current_conversation_file, local_path, github_content_url, external_uri, derived_preview]
+  native_primary_types: [chatgpt_file_id, file_library_title, current_conversation_file]
+  compatibility_manual_types: [local_path, derived_preview]
+  external_exception_only_types: [github_content_url, external_uri]
   locator_status: [verified, unverified, stale, unavailable]
   rules:
     - 同一个Media Version可以有多个locator
     - locator变化不创建新Media Version
     - 同一像素被重新上传且content_hash相同，只增加或更新locator，不创建新版本
-    - 无法从某个locator解引用时，尝试同版本其他verified locator
+    - 普通导演、生图与编辑默认只自动尝试当前工具面可用的 native_primary_types
+    - 无法从某个 native locator 解引用时，可尝试同版本其他 eligible native locator
+    - github_content_url 与 external_uri 不属于默认或自动 fallback；只有用户本轮显式提供既有 locator，或未来通过 asset_retrieval_policy 的 hard-gap gate 后才可进入例外路径
+    - native locator 全部失败时，停止在 ASSET_FOUND_PIXELS_UNAVAILABLE，不自动复制或搬运媒体到 GitHub、Cloudflare KV、R2 或其他对象存储
+    - derived_preview 不得替代目标 color_master，除非目标Asset自身media_role就是derived_preview
     - 不得用语义相近候选图替代目标version
 
 content_identity:
@@ -79,7 +89,7 @@ replacement_transaction:
     - 这是修改后的正式图
     - 用这张覆盖当前正式版
   steps:
-    - FETCH PROJECT_INDEX、identity schema、logical asset registry、本manifest、相关连续性和活动引用
+    - FETCH PROJECT_INDEX、asset_retrieval_policy、identity schema、logical asset registry、本manifest、相关连续性和活动引用
     - 实际打开新上传像素
     - 解析目标Asset并判断same_pixels / new_revision / new_variant / new_view_or_anchor
     - 计算或记录content_hash；无法计算时明确hash_unknown并禁止自动去重
@@ -88,8 +98,9 @@ replacement_transaction:
     - 核验Scene、Camera Anchor、View、方向、地标、构图和媒体职责
     - 核验通过后把新version设为current并把旧current设为superseded
     - 检查默认指针、Relation、连续性和当前镜头绑定不因版本切换失效
+    - 不因正式登记或版本替换自动复制媒体本体到GitHub/Cloudflare/R2
     - COMMIT serially
-    - FETCH AGAIN验证current_version_id、version状态和locator可解析性
+    - FETCH AGAIN验证current_version_id、version状态和locator元数据；只有当前工具实际取回时才可声称locator当前可解析
   failure_policy:
     - 事务中途失败时不得切换current_version_pointer
     - 若已部分写入则在连续性记录blocked transaction并优先恢复
@@ -111,13 +122,17 @@ runtime_resolution:
   order:
     - resolve_asset_id_from_view_and_continuity
     - lookup_current_version_id_in_this_manifest
-    - collect_verified_locators_for_current_version
-    - resolve_actual_binary
-    - open_and_verify_pixels_when_visual_analysis_is_required
+    - collect_eligible_native_primary_locators_for_current_version
+    - attempt_actual_binary_retrieval_with_current_chatgpt_native_capabilities
+    - open_and_verify_pixels_when_visual_analysis_generation_or_editing_requires_them
+    - if_generation_reference_is_required_follow_asset_retrieval_policy_binding_gate
   failure_behavior:
     - if_current_version_missing: report_formal_asset_version_unresolved
-    - if_all_locators_fail: report_identity_found_but_pixels_unavailable
+    - if_asset_and_version_found_but_all_eligible_native_locators_fail: report_ASSET_FOUND_PIXELS_UNAVAILABLE
+    - external_fallback_attempted_must_remain_false_by_default
+    - semantic_substitution_used_must_remain_false
     - never_substitute_semantically_similar_candidate
+    - never_claim_pixels_seen_or_generation_reference_used_from_locator_metadata_alone
 
 shot_binding_policy:
   default_binding_level: asset_id
@@ -126,6 +141,7 @@ shot_binding_policy:
     - 普通导演与长期场景连续性默认绑定asset_id，以便正式母图升级后自动使用current版本
     - 已生成镜头、回归案例、复现任务或需要精确追溯时可额外锁定media_version_id
     - 若镜头显式锁定media_version_id，不因current版本更新而自动重指向
+    - pinned media_version像素不可用时不得偷偷改用current版本
 
 assets:
   EUS-AST-000001:
