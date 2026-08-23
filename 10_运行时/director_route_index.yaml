@@ -248,6 +248,44 @@ routes:
       - per_shot_visual_authority
       - A_B_C_validation
 
+  - id: TARGET_ORIENTED_SPATIAL_BINDING
+    symptoms:
+      - gaze target relation
+      - 视线看向明确目标
+      - 面向明确目标
+      - 朝目标下跪
+      - kneeling-to-target
+      - pursuit target relation
+      - 追逐目标
+      - escape from target
+      - 逃离目标
+      - blocking 与目标空间关系
+      - occlusion 与目标空间关系
+      - camera-side 与目标冲突
+      - action-end orientation 错误
+      - 人物看向或身体朝向与剧情目标位置不一致
+      - 参考图展示构图与剧情目标朝向冲突
+    maturity: candidate
+    mandatory_reads:
+      - 08_系统学习/导演反馈学习案例.yaml#CROWD-GAZE-BODY-CAMERA-BINDING-001
+    mandatory_scans:
+      - target_world_position
+      - gaze_target
+      - body_orientation
+      - kneeling_to_target
+      - pursuit_escape_vector
+      - blocking_and_occlusion
+      - camera_side
+      - action_end_orientation
+      - reference_composition_conflict
+    candidate_axes:
+      - explicit_target_orientation_contract
+      - rear_or_three_quarter_rear_camera_when_target_is_ahead
+      - target_side_camera_only_when_story_relation_supports_it
+      - preserve_target_facing_through_action
+      - explicit_orientation_change_event
+      - reference_composition_override_when_story_relation_is_material
+
   - id: SPACE_CONTINUITY_RISK
     symptoms:
       - 左右反了
