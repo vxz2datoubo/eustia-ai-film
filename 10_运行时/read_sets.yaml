@@ -7,6 +7,7 @@ read_sets:
       - 连续性与当前生产状态#relevant_work_item
       - director_route_index#symptom_scan+mandatory_reads
       - learning_application_gate#pre_directing_gate+pre_output_gate
+      - learning_recall_index#compact_router_metadata_only
       - proactive_execution_opportunity_router#next_step_scan
     conditional:
       characters: 角色与表演设定库#named_characters
@@ -201,6 +202,8 @@ rules:
   director_task_must_read_project_index: true
   directing_must_scan_director_route_index: true
   directing_learning_application_gate_required: true
+  directing_learning_smart_recall_required: true
+  learning_recall_top_k_expansion_only: true
   learning_retrieval_must_resolve_scope_and_conflicts_before_application: true
   episodic_surface_constraints_must_expire_outside_scope_unless_promoted: true
   unresolved_material_learning_conflict_must_defer_to_user: true
