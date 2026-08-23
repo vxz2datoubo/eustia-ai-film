@@ -1,0 +1,411 @@
+schema_version: "1.0"
+index_id: EUSTIA_LEARNING_RECALL_INDEX
+status: active
+role: compact_derived_router_metadata_only
+canonical_authority_boundary:
+  this_index_is_not_learning_authority: true
+  full_learning_authority_remains_in_referenced_canonical: true
+  may_store_only:
+    - authority_ref
+    - recall_signature
+    - routing_scope
+    - maturity_summary
+    - mandatory_scans
+    - conflict_refs
+  must_not_copy_full_learning_rules: true
+source_authorities:
+  - 08_系统学习/导演反馈学习案例.yaml
+  - 08_系统学习/C-DANCE2.5真实生成反馈库.md
+  - 11_验收/golden_prompt_cases.yaml
+retrieval_runtime:
+  top_k_default: 5
+  normalize_casefold: true
+  ranking_priority:
+    - hard_canonical
+    - failure_mechanism
+    - dramatic_function
+    - spatial_action_relation
+    - character_mechanism
+    - model_version
+    - camera_performance_sound
+    - surface_similarity
+  weights:
+    hard_canonical: 10000
+    failure_mechanism: 120
+    dramatic_function: 90
+    spatial_action_relation: 75
+    character_mechanism: 55
+    model_version: 40
+    camera_performance_sound: 20
+    surface_similarity: 5
+    negative_retrieval: -300
+  embedding_policy:
+    future_candidate_expansion_allowed: true
+    role: candidate_expansion_only
+    may_bypass_authority_gate: false
+    may_bypass_scope_gate: false
+    may_bypass_maturity_gate: false
+    may_bypass_model_version_gate: false
+    may_bypass_conflict_gate: false
+    may_satisfy_mandatory_route_without_canonical_ref: false
+receipt_contract:
+  required_fields:
+    - task_id
+    - index_id
+    - index_schema_version
+    - hard_routes
+    - mandatory_case_ids
+    - scored_candidates
+    - selected_case_ids
+    - selected_authority_refs
+    - excluded_candidates
+    - filters_applied
+    - unresolved_conflicts
+    - mandatory_recall_satisfied
+    - top_k
+    - receipt_complete
+entries:
+  - case_id: MOTIVE-FIRST-CROWD-001
+    source_kind: director_feedback_learning_case
+    authority_ref: 08_系统学习/导演反馈学习案例.yaml#MOTIVE-FIRST-CROWD-001
+    learning_layers: [L2_director_intent, L3_causal_mechanism, L4_contextual_policy]
+    application_roles: [director_intents, causal_mechanisms, contextual_policies, known_failure_modes]
+    hard_routes: [MOTIVATION_BEFORE_TONE]
+    recall_signature:
+      dramatic_function: [crowd_reaction, ritual_attention, authority_response, social_behavior]
+      failure_mechanism: [motive_tone_mismatch, generic_authority_comedy, institution_relation_collapse]
+      relation_type: [crowd_to_institution, crowd_to_saint, dependency_and_grievance]
+      spatial_action_features: [crowd_attention_shift, collective_silence, heterogeneous_microreaction]
+      scene_context: [poverty, relief_distribution, church_square, ritual, crowd]
+      character_context: [crowd_motive, material_dependency, spiritual_dependency, hope_dependency]
+      model_version:
+        families: []
+        versions: []
+        aliases: []
+        exclusive: false
+      aliases: [motive_first_crowd, 群众动机优先, 群众对机构态度]
+      camera_performance_sound: [macro_silence, crowd_sound_field, heterogeneous_performance]
+      surface_similarity: [群众, 圣女, 教会, 施粥, 广场]
+      negative_retrieval_examples:
+        - id: NEG-MOTIVE-001
+          when_all: [single_character_scene, no_group_behavior]
+          reason: no crowd or institutional group relation exists
+    scope:
+      classes: [TRANSFERABLE_METHOD]
+      work_items: []
+      scenes: []
+      expiration_condition: none_for_transferable_candidate
+    maturity:
+      observation: scene_verified
+      transferable: candidate
+      model_behavior: null
+    mandatory_scans:
+      - immediate_need
+      - material_dependency
+      - hope_dependency
+      - spiritual_dependency
+      - institutional_function
+      - grievance_target
+      - perceived_legitimacy
+      - fear_and_cost
+      - emotional_ambivalence
+      - group_heterogeneity
+    conflict_refs: []
+
+  - case_id: EXPOSITION-MEDIA-DISTANCE-001
+    source_kind: director_feedback_learning_case
+    authority_ref: 08_系统学习/导演反馈学习案例.yaml#EXPOSITION-MEDIA-DISTANCE-001
+    learning_layers: [L2_director_intent, L3_causal_mechanism, L4_contextual_policy]
+    application_roles: [director_intents, causal_mechanisms, contextual_policies, open_hypotheses_and_optional_ab_opportunities]
+    hard_routes: [EXPOSITION_STALL]
+    recall_signature:
+      dramatic_function: [worldbuilding_exposition, institutional_legitimacy, historical_explanation]
+      failure_mechanism: [exposition_stall, information_value_lost_by_compression, epistemic_distance_mismatch]
+      relation_type: [speaker_to_history, audience_to_religious_narrative, present_to_past]
+      spatial_action_features: [return_to_present, visual_medium_switch]
+      scene_context: [religious_ritual, history, world_origin, exposition]
+      character_context: [authoritative_speaker, audience_attention]
+      model_version:
+        families: []
+        versions: []
+        aliases: []
+        exclusive: false
+      aliases: [exposition_media_distance, 说明介质距离, 羊皮纸历史, 写实闪回AB]
+      camera_performance_sound: [voice_over, medium_transition, return_to_present]
+      surface_similarity: [世界观, 历史, 布道, 羊皮纸, 闪回]
+      negative_retrieval_examples:
+        - id: NEG-EXPOSITION-001
+          when_all: [short_action_only, no_exposition]
+          reason: no explanatory information load exists
+    scope:
+      classes: [TRANSFERABLE_METHOD]
+      work_items: []
+      scenes: []
+      expiration_condition: none_for_transferable_candidate
+    maturity:
+      observation: scene_verified
+      transferable: candidate
+      model_behavior: null
+    mandatory_scans:
+      - exposition_information_value
+      - placement_need
+      - representation_medium
+      - epistemic_status_of_history
+      - temporal_distance
+      - dialogue_speakability
+      - return_to_present
+      - asset_lock_cost
+    conflict_refs: []
+
+  - case_id: VN-TO-FILM-DIALOGUE-001
+    source_kind: director_feedback_learning_case
+    authority_ref: 08_系统学习/导演反馈学习案例.yaml#VN-TO-FILM-DIALOGUE-001
+    learning_layers: [L3_causal_mechanism, L4_contextual_policy]
+    application_roles: [causal_mechanisms, contextual_policies]
+    hard_routes: [VN_TO_FILM_DIALOGUE]
+    recall_signature:
+      dramatic_function: [dialogue_adaptation, exposition_dialogue, playable_speech]
+      failure_mechanism: [written_sentence_shape_leak, unplayable_long_sentence, one_pass_comprehension_fail]
+      relation_type: [speaker_to_listener]
+      spatial_action_features: []
+      scene_context: [galgame_adaptation, dialogue_scene, exposition]
+      character_context: [character_register, social_status, breath_and_emphasis]
+      model_version:
+        families: []
+        versions: []
+        aliases: []
+        exclusive: false
+      aliases: [vn_to_film, galgame对白电影化, 文字游戏对白改编]
+      camera_performance_sound: [breath_grouping, emphasis, spoken_rhythm]
+      surface_similarity: [对白, 台词, GAL, galgame, 口语化]
+      negative_retrieval_examples:
+        - id: NEG-VN-001
+          when_all: [no_dialogue, pure_visual_action]
+          reason: no spoken language is being adapted
+    scope:
+      classes: [TRANSFERABLE_METHOD]
+      work_items: []
+      scenes: []
+      expiration_condition: none_for_transferable_candidate
+    maturity:
+      observation: scene_verified
+      transferable: candidate
+      model_behavior: null
+    mandatory_scans:
+      - source_medium
+      - dramatic_information_to_preserve
+      - character_register
+      - dialogue_speakability
+      - breath_grouping
+      - emphasis_and_stress
+      - listener_one_pass_comprehension
+    conflict_refs: []
+
+  - case_id: NOVUS-30S-REAL-OUTPUT-001
+    source_kind: director_feedback_learning_case
+    authority_ref: 08_系统学习/导演反馈学习案例.yaml#NOVUS-30S-REAL-OUTPUT-001
+    learning_layers: [L0_observation, L3_causal_mechanism, L4_contextual_policy]
+    application_roles: [known_failure_modes, causal_mechanisms, open_hypotheses_and_optional_ab_opportunities]
+    hard_routes: []
+    recall_signature:
+      dramatic_function: [historical_montage, worldbuilding_sequence, ritual_climax, multi_shot_sequence]
+      failure_mechanism: [crowd_motion_motive_mismatch, semantic_entity_class_drift, sequence_function_redundancy, canonical_world_state_violation, inherited_scene_state_loss]
+      relation_type: [entity_attribute_binding, continuity_inheritance, background_to_worldstate]
+      spatial_action_features: [wide_background_exposure, multi_shot_carry_forward, crowd_motion_envelope]
+      scene_context: [novus, flood_world, historical_saints, ritual, 30s_sequence]
+      character_context: [adult_female_saint_identity, crowd_motive, daal_performance, nun_continuity]
+      model_version:
+        families: [seedance]
+        versions: ["2.5"]
+        aliases: [C-DANCE 2.5, Seedance 2.5]
+        exclusive: false
+      aliases: [novus_real_output, 30秒真实生成反馈, 历代圣女儿童化, 洪水世界背景完整性]
+      camera_performance_sound: [wide_shot_integrity, final_performance_pass, continuity_return_shot]
+      surface_similarity: [诺瓦斯, 圣女, 洪水, 达尔, 修女, 群众]
+      negative_retrieval_examples:
+        - id: NEG-NOVUS-001
+          when_all: [single_closeup, no_background_exposure, no_sequence_continuity]
+          reason: wide background and sequence carry-forward mechanisms are absent
+    scope:
+      classes: [TRANSFERABLE_METHOD, MODEL_VERSION_BOUND]
+      work_items: []
+      scenes: []
+      expiration_condition: model_behavior_requires_revalidation_on_version_change
+    maturity:
+      observation: scene_verified
+      transferable: candidate
+      model_behavior: candidate
+    mandatory_scans:
+      - motive_to_motion
+      - semantic_attribute_binding
+      - sequence_function_redundancy
+      - canonical_background_integrity
+      - inherited_scene_state
+      - aesthetic_quality_separation
+    conflict_refs: []
+
+  - case_id: CROWD-GAZE-BODY-CAMERA-BINDING-001
+    source_kind: director_feedback_learning_case
+    authority_ref: 08_系统学习/导演反馈学习案例.yaml#CROWD-GAZE-BODY-CAMERA-BINDING-001
+    learning_layers: [L0_observation, L3_causal_mechanism, L4_contextual_policy]
+    application_roles: [known_failure_modes, causal_mechanisms, contextual_policies]
+    hard_routes: [TARGET_ORIENTED_SPATIAL_BINDING]
+    recall_signature:
+      dramatic_function: [target_oriented_action, worship, pursuit, escape, confrontation, blocking]
+      failure_mechanism: [gaze_target_spatial_binding_fail, body_orientation_target_fail, camera_side_target_conflict, action_end_orientation_fail]
+      relation_type: [gaze_to_target, facing_to_target, kneeling_to_target, pursuit_to_target, escape_from_target, occlusion_to_target, camera_side_to_target]
+      spatial_action_features: [locatable_target, target_world_position, gaze_direction, body_orientation, kneeling_to_target, pursuit, escape, blocking, occlusion, camera_side, action_end_orientation]
+      scene_context: [crowd, ritual, target_oriented_scene, spatial_relation]
+      character_context: [crowd_behavior, target_awareness, body_orientation_contract]
+      model_version:
+        families: [seedance]
+        versions: ["2.5"]
+        aliases: [C-DANCE 2.5, Seedance 2.5]
+        exclusive: false
+      aliases: [target_orientation_binding, gaze_body_camera_binding, 朝目标下跪, 面向目标, 追逐目标, 逃离目标, 机位目标侧]
+      camera_performance_sound: [camera_side, 3_4_back_view, side_profile, performance_readability_vs_spatial_truth]
+      surface_similarity: [仰头, 下跪, 看向, 面向, 追逐, 逃跑, 遮挡, 机位]
+      negative_retrieval_examples:
+        - id: NEG-TARGET-BINDING-001
+          when_all: [abstract_upward_gaze, no_locatable_target]
+          reason: upward gaze without a story-material locatable target does not require target binding
+        - id: NEG-TARGET-BINDING-002
+          when_all: [camera_is_target_position, crowd_faces_camera]
+          reason: front-facing crowd can be correct when camera occupies the target side
+    scope:
+      classes: [TRANSFERABLE_METHOD, MODEL_VERSION_BOUND]
+      work_items: []
+      scenes: []
+      expiration_condition: model_behavior_requires_revalidation_on_version_change
+    maturity:
+      observation: scene_verified
+      transferable: candidate
+      model_behavior: candidate
+    mandatory_scans:
+      - target_world_position
+      - gaze_target
+      - body_orientation
+      - kneeling_to_target
+      - pursuit_escape_vector
+      - blocking_and_occlusion
+      - camera_side
+      - action_end_orientation
+      - reference_composition_conflict
+    conflict_refs: []
+
+  - case_id: CD25-KAIM-WINDOW-AB-20260815
+    source_kind: model_version_real_generation_feedback
+    authority_ref: 08_系统学习/C-DANCE2.5真实生成反馈库.md#CD25-KAIM-WINDOW-AB-20260815
+    learning_layers: [L0_observation, L3_causal_mechanism]
+    application_roles: [model_version_lessons, known_failure_modes, open_hypotheses_and_optional_ab_opportunities]
+    hard_routes: []
+    recall_signature:
+      dramatic_function: [high_dynamic_climbing, near_miss, event_order, contact_causality]
+      failure_mechanism: [event_order_fail, contact_binding_fail, observable_knowledge_conflict, environment_response_weak, confounded_ab]
+      relation_type: [foot_to_window_contact, climber_to_facade, woman_to_window, camera_to_exterior]
+      spatial_action_features: [climbing, window_contact, support_point, external_camera, sequential_contact, environment_response]
+      scene_context: [building_exterior, window_micro_sequence, high_dynamic_motion]
+      character_context: [kaim_climbing, woman_reaction, offscreen_voice]
+      model_version:
+        families: [seedance]
+        versions: ["2.5"]
+        aliases: [C-DANCE 2.5, Seedance 2.5]
+        exclusive: true
+      aliases: [kaim_window_ab, 凯姆踩窗, C-DANCE窗口AB]
+      camera_performance_sound: [external_camera, contact_sound, environment_response, vo_non_entity]
+      surface_similarity: [凯姆, 窗, 攀爬, 踩窗, 画外音]
+      negative_retrieval_examples:
+        - id: NEG-CD25-WINDOW-001
+          when_all: [static_dialogue, no_contact_chain]
+          reason: model-specific contact ordering lesson is not relevant
+    scope:
+      classes: [MODEL_VERSION_BOUND]
+      work_items: []
+      scenes: []
+      expiration_condition: exact_model_version_change
+    maturity:
+      observation: scene_verified
+      transferable: candidate
+      model_behavior: candidate
+    mandatory_scans:
+      - event_order
+      - contact_binding
+      - observable_knowledge
+      - environment_response
+      - camera_contract
+      - confound_check
+    conflict_refs: []
+
+  - case_id: GPC-20260813-001
+    source_kind: golden_prompt_case
+    authority_ref: 11_验收/golden_prompt_cases.yaml#GPC-20260813-001
+    learning_layers: [L2_director_intent, L4_contextual_policy]
+    application_roles: [contextual_policies, open_hypotheses_and_optional_ab_opportunities]
+    hard_routes: []
+    recall_signature:
+      dramatic_function: [high_end_fashion_commercial, kinetic_typography, hero_lockup]
+      failure_mechanism: [subject_scale_drift, graphics_not_integrated, title_lockup_failure]
+      relation_type: [camera_subject_matched_speed, typography_to_subject, reflection_binding]
+      spatial_action_features: [matched_speed_dolly_back, centered_subject, 3d_text_motion, reflection]
+      scene_context: [black_void_commercial, runway, graphic_motion]
+      character_context: [single_model_hero]
+      model_version:
+        families: []
+        versions: []
+        aliases: []
+        exclusive: false
+      aliases: [matched_speed_camera_subject, 三维文字场景实体, 人物占比恒定]
+      camera_performance_sound: [matched_speed_dolly, hero_framing, dynamic_then_lockup, low_bass]
+      surface_similarity: [广告, 走秀, 三维文字, 黑色背景]
+      negative_retrieval_examples:
+        - id: NEG-GPC001-001
+          when_all: [multi_character_dramatic_blocking, no_graphic_motion]
+          reason: golden case explicitly marks this as non-applicable context
+    scope:
+      classes: [TRANSFERABLE_METHOD]
+      work_items: []
+      scenes: []
+      expiration_condition: revalidate_model_sensitive_text_rendering_on_transfer
+    maturity:
+      observation: prompt_approved
+      transferable: candidate
+      model_behavior: unknown
+    mandatory_scans: [task_function, transferable_mechanism, model_text_rendering_dependency]
+    conflict_refs: []
+
+  - case_id: GPC-20260813-002
+    source_kind: golden_prompt_case
+    authority_ref: 11_验收/golden_prompt_cases.yaml#GPC-20260813-002
+    learning_layers: [L2_director_intent, L4_contextual_policy]
+    application_roles: [contextual_policies, open_hypotheses_and_optional_ab_opportunities]
+    hard_routes: []
+    recall_signature:
+      dramatic_function: [brutal_combat_tone, pathological_tension, blood_attention_anchor]
+      failure_mechanism: [flat_lighting, weak_attention_hierarchy, tone_light_mismatch]
+      relation_type: [motivated_light_to_subject, palette_to_attention_anchor]
+      spatial_action_features: [single_top_light, deep_shadow_negative_space]
+      scene_context: [confined_fight, interrogation, underground_corridor, pathological_space]
+      character_context: [face_readability_under_toplight]
+      model_version:
+        families: []
+        versions: []
+        aliases: []
+        exclusive: false
+      aliases: [single_motivated_top_light, cool_field_crimson_anchor, deep_shadow_negative_space]
+      camera_performance_sound: [top_light, low_key, shadow_readability]
+      surface_similarity: [打斗, 顶光, 青蓝绿, 猩红, 血迹]
+      negative_retrieval_examples:
+        - id: NEG-GPC002-001
+          when_all: [broad_daylight_exterior, healthy_natural_skin_tone_primary]
+          reason: golden case explicitly marks broad daylight and natural-skin priorities as non-applicable
+    scope:
+      classes: [TRANSFERABLE_METHOD]
+      work_items: []
+      scenes: []
+      expiration_condition: revalidate_on_cross_scene_transfer
+    maturity:
+      observation: prompt_approved
+      transferable: candidate
+      model_behavior: unknown
+    mandatory_scans: [motivated_light_source, topology_readability, face_readability, continuity_light_compatibility]
+    conflict_refs: []
