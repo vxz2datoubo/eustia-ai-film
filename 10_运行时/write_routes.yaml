@@ -24,6 +24,7 @@ routes:
   revision_trace_and_learning: 08_系统学习/反馈反推与系统反哺引擎.md
   learning_evidence_and_outcome: 08_系统学习/反馈反推与系统反哺引擎.md
   director_feedback_learning_case: 08_系统学习/导演反馈学习案例.yaml
+  learning_recall_index: 10_运行时/learning_recall_index.yaml
   model_version_real_generation_feedback: 08_系统学习/C-DANCE2.5真实生成反馈库.md
   golden_prompt_learning_protocol: 08_系统学习/优秀提示词案例学习协议.md
   official_research_evidence: 09_资料证据/官方资料与证据索引.md
@@ -152,6 +153,7 @@ golden_media_evidence_policy:
 
 canonical_learning_gate:
   principle: maturity_controls_promotion_not_registration
+  recall_index_is_derived_router_metadata_not_authority: true
   candidate_registration_allowed: true
   applies_to:
     - general_directing_method
