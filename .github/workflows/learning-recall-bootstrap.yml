@@ -42,3 +42,5 @@ jobs:
           git add -A
           git commit -m "Integrate Learning Smart Recall runtime gates"
           git push origin HEAD:gpt/learning-smart-recall-v1
+
+# second push after workflow registration; temporary bootstrap removes itself
