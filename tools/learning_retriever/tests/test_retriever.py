@@ -105,6 +105,17 @@ class LearningRetrieverIntegrationTests(unittest.TestCase):
         self.assertEqual(len(result["expanded_cases"]), 1)
         self.assertIn("CROWD-GAZE-BODY-CAMERA-BINDING-001", result["expanded_cases"])
 
+    def test_final_yaml_case_expansion_stops_before_top_level_learning_checkpoint(self) -> None:
+        r = LearningRetriever(REPO_ROOT)
+        expanded = r.expand_authority_ref(
+            "08_系统学习/导演反馈学习案例.yaml#CROWD-GAZE-BODY-CAMERA-BINDING-001"
+        )
+        self.assertIsNotNone(expanded)
+        payload = expanded["payload"]
+        self.assertEqual(payload["case_id"], "CROWD-GAZE-BODY-CAMERA-BINDING-001")
+        self.assertNotIn("learning_checkpoint", payload)
+        self.assertIn("operational_candidate", payload)
+
 
 class LearningRetrieverSyntheticGateTests(unittest.TestCase):
     def _retriever(self, mutate=None) -> LearningRetriever:
