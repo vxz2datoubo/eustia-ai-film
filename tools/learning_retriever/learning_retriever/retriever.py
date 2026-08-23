@@ -76,27 +76,25 @@ def _ref_parts(ref: str) -> tuple[str, str | None]:
 
 
 def _extract_yaml_case_block(path: Path, anchor: str) -> dict[str, Any] | None:
-    """Extract only the selected case block from a YAML registry text.
+    """Extract one selected ``- case_id:`` item without parsing the full registry.
 
-    This deliberately avoids returning the full registry payload to the caller. It
-    scans case boundaries in text, then parses only the selected block.
+    Case registries may contain top-level metadata after the ``cases`` list, for
+    example ``learning_checkpoint:``. A selected final case therefore ends not
+    only at the next ``- case_id`` item, but at any non-comment YAML line whose
+    indentation returns to the case-item indentation or shallower. Keeping this
+    boundary textual lets Top-K expansion avoid loading the full learning
+    registry into the retrieval payload.
     """
     text = path.read_text(encoding="utf-8")
     lines = text.splitlines()
     start = None
     base_indent = None
-    patterns = (
-        re.compile(r"^(\s*)-\s+case_id:\s*[\"']?([^\"'#]+)"),
-        re.compile(r"^(\s*)case_id:\s*[\"']?([^\"'#]+)"),
-    )
+    pattern = re.compile(r"^(\s*)-\s+case_id:\s*[\"']?([^\"'#]+)")
     for i, line in enumerate(lines):
-        for pat in patterns:
-            m = pat.match(line)
-            if m and m.group(2).strip() == anchor:
-                start = i
-                base_indent = len(m.group(1))
-                break
-        if start is not None:
+        m = pattern.match(line)
+        if m and m.group(2).strip() == anchor:
+            start = i
+            base_indent = len(m.group(1))
             break
     if start is None or base_indent is None:
         return None
@@ -104,12 +102,14 @@ def _extract_yaml_case_block(path: Path, anchor: str) -> dict[str, Any] | None:
     end = len(lines)
     for i in range(start + 1, len(lines)):
         line = lines[i]
-        if not line.strip():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
             continue
-        m = re.match(r"^(\s*)-\s+case_id:\s*", line)
-        if m and len(m.group(1)) == base_indent:
+        indent = len(line) - len(line.lstrip(" "))
+        if indent <= base_indent:
             end = i
             break
+
     block = "\n".join(lines[start:end]) + "\n"
     wrapped = "cases:\n" + "\n".join("  " + ln for ln in block.splitlines()) + "\n"
     parsed = yaml.safe_load(wrapped) or {}
