@@ -1,4 +1,4 @@
-schema_version: "1.0"
+schema_version: "1.1"
 runtime_id: LEARNING_APPLICATION_GATE
 status: active
 purpose:
@@ -12,6 +12,8 @@ authority:
   project_index: "PROJECT_INDEX.yaml"
   regression_suite: "11_验收/learning_application_gate_regression_cases.yaml"
   evidence_index: "09_资料证据/学习应用与冲突裁决证据索引.md"
+  learning_recall_index: "10_运行时/learning_recall_index.yaml"
+  learning_retriever: "tools/learning_retriever/"
 
 core_principles:
   means_are_not_goals: true
@@ -28,6 +30,10 @@ core_principles:
   proxy_model_pass_equals_target_model_pass: false
   pre_output_gate_failure_requires_self_revision: true
   media_claim_without_actual_media_inspection_forbidden: true
+  compact_index_before_full_learning_library: true
+  embedding_candidate_expansion_cannot_bypass_gates: true
+  mandatory_route_recall_missing_is_gate_failure: true
+  retrieval_receipt_required_before_pre_output_pass: true
   sparse_sampling_cannot_be_described_as_full_frame_by_frame_review: true
 
 knowledge_abstraction_ladder:
@@ -177,13 +183,15 @@ media_evidence_analysis_gate:
 pre_directing_gate:
   required: true
   steps:
-    - "读取当前 work item / 剧情 / 连续性 / 相关角色场景与模型版本"
-    - "召回与当前导演功能、症状、模型版本和失败模式相关的学习、Golden Cases、真实生成反馈与回归"
-    - "把召回内容按 L0-L5、scope、maturity、model/version、failure conditions 分类"
-    - "剔除已过期的 EPISODIC_WORK_ITEM / SCENE_LOCAL 表面限制，保留仍在当前 scope 内的 LOCK"
-    - "同时检索反例、冲突、superseded、deprecated、needs_revalidation 记录，禁止只召回支持证据"
-    - "运行 conflict_model，形成 ApplicableLearningSet"
-    - "若存在 material unresolved conflict，先向用户提出最小必要问题；否则继续导演"
+    - "Task feature extraction：从当前 work item / 剧情 / 连续性 / 角色 / 场景 / 模型版本中提取 dramatic_function、failure_mechanism、relation_type、spatial/action、scene/character context、model/version、aliases 与 camera/performance/sound 特征"
+    - "Hard route：先运行 director_route_index；命中 mandatory_reads 的学习案例必须进入 mandatory recall，不得被 Top-K、表面相似度或 embedding 候选挤掉"
+    - "Semantic recall：先读 compact learning_recall_index，只用路由元数据按机制优先加权召回，不全文加载学习库"
+    - "Scope / maturity / model / conflict filter：剔除过期 EPISODIC_WORK_ITEM / SCENE_LOCAL、deprecated、版本不匹配经验；candidate 只作候选/假设；同时保留反例与冲突"
+    - "ApplicableLearningSet：把通过过滤的 hard invariants、live locks、director intents、causal mechanisms、contextual policies、model lessons、failure modes、counterexamples 与 open hypotheses 分类"
+    - "Top-K expansion：只展开命中的 Top-K canonical case 正文；完整知识 authority 仍在原 canonical，不复制进 recall index"
+    - "Prompt compilation：现有 AI电影系统只使用 ApplicableLearningSet 与命中的 canonical payload 编译执行稿"
+    - "Retrieval receipt：记录 hard routes、mandatory cases、score components、selected refs、excluded reasons、filters、conflicts、Top-K 与 mandatory_recall_satisfied"
+    - "Pre-output gate：receipt 不完整、mandatory recall missing 或 material unresolved conflict 时必须 FAIL 并自修订/最小必要提问，不得交付已知坏稿"
   applicable_learning_set:
     - hard_canonical_invariants
     - live_work_item_locks
@@ -194,6 +202,44 @@ pre_directing_gate:
     - known_failure_modes
     - relevant_counterexamples
     - open_hypotheses_and_optional_ab_opportunities
+
+smart_recall_runtime:
+  id: LEARNING-SMART-RECALL-V1
+  index: 10_运行时/learning_recall_index.yaml
+  executable: tools/learning_retriever/
+  index_role: compact_derived_router_metadata_only
+  authority_rule: "recall index 只保存路由元数据；完整学习规则、证据、边界与成熟度仍以 authority_ref 指向的 canonical case 为准"
+  fixed_flow:
+    - task_feature_extraction
+    - hard_route
+    - semantic_recall
+    - scope_maturity_model_conflict_filter
+    - ApplicableLearningSet
+    - prompt_compilation
+    - retrieval_receipt
+    - pre_output_gate
+  ranking_priority:
+    - hard_canonical
+    - failure_mechanism
+    - dramatic_function
+    - spatial_action_relation
+    - character_mechanism
+    - model_version
+    - camera_performance_sound
+    - surface_similarity
+  top_k_policy:
+    compact_index_first: true
+    expand_full_case_only_after_selection: true
+    full_learning_library_context_injection_default: false
+  embedding_future_policy:
+    may_expand_candidate_pool: true
+    may_bypass_authority_scope_maturity_model_conflict_gates: false
+    may_satisfy_missing_mandatory_recall: false
+  fail_closed:
+    - mandatory_route_case_missing
+    - dangling_authority_ref
+    - unresolved_material_conflict
+    - incomplete_retrieval_receipt
 
 pre_output_gate:
   required: true
@@ -206,6 +252,7 @@ pre_output_gate:
     - "是否误用其他模型或旧版本经验"
     - "是否存在已召回但被忽略且足以改变结果的高置信经验"
     - "若结论依赖用户提供的真实媒体，media_evidence_analysis_gate 是否已经满足"
+    - "Learning Smart Recall retrieval receipt 是否完整，且所有 hard-route mandatory recall 均已命中并展开所需 canonical case"
   on_fail:
     - "在发送给用户前自行修订并重新检查"
     - "若失败来自无法裁决的用户意图或规则冲突，停止猜测并主动提问"
