@@ -23,6 +23,7 @@ policy:
   old_file_search_rank_can_define_authority: false
   director_task_must_read_project_index_first: true
   director_learning_application_gate_required: true
+  director_learning_smart_recall_required: true
   learning_conflict_resolution_contextual_not_latest_wins: true
   episodic_constraints_scope_bounded: true
   unresolved_material_learning_conflict_requires_user_deferral: true
@@ -65,6 +66,7 @@ canonical:
   high_dynamic_motion_prompt_compiler: 10_运行时/high_dynamic_motion_prompt_compiler.yaml
   minimax_h3_prompt_adapter: 10_运行时/minimax_h3_prompt_adapter.yaml
   learning_application_gate: 10_运行时/learning_application_gate.yaml
+  learning_recall_index: 10_运行时/learning_recall_index.yaml
   route_index: 10_运行时/director_route_index.yaml
   source_authority_rules: 10_运行时/source_authority.yaml
   read_sets: 10_运行时/read_sets.yaml
@@ -116,6 +118,7 @@ effective_sources:
   10_运行时/high_dynamic_motion_prompt_compiler.yaml: github_verified
   10_运行时/minimax_h3_prompt_adapter.yaml: github_verified
   10_运行时/learning_application_gate.yaml: github_verified
+  10_运行时/learning_recall_index.yaml: github_verified
   10_运行时/source_authority.yaml: github_verified
   10_运行时/read_sets.yaml: github_verified
   10_运行时/write_routes.yaml: github_verified
