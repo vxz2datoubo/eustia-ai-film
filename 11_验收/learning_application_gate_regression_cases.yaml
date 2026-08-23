@@ -202,3 +202,89 @@ cases:
         - "可表演"
         - "观众一次听懂"
       locked_or_iconic_source_line_may_be_changed_without_authority: false
+
+  - id: LAG-REG-015-SMART-RECALL-POSITIVE-TARGET-BINDING
+    title: "明确目标的视线/身体/下跪/机位关系必须召回空间绑定案例"
+    setup:
+      hard_route: TARGET_ORIENTED_SPATIAL_BINDING
+      task_features:
+        dramatic_function: [worship]
+        relation_type: [kneeling_to_target]
+        spatial_action_features: [target_world_position, gaze_direction, body_orientation, camera_side, action_end_orientation]
+    must_retrieve:
+      learning_case: CROWD-GAZE-BODY-CAMERA-BINDING-001
+    expected:
+      mandatory_recall_satisfied: true
+      receipt_complete: true
+
+  - id: LAG-REG-016-SMART-RECALL-NEGATIVE-TARGET-BINDING
+    title: "只有抽象抬头且没有可定位剧情目标时不得机械召回目标绑定规则"
+    setup:
+      task_features: [abstract_upward_gaze, no_locatable_target]
+      surface_words: [仰头, 看上方]
+    expected:
+      CROWD_GAZE_BODY_CAMERA_BINDING_forced: false
+      negative_retrieval_example_applied: true
+
+  - id: LAG-REG-017-SMART-RECALL-FALSE-POSITIVE-SURFACE
+    title: "表面同为群众/广场不得压过机制不匹配"
+    setup:
+      surface_similarity: [群众, 广场, 圣女]
+      actual_function: unrelated_background_establishing
+      failure_mechanism: none_target_oriented
+    expected:
+      surface_only_case_must_not_outrank_mechanism_match: true
+
+  - id: LAG-REG-018-SMART-RECALL-FALSE-NEGATIVE-ALIAS
+    title: "不使用原案例字面词仍应通过关系别名命中"
+    setup:
+      aliases: [朝目标下跪]
+      relation_type: [kneeling_to_target]
+      spatial_action_features: [action_end_orientation]
+    must_retrieve:
+      learning_case: CROWD-GAZE-BODY-CAMERA-BINDING-001
+    expected:
+      false_negative: false
+
+  - id: LAG-REG-019-SMART-RECALL-EXPIRED-SCENE-LOCAL
+    title: "旧 scene-local 表面经验离开作用域后必须过滤"
+    setup:
+      lesson_scope: SCENE_LOCAL
+      lesson_scene: OLD-SCENE
+      current_scene: NEW-SCENE
+    expected:
+      injected_as_applicable_lock: false
+      exclusion_reason: expired_scene_local_scope
+
+  - id: LAG-REG-020-SMART-RECALL-MODEL-MISMATCH
+    title: "C-DANCE 2.5 exclusive 模型行为不得直接注入其他模型"
+    setup:
+      lesson: CD25-KAIM-WINDOW-AB-20260815
+      lesson_model: Seedance 2.5
+      current_model: MiniMax H3
+    expected:
+      applied_as_model_lesson: false
+      exclusion_reason: model_version_mismatch
+
+  - id: LAG-REG-021-SMART-RECALL-CONFLICT-FAIL-CLOSED
+    title: "命中 material unresolved learning conflict 必须 fail closed"
+    setup:
+      conflict_type: TRUE_CONTRADICTION
+      material: true
+      resolved: false
+    expected:
+      retrieval_status: FAIL
+      prompt_compilation_allowed: false
+      arbitrary_latest_wins: false
+
+  - id: LAG-REG-022-SMART-RECALL-MANDATORY-MISSING-FAIL
+    title: "hard route mandatory case 缺失或悬空不得继续导演"
+    setup:
+      hard_route: TARGET_ORIENTED_SPATIAL_BINDING
+      mandatory_case: CROWD-GAZE-BODY-CAMERA-BINDING-001
+      simulated_index_state: missing_or_dangling
+    expected:
+      retrieval_status: FAIL
+      mandatory_recall_satisfied: false
+      prompt_compilation_allowed: false
+      pre_output_gate_must_fail: true
