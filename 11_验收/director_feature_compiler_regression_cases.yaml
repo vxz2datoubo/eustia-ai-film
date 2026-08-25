@@ -42,6 +42,40 @@ retrieval_cases:
       - "教堂里圣女讲述城市起源，避免世界观说明拖慢节奏"
       - "牢狱酒馆中老兵用旁白解释旧时代历史，不要让信息段停滞"
     expected_case_id: EXPOSITION-MEDIA-DISTANCE-001
+    expected_hard_route: EXPOSITION_STALL
+
+mandatory_learning_route_paraphrases:
+  - id: motive_route_from_compiled_semantics
+    description: "灾民面对救济教会的反应显得不合理"
+    expected_compiled_feature:
+      field: failure_mechanism
+      value: motive_tone_mismatch
+    expected_hard_route: MOTIVATION_BEFORE_TONE
+    expected_mandatory_case_id: MOTIVE-FIRST-CROWD-001
+
+  - id: exposition_route_from_compiled_semantics
+    description: "老兵解释旧时代历史，信息段拖慢了推进"
+    expected_compiled_feature:
+      field: failure_mechanism
+      value: exposition_stall
+    expected_hard_route: EXPOSITION_STALL
+    expected_mandatory_case_id: EXPOSITION-MEDIA-DISTANCE-001
+
+  - id: dialogue_route_from_compiled_semantics
+    description: "这段台词太书面，需要口语化"
+    expected_compiled_feature:
+      field: failure_mechanism
+      value: written_sentence_shape_leak
+    expected_hard_route: VN_TO_FILM_DIALOGUE
+    expected_mandatory_case_id: VN-TO-FILM-DIALOGUE-001
+
+  - id: target_route_from_compiled_semantics
+    description: "卫兵盯着门口逃犯继续追击"
+    expected_compiled_feature:
+      field: relation_type
+      value: gaze_to_target
+    expected_hard_route: TARGET_ORIENTED_SPATIAL_BINDING
+    expected_mandatory_case_id: CROWD-GAZE-BODY-CAMERA-BINDING-001
 
 negative_semantic_cases:
   - id: objective_word_is_not_spatial_target
@@ -100,6 +134,57 @@ negative_semantic_cases:
       relation_type:
         - escape_from_target
 
+  - id: agent_gaze_distance_is_not_target
+    description: "角色看向远处，神情紧张"
+    expected_present:
+      spatial_action_features:
+        - gaze_direction
+    expected_absent:
+      dramatic_function:
+        - target_oriented_action
+      spatial_action_features:
+        - locatable_target
+      relation_type:
+        - gaze_to_target
+
+  - id: agent_turns_side_is_not_target
+    description: "人物转向左侧"
+    expected_present:
+      spatial_action_features:
+        - body_orientation
+    expected_absent:
+      dramatic_function:
+        - target_oriented_action
+      spatial_action_features:
+        - locatable_target
+      relation_type:
+        - facing_to_target
+
+  - id: crowd_gazes_sky_without_story_target
+    description: "群众望向天空，但没有明确剧情目标"
+    expected_present:
+      spatial_action_features:
+        - gaze_direction
+    expected_absent:
+      dramatic_function:
+        - target_oriented_action
+      spatial_action_features:
+        - locatable_target
+      relation_type:
+        - gaze_to_target
+        - crowd_to_institution
+
+negative_target_route_cases:
+  - id: gaze_to_distance_no_target_route
+    description: "角色看向远处，神情紧张"
+    forbidden_hard_route: TARGET_ORIENTED_SPATIAL_BINDING
+  - id: turn_left_no_target_route
+    description: "人物转向左侧"
+    forbidden_hard_route: TARGET_ORIENTED_SPATIAL_BINDING
+  - id: sky_gaze_no_story_target_route
+    description: "群众望向天空，但没有明确剧情目标"
+    forbidden_hard_route: TARGET_ORIENTED_SPATIAL_BINDING
+
 fail_closed_cases:
   - id: unrecognized_generic_scene
     description: "普通场景"
@@ -144,5 +229,6 @@ gates:
   fail_closed_on_missing_feature: true
   retriever_authority_unchanged: true
   director_route_index_is_route_authority: true
+  route_resolver_must_not_own_route_ids_or_feature_mappings: true
   regression_file_must_be_loaded_by_ci: true
   same_mechanism_must_recall_same_canonical_case_when_case_exists: true
