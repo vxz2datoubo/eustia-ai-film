@@ -171,40 +171,57 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
         *,
         temporal_terms: tuple[str, ...],
         continuation_adverbs: tuple[str, ...],
+        target_followup_terms: tuple[str, ...],
     ) -> bool:
-        """Fail closed unless the second event has no new subject or repeats the source actor.
+        """Verify the complete inter-event chain before carrying the prior target.
 
-        This guard deliberately does not try to enumerate every possible Chinese
-        actor noun. Any residual lexical material in the second-event subject
-        position is treated as an unproven agent boundary.
+        Every punctuation-delimited segment between perception target and ritual
+        action is checked. A segment may contain only bounded temporal/adverbial
+        glue, an explicit repetition of the source actor, or (in the first
+        segment only) a bounded predicate that still belongs to the already
+        identified perception target. Any other lexical material represents an
+        unproven event-agent transition and fails closed.
         """
         if not source_actor:
             return False
 
         separators = ("，", "。", "；", "！", "？", ",", ";", "!", "?")
-        last_separator = max((between.rfind(separator) for separator in separators), default=-1)
-        residual = (between[last_separator + 1:] if last_separator >= 0 else between).strip()
-        allowed = tuple(sorted(set(temporal_terms + continuation_adverbs), key=len, reverse=True))
-        source_actor_removed = False
+        segments = [between]
+        for separator in separators:
+            split_segments: list[str] = []
+            for segment in segments:
+                split_segments.extend(segment.split(separator))
+            segments = split_segments
 
-        while residual:
-            stripped = residual.lstrip()
-            if not source_actor_removed and stripped.startswith(source_actor):
-                residual = stripped[len(source_actor):]
-                source_actor_removed = True
+        base_allowed = tuple(sorted(set(temporal_terms + continuation_adverbs), key=len, reverse=True))
+        first_segment_allowed = tuple(
+            sorted(set(base_allowed + target_followup_terms), key=len, reverse=True)
+        )
+
+        for index, segment in enumerate(segments):
+            residual = segment.strip()
+            if not residual:
                 continue
 
-            matched = False
-            for token in allowed:
-                if stripped.startswith(token):
-                    residual = stripped[len(token):]
-                    matched = True
-                    break
-            if not matched:
-                residual = stripped
-                break
+            source_actor_removed = False
+            allowed = first_segment_allowed if index == 0 else base_allowed
+            while residual:
+                stripped = residual.lstrip()
+                if not source_actor_removed and stripped.startswith(source_actor):
+                    residual = stripped[len(source_actor):]
+                    source_actor_removed = True
+                    continue
 
-        return not residual.strip()
+                matched = False
+                for token in allowed:
+                    if stripped.startswith(token):
+                        residual = stripped[len(token):]
+                        matched = True
+                        break
+                if not matched:
+                    return False
+
+        return True
 
     def camera_is_action_agent(actions: tuple[str, ...], camera_terms: tuple[str, ...]) -> bool:
         for action in actions:
@@ -239,6 +256,7 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
     )
     temporal_carry_terms = ("后", "之后", "随后", "随即", "便", "于是", "立刻", "马上", "接着", "继而")
     continuation_adverb_terms = ("纷纷", "共同", "一起", "一同", "全都", "都")
+    target_followup_terms = ("现身", "出现", "降临", "到来")
     alternate_kneel_reason_terms = (
         "爆炸", "冲击", "碎石", "坍塌", "枪声", "攻击", "躲避", "避险", "摔倒", "绊倒", "受伤", "失去平衡",
     )
@@ -276,6 +294,7 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
                 between,
                 temporal_terms=temporal_carry_terms,
                 continuation_adverbs=continuation_adverb_terms,
+                target_followup_terms=target_followup_terms,
             )
             competing_target = any(
                 target in between
