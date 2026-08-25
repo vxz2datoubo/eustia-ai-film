@@ -16,7 +16,7 @@ jobs:
           python-version: '3.11'
       - name: Install test dependencies
         run: |
-          python -m pip install pytest
+          python -m pip install pytest PyYAML
       - name: Run feature compiler regression
         run: |
           PYTHONPATH=tools/learning_retriever python -m pytest tools/learning_retriever/tests/test_feature_compiler.py
