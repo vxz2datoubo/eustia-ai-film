@@ -1,5 +1,9 @@
-schema_version: 1
+schema_version: "1.1"
 component: DIRECTOR_FEATURE_COMPILER_V1_1
+purpose: >-
+  Cross-surface regression for mechanism generalization. These cases test query
+  compilation and retrieval behavior only; they are not learning authority.
+
 cases:
   - id: same_mechanism_character_variation
     descriptions:
@@ -25,6 +29,48 @@ cases:
     expected:
       compatible_failure_mechanism: consequence_of_prior_choice
 
+retrieval_cases:
+  - id: target_binding_cross_character_scene_wording
+    descriptions:
+      - "贫民区里一群信徒跪向远处圣女，必须保持身体和视线朝向她"
+      - "城堡大厅里卫兵面向门口逃犯追击，人物朝向不能和目标方向打架"
+    expected_case_id: CROWD-GAZE-BODY-CAMERA-BINDING-001
+
+  - id: exposition_cross_character_scene_wording
+    descriptions:
+      - "教堂里圣女讲述城市起源，避免世界观说明拖慢节奏"
+      - "牢狱酒馆中老兵用旁白解释旧时代历史，不要让信息段停滞"
+    expected_case_id: EXPOSITION-MEDIA-DISTANCE-001
+
+negative_semantic_cases:
+  - id: objective_word_is_not_spatial_target
+    description: "本场目标是解释世界观背景"
+    expected_present:
+      dramatic_function:
+        - worldbuilding_exposition
+    expected_absent:
+      spatial_action_features:
+        - locatable_target
+        - body_orientation
+      failure_mechanism:
+        - gaze_target_spatial_binding_fail
+        - body_orientation_target_fail
+
+fail_closed_cases:
+  - id: unrecognized_generic_scene
+    description: "普通场景"
+    expected_error: NO_RECOGNIZED_DIRECTOR_FEATURES
+
+semantic_dependency_gate:
+  schema: 10_运行时/screen_observable_audible_ir_schema.yaml
+  required_layers:
+    - EventGraphIR
+    - BlockingIR
+    - VisibleIR
+  director_method_must_bind: SOAC-001
+
 gates:
   fail_closed_on_missing_feature: true
   retriever_authority_unchanged: true
+  regression_file_must_be_loaded_by_ci: true
+  same_mechanism_must_recall_same_canonical_case_when_case_exists: true
