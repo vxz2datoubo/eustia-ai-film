@@ -7,14 +7,27 @@ purpose: >-
   retriever authority or creating a second learning knowledge base.
 
 authority:
+  project_registry: PROJECT_INDEX.yaml
   retriever_authority_unchanged: true
   learning_authority: 10_运行时/learning_application_gate.yaml
+  route_authority: 10_运行时/director_route_index.yaml
   recall_router_metadata: 10_运行时/learning_recall_index.yaml
   semantic_ir: 10_运行时/screen_observable_audible_ir_schema.yaml
   director_method: 01_AI电影系统/AI电影系统.md#SOAC-001
   knowledge_base_duplication: forbidden
   compiler_output_is_retrieval_query_only: true
   fail_closed: true
+
+runtime_binding:
+  canonical_entrypoint: tools/learning_retriever/learning_retriever/runtime.py#DirectorLearningRuntime.retrieve
+  route_resolver: tools/learning_retriever/learning_retriever/route_resolver.py#resolve_hard_routes
+  natural_language_flow:
+    - director_feature_compiler
+    - hard_route_from_director_route_index
+    - semantic_recall_from_learning_recall_index
+  natural_language_bypass_forbidden: true
+  route_definition_duplication_in_compiler: forbidden
+  structured_feature_only_retrieval_compatibility: preserved
 
 input:
   type: director_task_description
@@ -55,18 +68,25 @@ resolution_rule:
   mechanism_first: true
   wording_is_not_identity: true
   character_and_scene_are_context_only: true
+  relational_evidence_required_for_target_or_causal_relation: true
+  surface_noun_or_verb_alone_cannot_create_causal_mechanism: true
   literal_objective_word_is_not_spatial_target_without_spatial_action: true
+  camera_orientation_is_not_character_facing_relation: true
+  untargeted_escape_does_not_create_locatable_escape_source: true
   compiler_may_not_emit_learning_payload: true
+  compiler_may_not_define_hard_route_ids: true
   compiler_may_not_change_scope_maturity_conflict_or_authority: true
 
 fail_closed:
   conditions:
     - empty_director_task
     - no_recognized_director_feature
+    - director_route_index_unavailable_for_natural_language_retrieval
   error_codes:
     - EMPTY_DIRECTOR_TASK
     - NO_RECOGNIZED_DIRECTOR_FEATURES
-  downstream_rule: compiler_failure_must_not_enter_learning_retrieval_or_prompt_compilation
+    - DIRECTOR_ROUTE_INDEX_REQUIRED
+  downstream_rule: compiler_or_route_resolution_failure_must_not_enter_learning_retrieval_or_prompt_compilation
 
 provenance:
   receipt_required_for_natural_language_compilation: true
@@ -77,6 +97,8 @@ provenance:
     - compiled_feature_keys
     - matched_rules
     - semantic_trace
+    - route_resolution
+    - hard_routes
     - authority_boundary
   raw_director_description_persistence_required: false
 
