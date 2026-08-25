@@ -39,6 +39,9 @@ jobs:
       - name: Validate SOAC semantic dependencies
         run: |
           PYTHONPATH=tools/learning_retriever python -m learning_retriever.cli --project-root . --validate-feature-compiler
-      - name: Run Learning Smart Recall regressions
+      - name: Run targeted feature compiler regressions
+        run: |
+          PYTHONPATH=tools/learning_retriever python -m pytest tools/learning_retriever/tests/test_feature_compiler.py
+      - name: Run full learning retriever tests
         run: |
           PYTHONPATH=tools/learning_retriever python -m pytest tools/learning_retriever/tests
