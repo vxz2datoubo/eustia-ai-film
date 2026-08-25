@@ -1,0 +1,30 @@
+schema_version: 1
+component: DIRECTOR_FEATURE_COMPILER_V1_1
+cases:
+  - id: same_mechanism_character_variation
+    descriptions:
+      - "凯姆在贫民区保护同伴"
+      - "另一角色在废墟中保护陌生人"
+    expected:
+      compatible_failure_mechanism: protection_under_pressure
+      compatible_relation_type: protector_dependant
+
+  - id: same_mechanism_scene_variation
+    descriptions:
+      - "狭窄街巷追逐后无法脱身"
+      - "城堡走廊追击导致封锁"
+    expected:
+      compatible_spatial_action_features:
+        - constrained_space
+        - pursuit_blocking
+
+  - id: same_mechanism_wording_variation
+    descriptions:
+      - "人物被过去选择拖入危险"
+      - "角色因旧决定面对当前代价"
+    expected:
+      compatible_failure_mechanism: consequence_of_prior_choice
+
+gates:
+  fail_closed_on_missing_feature: true
+  retriever_authority_unchanged: true
