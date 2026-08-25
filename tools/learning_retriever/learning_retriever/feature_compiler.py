@@ -165,6 +165,47 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
             return None
         return min(matches, key=lambda item: item[1])
 
+    def same_agent_continuation_is_proven(
+        source_actor: str | None,
+        between: str,
+        *,
+        temporal_terms: tuple[str, ...],
+        continuation_adverbs: tuple[str, ...],
+    ) -> bool:
+        """Fail closed unless the second event has no new subject or repeats the source actor.
+
+        This guard deliberately does not try to enumerate every possible Chinese
+        actor noun. Any residual lexical material in the second-event subject
+        position is treated as an unproven agent boundary.
+        """
+        if not source_actor:
+            return False
+
+        separators = ("，", "。", "；", "！", "？", ",", ";", "!", "?")
+        last_separator = max((between.rfind(separator) for separator in separators), default=-1)
+        residual = (between[last_separator + 1:] if last_separator >= 0 else between).strip()
+        allowed = tuple(sorted(set(temporal_terms + continuation_adverbs), key=len, reverse=True))
+        source_actor_removed = False
+
+        while residual:
+            stripped = residual.lstrip()
+            if not source_actor_removed and stripped.startswith(source_actor):
+                residual = stripped[len(source_actor):]
+                source_actor_removed = True
+                continue
+
+            matched = False
+            for token in allowed:
+                if stripped.startswith(token):
+                    residual = stripped[len(token):]
+                    matched = True
+                    break
+            if not matched:
+                residual = stripped
+                break
+
+        return not residual.strip()
+
     def camera_is_action_agent(actions: tuple[str, ...], camera_terms: tuple[str, ...]) -> bool:
         for action in actions:
             hit = text.find(action)
@@ -197,6 +238,7 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
         "她", "他", "孩子", "伤员", "平民", "队友", "门口", "大门", "门", "窗口", "窗户", "舞台", "出口",
     )
     temporal_carry_terms = ("后", "之后", "随后", "随即", "便", "于是", "立刻", "马上", "接着", "继而")
+    continuation_adverb_terms = ("纷纷", "共同", "一起", "一同", "全都", "都")
     alternate_kneel_reason_terms = (
         "爆炸", "冲击", "碎石", "坍塌", "枪声", "攻击", "躲避", "避险", "摔倒", "绊倒", "受伤", "失去平衡",
     )
@@ -229,10 +271,11 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
             _, ritual_pos = ritual_match
             source_actor = nearest_actor_before(perception_target_match["action_pos"], actor_terms)
             between = text[perception_target_match["object_end"]:ritual_pos]
-            competing_actor = any(
-                actor in between
-                for actor in actor_terms
-                if actor not in {source_actor, perception_target_match["object"]}
+            agent_continuity_proven = same_agent_continuation_is_proven(
+                source_actor,
+                between,
+                temporal_terms=temporal_carry_terms,
+                continuation_adverbs=continuation_adverb_terms,
             )
             competing_target = any(
                 target in between
@@ -241,8 +284,8 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
             )
             ritual_target_carry = bool(
                 source_actor
+                and agent_continuity_proven
                 and _contains_any(between, temporal_carry_terms)
-                and not competing_actor
                 and not competing_target
                 and not _contains_any(between, alternate_kneel_reason_terms)
             )
