@@ -1,0 +1,34 @@
+schema_version: 1
+component: DIRECTOR_FEATURE_COMPILER_V1_1
+purpose: >-
+  Convert bounded natural language director intent into structured retrieval
+  features without changing retriever authority.
+
+authority:
+  retriever_authority_unchanged: true
+  knowledge_base_duplication: forbidden
+  fail_closed: true
+
+input:
+  type: director_task_description
+
+output:
+  dramatic_function:
+    required: true
+  relation_type:
+    required: true
+  spatial_action_features:
+    required: true
+  failure_mechanism:
+    required: true
+
+semantic_dependencies:
+  - SOAC
+  - EventGraph
+  - Blocking
+  - VisibleIR
+
+resolution_rule:
+  mechanism_first: true
+  wording_is_not_identity: true
+  character_and_scene_are_context_only: true
