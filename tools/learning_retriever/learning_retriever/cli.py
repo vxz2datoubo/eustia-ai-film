@@ -4,12 +4,9 @@ import argparse
 import json
 from pathlib import Path
 
-from .feature_compiler import (
-    FeatureCompilationError,
-    compile_retrieval_task,
-    validate_semantic_dependencies,
-)
+from .feature_compiler import FeatureCompilationError, validate_semantic_dependencies
 from .retriever import LearningRetriever, RetrievalGateError, validate_index
+from .runtime import DirectorLearningRuntime
 
 
 def main() -> int:
@@ -41,29 +38,37 @@ def main() -> int:
 
     try:
         if args.description:
-            task = compile_retrieval_task(args.description, task_id=args.task_id, strict=True)
+            result = DirectorLearningRuntime(root).retrieve(
+                args.description,
+                task_id=args.task_id,
+                top_k=args.top_k,
+                expand=args.expand,
+            )
         else:
             raw_task = json.loads(Path(args.task).read_text(encoding="utf-8"))
             description = raw_task.pop("director_task_description", None)
             if description is not None:
-                task = compile_retrieval_task(
+                result = DirectorLearningRuntime(root).retrieve(
                     str(description),
                     task_id=str(raw_task.get("task_id") or args.task_id),
                     base_task=raw_task,
-                    strict=True,
+                    top_k=args.top_k,
+                    expand=args.expand,
                 )
             else:
-                task = raw_task
+                result = LearningRetriever(root).retrieve(
+                    raw_task,
+                    top_k=args.top_k,
+                    expand=args.expand,
+                    fail_closed=True,
+                )
     except FeatureCompilationError as exc:
         print(json.dumps({"status": "FAIL", "stage": "feature_compiler", "error": str(exc)}, ensure_ascii=False, indent=2))
         return 2
-
-    retriever = LearningRetriever(root)
-    try:
-        result = retriever.retrieve(task, top_k=args.top_k, expand=args.expand, fail_closed=True)
     except RetrievalGateError as exc:
         print(json.dumps({"status": "FAIL", "stage": "retriever", "error": str(exc)}, ensure_ascii=False, indent=2))
         return 2
+
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0
 
