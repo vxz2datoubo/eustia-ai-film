@@ -2,9 +2,9 @@
 
 This module is a deterministic query-normalization layer. It does not store
 learning knowledge, change maturity, or become a new authority. It compiles
-surface director language into retrieval features that are consumed by the
-existing LearningRetriever and traces those features back to the canonical
-SOAC / EventGraphIR / BlockingIR / VisibleIR semantics.
+surface director language into retrieval features consumed by the existing
+LearningRetriever and traces those features to canonical SOAC / EventGraphIR /
+BlockingIR / VisibleIR semantics.
 """
 
 from __future__ import annotations
@@ -15,6 +15,8 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+
+from .route_resolver import RouteResolutionError, resolve_hard_routes
 
 
 FEATURE_KEYS = (
@@ -69,8 +71,8 @@ class DirectorFeatures:
 def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeatures:
     """Compile director language into retrieval-only mechanism features.
 
-    The mappings below are lexical normalizers over existing project semantics.
-    They do not contain learning payloads or canonical story knowledge.
+    Mechanism features require relational evidence. Surface nouns or verbs alone
+    are not promoted into causal/director mechanisms.
     """
     if not isinstance(task, str) or not task.strip():
         raise FeatureCompilationError("EMPTY_DIRECTOR_TASK")
@@ -90,22 +92,40 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
         matched_rules.append(rule)
         semantic_trace.extend(paths)
 
+    # Shared action vocabulary. Target-oriented semantics are added only when a
+    # story-material target/source relation is present.
+    gaze_terms = ("看向", "望向", "盯着", "注视", "视线朝", "目光朝", "观察")
+    facing_terms = ("面向", "朝向", "转向", "身体朝", "正对")
+    kneel_terms = ("下跪", "跪向", "跪着朝")
+    pursuit_terms = ("追逐", "追击", "追赶", "追捕", "追杀")
+    escape_terms = ("逃离", "逃跑", "逃开", "撤离", "远离", "躲避", "摆脱")
+    escape_source_terms = ("逃离", "逃开", "远离", "躲避", "摆脱")
+    occlusion_terms = ("遮挡", "挡住", "挡在", "遮住")
+    camera_actor_terms = ("摄影机", "摄像机", "镜头面向", "机位面向", "camera")
+    human_actor_terms = (
+        "人物", "角色", "男孩", "女孩", "男人", "女人", "群众", "人群", "信徒", "卫兵", "凯姆", "圣女", "逃犯"
+    )
+    target_entity_terms = (
+        "目标", "圣女", "教会", "敌人", "对手", "逃犯", "追兵", "同伴", "陌生人", "凯姆",
+        "人物", "角色", "人群", "群众", "门口", "大门", "门", "窗口", "窗户", "舞台", "出口",
+    )
+    explicit_target = _contains_any(text, target_entity_terms)
+    camera_only_orientation = _contains_any(text, camera_actor_terms) and not _contains_any(text, human_actor_terms)
+
     crowd_terms = ("群众", "人群", "百姓", "信徒", "灾民", "居民", "民众", "围观者")
     institution_terms = (
-        "教会",
-        "圣女",
-        "政府",
-        "统治者",
-        "王室",
-        "官员",
-        "军队",
-        "组织",
-        "救济",
-        "施粥",
-        "布道",
-        "权威",
+        "教会", "圣女", "政府", "统治者", "王室", "官员", "军队", "组织", "救济", "施粥", "布道", "权威",
     )
-    if _contains_any(text, crowd_terms):
+    crowd_relation_cues = (
+        "看向", "望向", "注视", "观察", "等待救济", "等待施粥", "聆听", "欢呼", "沉默", "嘲笑",
+        "反应", "态度", "跪向", "下跪", "转向", "聚焦",
+    )
+    crowd_has_relation = (
+        _contains_any(text, crowd_terms)
+        and _contains_any(text, crowd_relation_cues)
+        and (_contains_any(text, institution_terms) or explicit_target)
+    )
+    if crowd_has_relation:
         add(dramatic, "crowd_reaction", "social_behavior")
         add(spatial, "crowd_attention_shift", "heterogeneous_microreaction")
         if _contains_any(text, institution_terms):
@@ -120,16 +140,7 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
         )
 
     exposition_terms = (
-        "解释",
-        "世界观",
-        "历史",
-        "背景说明",
-        "旁白",
-        "起源",
-        "传说",
-        "设定说明",
-        "说明这段",
-        "交代背景",
+        "解释", "世界观", "历史", "背景说明", "旁白", "起源", "传说", "设定说明", "说明这段", "交代背景",
     )
     if _contains_any(text, exposition_terms):
         add(dramatic, "worldbuilding_exposition")
@@ -159,43 +170,58 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
             "PerformanceIR.pause",
         )
 
-    gaze_terms = ("看向", "望向", "盯着", "注视", "视线朝", "目光朝")
-    facing_terms = ("面向", "朝向", "转向", "身体朝", "正对")
-    kneel_terms = ("下跪", "跪向", "跪着朝")
-    pursuit_terms = ("追逐", "追击", "追赶", "追捕", "追杀")
-    escape_terms = ("逃离", "逃跑", "逃开", "撤离")
-    occlusion_terms = ("遮挡", "挡住", "挡在", "遮住")
-    target_spatial_trigger = any(
-        _contains_any(text, group)
-        for group in (gaze_terms, facing_terms, kneel_terms, pursuit_terms, escape_terms, occlusion_terms)
-    )
-    if target_spatial_trigger:
-        add(dramatic, "target_oriented_action")
-        add(spatial, "locatable_target")
-        if _contains_any(text, gaze_terms):
+    has_gaze = _contains_any(text, gaze_terms)
+    has_facing = _contains_any(text, facing_terms)
+    has_kneel = _contains_any(text, kneel_terms)
+    has_pursuit = _contains_any(text, pursuit_terms)
+    has_escape = _contains_any(text, escape_terms)
+    has_occlusion = _contains_any(text, occlusion_terms)
+
+    # Pursuit/escape can exist without a known target. Keep the action observable,
+    # but do not fabricate a locatable target or target relation.
+    if has_pursuit:
+        add(dramatic, "pursuit")
+        add(spatial, "pursuit")
+        trace("pursuit_action", "EventGraphIR.action", "BlockingIR.movement_paths")
+    if has_escape:
+        add(dramatic, "escape")
+        add(spatial, "escape")
+        trace("escape_action", "EventGraphIR.action", "BlockingIR.approach_or_retreat")
+
+    target_relation_present = False
+    if explicit_target and not camera_only_orientation:
+        if has_gaze:
+            target_relation_present = True
             add(relation, "gaze_to_target")
             add(spatial, "gaze_direction")
             add(failure, "gaze_target_spatial_binding_fail")
-        if _contains_any(text, facing_terms):
+        if has_facing:
+            target_relation_present = True
             add(relation, "facing_to_target")
             add(spatial, "body_orientation")
             add(failure, "body_orientation_target_fail")
-        if _contains_any(text, kneel_terms):
+        if has_kneel:
+            target_relation_present = True
             add(relation, "kneeling_to_target")
             add(spatial, "kneeling_to_target", "body_orientation")
             add(failure, "body_orientation_target_fail")
-        if _contains_any(text, pursuit_terms):
-            add(dramatic, "pursuit")
+        if has_pursuit:
+            target_relation_present = True
             add(relation, "pursuit_to_target")
-            add(spatial, "pursuit", "body_orientation")
-        if _contains_any(text, escape_terms):
-            add(dramatic, "escape")
+            add(spatial, "body_orientation")
+        if has_escape and _contains_any(text, escape_source_terms):
+            target_relation_present = True
             add(relation, "escape_from_target")
-            add(spatial, "escape", "body_orientation")
-        if _contains_any(text, occlusion_terms):
+            add(spatial, "body_orientation")
+        if has_occlusion:
+            target_relation_present = True
             add(dramatic, "blocking")
             add(relation, "occlusion_to_target")
             add(spatial, "blocking", "occlusion")
+
+    if target_relation_present:
+        add(dramatic, "target_oriented_action")
+        add(spatial, "locatable_target")
         trace(
             "target_oriented_spatial_binding",
             "EventGraphIR.action",
@@ -208,7 +234,8 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
         )
 
     protection_terms = ("保护", "护住", "掩护", "护送", "守护", "挡在身前", "挡在前面")
-    if _contains_any(text, protection_terms):
+    protection_target_terms = ("同伴", "陌生人", "她", "他", "孩子", "伤员", "平民", "队友", "蒂娅")
+    if _contains_any(text, protection_terms) and _contains_any(text, protection_target_terms):
         add(dramatic, "protective_intervention")
         add(relation, "protector_dependant")
         add(failure, "protection_under_pressure")
@@ -224,25 +251,11 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
         )
 
     constrained_terms = (
-        "狭窄",
-        "街巷",
-        "走廊",
-        "巷道",
-        "通道",
-        "封锁",
-        "堵住",
-        "堵死",
-        "死路",
-        "无法脱身",
-        "无路可逃",
+        "狭窄", "街巷", "走廊", "巷道", "通道", "封锁", "堵住", "堵死", "死路", "无法脱身", "无路可逃",
     )
-    if (_contains_any(text, pursuit_terms) or _contains_any(text, escape_terms)) and _contains_any(text, constrained_terms):
+    if (has_pursuit or has_escape) and _contains_any(text, constrained_terms):
         add(dramatic, "pursuit", "blocking")
         add(spatial, "constrained_space", "pursuit_blocking", "blocking")
-        if _contains_any(text, pursuit_terms):
-            add(relation, "pursuit_to_target")
-        if _contains_any(text, escape_terms):
-            add(relation, "escape_from_target")
         trace(
             "constrained_pursuit_blocking",
             "BlockingIR.relative_positions",
@@ -283,12 +296,7 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
     if _contains_any(text, ("先后顺序", "事件顺序", "先再", "先…再", "顺序不对", "动作顺序")):
         add(dramatic, "event_order")
         add(failure, "event_order_fail")
-        trace(
-            "event_order",
-            "EventGraphIR.temporal_relation",
-            "EventGraphIR.precondition",
-            "EventGraphIR.result",
-        )
+        trace("event_order", "EventGraphIR.temporal_relation", "EventGraphIR.precondition", "EventGraphIR.result")
 
     if _contains_any(text, ("动作不对", "穿帮", "连续性", "保持一致", "世界状态", "背景状态", "前后不一致")):
         add(relation, "continuity_inheritance")
@@ -319,19 +327,24 @@ def compile_retrieval_task(
     *,
     task_id: str = "UNSPECIFIED_TASK",
     base_task: dict[str, Any] | None = None,
+    route_data: dict[str, Any] | None = None,
     strict: bool = True,
 ) -> dict[str, Any]:
-    """Compile natural language and merge it into an existing structured task.
+    """Compile natural language, then resolve hard routes from route authority.
 
-    Explicit structured features are preserved and unioned with compiled
-    features. The result remains a retriever query; it has no learning
-    authority and carries no canonical learning payload.
+    Natural-language retrieval fails closed when director_route_index data is not
+    supplied. This prevents callers from silently skipping the canonical hard
+    route stage.
     """
     features = compile_director_features(description, strict=strict)
     task = dict(base_task or {})
     task["task_id"] = str(task.get("task_id") or task_id)
     for key, compiled in features.as_dict().items():
         task[key] = _merge(task.get(key), compiled)
+    try:
+        task["hard_routes"] = resolve_hard_routes(task, route_data, description=description)
+    except RouteResolutionError as exc:
+        raise FeatureCompilationError(str(exc)) from exc
     task["feature_compiler_receipt"] = {
         "component": "DIRECTOR_FEATURE_COMPILER_V1_1",
         "status": "PASS" if features.recognized else "FAIL",
@@ -339,6 +352,8 @@ def compile_retrieval_task(
         "compiled_feature_keys": [key for key in FEATURE_KEYS if getattr(features, key)],
         "matched_rules": list(features.matched_rules),
         "semantic_trace": list(features.semantic_trace),
+        "route_resolution": "director_route_index",
+        "hard_routes": list(task["hard_routes"]),
         "authority_boundary": "retrieval_query_only",
     }
     return task
@@ -361,37 +376,18 @@ def validate_semantic_dependencies(project_root: str | Path) -> list[str]:
     required_fields = {
         "EventGraphIR": {
             "event_fields": {
-                "agent",
-                "action",
-                "target",
-                "support_or_contact",
-                "precondition",
-                "temporal_relation",
-                "state_change",
-                "result",
-                "reveal_effect",
-                "narrative_function",
+                "agent", "action", "target", "support_or_contact", "precondition", "temporal_relation",
+                "state_change", "result", "reveal_effect", "narrative_function",
             }
         },
         "BlockingIR": {
             "fields": {
-                "relative_positions",
-                "orientations",
-                "movement_paths",
-                "approach_or_retreat",
-                "occlusion",
-                "prop_interaction",
-                "final_positions",
+                "relative_positions", "orientations", "movement_paths", "approach_or_retreat", "occlusion",
+                "prop_interaction", "final_positions",
             }
         },
         "VisibleIR": {
-            "entity_fields": {
-                "relative_position",
-                "body_orientation",
-                "gaze_target",
-                "current_action",
-                "support_or_contact",
-            },
+            "entity_fields": {"relative_position", "body_orientation", "gaze_target", "current_action", "support_or_contact"},
             "environment_fields": {"environmental_response", "canonical_background_evidence"},
         },
     }
