@@ -111,7 +111,7 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
     def first_action_object_match(
         actions: tuple[str, ...], objects: tuple[str, ...], *, max_chars: int = 32
     ) -> dict[str, Any] | None:
-        """Return the first bounded action->object match with absolute positions."""
+        """Return the earliest bounded action->object match with absolute positions."""
         object_candidates = sorted(set(objects), key=len, reverse=True)
         matches: list[dict[str, Any]] = []
         for action in actions:
@@ -124,24 +124,27 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
                 tail = text[tail_start: tail_start + max_chars]
                 for separator in ("，", "。", "；", "！", "？", ",", ";", "!", "?"):
                     tail = tail.split(separator, 1)[0]
+                object_hits: list[tuple[int, int, str]] = []
                 for obj in object_candidates:
                     object_offset = tail.find(obj)
                     if object_offset >= 0:
-                        object_pos = tail_start + object_offset
-                        matches.append(
-                            {
-                                "action": action,
-                                "action_pos": hit,
-                                "object": obj,
-                                "object_pos": object_pos,
-                                "object_end": object_pos + len(obj),
-                            }
-                        )
-                        break
+                        object_hits.append((object_offset, -len(obj), obj))
+                if object_hits:
+                    object_offset, _, obj = min(object_hits)
+                    object_pos = tail_start + object_offset
+                    matches.append(
+                        {
+                            "action": action,
+                            "action_pos": hit,
+                            "object": obj,
+                            "object_pos": object_pos,
+                            "object_end": object_pos + len(obj),
+                        }
+                    )
                 search_from = hit + len(action)
         if not matches:
             return None
-        return min(matches, key=lambda item: item["action_pos"])
+        return min(matches, key=lambda item: (item["action_pos"], item["object_pos"]))
 
     def nearest_actor_before(position: int, actors: tuple[str, ...], *, max_chars: int = 18) -> str | None:
         prefix_start = max(0, position - max_chars)
