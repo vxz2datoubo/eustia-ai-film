@@ -45,6 +45,16 @@ class DirectorFeatureCompilerRegressionTests(unittest.TestCase):
         scored = next(x for x in receipt["scored_candidates"] if x["case_id"] == case_id)
         self.assertTrue(scored["hard"])
 
+    def _assert_feature_expectations(self, compiled, case):
+        for field, values in case.get("expected_present", {}).items():
+            observed = getattr(compiled, field)
+            for value in values:
+                self.assertIn(value, observed)
+        for field, values in case.get("expected_absent", {}).items():
+            observed = getattr(compiled, field)
+            for value in values:
+                self.assertNotIn(value, observed)
+
     def test_declared_cross_surface_regressions_are_executable(self):
         for case in REGRESSIONS["cases"]:
             with self.subTest(case=case["id"]):
@@ -75,8 +85,6 @@ class DirectorFeatureCompilerRegressionTests(unittest.TestCase):
             with self.subTest(case=case["id"]):
                 route = route_map[case["expected_hard_route"]]
                 description = case["description"]
-                # Prove this regression exercises the structured trigger bridge,
-                # not the legacy literal symptom substring fallback.
                 self.assertFalse(
                     any(str(symptom).casefold() in description.casefold() for symptom in route.get("symptoms", []))
                 )
@@ -89,6 +97,29 @@ class DirectorFeatureCompilerRegressionTests(unittest.TestCase):
                     route_id=case["expected_hard_route"],
                     case_id=case["expected_mandatory_case_id"],
                 )
+
+    def test_production_language_synonyms_and_event_target_carry_recall_mandatory_learning(self):
+        runtime = DirectorLearningRuntime(REPO_ROOT)
+        for case in REGRESSIONS["production_language_regressions"]:
+            with self.subTest(case=case["id"]):
+                compiled = compile_director_features(case["description"])
+                self._assert_feature_expectations(compiled, case)
+                self.assertIn(case["expected_matched_rule"], compiled.matched_rules)
+                result = runtime.retrieve(case["description"], task_id=case["id"], top_k=5)
+                self.assertEqual(result["status"], "PASS")
+                for expected in case["expected_mandatory_cases"]:
+                    self._assert_mandatory_hard_case(
+                        result,
+                        route_id=expected["route_id"],
+                        case_id=expected["case_id"],
+                    )
+
+    def test_adjacent_event_target_carry_is_bounded(self):
+        for case in REGRESSIONS["production_language_negative_regressions"]:
+            with self.subTest(case=case["id"]):
+                compiled = compile_director_features(case["description"])
+                self._assert_feature_expectations(compiled, case)
+                self.assertNotIn(case["forbidden_matched_rule"], compiled.matched_rules)
 
     def test_route_authority_owns_structured_trigger_mappings(self):
         route_map = {route["id"]: route for route in ROUTES["routes"]}
@@ -193,6 +224,9 @@ class DirectorFeatureCompilerRegressionTests(unittest.TestCase):
         self.assertEqual(gate["smart_recall_runtime"]["fixed_flow"][:3], ["director_feature_compiler", "hard_route", "semantic_recall"])
         self.assertTrue(gate["smart_recall_runtime"]["natural_language_bypass_forbidden"])
         self.assertTrue(compiler["runtime_binding"]["natural_language_bypass_forbidden"])
+        carry = compiler["resolution_rule"]["adjacent_event_target_carry"]
+        self.assertTrue(carry["allowed"])
+        self.assertTrue(carry["fail_closed_when_ambiguous"])
 
         result = DirectorLearningRuntime(REPO_ROOT).retrieve("角色下跪并面向门口圣女", task_id="REG-CANONICAL-RUNTIME")
         runtime_receipt = result["canonical_runtime_receipt"]
