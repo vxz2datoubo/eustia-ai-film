@@ -10,6 +10,7 @@ from learning_retriever.feature_compiler import (
     compile_retrieval_task,
     validate_semantic_dependencies,
 )
+from learning_retriever.route_resolver import resolve_hard_routes
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -34,6 +35,16 @@ class DirectorFeatureCompilerRegressionTests(unittest.TestCase):
         for value in expected.get("compatible_spatial_action_features", []):
             self.assertTrue(all(value in item.spatial_action_features for item in compiled))
 
+    def _assert_mandatory_hard_case(self, result, *, route_id, case_id):
+        receipt = result["retrieval_receipt"]
+        self.assertIn(route_id, result["canonical_runtime_receipt"]["hard_routes"])
+        self.assertIn(route_id, receipt["hard_routes"])
+        self.assertIn(case_id, receipt["mandatory_case_ids"])
+        self.assertTrue(receipt["mandatory_recall_satisfied"])
+        self.assertIn(case_id, receipt["selected_case_ids"])
+        scored = next(x for x in receipt["scored_candidates"] if x["case_id"] == case_id)
+        self.assertTrue(scored["hard"])
+
     def test_declared_cross_surface_regressions_are_executable(self):
         for case in REGRESSIONS["cases"]:
             with self.subTest(case=case["id"]):
@@ -51,7 +62,58 @@ class DirectorFeatureCompilerRegressionTests(unittest.TestCase):
                     self.assertEqual(selected[0], expected)
                     self.assertEqual(result["status"], "PASS")
                     if case.get("expected_hard_route"):
-                        self.assertIn(case["expected_hard_route"], result["canonical_runtime_receipt"]["hard_routes"])
+                        self._assert_mandatory_hard_case(
+                            result,
+                            route_id=case["expected_hard_route"],
+                            case_id=case["expected_case_id"],
+                        )
+
+    def test_mandatory_learning_routes_bridge_compiled_semantics_without_literal_symptom(self):
+        runtime = DirectorLearningRuntime(REPO_ROOT)
+        route_map = {route["id"]: route for route in ROUTES["routes"]}
+        for case in REGRESSIONS["mandatory_learning_route_paraphrases"]:
+            with self.subTest(case=case["id"]):
+                route = route_map[case["expected_hard_route"]]
+                description = case["description"]
+                # Prove this regression exercises the structured trigger bridge,
+                # not the legacy literal symptom substring fallback.
+                self.assertFalse(
+                    any(str(symptom).casefold() in description.casefold() for symptom in route.get("symptoms", []))
+                )
+                compiled = compile_director_features(description)
+                expected_feature = case["expected_compiled_feature"]
+                self.assertIn(expected_feature["value"], getattr(compiled, expected_feature["field"]))
+                result = runtime.retrieve(description, task_id=case["id"], top_k=5)
+                self._assert_mandatory_hard_case(
+                    result,
+                    route_id=case["expected_hard_route"],
+                    case_id=case["expected_mandatory_case_id"],
+                )
+
+    def test_route_authority_owns_structured_trigger_mappings(self):
+        route_map = {route["id"]: route for route in ROUTES["routes"]}
+        for route_id in (
+            "MOTIVATION_BEFORE_TONE",
+            "EXPOSITION_STALL",
+            "VN_TO_FILM_DIALOGUE",
+            "TARGET_ORIENTED_SPATIAL_BINDING",
+        ):
+            with self.subTest(route=route_id):
+                self.assertIn("machine_triggers", route_map[route_id])
+
+        synthetic = {
+            "routes": [
+                {
+                    "id": "SYNTHETIC_ROUTE_NOT_KNOWN_TO_RESOLVER",
+                    "symptoms": ["完全不匹配的中文症状"],
+                    "machine_triggers": {"any_of": {"dramatic_function": ["synthetic_function"]}},
+                }
+            ]
+        }
+        self.assertEqual(
+            resolve_hard_routes({"dramatic_function": ["synthetic_function"]}, synthetic, description="另一种说法"),
+            ["SYNTHETIC_ROUTE_NOT_KNOWN_TO_RESOLVER"],
+        )
 
     def test_negative_semantic_regressions(self):
         for case in REGRESSIONS["negative_semantic_cases"]:
@@ -65,6 +127,16 @@ class DirectorFeatureCompilerRegressionTests(unittest.TestCase):
                     observed = getattr(result, field)
                     for value in values:
                         self.assertNotIn(value, observed)
+
+    def test_agent_only_orientation_never_activates_target_hard_route(self):
+        runtime = DirectorLearningRuntime(REPO_ROOT)
+        for case in REGRESSIONS["negative_target_route_cases"]:
+            with self.subTest(case=case["id"]):
+                result = runtime.retrieve(case["description"], task_id=case["id"], top_k=5)
+                self.assertNotIn(case["forbidden_hard_route"], result["canonical_runtime_receipt"]["hard_routes"])
+                self.assertNotIn(case["forbidden_hard_route"], result["retrieval_receipt"]["hard_routes"])
+                compiled = result["canonical_runtime_receipt"]["feature_compiler_receipt"]
+                self.assertNotIn(case["forbidden_hard_route"], compiled["hard_routes"])
 
     def test_background_crowd_does_not_force_motive_learning_case(self):
         case = next(x for x in REGRESSIONS["negative_semantic_cases"] if x["id"] == "background_crowd_is_not_crowd_reaction")
@@ -85,14 +157,11 @@ class DirectorFeatureCompilerRegressionTests(unittest.TestCase):
     def test_target_input_uses_mandatory_hard_route(self):
         gate = REGRESSIONS["hard_route_gate"]
         result = DirectorLearningRuntime(REPO_ROOT).retrieve(gate["description"], task_id="REG-HARD-ROUTE", top_k=5)
-        receipt = result["retrieval_receipt"]
-        self.assertIn(gate["expected_hard_route"], result["canonical_runtime_receipt"]["hard_routes"])
-        self.assertIn(gate["expected_hard_route"], receipt["hard_routes"])
-        self.assertIn(gate["expected_mandatory_case_id"], receipt["mandatory_case_ids"])
-        self.assertTrue(receipt["mandatory_recall_satisfied"])
-        self.assertIn(gate["expected_mandatory_case_id"], receipt["selected_case_ids"])
-        scored = next(x for x in receipt["scored_candidates"] if x["case_id"] == gate["expected_mandatory_case_id"])
-        self.assertTrue(scored["hard"])
+        self._assert_mandatory_hard_case(
+            result,
+            route_id=gate["expected_hard_route"],
+            case_id=gate["expected_mandatory_case_id"],
+        )
 
     def test_objective_word_does_not_activate_target_hard_route(self):
         gate = REGRESSIONS["negative_route_gate"]
