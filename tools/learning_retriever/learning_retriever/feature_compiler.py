@@ -108,6 +108,60 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
                 return True
         return False
 
+    def first_action_object_match(
+        actions: tuple[str, ...], objects: tuple[str, ...], *, max_chars: int = 32
+    ) -> dict[str, Any] | None:
+        """Return the first bounded action->object match with absolute positions."""
+        object_candidates = sorted(set(objects), key=len, reverse=True)
+        matches: list[dict[str, Any]] = []
+        for action in actions:
+            search_from = 0
+            while True:
+                hit = text.find(action, search_from)
+                if hit < 0:
+                    break
+                tail_start = hit + len(action)
+                tail = text[tail_start: tail_start + max_chars]
+                for separator in ("，", "。", "；", "！", "？", ",", ";", "!", "?"):
+                    tail = tail.split(separator, 1)[0]
+                for obj in object_candidates:
+                    object_offset = tail.find(obj)
+                    if object_offset >= 0:
+                        object_pos = tail_start + object_offset
+                        matches.append(
+                            {
+                                "action": action,
+                                "action_pos": hit,
+                                "object": obj,
+                                "object_pos": object_pos,
+                                "object_end": object_pos + len(obj),
+                            }
+                        )
+                        break
+                search_from = hit + len(action)
+        if not matches:
+            return None
+        return min(matches, key=lambda item: item["action_pos"])
+
+    def nearest_actor_before(position: int, actors: tuple[str, ...], *, max_chars: int = 18) -> str | None:
+        prefix_start = max(0, position - max_chars)
+        prefix = text[prefix_start:position]
+        candidates: list[tuple[int, str]] = []
+        for actor in actors:
+            hit = prefix.rfind(actor)
+            if hit >= 0:
+                candidates.append((hit, actor))
+        if not candidates:
+            return None
+        return max(candidates, key=lambda item: item[0])[1]
+
+    def first_action_after(actions: tuple[str, ...], position: int) -> tuple[str, int] | None:
+        matches = [(action, text.find(action, position)) for action in actions]
+        matches = [(action, hit) for action, hit in matches if hit >= 0]
+        if not matches:
+            return None
+        return min(matches, key=lambda item: item[1])
+
     def camera_is_action_agent(actions: tuple[str, ...], camera_terms: tuple[str, ...]) -> bool:
         for action in actions:
             hit = text.find(action)
@@ -122,19 +176,30 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
     # story-material target/source relation is present after the action, never
     # merely because an actor noun appears elsewhere in the sentence.
     gaze_terms = ("看向", "望向", "盯着", "注视", "视线朝", "目光朝", "观察")
+    perception_terms = ("看到", "看见", "见到")
     facing_terms = ("面向", "朝向", "转向", "身体朝", "正对")
-    kneel_terms = ("下跪", "跪向", "跪着朝")
+    ritual_kneel_terms = ("跪拜", "拜下", "拜倒", "伏地跪拜")
+    kneel_terms = ("下跪", "跪向", "跪着朝") + ritual_kneel_terms
     pursuit_terms = ("追逐", "追击", "追赶", "追捕", "追杀")
     escape_terms = ("逃离", "逃跑", "逃开", "撤离", "远离", "躲避", "摆脱")
     escape_source_terms = ("逃离", "逃开", "远离", "躲避", "摆脱")
     occlusion_terms = ("遮挡", "挡住", "挡在", "遮住")
     camera_actor_terms = ("摄影机", "摄像机", "镜头", "机位", "camera")
+    actor_terms = (
+        "群众", "人群", "百姓", "信徒", "灾民", "居民", "民众", "围观者", "人物", "角色", "男孩", "女孩",
+        "男人", "女人", "卫兵", "凯姆", "蒂娅", "圣女",
+    )
     target_object_terms = (
         "目标", "圣女", "教会", "敌人", "对手", "逃犯", "追兵", "同伴", "陌生人", "凯姆", "蒂娅",
         "她", "他", "孩子", "伤员", "平民", "队友", "门口", "大门", "门", "窗口", "窗户", "舞台", "出口",
     )
+    temporal_carry_terms = ("后", "之后", "随后", "随即", "便", "于是", "立刻", "马上", "接着", "继而")
+    alternate_kneel_reason_terms = (
+        "爆炸", "冲击", "碎石", "坍塌", "枪声", "攻击", "躲避", "避险", "摔倒", "绊倒", "受伤", "失去平衡",
+    )
 
     has_gaze = _contains_any(text, gaze_terms)
+    has_perception = _contains_any(text, perception_terms)
     has_facing = _contains_any(text, facing_terms)
     has_kneel = _contains_any(text, kneel_terms)
     has_pursuit = _contains_any(text, pursuit_terms)
@@ -142,18 +207,61 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
     has_occlusion = _contains_any(text, occlusion_terms)
 
     gaze_camera_agent = camera_is_action_agent(gaze_terms, camera_actor_terms)
+    perception_camera_agent = camera_is_action_agent(perception_terms, camera_actor_terms)
     facing_camera_agent = camera_is_action_agent(facing_terms, camera_actor_terms)
-    gaze_target_evidence = has_gaze and not gaze_camera_agent and action_has_object(gaze_terms, target_object_terms)
+    direct_gaze_target_evidence = has_gaze and not gaze_camera_agent and action_has_object(gaze_terms, target_object_terms)
+    perception_target_match = (
+        first_action_object_match(perception_terms, target_object_terms)
+        if has_perception and not perception_camera_agent
+        else None
+    )
+    perception_target_evidence = perception_target_match is not None
+    gaze_target_evidence = direct_gaze_target_evidence or perception_target_evidence
     facing_target_evidence = has_facing and not facing_camera_agent and action_has_object(facing_terms, target_object_terms)
+
+    ritual_target_carry = False
+    if perception_target_match:
+        ritual_match = first_action_after(ritual_kneel_terms, perception_target_match["object_end"])
+        if ritual_match:
+            _, ritual_pos = ritual_match
+            source_actor = nearest_actor_before(perception_target_match["action_pos"], actor_terms)
+            between = text[perception_target_match["object_end"]:ritual_pos]
+            competing_actor = any(
+                actor in between
+                for actor in actor_terms
+                if actor not in {source_actor, perception_target_match["object"]}
+            )
+            competing_target = any(
+                target in between
+                for target in target_object_terms
+                if target != perception_target_match["object"]
+            )
+            ritual_target_carry = bool(
+                source_actor
+                and _contains_any(between, temporal_carry_terms)
+                and not competing_actor
+                and not competing_target
+                and not _contains_any(between, alternate_kneel_reason_terms)
+            )
+            if ritual_target_carry:
+                trace(
+                    "bounded_cross_event_target_carry",
+                    "EventGraphIR.agent",
+                    "EventGraphIR.target",
+                    "EventGraphIR.temporal_relation",
+                    "BlockingIR.orientations",
+                )
+
+    direct_kneel_target_evidence = has_kneel and action_has_object(kneel_terms, target_object_terms)
     kneel_target_evidence = has_kneel and (
-        action_has_object(kneel_terms, target_object_terms) or facing_target_evidence
+        direct_kneel_target_evidence or facing_target_evidence or ritual_target_carry
     )
     pursuit_target_evidence = has_pursuit and action_has_object(pursuit_terms, target_object_terms)
     escape_source_evidence = has_escape and action_has_object(escape_source_terms, target_object_terms)
     occlusion_target_evidence = has_occlusion and action_has_object(occlusion_terms, target_object_terms)
 
     # Observable direction/orientation may exist without a story-material target.
-    if has_gaze and not gaze_camera_agent:
+    if (has_gaze and not gaze_camera_agent) or (has_perception and not perception_camera_agent):
         add(spatial, "gaze_direction")
         trace("observable_gaze_direction", "VisibleIR.gaze_target", "BlockingIR.orientations")
     if has_facing and not facing_camera_agent:
@@ -165,8 +273,8 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
         "教会", "圣女", "政府", "统治者", "王室", "官员", "军队", "组织", "救济", "施粥", "布道", "权威",
     )
     crowd_relation_cues = (
-        "看向", "望向", "注视", "观察", "等待救济", "等待施粥", "聆听", "欢呼", "沉默", "嘲笑",
-        "反应", "态度", "跪向", "下跪", "转向", "聚焦",
+        "看向", "望向", "注视", "观察", "看到", "看见", "见到", "等待救济", "等待施粥", "聆听", "欢呼", "沉默",
+        "嘲笑", "反应", "态度", "跪向", "下跪", "跪拜", "拜下", "拜倒", "转向", "聚焦",
     )
     crowd_has_relation = (
         _contains_any(text, crowd_terms)
