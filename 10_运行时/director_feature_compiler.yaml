@@ -73,6 +73,17 @@ resolution_rule:
   literal_objective_word_is_not_spatial_target_without_spatial_action: true
   camera_orientation_is_not_character_facing_relation: true
   untargeted_escape_does_not_create_locatable_escape_source: true
+  bounded_natural_language_synonym_normalization: true
+  adjacent_event_target_carry:
+    allowed: true
+    requires:
+      - prior_event_has_explicit_target
+      - same_agent_or_group_is_preserved
+      - complete_inter_event_clause_chain_has_no_unproven_agent_transition
+      - temporal_or_causal_link_is_explicit
+      - no_competing_target
+      - no_alternate_physical_cause_for_the_second_action
+    fail_closed_when_ambiguous: true
   compiler_may_not_emit_learning_payload: true
   compiler_may_not_define_hard_route_ids: true
   compiler_may_not_change_scope_maturity_conflict_or_authority: true
