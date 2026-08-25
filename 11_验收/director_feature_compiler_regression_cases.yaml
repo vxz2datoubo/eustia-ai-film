@@ -35,6 +35,7 @@ retrieval_cases:
       - "贫民区里一群信徒跪向远处圣女，必须保持身体和视线朝向她"
       - "城堡大厅里卫兵面向门口逃犯追击，人物朝向不能和目标方向打架"
     expected_case_id: CROWD-GAZE-BODY-CAMERA-BINDING-001
+    expected_hard_route: TARGET_ORIENTED_SPATIAL_BINDING
 
   - id: exposition_cross_character_scene_wording
     descriptions:
@@ -52,14 +53,84 @@ negative_semantic_cases:
       spatial_action_features:
         - locatable_target
         - body_orientation
+      relation_type:
+        - facing_to_target
       failure_mechanism:
         - gaze_target_spatial_binding_fail
         - body_orientation_target_fail
+
+  - id: background_crowd_is_not_crowd_reaction
+    description: "广场里群众正常走动，仅作为远景背景建立镜头"
+    strict: false
+    expected_absent:
+      dramatic_function:
+        - crowd_reaction
+        - social_behavior
+      spatial_action_features:
+        - crowd_attention_shift
+        - heterogeneous_microreaction
+      relation_type:
+        - crowd_to_institution
+
+  - id: camera_orientation_is_not_character_facing
+    description: "摄影机面向北方建立镜头"
+    strict: false
+    expected_absent:
+      dramatic_function:
+        - target_oriented_action
+      spatial_action_features:
+        - locatable_target
+        - body_orientation
+      relation_type:
+        - facing_to_target
+
+  - id: untargeted_escape_has_no_invented_source
+    description: "男孩突然逃跑"
+    expected_present:
+      dramatic_function:
+        - escape
+      spatial_action_features:
+        - escape
+    expected_absent:
+      dramatic_function:
+        - target_oriented_action
+      spatial_action_features:
+        - locatable_target
+        - body_orientation
+      relation_type:
+        - escape_from_target
 
 fail_closed_cases:
   - id: unrecognized_generic_scene
     description: "普通场景"
     expected_error: NO_RECOGNIZED_DIRECTOR_FEATURES
+
+  - id: natural_language_without_route_authority
+    description: "角色下跪并面向门口圣女"
+    stage: compile_retrieval_task_without_route_data
+    expected_error: DIRECTOR_ROUTE_INDEX_REQUIRED
+
+canonical_runtime_gate:
+  project_registry: PROJECT_INDEX.yaml
+  compiler_contract: 10_运行时/director_feature_compiler.yaml
+  read_set: 10_运行时/read_sets.yaml#directing
+  learning_gate: 10_运行时/learning_application_gate.yaml#pre_directing_gate
+  required_flow:
+    - director_feature_compiler
+    - hard_route
+    - semantic_recall
+  natural_language_bypass_forbidden: true
+
+hard_route_gate:
+  description: "角色下跪并面向门口圣女"
+  expected_hard_route: TARGET_ORIENTED_SPATIAL_BINDING
+  expected_mandatory_case_id: CROWD-GAZE-BODY-CAMERA-BINDING-001
+  mandatory_recall_satisfied: true
+  mandatory_case_must_be_hard: true
+
+negative_route_gate:
+  description: "本场目标是解释世界观背景"
+  forbidden_hard_route: TARGET_ORIENTED_SPATIAL_BINDING
 
 semantic_dependency_gate:
   schema: 10_运行时/screen_observable_audible_ir_schema.yaml
@@ -72,5 +143,6 @@ semantic_dependency_gate:
 gates:
   fail_closed_on_missing_feature: true
   retriever_authority_unchanged: true
+  director_route_index_is_route_authority: true
   regression_file_must_be_loaded_by_ci: true
   same_mechanism_must_recall_same_canonical_case_when_case_exists: true
