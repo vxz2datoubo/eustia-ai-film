@@ -1,3 +1,18 @@
+machine_trigger_contract:
+  authority: this_file
+  purpose: compiled_feature_to_route_bridge
+  resolver_owns_route_mappings: false
+  supported_operators:
+    any_of: exact_normalized_token_intersection_by_feature_key
+    all_of: all_declared_tokens_required_by_feature_key
+    none_of: reject_on_any_declared_token_intersection
+  feature_keys:
+    - dramatic_function
+    - relation_type
+    - spatial_action_features
+    - failure_mechanism
+  legacy_symptom_matching_remains_fallback: true
+
 routes:
   - id: CHARACTER_WAITS_FOR_PLOT
     symptoms:
@@ -22,6 +37,11 @@ routes:
       - 群众喜怒与救济信仰希望或现实依赖不匹配
       - 角色当前需求与表演语气矛盾
       - 同一群体对不同机构的态度被简单合并
+    machine_triggers:
+      any_of:
+        dramatic_function: [crowd_reaction]
+        relation_type: [crowd_to_institution]
+        failure_mechanism: [motive_tone_mismatch]
     maturity: candidate
     mandatory_reads:
       - 08_系统学习/导演反馈学习案例.yaml#MOTIVE-FIRST-CROWD-001
@@ -54,6 +74,10 @@ routes:
       - 信息很多但画面不推进
       - 重要世界观不能简单删减但真人讲话过于枯燥
       - 宗教历史传说或制度起源需要视觉化
+    machine_triggers:
+      any_of:
+        dramatic_function: [worldbuilding_exposition]
+        failure_mechanism: [exposition_stall]
     mandatory_reads:
       - 08_系统学习/导演反馈学习案例.yaml#EXPOSITION-MEDIA-DISTANCE-001
     mandatory_scans:
@@ -91,6 +115,10 @@ routes:
       - 长句读起来成立但说出来不像真人
       - 原作说明句需要电影化
       - 台词需要更能表演和一次听懂
+    machine_triggers:
+      any_of:
+        dramatic_function: [dialogue_adaptation]
+        failure_mechanism: [written_sentence_shape_leak]
     maturity: candidate
     mandatory_reads:
       - 08_系统学习/导演反馈学习案例.yaml#VN-TO-FILM-DIALOGUE-001
@@ -265,6 +293,16 @@ routes:
       - action-end orientation 错误
       - 人物看向或身体朝向与剧情目标位置不一致
       - 参考图展示构图与剧情目标朝向冲突
+    machine_triggers:
+      any_of:
+        relation_type:
+          - gaze_to_target
+          - facing_to_target
+          - kneeling_to_target
+          - pursuit_to_target
+          - escape_from_target
+          - occlusion_to_target
+          - camera_side_to_target
     maturity: candidate
     mandatory_reads:
       - 08_系统学习/导演反馈学习案例.yaml#CROWD-GAZE-BODY-CAMERA-BINDING-001
