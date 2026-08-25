@@ -5,6 +5,7 @@ read_sets:
       - AI电影系统#relevant_sections_only
       - 当前改编剧本#hit_range
       - 连续性与当前生产状态#relevant_work_item
+      - director_feature_compiler#runtime_binding+fail_closed
       - director_route_index#symptom_scan+mandatory_reads
       - learning_application_gate#pre_directing_gate+pre_output_gate
       - learning_recall_index#compact_router_metadata_only
@@ -128,7 +129,7 @@ read_sets:
       map: 00_项目地图文件#when_camera_anchor_view_direction_or_topology_may_change
       scene: 场景与空间设定库#when_scene_design_or_view_duty_may_change
       regression: director_regression_cases#when_existing_version_is_pinned_by_eval_or_reproducibility
-      asset_retrieval_regression: asset_retrieval_regression_cases#when_retrieval_version_pin_external_fallback_or_reference_binding_is_relevant
+      asset_retrieval_regression: asset_retrieval_regression_cases#when_asset_retrieval_policy_or_fail_closed_behavior_is_evaluated
 
   system_research:
     always:
@@ -148,7 +149,7 @@ read_sets:
       golden_media_evidence: golden_media_evidence_schema#when_prompt_output_media_pairing_temporal_video_evidence_aesthetic_retrieval_or_video_eval_is_researched
       golden_case_director_pull: golden_case_director_pull_schema#when_director_grade_case_breakdown_performance_beats_stillness_sound_or_retrieval_is_researched
       golden_case_director_pull_evidence: 导演级拉片与低运动表演证据索引#when_director_pull_or_low_motion_high_information_method_needs_external_evidence
-      golden_case_director_pull_regression: golden_case_director_pull_regression_cases#when_protocol_or_retrieval_regression_is_being_evaluated
+      golden_case_director_pull_regression: golden_case_director_pull_regression_cases#when_protocol_or_retrieval_behavior_is_evaluated
       high_dynamic_motion: high_dynamic_motion_prompt_compiler#when_high_dynamic_human_motion_prompting_or_reference_escalation_is_researched
       high_dynamic_motion_evidence: AI视频高动态动作提示证据索引#when_researching_parkour_climbing_combat_sport_or_dynamic_motion_prompting
       minimax_h3_prompt_adapter: minimax_h3_prompt_adapter#when_h3_prompt_skill_routing_format_or_versioning_is_researched
@@ -200,6 +201,7 @@ rules:
   local_targeted_retrieval_default: true
   global_expand_on_route_uncertainty: true
   director_task_must_read_project_index: true
+  directing_must_invoke_director_feature_compiler_before_route_and_recall: true
   directing_must_scan_director_route_index: true
   directing_learning_application_gate_required: true
   directing_learning_smart_recall_required: true

@@ -4,12 +4,14 @@ on:
   pull_request:
     paths:
       - 'PROJECT_INDEX.yaml'
+      - '10_运行时/director_feature_compiler.yaml'
       - '10_运行时/learning_recall_index.yaml'
       - '10_运行时/learning_application_gate.yaml'
       - '10_运行时/director_route_index.yaml'
       - '10_运行时/read_sets.yaml'
       - '10_运行时/write_routes.yaml'
       - '08_系统学习/**'
+      - '11_验收/director_feature_compiler_regression_cases.yaml'
       - '11_验收/learning_application_gate_regression_cases.yaml'
       - '11_验收/golden_prompt_cases.yaml'
       - 'tools/learning_retriever/**'
@@ -20,12 +22,14 @@ on:
       - 'gpt/learning-smart-recall-v1'
     paths:
       - 'PROJECT_INDEX.yaml'
+      - '10_运行时/director_feature_compiler.yaml'
       - '10_运行时/learning_recall_index.yaml'
       - '10_运行时/learning_application_gate.yaml'
       - '10_运行时/director_route_index.yaml'
       - '10_运行时/read_sets.yaml'
       - '10_运行时/write_routes.yaml'
       - '08_系统学习/**'
+      - '11_验收/director_feature_compiler_regression_cases.yaml'
       - '11_验收/learning_application_gate_regression_cases.yaml'
       - '11_验收/golden_prompt_cases.yaml'
       - 'tools/learning_retriever/**'
@@ -44,6 +48,12 @@ jobs:
         working-directory: tools/learning_retriever
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Verify exact checkout provenance
+        env:
+          EXPECTED_PR_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: python -c "import os,subprocess; expected=os.getenv('EXPECTED_PR_HEAD',''); actual=subprocess.check_output(['git','rev-parse','HEAD'], text=True).strip(); print(f'CHECKED_HEAD={actual}'); assert (not expected) or actual == expected, (actual, expected)"
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'

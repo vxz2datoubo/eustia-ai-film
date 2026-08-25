@@ -1,5 +1,9 @@
-schema_version: 1
+schema_version: "1.1"
 component: DIRECTOR_FEATURE_COMPILER_V1_1
+purpose: >-
+  Cross-surface regression for mechanism generalization. These cases test query
+  compilation and retrieval behavior only; they are not learning authority.
+
 cases:
   - id: same_mechanism_character_variation
     descriptions:
@@ -25,6 +29,206 @@ cases:
     expected:
       compatible_failure_mechanism: consequence_of_prior_choice
 
+retrieval_cases:
+  - id: target_binding_cross_character_scene_wording
+    descriptions:
+      - "贫民区里一群信徒跪向远处圣女，必须保持身体和视线朝向她"
+      - "城堡大厅里卫兵面向门口逃犯追击，人物朝向不能和目标方向打架"
+    expected_case_id: CROWD-GAZE-BODY-CAMERA-BINDING-001
+    expected_hard_route: TARGET_ORIENTED_SPATIAL_BINDING
+
+  - id: exposition_cross_character_scene_wording
+    descriptions:
+      - "教堂里圣女讲述城市起源，避免世界观说明拖慢节奏"
+      - "牢狱酒馆中老兵用旁白解释旧时代历史，不要让信息段停滞"
+    expected_case_id: EXPOSITION-MEDIA-DISTANCE-001
+    expected_hard_route: EXPOSITION_STALL
+
+mandatory_learning_route_paraphrases:
+  - id: motive_route_from_compiled_semantics
+    description: "灾民面对救济教会的反应显得不合理"
+    expected_compiled_feature:
+      field: failure_mechanism
+      value: motive_tone_mismatch
+    expected_hard_route: MOTIVATION_BEFORE_TONE
+    expected_mandatory_case_id: MOTIVE-FIRST-CROWD-001
+
+  - id: exposition_route_from_compiled_semantics
+    description: "老兵解释旧时代历史，信息段拖慢了推进"
+    expected_compiled_feature:
+      field: failure_mechanism
+      value: exposition_stall
+    expected_hard_route: EXPOSITION_STALL
+    expected_mandatory_case_id: EXPOSITION-MEDIA-DISTANCE-001
+
+  - id: dialogue_route_from_compiled_semantics
+    description: "这段台词太书面，需要口语化"
+    expected_compiled_feature:
+      field: failure_mechanism
+      value: written_sentence_shape_leak
+    expected_hard_route: VN_TO_FILM_DIALOGUE
+    expected_mandatory_case_id: VN-TO-FILM-DIALOGUE-001
+
+  - id: target_route_from_compiled_semantics
+    description: "卫兵盯着门口逃犯继续追击"
+    expected_compiled_feature:
+      field: relation_type
+      value: gaze_to_target
+    expected_hard_route: TARGET_ORIENTED_SPATIAL_BINDING
+    expected_mandatory_case_id: CROWD-GAZE-BODY-CAMERA-BINDING-001
+
+negative_semantic_cases:
+  - id: objective_word_is_not_spatial_target
+    description: "本场目标是解释世界观背景"
+    expected_present:
+      dramatic_function:
+        - worldbuilding_exposition
+    expected_absent:
+      spatial_action_features:
+        - locatable_target
+        - body_orientation
+      relation_type:
+        - facing_to_target
+      failure_mechanism:
+        - gaze_target_spatial_binding_fail
+        - body_orientation_target_fail
+
+  - id: background_crowd_is_not_crowd_reaction
+    description: "广场里群众正常走动，仅作为远景背景建立镜头"
+    strict: false
+    expected_absent:
+      dramatic_function:
+        - crowd_reaction
+        - social_behavior
+      spatial_action_features:
+        - crowd_attention_shift
+        - heterogeneous_microreaction
+      relation_type:
+        - crowd_to_institution
+
+  - id: camera_orientation_is_not_character_facing
+    description: "摄影机面向北方建立镜头"
+    strict: false
+    expected_absent:
+      dramatic_function:
+        - target_oriented_action
+      spatial_action_features:
+        - locatable_target
+        - body_orientation
+      relation_type:
+        - facing_to_target
+
+  - id: untargeted_escape_has_no_invented_source
+    description: "男孩突然逃跑"
+    expected_present:
+      dramatic_function:
+        - escape
+      spatial_action_features:
+        - escape
+    expected_absent:
+      dramatic_function:
+        - target_oriented_action
+      spatial_action_features:
+        - locatable_target
+        - body_orientation
+      relation_type:
+        - escape_from_target
+
+  - id: agent_gaze_distance_is_not_target
+    description: "角色看向远处，神情紧张"
+    expected_present:
+      spatial_action_features:
+        - gaze_direction
+    expected_absent:
+      dramatic_function:
+        - target_oriented_action
+      spatial_action_features:
+        - locatable_target
+      relation_type:
+        - gaze_to_target
+
+  - id: agent_turns_side_is_not_target
+    description: "人物转向左侧"
+    expected_present:
+      spatial_action_features:
+        - body_orientation
+    expected_absent:
+      dramatic_function:
+        - target_oriented_action
+      spatial_action_features:
+        - locatable_target
+      relation_type:
+        - facing_to_target
+
+  - id: crowd_gazes_sky_without_story_target
+    description: "群众望向天空，但没有明确剧情目标"
+    expected_present:
+      spatial_action_features:
+        - gaze_direction
+    expected_absent:
+      dramatic_function:
+        - target_oriented_action
+      spatial_action_features:
+        - locatable_target
+      relation_type:
+        - gaze_to_target
+        - crowd_to_institution
+
+negative_target_route_cases:
+  - id: gaze_to_distance_no_target_route
+    description: "角色看向远处，神情紧张"
+    forbidden_hard_route: TARGET_ORIENTED_SPATIAL_BINDING
+  - id: turn_left_no_target_route
+    description: "人物转向左侧"
+    forbidden_hard_route: TARGET_ORIENTED_SPATIAL_BINDING
+  - id: sky_gaze_no_story_target_route
+    description: "群众望向天空，但没有明确剧情目标"
+    forbidden_hard_route: TARGET_ORIENTED_SPATIAL_BINDING
+
+fail_closed_cases:
+  - id: unrecognized_generic_scene
+    description: "普通场景"
+    expected_error: NO_RECOGNIZED_DIRECTOR_FEATURES
+
+  - id: natural_language_without_route_authority
+    description: "角色下跪并面向门口圣女"
+    stage: compile_retrieval_task_without_route_data
+    expected_error: DIRECTOR_ROUTE_INDEX_REQUIRED
+
+canonical_runtime_gate:
+  project_registry: PROJECT_INDEX.yaml
+  compiler_contract: 10_运行时/director_feature_compiler.yaml
+  read_set: 10_运行时/read_sets.yaml#directing
+  learning_gate: 10_运行时/learning_application_gate.yaml#pre_directing_gate
+  required_flow:
+    - director_feature_compiler
+    - hard_route
+    - semantic_recall
+  natural_language_bypass_forbidden: true
+
+hard_route_gate:
+  description: "角色下跪并面向门口圣女"
+  expected_hard_route: TARGET_ORIENTED_SPATIAL_BINDING
+  expected_mandatory_case_id: CROWD-GAZE-BODY-CAMERA-BINDING-001
+  mandatory_recall_satisfied: true
+  mandatory_case_must_be_hard: true
+
+negative_route_gate:
+  description: "本场目标是解释世界观背景"
+  forbidden_hard_route: TARGET_ORIENTED_SPATIAL_BINDING
+
+semantic_dependency_gate:
+  schema: 10_运行时/screen_observable_audible_ir_schema.yaml
+  required_layers:
+    - EventGraphIR
+    - BlockingIR
+    - VisibleIR
+  director_method_must_bind: SOAC-001
+
 gates:
   fail_closed_on_missing_feature: true
   retriever_authority_unchanged: true
+  director_route_index_is_route_authority: true
+  route_resolver_must_not_own_route_ids_or_feature_mappings: true
+  regression_file_must_be_loaded_by_ci: true
+  same_mechanism_must_recall_same_canonical_case_when_case_exists: true
