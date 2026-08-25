@@ -135,6 +135,22 @@ production_language_regressions:
       - route_id: MOTIVATION_BEFORE_TONE
         case_id: MOTIVE-FIRST-CROWD-001
 
+  - id: explicit_same_agent_after_separator
+    description: "群众看到圣女后，群众随即跪拜。"
+    expected_present:
+      relation_type:
+        - gaze_to_target
+        - kneeling_to_target
+      spatial_action_features:
+        - locatable_target
+        - kneeling_to_target
+    expected_matched_rule: bounded_cross_event_target_carry
+    expected_mandatory_cases:
+      - route_id: TARGET_ORIENTED_SPATIAL_BINDING
+        case_id: CROWD-GAZE-BODY-CAMERA-BINDING-001
+      - route_id: MOTIVATION_BEFORE_TONE
+        case_id: MOTIVE-FIRST-CROWD-001
+
 production_language_negative_regressions:
   - id: explosion_breaks_kneel_target_carry
     description: "群众看到圣女后因为爆炸声跪下躲避碎石。"
@@ -162,6 +178,26 @@ production_language_negative_regressions:
 
   - id: out_of_vocabulary_competing_agent_breaks_target_carry
     description: "群众看到圣女后，贵族随即拜下。"
+    expected_present:
+      relation_type:
+        - gaze_to_target
+    expected_absent:
+      relation_type:
+        - kneeling_to_target
+    forbidden_matched_rule: bounded_cross_event_target_carry
+
+  - id: multiclause_known_agent_breaks_target_carry
+    description: "群众看到圣女后，凯姆欢呼，随即拜下。"
+    expected_present:
+      relation_type:
+        - gaze_to_target
+    expected_absent:
+      relation_type:
+        - kneeling_to_target
+    forbidden_matched_rule: bounded_cross_event_target_carry
+
+  - id: multiclause_out_of_vocabulary_agent_breaks_target_carry
+    description: "群众看到圣女后，贵族欢呼，随后拜下。"
     expected_present:
       relation_type:
         - gaze_to_target
@@ -338,3 +374,4 @@ gates:
   production_language_failure_must_be_regression_locked: true
   adjacent_event_target_carry_must_be_bounded: true
   unproven_second_clause_agent_must_fail_closed: true
+  complete_inter_event_clause_chain_must_be_checked: true
