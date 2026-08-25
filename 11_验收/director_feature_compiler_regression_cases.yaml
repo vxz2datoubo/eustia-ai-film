@@ -160,6 +160,16 @@ production_language_negative_regressions:
         - kneeling_to_target
     forbidden_matched_rule: bounded_cross_event_target_carry
 
+  - id: out_of_vocabulary_competing_agent_breaks_target_carry
+    description: "群众看到圣女后，贵族随即拜下。"
+    expected_present:
+      relation_type:
+        - gaze_to_target
+    expected_absent:
+      relation_type:
+        - kneeling_to_target
+    forbidden_matched_rule: bounded_cross_event_target_carry
+
   - id: competing_target_breaks_target_carry
     description: "群众看到圣女后又看向凯姆，随即跪拜。"
     expected_present:
@@ -327,3 +337,4 @@ gates:
   same_mechanism_must_recall_same_canonical_case_when_case_exists: true
   production_language_failure_must_be_regression_locked: true
   adjacent_event_target_carry_must_be_bounded: true
+  unproven_second_clause_agent_must_fail_closed: true
