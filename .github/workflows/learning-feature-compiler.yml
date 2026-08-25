@@ -3,8 +3,13 @@ name: learning-feature-compiler
 on:
   pull_request:
     paths:
+      - 'PROJECT_INDEX.yaml'
       - 'tools/learning_retriever/**'
       - '10_运行时/director_feature_compiler.yaml'
+      - '10_运行时/director_route_index.yaml'
+      - '10_运行时/read_sets.yaml'
+      - '10_运行时/learning_application_gate.yaml'
+      - '10_运行时/source_authority.yaml'
       - '10_运行时/screen_observable_audible_ir_schema.yaml'
       - '10_运行时/learning_recall_index.yaml'
       - '11_验收/director_feature_compiler_regression_cases.yaml'
@@ -15,6 +20,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Verify exact PR head checkout
+        env:
+          EXPECTED_PR_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          python -c "import os,subprocess; expected=os.environ['EXPECTED_PR_HEAD']; actual=subprocess.check_output(['git','rev-parse','HEAD'], text=True).strip(); print(f'EXACT_HEAD={actual}'); assert actual == expected, (actual, expected)"
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
