@@ -92,8 +92,35 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
         matched_rules.append(rule)
         semantic_trace.extend(paths)
 
+    def clause_after(action: str, *, max_chars: int = 24) -> str:
+        hit = text.find(action)
+        if hit < 0:
+            return ""
+        tail = text[hit + len(action): hit + len(action) + max_chars]
+        for separator in ("，", "。", "；", "！", "？", ",", ";", "!", "?"):
+            tail = tail.split(separator, 1)[0]
+        return tail
+
+    def action_has_object(actions: tuple[str, ...], objects: tuple[str, ...]) -> bool:
+        for action in actions:
+            tail = clause_after(action)
+            if tail and _contains_any(tail, objects):
+                return True
+        return False
+
+    def camera_is_action_agent(actions: tuple[str, ...], camera_terms: tuple[str, ...]) -> bool:
+        for action in actions:
+            hit = text.find(action)
+            if hit < 0:
+                continue
+            prefix = text[max(0, hit - 10):hit]
+            if _contains_any(prefix, camera_terms):
+                return True
+        return False
+
     # Shared action vocabulary. Target-oriented semantics are added only when a
-    # story-material target/source relation is present.
+    # story-material target/source relation is present after the action, never
+    # merely because an actor noun appears elsewhere in the sentence.
     gaze_terms = ("看向", "望向", "盯着", "注视", "视线朝", "目光朝", "观察")
     facing_terms = ("面向", "朝向", "转向", "身体朝", "正对")
     kneel_terms = ("下跪", "跪向", "跪着朝")
@@ -101,16 +128,37 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
     escape_terms = ("逃离", "逃跑", "逃开", "撤离", "远离", "躲避", "摆脱")
     escape_source_terms = ("逃离", "逃开", "远离", "躲避", "摆脱")
     occlusion_terms = ("遮挡", "挡住", "挡在", "遮住")
-    camera_actor_terms = ("摄影机", "摄像机", "镜头面向", "机位面向", "camera")
-    human_actor_terms = (
-        "人物", "角色", "男孩", "女孩", "男人", "女人", "群众", "人群", "信徒", "卫兵", "凯姆", "圣女", "逃犯"
+    camera_actor_terms = ("摄影机", "摄像机", "镜头", "机位", "camera")
+    target_object_terms = (
+        "目标", "圣女", "教会", "敌人", "对手", "逃犯", "追兵", "同伴", "陌生人", "凯姆", "蒂娅",
+        "她", "他", "孩子", "伤员", "平民", "队友", "门口", "大门", "门", "窗口", "窗户", "舞台", "出口",
     )
-    target_entity_terms = (
-        "目标", "圣女", "教会", "敌人", "对手", "逃犯", "追兵", "同伴", "陌生人", "凯姆",
-        "人物", "角色", "人群", "群众", "门口", "大门", "门", "窗口", "窗户", "舞台", "出口",
+
+    has_gaze = _contains_any(text, gaze_terms)
+    has_facing = _contains_any(text, facing_terms)
+    has_kneel = _contains_any(text, kneel_terms)
+    has_pursuit = _contains_any(text, pursuit_terms)
+    has_escape = _contains_any(text, escape_terms)
+    has_occlusion = _contains_any(text, occlusion_terms)
+
+    gaze_camera_agent = camera_is_action_agent(gaze_terms, camera_actor_terms)
+    facing_camera_agent = camera_is_action_agent(facing_terms, camera_actor_terms)
+    gaze_target_evidence = has_gaze and not gaze_camera_agent and action_has_object(gaze_terms, target_object_terms)
+    facing_target_evidence = has_facing and not facing_camera_agent and action_has_object(facing_terms, target_object_terms)
+    kneel_target_evidence = has_kneel and (
+        action_has_object(kneel_terms, target_object_terms) or facing_target_evidence
     )
-    explicit_target = _contains_any(text, target_entity_terms)
-    camera_only_orientation = _contains_any(text, camera_actor_terms) and not _contains_any(text, human_actor_terms)
+    pursuit_target_evidence = has_pursuit and action_has_object(pursuit_terms, target_object_terms)
+    escape_source_evidence = has_escape and action_has_object(escape_source_terms, target_object_terms)
+    occlusion_target_evidence = has_occlusion and action_has_object(occlusion_terms, target_object_terms)
+
+    # Observable direction/orientation may exist without a story-material target.
+    if has_gaze and not gaze_camera_agent:
+        add(spatial, "gaze_direction")
+        trace("observable_gaze_direction", "VisibleIR.gaze_target", "BlockingIR.orientations")
+    if has_facing and not facing_camera_agent:
+        add(spatial, "body_orientation")
+        trace("observable_body_orientation", "VisibleIR.body_orientation", "BlockingIR.orientations")
 
     crowd_terms = ("群众", "人群", "百姓", "信徒", "灾民", "居民", "民众", "围观者")
     institution_terms = (
@@ -123,7 +171,12 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
     crowd_has_relation = (
         _contains_any(text, crowd_terms)
         and _contains_any(text, crowd_relation_cues)
-        and (_contains_any(text, institution_terms) or explicit_target)
+        and (
+            _contains_any(text, institution_terms)
+            or gaze_target_evidence
+            or facing_target_evidence
+            or kneel_target_evidence
+        )
     )
     if crowd_has_relation:
         add(dramatic, "crowd_reaction", "social_behavior")
@@ -170,13 +223,6 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
             "PerformanceIR.pause",
         )
 
-    has_gaze = _contains_any(text, gaze_terms)
-    has_facing = _contains_any(text, facing_terms)
-    has_kneel = _contains_any(text, kneel_terms)
-    has_pursuit = _contains_any(text, pursuit_terms)
-    has_escape = _contains_any(text, escape_terms)
-    has_occlusion = _contains_any(text, occlusion_terms)
-
     # Pursuit/escape can exist without a known target. Keep the action observable,
     # but do not fabricate a locatable target or target relation.
     if has_pursuit:
@@ -189,35 +235,32 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
         trace("escape_action", "EventGraphIR.action", "BlockingIR.approach_or_retreat")
 
     target_relation_present = False
-    if explicit_target and not camera_only_orientation:
-        if has_gaze:
-            target_relation_present = True
-            add(relation, "gaze_to_target")
-            add(spatial, "gaze_direction")
-            add(failure, "gaze_target_spatial_binding_fail")
-        if has_facing:
-            target_relation_present = True
-            add(relation, "facing_to_target")
-            add(spatial, "body_orientation")
-            add(failure, "body_orientation_target_fail")
-        if has_kneel:
-            target_relation_present = True
-            add(relation, "kneeling_to_target")
-            add(spatial, "kneeling_to_target", "body_orientation")
-            add(failure, "body_orientation_target_fail")
-        if has_pursuit:
-            target_relation_present = True
-            add(relation, "pursuit_to_target")
-            add(spatial, "body_orientation")
-        if has_escape and _contains_any(text, escape_source_terms):
-            target_relation_present = True
-            add(relation, "escape_from_target")
-            add(spatial, "body_orientation")
-        if has_occlusion:
-            target_relation_present = True
-            add(dramatic, "blocking")
-            add(relation, "occlusion_to_target")
-            add(spatial, "blocking", "occlusion")
+    if gaze_target_evidence:
+        target_relation_present = True
+        add(relation, "gaze_to_target")
+        add(failure, "gaze_target_spatial_binding_fail")
+    if facing_target_evidence:
+        target_relation_present = True
+        add(relation, "facing_to_target")
+        add(failure, "body_orientation_target_fail")
+    if kneel_target_evidence:
+        target_relation_present = True
+        add(relation, "kneeling_to_target")
+        add(spatial, "kneeling_to_target", "body_orientation")
+        add(failure, "body_orientation_target_fail")
+    if pursuit_target_evidence:
+        target_relation_present = True
+        add(relation, "pursuit_to_target")
+        add(spatial, "body_orientation")
+    if escape_source_evidence:
+        target_relation_present = True
+        add(relation, "escape_from_target")
+        add(spatial, "body_orientation")
+    if occlusion_target_evidence:
+        target_relation_present = True
+        add(dramatic, "blocking")
+        add(relation, "occlusion_to_target")
+        add(spatial, "blocking", "occlusion")
 
     if target_relation_present:
         add(dramatic, "target_oriented_action")
