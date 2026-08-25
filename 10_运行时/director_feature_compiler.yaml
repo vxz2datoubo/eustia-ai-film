@@ -79,6 +79,7 @@ resolution_rule:
     requires:
       - prior_event_has_explicit_target
       - same_agent_or_group_is_preserved
+      - complete_inter_event_clause_chain_has_no_unproven_agent_transition
       - temporal_or_causal_link_is_explicit
       - no_competing_target
       - no_alternate_physical_cause_for_the_second_action
