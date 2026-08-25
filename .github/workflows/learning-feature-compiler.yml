@@ -4,6 +4,10 @@ on:
   pull_request:
     paths:
       - 'tools/learning_retriever/**'
+      - '10_运行时/director_feature_compiler.yaml'
+      - '10_运行时/screen_observable_audible_ir_schema.yaml'
+      - '10_运行时/learning_recall_index.yaml'
+      - '11_验收/director_feature_compiler_regression_cases.yaml'
       - '.github/workflows/learning-feature-compiler.yml'
 
 jobs:
@@ -17,6 +21,12 @@ jobs:
       - name: Install test dependencies
         run: |
           python -m pip install pytest PyYAML
-      - name: Run feature compiler regression
+      - name: Validate canonical retrieval index
         run: |
-          PYTHONPATH=tools/learning_retriever python -m pytest tools/learning_retriever/tests/test_feature_compiler.py
+          PYTHONPATH=tools/learning_retriever python -m learning_retriever.cli --project-root . --validate-index
+      - name: Validate SOAC semantic dependencies
+        run: |
+          PYTHONPATH=tools/learning_retriever python -m learning_retriever.cli --project-root . --validate-feature-compiler
+      - name: Run Learning Smart Recall regressions
+        run: |
+          PYTHONPATH=tools/learning_retriever python -m pytest tools/learning_retriever/tests
