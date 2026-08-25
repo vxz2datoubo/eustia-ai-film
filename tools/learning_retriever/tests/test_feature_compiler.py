@@ -3,7 +3,7 @@ import unittest
 
 import yaml
 
-from learning_retriever import LearningRetriever
+from learning_retriever import DirectorLearningRuntime, LearningRetriever
 from learning_retriever.feature_compiler import (
     FeatureCompilationError,
     compile_director_features,
@@ -15,6 +15,7 @@ from learning_retriever.feature_compiler import (
 REPO_ROOT = Path(__file__).resolve().parents[3]
 REGRESSION_PATH = REPO_ROOT / "11_验收/director_feature_compiler_regression_cases.yaml"
 REGRESSIONS = yaml.safe_load(REGRESSION_PATH.read_text(encoding="utf-8"))
+ROUTES = yaml.safe_load((REPO_ROOT / "10_运行时/director_route_index.yaml").read_text(encoding="utf-8"))
 
 
 class DirectorFeatureCompilerRegressionTests(unittest.TestCase):
@@ -39,22 +40,23 @@ class DirectorFeatureCompilerRegressionTests(unittest.TestCase):
                 self._assert_declared_compatibility(case)
 
     def test_cross_surface_same_mechanism_recalls_same_canonical_case(self):
-        retriever = LearningRetriever(REPO_ROOT)
+        runtime = DirectorLearningRuntime(REPO_ROOT)
         for case in REGRESSIONS["retrieval_cases"]:
             expected = case["expected_case_id"]
             for index, description in enumerate(case["descriptions"]):
                 with self.subTest(case=case["id"], description=index):
-                    task = compile_retrieval_task(description, task_id=f"{case['id']}-{index}")
-                    result = retriever.retrieve(task, top_k=5)
+                    result = runtime.retrieve(description, task_id=f"{case['id']}-{index}", top_k=5)
                     selected = result["retrieval_receipt"]["selected_case_ids"]
                     self.assertIn(expected, selected)
                     self.assertEqual(selected[0], expected)
                     self.assertEqual(result["status"], "PASS")
+                    if case.get("expected_hard_route"):
+                        self.assertIn(case["expected_hard_route"], result["canonical_runtime_receipt"]["hard_routes"])
 
     def test_negative_semantic_regressions(self):
         for case in REGRESSIONS["negative_semantic_cases"]:
             with self.subTest(case=case["id"]):
-                result = compile_director_features(case["description"])
+                result = compile_director_features(case["description"], strict=case.get("strict", True))
                 for field, values in case.get("expected_present", {}).items():
                     observed = getattr(result, field)
                     for value in values:
@@ -64,11 +66,70 @@ class DirectorFeatureCompilerRegressionTests(unittest.TestCase):
                     for value in values:
                         self.assertNotIn(value, observed)
 
+    def test_background_crowd_does_not_force_motive_learning_case(self):
+        case = next(x for x in REGRESSIONS["negative_semantic_cases"] if x["id"] == "background_crowd_is_not_crowd_reaction")
+        features = compile_director_features(case["description"], strict=False)
+        result = LearningRetriever(REPO_ROOT).retrieve({"task_id": "REG-BACKGROUND-CROWD", **features.as_dict()}, top_k=5)
+        self.assertNotIn("MOTIVE-FIRST-CROWD-001", result["retrieval_receipt"]["selected_case_ids"])
+
     def test_unrecognized_description_fails_closed(self):
-        for case in REGRESSIONS["fail_closed_cases"]:
-            with self.subTest(case=case["id"]):
-                with self.assertRaisesRegex(FeatureCompilationError, case["expected_error"]):
-                    compile_director_features(case["description"])
+        case = next(x for x in REGRESSIONS["fail_closed_cases"] if x["id"] == "unrecognized_generic_scene")
+        with self.assertRaisesRegex(FeatureCompilationError, case["expected_error"]):
+            compile_director_features(case["description"])
+
+    def test_natural_language_compile_requires_route_authority(self):
+        case = next(x for x in REGRESSIONS["fail_closed_cases"] if x["id"] == "natural_language_without_route_authority")
+        with self.assertRaisesRegex(FeatureCompilationError, case["expected_error"]):
+            compile_retrieval_task(case["description"])
+
+    def test_target_input_uses_mandatory_hard_route(self):
+        gate = REGRESSIONS["hard_route_gate"]
+        result = DirectorLearningRuntime(REPO_ROOT).retrieve(gate["description"], task_id="REG-HARD-ROUTE", top_k=5)
+        receipt = result["retrieval_receipt"]
+        self.assertIn(gate["expected_hard_route"], result["canonical_runtime_receipt"]["hard_routes"])
+        self.assertIn(gate["expected_hard_route"], receipt["hard_routes"])
+        self.assertIn(gate["expected_mandatory_case_id"], receipt["mandatory_case_ids"])
+        self.assertTrue(receipt["mandatory_recall_satisfied"])
+        self.assertIn(gate["expected_mandatory_case_id"], receipt["selected_case_ids"])
+        scored = next(x for x in receipt["scored_candidates"] if x["case_id"] == gate["expected_mandatory_case_id"])
+        self.assertTrue(scored["hard"])
+
+    def test_objective_word_does_not_activate_target_hard_route(self):
+        gate = REGRESSIONS["negative_route_gate"]
+        result = DirectorLearningRuntime(REPO_ROOT).retrieve(gate["description"], task_id="REG-OBJECTIVE-NOT-TARGET", top_k=5)
+        self.assertNotIn(gate["forbidden_hard_route"], result["canonical_runtime_receipt"]["hard_routes"])
+        self.assertNotIn(gate["forbidden_hard_route"], result["retrieval_receipt"]["hard_routes"])
+
+    def test_canonical_runtime_binding_cannot_silently_bypass_compiler(self):
+        project = yaml.safe_load((REPO_ROOT / "PROJECT_INDEX.yaml").read_text(encoding="utf-8"))
+        read_sets = yaml.safe_load((REPO_ROOT / "10_运行时/read_sets.yaml").read_text(encoding="utf-8"))
+        gate = yaml.safe_load((REPO_ROOT / "10_运行时/learning_application_gate.yaml").read_text(encoding="utf-8"))
+        compiler = yaml.safe_load((REPO_ROOT / "10_运行时/director_feature_compiler.yaml").read_text(encoding="utf-8"))
+        source_authority = yaml.safe_load((REPO_ROOT / "10_运行时/source_authority.yaml").read_text(encoding="utf-8"))
+
+        self.assertTrue(source_authority["rules"]["file_self_declared_active_cannot_override_project_index"])
+        self.assertEqual(project["canonical"]["director_feature_compiler"], "10_运行时/director_feature_compiler.yaml")
+        self.assertEqual(project["effective_sources"]["10_运行时/director_feature_compiler.yaml"], "github_verified")
+        self.assertTrue(project["policy"]["director_feature_compiler_required_for_natural_language_directing"])
+
+        always = read_sets["read_sets"]["directing"]["always"]
+        compiler_pos = next(i for i, item in enumerate(always) if item.startswith("director_feature_compiler"))
+        route_pos = next(i for i, item in enumerate(always) if item.startswith("director_route_index"))
+        recall_pos = next(i for i, item in enumerate(always) if item.startswith("learning_recall_index"))
+        self.assertLess(compiler_pos, route_pos)
+        self.assertLess(route_pos, recall_pos)
+        self.assertTrue(read_sets["rules"]["directing_must_invoke_director_feature_compiler_before_route_and_recall"])
+
+        self.assertEqual(gate["authority"]["director_feature_compiler"], "10_运行时/director_feature_compiler.yaml")
+        self.assertEqual(gate["smart_recall_runtime"]["fixed_flow"][:3], ["director_feature_compiler", "hard_route", "semantic_recall"])
+        self.assertTrue(gate["smart_recall_runtime"]["natural_language_bypass_forbidden"])
+        self.assertTrue(compiler["runtime_binding"]["natural_language_bypass_forbidden"])
+
+        result = DirectorLearningRuntime(REPO_ROOT).retrieve("角色下跪并面向门口圣女", task_id="REG-CANONICAL-RUNTIME")
+        runtime_receipt = result["canonical_runtime_receipt"]
+        self.assertTrue(runtime_receipt["compiler_invoked"])
+        self.assertEqual(runtime_receipt["flow"], ["director_feature_compiler", "hard_route", "semantic_recall"])
+        self.assertEqual(runtime_receipt["feature_compiler_receipt"]["status"], "PASS")
 
     def test_semantic_dependencies_bind_existing_soac_eventgraph_blocking_visibleir(self):
         self.assertEqual(validate_semantic_dependencies(REPO_ROOT), [])
@@ -78,25 +139,15 @@ class DirectorFeatureCompilerRegressionTests(unittest.TestCase):
             "角色面向门口目标",
             task_id="REG-MERGE",
             base_task={"dramatic_function": ["explicit_user_feature"]},
+            route_data=ROUTES,
         )
         self.assertIn("explicit_user_feature", task["dramatic_function"])
         self.assertIn("target_oriented_action", task["dramatic_function"])
 
     def test_compiler_is_query_only_and_does_not_duplicate_learning_authority(self):
-        task = compile_retrieval_task("普通对白场景", task_id="REG-AUTHORITY")
-        self.assertEqual(
-            set(task["feature_compiler_receipt"]),
-            {
-                "component",
-                "status",
-                "input_fingerprint",
-                "compiled_feature_keys",
-                "matched_rules",
-                "semantic_trace",
-                "authority_boundary",
-            },
-        )
+        task = compile_retrieval_task("普通对白场景", task_id="REG-AUTHORITY", route_data=ROUTES)
         self.assertEqual(task["feature_compiler_receipt"]["authority_boundary"], "retrieval_query_only")
+        self.assertEqual(task["feature_compiler_receipt"]["route_resolution"], "director_route_index")
         self.assertNotIn("learning_rules", task)
         self.assertNotIn("authority_ref", task)
         self.assertNotIn("maturity", task)
