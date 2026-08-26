@@ -13,6 +13,7 @@ on:
       - '10_运行时/screen_observable_audible_ir_schema.yaml'
       - '10_运行时/learning_recall_index.yaml'
       - '11_验收/director_feature_compiler_regression_cases.yaml'
+      - '11_验收/learning_smart_recall_production_validation_matrix.yaml'
       - '.github/workflows/learning-feature-compiler.yml'
 
 jobs:
@@ -39,9 +40,12 @@ jobs:
       - name: Validate SOAC semantic dependencies
         run: |
           PYTHONPATH=tools/learning_retriever python -m learning_retriever.cli --project-root . --validate-feature-compiler
+      - name: Run production validation matrix
+        run: |
+          PYTHONPATH=tools/learning_retriever python -m learning_retriever.cli --project-root . --production-validation-matrix
       - name: Run targeted feature compiler regressions
         run: |
-          PYTHONPATH=tools/learning_retriever python -m pytest tools/learning_retriever/tests/test_feature_compiler.py
+          PYTHONPATH=tools/learning_retriever python -m pytest tools/learning_retriever/tests/test_feature_compiler.py tools/learning_retriever/tests/test_production_validation.py
       - name: Run full learning retriever tests
         run: |
           PYTHONPATH=tools/learning_retriever python -m pytest tools/learning_retriever/tests
