@@ -191,11 +191,15 @@ cases:
     kind: negative
     production_context: boundary
     description: "凯姆看向远处，神情紧张。"
+    boundary_note: >-
+      Natural-language gaze without a locatable story target must not activate
+      TARGET_ORIENTED_SPATIAL_BINDING as a hard route. A non-hard semantic soft
+      candidate remains allowed by the current canonical retriever contract;
+      explicit negative-retrieval semantics are tested separately in retriever regressions.
     expected:
       feature_present:
         spatial_action_features: [gaze_direction]
       hard_routes_absent: [TARGET_ORIENTED_SPATIAL_BINDING]
-      selected_cases_absent: [CROWD-GAZE-BODY-CAMERA-BINDING-001]
       receipt_complete: true
 
   - id: PVM-TARGET-FAILCLOSED-005
