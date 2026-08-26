@@ -1,0 +1,334 @@
+schema_version: "1.0"
+component: LEARNING_SMART_RECALL_V1_1_PRODUCTION_VALIDATION_MATRIX
+role: eval_fixture_only
+authority_boundary:
+  this_file_is_not_learning_authority: true
+  route_authority: 10_运行时/director_route_index.yaml
+  recall_metadata: 10_运行时/learning_recall_index.yaml
+  learning_payload_authority_remains_in_existing_canonical: true
+  may_not_change_weights_maturity_scope_conflict_or_case_authority: true
+purpose: >-
+  Prove that the canonical natural-language director runtime transfers learned
+  mechanisms across characters, scenes, wording and action surfaces, while
+  preserving fail-closed, model-version and mandatory-recall boundaries.
+
+required_families:
+  - MOTIVATION_BEFORE_TONE
+  - EXPOSITION_STALL
+  - VN_TO_FILM_DIALOGUE
+  - TARGET_ORIENTED_SPATIAL_BINDING
+  - EVENT_ORDER_CONTACT_CAUSALITY
+  - CONTINUITY_WORLD_STATE
+
+cases:
+  - id: PVM-MOTIVE-EP1-001
+    family: MOTIVATION_BEFORE_TONE
+    kind: positive
+    production_context: first_episode
+    description: "施粥队列里的灾民面对救济教会的反应显得不合理，先从他们当前依赖与希望判断态度。"
+    expected:
+      feature_present:
+        dramatic_function: [crowd_reaction]
+        relation_type: [crowd_to_institution]
+        failure_mechanism: [motive_tone_mismatch]
+      hard_routes_present: [MOTIVATION_BEFORE_TONE]
+      mandatory_cases_present: [MOTIVE-FIRST-CROWD-001]
+      selected_cases_present: [MOTIVE-FIRST-CROWD-001]
+      mandatory_recall_satisfied: true
+      receipt_complete: true
+
+  - id: PVM-MOTIVE-XSCENE-002
+    family: MOTIVATION_BEFORE_TONE
+    kind: positive
+    production_context: cross_scene
+    description: "城堡避难所中的居民面对王室救济时态度与现实依赖不匹配，不能直接套用统一情绪。"
+    expected:
+      feature_present:
+        dramatic_function: [crowd_reaction]
+        relation_type: [crowd_to_institution]
+        failure_mechanism: [motive_tone_mismatch]
+      hard_routes_present: [MOTIVATION_BEFORE_TONE]
+      mandatory_cases_present: [MOTIVE-FIRST-CROWD-001]
+      selected_cases_present: [MOTIVE-FIRST-CROWD-001]
+      mandatory_recall_satisfied: true
+      receipt_complete: true
+
+  - id: PVM-MOTIVE-NEG-003
+    family: MOTIVATION_BEFORE_TONE
+    kind: negative
+    production_context: boundary
+    description: "凯姆一个人看向远处，神情冷静。"
+    expected:
+      hard_routes_absent: [MOTIVATION_BEFORE_TONE]
+      selected_cases_absent: [MOTIVE-FIRST-CROWD-001]
+      receipt_complete: true
+
+  - id: PVM-EXPOSITION-EP1-001
+    family: EXPOSITION_STALL
+    kind: positive
+    production_context: first_episode
+    description: "爱丽丝用画外音解释羽化病和猎羽规则，凯姆同时攀爬，不能让信息段拖慢推进。"
+    expected:
+      feature_present:
+        dramatic_function: [worldbuilding_exposition]
+        failure_mechanism: [exposition_stall]
+      hard_routes_present: [EXPOSITION_STALL]
+      mandatory_cases_present: [EXPOSITION-MEDIA-DISTANCE-001]
+      selected_cases_present: [EXPOSITION-MEDIA-DISTANCE-001]
+      mandatory_recall_satisfied: true
+      receipt_complete: true
+
+  - id: PVM-EXPOSITION-XSCENE-002
+    family: EXPOSITION_STALL
+    kind: positive
+    production_context: cross_scene
+    description: "老兵在酒馆讲述旧时代历史，世界观说明不能让节奏停滞。"
+    expected:
+      feature_present:
+        dramatic_function: [worldbuilding_exposition]
+        failure_mechanism: [exposition_stall]
+      hard_routes_present: [EXPOSITION_STALL]
+      mandatory_cases_present: [EXPOSITION-MEDIA-DISTANCE-001]
+      selected_cases_present: [EXPOSITION-MEDIA-DISTANCE-001]
+      mandatory_recall_satisfied: true
+      receipt_complete: true
+
+  - id: PVM-EXPOSITION-NEG-003
+    family: EXPOSITION_STALL
+    kind: negative
+    production_context: boundary
+    description: "凯姆抓住屋檐翻上屋顶。"
+    expected:
+      hard_routes_absent: [EXPOSITION_STALL]
+      selected_cases_absent: [EXPOSITION-MEDIA-DISTANCE-001]
+      receipt_complete: true
+
+  - id: PVM-DIALOGUE-EP1-001
+    family: VN_TO_FILM_DIALOGUE
+    kind: positive
+    production_context: first_episode
+    description: "把蒂娅原作里的galgame长句改成真人能一口听懂的口语化台词，同时保留原意。"
+    expected:
+      feature_present:
+        dramatic_function: [dialogue_adaptation]
+        failure_mechanism: [written_sentence_shape_leak]
+      hard_routes_present: [VN_TO_FILM_DIALOGUE]
+      mandatory_cases_present: [VN-TO-FILM-DIALOGUE-001]
+      selected_cases_present: [VN-TO-FILM-DIALOGUE-001]
+      mandatory_recall_satisfied: true
+      receipt_complete: true
+
+  - id: PVM-DIALOGUE-XSCENE-002
+    family: VN_TO_FILM_DIALOGUE
+    kind: positive
+    production_context: cross_scene
+    description: "老兵这段文字游戏式对白太书面，需要改成能呼吸和表演的说法。"
+    expected:
+      feature_present:
+        dramatic_function: [dialogue_adaptation]
+        failure_mechanism: [written_sentence_shape_leak]
+      hard_routes_present: [VN_TO_FILM_DIALOGUE]
+      mandatory_cases_present: [VN-TO-FILM-DIALOGUE-001]
+      selected_cases_present: [VN-TO-FILM-DIALOGUE-001]
+      mandatory_recall_satisfied: true
+      receipt_complete: true
+
+  - id: PVM-DIALOGUE-NEG-003
+    family: VN_TO_FILM_DIALOGUE
+    kind: negative
+    production_context: boundary
+    description: "凯姆沿外墙攀爬并踩住窗台继续上升。"
+    expected:
+      hard_routes_absent: [VN_TO_FILM_DIALOGUE]
+      selected_cases_absent: [VN-TO-FILM-DIALOGUE-001]
+      receipt_complete: true
+
+  - id: PVM-TARGET-EP1-001
+    family: TARGET_ORIENTED_SPATIAL_BINDING
+    kind: positive
+    production_context: first_episode
+    description: "圣女伊莲降临钟楼平台，群众看到圣女后跪拜。"
+    expected:
+      feature_present:
+        relation_type: [gaze_to_target, kneeling_to_target]
+        spatial_action_features: [gaze_direction, kneeling_to_target, body_orientation, locatable_target]
+      hard_routes_present: [TARGET_ORIENTED_SPATIAL_BINDING, MOTIVATION_BEFORE_TONE]
+      mandatory_cases_present: [CROWD-GAZE-BODY-CAMERA-BINDING-001, MOTIVE-FIRST-CROWD-001]
+      selected_cases_present: [CROWD-GAZE-BODY-CAMERA-BINDING-001, MOTIVE-FIRST-CROWD-001]
+      mandatory_recall_satisfied: true
+      receipt_complete: true
+
+  - id: PVM-TARGET-PURSUIT-002
+    family: TARGET_ORIENTED_SPATIAL_BINDING
+    kind: positive
+    production_context: cross_scene
+    description: "卫兵追击门口逃犯，身体持续朝向逃犯。"
+    expected:
+      feature_present:
+        relation_type: [pursuit_to_target, facing_to_target]
+      hard_routes_present: [TARGET_ORIENTED_SPATIAL_BINDING]
+      mandatory_cases_present: [CROWD-GAZE-BODY-CAMERA-BINDING-001]
+      selected_cases_present: [CROWD-GAZE-BODY-CAMERA-BINDING-001]
+      mandatory_recall_satisfied: true
+      receipt_complete: true
+
+  - id: PVM-TARGET-ESCAPE-003
+    family: TARGET_ORIENTED_SPATIAL_BINDING
+    kind: positive
+    production_context: cross_scene
+    description: "蒂娅逃离追兵并不断远离追兵。"
+    expected:
+      feature_present:
+        relation_type: [escape_from_target]
+      hard_routes_present: [TARGET_ORIENTED_SPATIAL_BINDING]
+      mandatory_cases_present: [CROWD-GAZE-BODY-CAMERA-BINDING-001]
+      selected_cases_present: [CROWD-GAZE-BODY-CAMERA-BINDING-001]
+      mandatory_recall_satisfied: true
+      receipt_complete: true
+
+  - id: PVM-TARGET-NEG-004
+    family: TARGET_ORIENTED_SPATIAL_BINDING
+    kind: negative
+    production_context: boundary
+    description: "凯姆看向远处，神情紧张。"
+    expected:
+      feature_present:
+        spatial_action_features: [gaze_direction]
+      hard_routes_absent: [TARGET_ORIENTED_SPATIAL_BINDING]
+      selected_cases_absent: [CROWD-GAZE-BODY-CAMERA-BINDING-001]
+      receipt_complete: true
+
+  - id: PVM-TARGET-FAILCLOSED-005
+    family: TARGET_ORIENTED_SPATIAL_BINDING
+    kind: fail_closed
+    production_context: boundary
+    description: "摄影机面向北方建立镜头。"
+    expected_error:
+      stage: feature_compiler
+      code: NO_RECOGNIZED_DIRECTOR_FEATURES
+
+  - id: PVM-TARGET-MULTICLAUSE-006
+    family: TARGET_ORIENTED_SPATIAL_BINDING
+    kind: negative
+    production_context: boundary
+    description: "群众看到圣女后，贵族欢呼，随后拜下。"
+    expected:
+      feature_present:
+        relation_type: [gaze_to_target]
+      feature_absent:
+        relation_type: [kneeling_to_target]
+      hard_routes_present: [TARGET_ORIENTED_SPATIAL_BINDING, MOTIVATION_BEFORE_TONE]
+      selected_cases_present: [CROWD-GAZE-BODY-CAMERA-BINDING-001, MOTIVE-FIRST-CROWD-001]
+      receipt_complete: true
+
+  - id: PVM-CONTACT-EP1-001
+    family: EVENT_ORDER_CONTACT_CAUSALITY
+    kind: positive
+    production_context: first_episode
+    description: "凯姆沿建筑外立面攀爬，踩住窗台再抓住房檐，动作顺序必须清楚。"
+    base_task:
+      model:
+        family: seedance
+        version: "2.5"
+        aliases: ["C-DANCE 2.5"]
+      scene_context: [building_exterior, window_micro_sequence, high_dynamic_motion]
+      character_context: [kaim_climbing]
+      surface_similarity: [凯姆, 窗, 攀爬, 踩窗]
+    expected:
+      feature_present:
+        dramatic_function: [contact_causality, event_order]
+        spatial_action_features: [support_point, sequential_contact]
+        failure_mechanism: [contact_binding_fail, event_order_fail]
+      selected_cases_present: [CD25-KAIM-WINDOW-AB-20260815]
+      receipt_complete: true
+
+  - id: PVM-CONTACT-XSCENE-002
+    family: EVENT_ORDER_CONTACT_CAUSALITY
+    kind: positive
+    production_context: cross_scene
+    description: "逃犯在城堡外墙抓住石沿、踩住横梁连续上爬，先后顺序不能错。"
+    base_task:
+      model:
+        family: seedance
+        version: "2.5"
+        aliases: ["Seedance 2.5"]
+      scene_context: [building_exterior, high_dynamic_motion]
+    expected:
+      feature_present:
+        dramatic_function: [contact_causality, event_order]
+        spatial_action_features: [support_point, sequential_contact]
+        failure_mechanism: [contact_binding_fail, event_order_fail]
+      selected_cases_present: [CD25-KAIM-WINDOW-AB-20260815]
+      receipt_complete: true
+
+  - id: PVM-CONTACT-MODEL-NEG-003
+    family: EVENT_ORDER_CONTACT_CAUSALITY
+    kind: negative
+    production_context: model_boundary
+    description: "凯姆沿建筑外立面攀爬，踩住窗台再抓住房檐，动作顺序必须清楚。"
+    base_task:
+      model:
+        family: minimax_h3
+        version: "1"
+      scene_context: [building_exterior, window_micro_sequence, high_dynamic_motion]
+      surface_similarity: [凯姆, 窗, 攀爬, 踩窗]
+    expected:
+      selected_cases_absent: [CD25-KAIM-WINDOW-AB-20260815]
+      excluded_reasons:
+        CD25-KAIM-WINDOW-AB-20260815: model_version_mismatch
+      receipt_complete: true
+
+  - id: PVM-WORLDSTATE-EP1-001
+    family: CONTINUITY_WORLD_STATE
+    kind: positive
+    production_context: first_episode
+    description: "诺瓦斯历史闪回结束回到钟楼广场时，背景状态前后不一致，必须保持世界状态连续性。"
+    base_task:
+      model:
+        family: seedance
+        version: "2.5"
+        aliases: ["C-DANCE 2.5"]
+      scene_context: [novus, historical_saints, worldbuilding_sequence]
+      character_context: [nun_continuity]
+    expected:
+      feature_present:
+        relation_type: [continuity_inheritance]
+        spatial_action_features: [continuity_inheritance]
+        failure_mechanism: [canonical_world_state_violation]
+      selected_cases_present: [NOVUS-30S-REAL-OUTPUT-001]
+      receipt_complete: true
+
+  - id: PVM-WORLDSTATE-XSCENE-002
+    family: CONTINUITY_WORLD_STATE
+    kind: positive
+    production_context: cross_scene
+    description: "追逐镜头切回主街后，背景状态前后不一致，连续性必须继承。"
+    base_task:
+      model:
+        family: seedance
+        version: "2.5"
+      scene_context: [multi_shot_sequence]
+    expected:
+      feature_present:
+        relation_type: [continuity_inheritance]
+        spatial_action_features: [continuity_inheritance]
+        failure_mechanism: [canonical_world_state_violation]
+      selected_cases_present: [NOVUS-30S-REAL-OUTPUT-001]
+      receipt_complete: true
+
+  - id: PVM-WORLDSTATE-NEG-003
+    family: CONTINUITY_WORLD_STATE
+    kind: fail_closed
+    production_context: boundary
+    description: "人物面部特写，只看表情，不展示背景。"
+    expected_error:
+      stage: feature_compiler
+      code: NO_RECOGNIZED_DIRECTOR_FEATURES
+
+aggregate_acceptance:
+  all_required_families_present: true
+  false_positive_routes: 0
+  false_negative_mandatory_recalls: 0
+  authority_boundary_violations: 0
+  all_receipts_complete_when_runtime_reaches_retrieval: true
+  no_eval_case_may_promote_maturity: true
