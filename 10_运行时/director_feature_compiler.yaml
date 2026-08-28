@@ -1,10 +1,12 @@
-schema_version: "1.1"
+schema_version: "1.2"
 component: DIRECTOR_FEATURE_COMPILER_V1_1
 status: active
 purpose: >-
   Convert bounded natural-language director intent into structured retrieval
   features before the existing Learning Smart Recall retriever, without changing
-  retriever authority or creating a second learning knowledge base.
+  retriever authority or creating a second learning knowledge base. Cinematic
+  visual-grammar language is normalized into the same four existing feature
+  families rather than creating a parallel aesthetic feature authority.
 
 authority:
   project_registry: PROJECT_INDEX.yaml
@@ -14,6 +16,7 @@ authority:
   recall_router_metadata: 10_运行时/learning_recall_index.yaml
   semantic_ir: 10_运行时/screen_observable_audible_ir_schema.yaml
   director_method: 01_AI电影系统/AI电影系统.md#SOAC-001
+  cinematic_visual_method: 01_AI电影系统/AI电影系统.md#CINEMATIC-VISUAL-GRAMMAR-001
   knowledge_base_duplication: forbidden
   compiler_output_is_retrieval_query_only: true
   fail_closed: true
@@ -40,12 +43,20 @@ output:
     semantic_sources:
       - ShotPlanIR.dramatic_function
       - EventGraphIR.narrative_function
+      - CinematicIntentIR.unresolved_state
+      - CinematicIntentIR.attention_flow
+      - CinematicIntentIR.color_intent
+      - CinematicIntentIR.visual_density
   relation_type:
     required_key: true
     semantic_sources:
       - EventGraphIR.agent_action_target
       - BlockingIR.relative_positions
       - BlockingIR.orientations
+      - CinematicIntentIR.relation_pressure
+      - CinematicIntentIR.viewer_position
+      - CinematicIntentIR.reference_signal_roles
+      - CinematicIntentIR.attention_handoff
   spatial_action_features:
     required_key: true
     semantic_sources:
@@ -57,12 +68,54 @@ output:
       - VisibleIR.body_orientation
       - VisibleIR.gaze_target
       - VisibleIR.support_or_contact
+      - CinematicIntentIR.attention_flow
+      - CinematicIntentIR.composition
+      - CinematicIntentIR.capture_intent
+      - CinematicIntentIR.reference_signal_roles
   failure_mechanism:
     required_key: true
     semantic_sources:
       - EventGraphIR.precondition_temporal_relation_state_change_result
       - VisibleIR.expected_vs_observed_binding
+      - CinematicIntentIR.expected_vs_observed_visual_intent
       - existing_learning_recall_signature_vocabulary
+
+cinematic_visual_vocabulary:
+  authority_boundary: retrieval_normalization_only
+  failure_mechanisms:
+    - generic_cinematic_style_stacking
+    - composition_without_pressure
+    - attention_flow_break
+    - color_as_filter
+    - visual_density_overload
+    - reference_appearance_contamination
+    - template_composition_repetition
+    - unmotivated_capture_style
+  dramatic_functions:
+    - cinematic_visual_design
+    - attention_design
+    - look_design
+    - visual_hierarchy
+    - reference_control
+    - shot_variation
+  relation_types:
+    - viewer_to_screen_information
+    - relation_pressure
+    - reference_to_generation
+  spatial_action_features:
+    - attention_path
+    - motivated_composition
+    - motivated_light_color
+    - detail_hierarchy
+    - reference_responsibility_split
+    - capture_substrate
+  guardrails:
+    - style_word_alone_cannot_create_failure_mechanism
+    - film_stock_or_lens_name_alone_cannot_create_unmotivated_capture_failure
+    - reference_word_alone_cannot_create_reference_contamination_failure
+    - negative_or_problem_evidence_is_required_for_failure_tokens
+    - compiler_does_not_choose_camera_color_or_style_solution
+    - compiler_does_not_define_skill_maturity_or_payload
 
 resolution_rule:
   mechanism_first: true
