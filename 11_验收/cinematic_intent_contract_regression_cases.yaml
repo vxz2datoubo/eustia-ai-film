@@ -20,10 +20,10 @@ policy:
   unsupported_camera_lock_surfaces_fail_closed: true
 
 trusted_upstream_fixture:
-  trusted_source_digest: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  trusted_source_digest: "a60a9346e6e40a68ee6506e8f2a86605897ee835e7f75c2a83b92694258e0e6f"
   envelope:
     source_authority_ref: test_fixture://shot_plan/no_camera_lock
-    source_material_digest: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    source_material_digest: "a60a9346e6e40a68ee6506e8f2a86605897ee835e7f75c2a83b92694258e0e6f"
     camera: {}
 
 compile_cases:
@@ -57,10 +57,10 @@ compile_cases:
         material_fields: [composition, color_intent]
     upstream_lock_envelope:
       source_authority_ref: test_fixture://shot_plan/locked_side_camera
-      source_material_digest: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      source_material_digest: "8833c812d840f1a0b34b1dbd38a80a30dc91bdb2cfb37c1a2a9ff0735a5af30e"
       camera:
         position: exterior_side
-    trusted_upstream_source_digest: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    trusted_upstream_source_digest: "8833c812d840f1a0b34b1dbd38a80a30dc91bdb2cfb37c1a2a9ff0735a5af30e"
     expected_status: PASS
     expected_overlay_fields: [composition, color_intent]
     expected_absent_overlay_fields: [unresolved_state, visual_density, capture_intent]
@@ -93,10 +93,10 @@ compile_cases:
         material_fields: [capture_intent]
     upstream_lock_envelope:
       source_authority_ref: test_fixture://shot_plan/locked_side_camera
-      source_material_digest: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      source_material_digest: "8833c812d840f1a0b34b1dbd38a80a30dc91bdb2cfb37c1a2a9ff0735a5af30e"
       camera:
         position: exterior_side
-    trusted_upstream_source_digest: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    trusted_upstream_source_digest: "8833c812d840f1a0b34b1dbd38a80a30dc91bdb2cfb37c1a2a9ff0735a5af30e"
     expected_status: FAIL
     expected_diagnostics: [CAMERA_SCOPE_CONFLICT]
     expected_overlay_fields: []
@@ -300,10 +300,10 @@ upstream_gate_cases:
     contract_ref: CIC-VALID-MINIMAL-001
     upstream_lock_envelope:
       source_authority_ref: test_fixture://shot_plan/substituted
-      source_material_digest: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      source_material_digest: "9b6ff06a40ca3ce724a047c47c053647887bc567bb5edfedb2ff0456799fce67"
       camera:
         position: exterior_side
-    trusted_upstream_source_digest: "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    trusted_upstream_source_digest: "8833c812d840f1a0b34b1dbd38a80a30dc91bdb2cfb37c1a2a9ff0735a5af30e"
     expected_error_code: UPSTREAM_BINDING_MISMATCH
 
   - id: CIC-UPSTREAM-ORIENTATION-UNENFORCEABLE-001

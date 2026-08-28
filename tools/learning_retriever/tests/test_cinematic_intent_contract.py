@@ -1,4 +1,6 @@
 from pathlib import Path
+import hashlib
+import json
 import unittest
 
 import yaml
@@ -19,6 +21,12 @@ SCHEMA = yaml.safe_load(
     (REPO_ROOT / "10_运行时/screen_observable_audible_ir_schema.yaml").read_text(encoding="utf-8")
 )
 UPSTREAM_FIXTURE = SUITE["trusted_upstream_fixture"]
+
+
+def _trusted_binding_digest(source_ref, camera):
+    payload = {"source_authority_ref": source_ref, "camera": camera}
+    canonical = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(canonical).hexdigest()
 
 
 def _compile_case(case):
@@ -74,12 +82,13 @@ class CinematicIntentContractTests(unittest.TestCase):
                     envelope = case["upstream_lock_envelope"]
                     trusted_digest = case["trusted_upstream_source_digest"]
                 else:
+                    source_ref = "test_fixture://shot_plan/unrepresentable_camera_lock"
+                    trusted_digest = _trusted_binding_digest(source_ref, case["camera_lock"])
                     envelope = {
-                        "source_authority_ref": "test_fixture://shot_plan/unrepresentable_camera_lock",
-                        "source_material_digest": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+                        "source_authority_ref": source_ref,
+                        "source_material_digest": trusted_digest,
                         "camera": case["camera_lock"],
                     }
-                    trusted_digest = "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
                 with self.assertRaises(CinematicIntentContractError) as ctx:
                     compile_cinematic_intent_contract(
                         contract_by_id[case["contract_ref"]],

@@ -9,6 +9,7 @@ remains in ``10_运行时/screen_observable_audible_ir_schema.yaml``.
 from __future__ import annotations
 
 from dataclasses import dataclass
+import hashlib
 import json
 import re
 from pathlib import Path
@@ -212,6 +213,23 @@ def _validate_trusted_upstream_lock_envelope(
             "CONTRACT_UNKNOWN_NESTED_FIELD",
             f"unknown upstream camera lock fields: {sorted(unknown_camera)}",
         )
+    binding_payload = {
+        "source_authority_ref": source_ref,
+        "camera": camera,
+    }
+    canonical_binding = json.dumps(
+        binding_payload,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    computed_digest = hashlib.sha256(canonical_binding).hexdigest()
+    if source_digest != computed_digest or trusted_digest != computed_digest:
+        raise CinematicIntentContractError(
+            "UPSTREAM_BINDING_MISMATCH",
+            "upstream lock payload, declared source digest and trusted invocation digest must match exactly",
+        )
+
     un_enforceable = set(camera) & _UNENFORCEABLE_CAMERA_LOCK_KEYS
     if un_enforceable:
         raise CinematicIntentContractError(

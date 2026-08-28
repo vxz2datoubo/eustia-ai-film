@@ -62,7 +62,7 @@ context:
   material_fields: [composition, color_intent]
 ```
 
-The downstream proposal cannot carry camera locks. Camera-lock authority enters through a separate upstream envelope, cross-bound to a trusted source digest. Current canonical `capture_intent` can mechanically propose only camera physical position and lens intent, so those are the only accepted lock surfaces in this runtime. Orientation, shot size, camera height and camera motion remain owned by upstream ShotPlan/Visible camera state and fail closed here rather than being accepted inertly.
+The downstream proposal cannot carry camera locks. Camera-lock authority enters through a separate upstream envelope whose canonical `source_authority_ref + camera` payload is SHA-256 hashed by the runtime and must exactly match both the envelope digest and a separately supplied trusted upstream digest. Current canonical `capture_intent` can mechanically propose only camera physical position and lens intent, so those are the only accepted lock surfaces in this runtime. Orientation, shot size, camera height and camera motion remain owned by upstream ShotPlan/Visible camera state and fail closed here rather than being accepted inertly.
 
 Example upstream lock envelope:
 
