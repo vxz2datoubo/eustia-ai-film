@@ -4,7 +4,7 @@ This module is a deterministic query-normalization layer. It does not store
 learning knowledge, change maturity, or become a new authority. It compiles
 surface director language into retrieval features consumed by the existing
 LearningRetriever and traces those features to canonical SOAC / EventGraphIR /
-BlockingIR / VisibleIR semantics.
+BlockingIR / VisibleIR / CinematicIntentIR semantics.
 """
 
 from __future__ import annotations
@@ -72,7 +72,9 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
     """Compile director language into retrieval-only mechanism features.
 
     Mechanism features require relational evidence. Surface nouns or verbs alone
-    are not promoted into causal/director mechanisms.
+    are not promoted into causal/director mechanisms. Cinematic vocabulary is
+    likewise bounded: style/capture/reference nouns may describe a valid intent,
+    while failure tokens require explicit problem evidence.
     """
     if not isinstance(task, str) or not task.strip():
         raise FeatureCompilationError("EMPTY_DIRECTOR_TASK")
@@ -396,6 +398,161 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
             "PerformanceIR.pause",
         )
 
+    # Cinematic visual grammar. These rules make visual-intent language
+    # retrievable without turning a style noun into a failure diagnosis.
+    generic_cinematic_terms = (
+        "电影感", "高级感", "cinematic", "masterpiece", "史诗感", "大片感", "dramatic lighting", "电影级",
+    )
+    generic_cinematic_problem_terms = (
+        "堆质量词", "只会堆", "像广告", "广告感", "像cg", "cg感", "像游戏", "游戏感", "油腻", "没有叙事理由",
+        "没叙事理由", "只像壁纸", "只是滤镜", "空泛电影感",
+    )
+    if _contains_any(text, generic_cinematic_terms) or _contains_any(text, generic_cinematic_problem_terms):
+        add(dramatic, "cinematic_visual_design")
+        if _contains_any(text, generic_cinematic_problem_terms):
+            add(failure, "generic_cinematic_style_stacking")
+        trace(
+            "cinematic_visual_design",
+            "CinematicIntentIR.unresolved_state",
+            "CinematicIntentIR.composition",
+            "CinematicIntentIR.visual_density",
+        )
+
+    unresolved_state_terms = (
+        "未解决状态", "不可解决状态", "人物只是站着", "只是摆拍", "画面没有事件", "没有故事钩子", "没有剧情缺口",
+        "只有情绪没有动作", "只有氛围没有事件",
+    )
+    if _contains_any(text, unresolved_state_terms):
+        add(dramatic, "cinematic_visual_design")
+        add(relation, "viewer_to_screen_information")
+        trace("unresolved_state_visualization", "CinematicIntentIR.unresolved_state", "ShotPlanIR.dramatic_function")
+
+    composition_terms = (
+        "构图", "机位", "空间压力", "关系压力", "观看立场", "摄影机为什么", "画面关系", "负空间", "前景遮挡",
+    )
+    composition_problem_terms = (
+        "构图没有理由", "构图没理由", "机位没有理由", "机位没理由", "构图漂亮但没意思", "像摆拍", "人物和空间没关系",
+        "没有空间压力", "没有关系压力", "随机构图", "套构图模板",
+    )
+    if _contains_any(text, composition_terms) or _contains_any(text, composition_problem_terms):
+        add(dramatic, "cinematic_visual_design")
+        add(relation, "relation_pressure")
+        add(spatial, "motivated_composition")
+        if _contains_any(text, composition_problem_terms):
+            add(failure, "composition_without_pressure")
+        trace(
+            "relation_pressure_composition",
+            "BlockingIR.power_center",
+            "CinematicIntentIR.relation_pressure",
+            "CinematicIntentIR.composition",
+        )
+
+    attention_terms = (
+        "视线流量", "注意流", "注意力", "观众第一眼", "观众看哪里", "看哪里", "注意落点", "视线入口", "视线落点",
+        "注意力交接", "attention handoff", "cutaway", "切回来", "空位揭示", "寻找原位置",
+    )
+    attention_problem_terms = (
+        "视线乱", "注意力乱", "视线断", "注意力断", "没有落点", "没落点", "不知道看哪里", "切回来找不到", "注意力跑掉",
+        "揭示没有冲击", "空位不明显",
+    )
+    if _contains_any(text, attention_terms) or _contains_any(text, attention_problem_terms):
+        add(dramatic, "attention_design")
+        add(relation, "viewer_to_screen_information")
+        add(spatial, "attention_path")
+        if _contains_any(text, attention_problem_terms):
+            add(failure, "attention_flow_break")
+        trace(
+            "attentional_flow",
+            "CinematicIntentIR.attention_flow",
+            "CinematicIntentIR.attention_handoff",
+            "TransitionContract.attention_handoff",
+        )
+
+    color_terms = ("色彩", "调色", "综合色", "色温", "颜色来源", "色彩命题", "光色", "强调色", "色域")
+    color_problem_terms = (
+        "像滤镜", "滤镜感", "直接染色", "统一染色", "全局滤镜", "颜色没有来源", "色彩没有来源", "调色太滤镜",
+    )
+    if _contains_any(text, color_terms) or _contains_any(text, color_problem_terms):
+        add(dramatic, "look_design")
+        add(spatial, "motivated_light_color")
+        if _contains_any(text, color_problem_terms):
+            add(failure, "color_as_filter")
+        trace(
+            "color_thesis",
+            "WorldStateIR.light_sources",
+            "CinematicIntentIR.color_intent",
+            "VisibleIR.lighting_evidence",
+            "VisibleIR.material_evidence",
+        )
+
+    density_problem_terms = (
+        "太脏", "画面脏", "纹理太多", "高频纹理", "噪点太多", "细节太多", "信息太满", "画面太满", "到处都很锐",
+        "全画面锐利", "细节抢戏", "纹理抢戏", "过度锐化", "高频脏噪点",
+    )
+    density_terms = ("视觉密度", "信息密度", "细节预算", "高光预算", "视觉层级", "主次层级")
+    if _contains_any(text, density_terms) or _contains_any(text, density_problem_terms):
+        add(dramatic, "visual_hierarchy")
+        add(spatial, "detail_hierarchy")
+        if _contains_any(text, density_problem_terms):
+            add(failure, "visual_density_overload")
+        trace(
+            "visual_density_budget",
+            "CinematicIntentIR.visual_density",
+            "VisibleIR.visual_hierarchy_evidence",
+        )
+
+    reference_terms = ("参考图", "参考素材", "动作参考", "构图参考", "风格参考", "白模", "clay", "previs")
+    reference_problem_terms = (
+        "参考图污染", "参考素材污染", "纹理污染", "带入错误纹理", "带入材质", "带入光线", "带入风格", "参考图太脏",
+        "动作参考太脏", "白模避免污染", "参考图抢权重", "参考图影响画质",
+    )
+    if _contains_any(text, reference_terms) or _contains_any(text, reference_problem_terms):
+        add(dramatic, "reference_control")
+        add(relation, "reference_to_generation")
+        add(spatial, "reference_responsibility_split")
+        if _contains_any(text, reference_problem_terms):
+            add(failure, "reference_appearance_contamination")
+        trace(
+            "reference_signal_decoupling",
+            "CinematicIntentIR.reference_signal_roles",
+            "VisibleIR.reference_leak_evidence",
+            "ModelAdapter.reference_signal_rule",
+        )
+
+    template_problem_terms = (
+        "镜头都一样", "构图都一样", "总是同一种构图", "总是同一个机位", "重复机位", "套模板", "模板化构图", "构图套路",
+        "每次都一样", "镜头套路化",
+    )
+    if _contains_any(text, template_problem_terms):
+        add(dramatic, "shot_variation")
+        add(failure, "template_composition_repetition")
+        trace(
+            "anti_template_composition",
+            "CinematicIntentIR.anti_template_signature",
+            "ShotPlanIR.sequence_function_signature",
+            "ShotPlanIR.prior_function_overlap",
+        )
+
+    capture_terms = (
+        "35mm", "16mm", "65mm", "胶片", "kodak", "柯达", "minidv", "mini dv", "监控画面", "旧广播", "转拍", "鱼眼",
+        "成像介质", "capture substrate",
+    )
+    capture_problem_terms = (
+        "乱加胶片", "为了电影感加胶片", "为了电影感用35mm", "没有成像理由", "没成像理由", "成像介质没理由", "只是为了高级感",
+        "无动机鱼眼", "无理由监控",
+    )
+    if _contains_any(text, capture_terms):
+        add(dramatic, "look_design")
+        add(spatial, "capture_substrate")
+        if _contains_any(text, capture_problem_terms):
+            add(failure, "unmotivated_capture_style")
+        trace("motivated_capture_substrate", "CinematicIntentIR.capture_intent", "VisibleIR.camera_fields")
+    elif _contains_any(text, capture_problem_terms):
+        add(dramatic, "look_design")
+        add(spatial, "capture_substrate")
+        add(failure, "unmotivated_capture_style")
+        trace("motivated_capture_substrate", "CinematicIntentIR.capture_intent", "VisibleIR.camera_fields")
+
     # Pursuit/escape can exist without a known target. Keep the action observable,
     # but do not fabricate a locatable target or target relation.
     if has_pursuit:
@@ -602,9 +759,18 @@ def validate_semantic_dependencies(project_root: str | Path) -> list[str]:
                 "prop_interaction", "final_positions",
             }
         },
+        "CinematicIntentIR": {
+            "fields": {
+                "unresolved_state", "viewer_position", "relation_pressure", "attention_flow", "composition",
+                "color_intent", "capture_intent", "visual_density", "reference_signal_roles",
+                "anti_template_signature", "attention_handoff",
+            }
+        },
         "VisibleIR": {
             "entity_fields": {"relative_position", "body_orientation", "gaze_target", "current_action", "support_or_contact"},
-            "environment_fields": {"environmental_response", "canonical_background_evidence"},
+            "environment_fields": {
+                "environmental_response", "canonical_background_evidence", "visual_hierarchy_evidence", "reference_leak_evidence",
+            },
         },
     }
     for layer_name, field_groups in required_fields.items():
