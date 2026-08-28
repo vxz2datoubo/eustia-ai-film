@@ -118,6 +118,40 @@ class CinematicVisualGrammarCompilerTests(unittest.TestCase):
         self.assertEqual(source["status"], "pinned_evidence_only")
         self.assertEqual(source["authority_role"], "external_candidate_research_only")
         self.assertNotIn("cinema_dna_21x9x3", project.get("external_skills", {}))
+        self.assertEqual(
+            project["effective_sources"]["11_验收/canonical_migration_integrity_audit.md"],
+            "github_verified",
+        )
+
+    def test_canonical_method_anchor_and_director_skill_registration_exist(self):
+        method = (REPO_ROOT / "01_AI电影系统/AI电影系统.md").read_text(encoding="utf-8")
+        self.assertIn("CINEMATIC-VISUAL-GRAMMAR-001", method)
+        self.assertIn("S25-23 / CINEMATIC-VISUAL-GRAMMAR-001", method)
+
+    def test_read_write_and_evidence_bindings_are_consistent(self):
+        read_sets = yaml.safe_load((REPO_ROOT / "10_运行时/read_sets.yaml").read_text(encoding="utf-8"))
+        directing = read_sets["read_sets"]["directing"]["conditional"]
+        research = read_sets["read_sets"]["system_research"]["conditional"]
+        for bindings in (directing, research):
+            self.assertIn("cinematic_visual_grammar_evidence", bindings)
+            self.assertIn("cinematic_visual_grammar_regression", bindings)
+
+        write_routes = yaml.safe_load((REPO_ROOT / "10_运行时/write_routes.yaml").read_text(encoding="utf-8"))["routes"]
+        self.assertEqual(
+            write_routes["cinematic_visual_grammar_research_evidence"],
+            "09_资料证据/Cinematic Visual Grammar外部研究与融合证据.md",
+        )
+        self.assertEqual(
+            write_routes["cinematic_visual_grammar_regression_case"],
+            "11_验收/cinematic_visual_grammar_regression_cases.yaml",
+        )
+
+        schema = yaml.safe_load((REPO_ROOT / "10_运行时/screen_observable_audible_ir_schema.yaml").read_text(encoding="utf-8"))
+        self.assertEqual(
+            schema["authority_and_interfaces"]["research_evidence"],
+            "09_资料证据/Cinematic Visual Grammar外部研究与融合证据.md",
+        )
+        self.assertTrue((REPO_ROOT / schema["authority_and_interfaces"]["research_evidence"]).exists())
 
     def test_candidate_skill_suite_never_self_promotes(self):
         self.assertEqual(SUITE["status"], "candidate")
