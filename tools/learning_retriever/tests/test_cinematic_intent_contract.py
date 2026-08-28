@@ -2,6 +2,7 @@ from pathlib import Path
 import unittest
 
 import yaml
+import learning_retriever
 
 from learning_retriever.cinematic_intent import (
     CinematicIntentContractError,
@@ -77,6 +78,12 @@ class CinematicIntentContractTests(unittest.TestCase):
             compile_cinematic_intent_contract(case["contract"], project_root=REPO_ROOT)
         self.assertEqual(ctx.exception.code, "MISSING_TRUSTED_UPSTREAM_BINDING")
         self.assertIn(ctx.exception.code, STRUCTURAL_GATE_CODES)
+
+    def test_trusted_camera_capability_is_not_public_package_api(self):
+        self.assertFalse(hasattr(learning_retriever, "TrustedUpstreamLockEnvelope"))
+        self.assertFalse(hasattr(learning_retriever, "_mint_trusted_upstream_lock_for_orchestration"))
+        self.assertNotIn("TrustedUpstreamLockEnvelope", getattr(learning_retriever, "__all__", []))
+        self.assertNotIn("_mint_trusted_upstream_lock_for_orchestration", getattr(learning_retriever, "__all__", []))
 
     def test_serialized_caller_cannot_mint_trusted_lock_authority(self):
         case = next(case for case in SUITE["compile_cases"] if case["id"] == "CIC-VALID-MINIMAL-001")
