@@ -32,6 +32,8 @@ policy:
   minimax_h3_official_skill_default_active: false
   minimax_h3_official_skill_must_not_route_generic_generation: true
   minimax_h3_official_format_authority_over_local_h3_syntax: true
+  cinematic_visual_grammar_external_source_is_evidence_only: true
+  cinematic_visual_grammar_cannot_become_second_director_authority: true
 
 canonical:
   project_entry: 项目入口.md
@@ -50,6 +52,7 @@ canonical:
   cdance25_real_generation_feedback: 08_系统学习/C-DANCE2.5真实生成反馈库.md
   golden_prompt_protocol: 08_系统学习/优秀提示词案例学习协议.md
   evidence_index: 09_资料证据/官方资料与证据索引.md
+  cinematic_visual_grammar_evidence: 09_资料证据/Cinematic Visual Grammar外部研究与融合证据.md
   golden_prompt_evidence: 09_资料证据/优秀提示词案例学习证据索引.md
   golden_case_director_pull_evidence: 09_资料证据/导演级拉片与低运动表演证据索引.md
   proactive_assistance_and_cost_routing_evidence: 09_资料证据/主动协作与成本路由证据索引.md
@@ -103,6 +106,7 @@ effective_sources:
   08_系统学习/C-DANCE2.5真实生成反馈库.md: github_verified
   08_系统学习/优秀提示词案例学习协议.md: github_verified
   09_资料证据/官方资料与证据索引.md: github_verified
+  09_资料证据/Cinematic Visual Grammar外部研究与融合证据.md: github_verified
   09_资料证据/优秀提示词案例学习证据索引.md: github_verified
   09_资料证据/导演级拉片与低运动表演证据索引.md: github_verified
   09_资料证据/主动协作与成本路由证据索引.md: github_verified
@@ -178,6 +182,27 @@ external_skills:
       - ai_film_directing
       - seedance_seedream_or_other_model_prompting
     refresh_policy: compare_upstream_commit_and_source_blobs_before_update
+
+external_research_sources:
+  cinema_dna_21x9x3:
+    status: pinned_evidence_only
+    upstream_repository: dacnay816y62-hub/cinema-dna-21x9x3
+    upstream_commit: 4e3ec03b0a2ac5ebf5ceb9f4bfac12ec60f54ef1
+    skill_blob: 4d2f0871f492ffed3a9a8babf0e1641eed10e0d8
+    license_status_at_ingestion: no_license_detected
+    local_evidence_summary: 09_资料证据/Cinematic Visual Grammar外部研究与融合证据.md
+    authority_role: external_candidate_research_only
+    cannot_override:
+      - project_story
+      - character
+      - scene
+      - map
+      - asset
+      - continuity
+      - ai_film_directing
+      - model_adapter_authority
+      - learning_maturity
+    refresh_policy: compare_upstream_commit_before_future_research_refresh
 
 external_binary_sources:
   primary: ChatGPT Library / Project
