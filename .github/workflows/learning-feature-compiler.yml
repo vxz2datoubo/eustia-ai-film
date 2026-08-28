@@ -54,13 +54,24 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
-          import subprocess
-          import yaml
 
-          workflow = yaml.safe_load(Path('.github/workflows/tmp-cinematic-visual-grammar-append.yml').read_text(encoding='utf-8'))
-          steps = workflow['jobs']['append-canonical-method']['steps']
-          script = next(step['run'] for step in steps if step.get('name') == 'Append candidate method without rewriting existing canonical content')
-          subprocess.run(['bash', '-lc', script], check=True)
+          carrier = Path('.github/workflows/tmp-cinematic-visual-grammar-append.yml').read_text(encoding='utf-8')
+          begin_marker = "          section = r'''\n"
+          end_marker = "\n'''\n\n          text = text.replace"
+          begin = carrier.index(begin_marker) + len(begin_marker)
+          end = carrier.index(end_marker, begin)
+          section = carrier[begin:end]
+
+          path = Path('01_AI电影系统/AI电影系统.md')
+          text = path.read_text(encoding='utf-8')
+          anchor = 'CINEMATIC-VISUAL-GRAMMAR-001'
+          if anchor in text:
+              print('anchor already exists; no append needed')
+              raise SystemExit(0)
+
+          text = text.replace('last_updated: 2026-08-13', 'last_updated: 2026-08-28', 1)
+          path.write_text(text.rstrip() + '\n\n' + section.strip() + '\n', encoding='utf-8')
+          print('canonical append complete')
           PY
       - name: Commit canonical append to integration branch
         if: github.event.pull_request.number == 21 && github.head_ref == 'gpt/cinematic-visual-grammar-integration'
