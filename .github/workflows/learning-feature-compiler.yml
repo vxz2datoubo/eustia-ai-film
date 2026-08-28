@@ -79,10 +79,34 @@ jobs:
         run: |
           if git diff --quiet -- '01_AI电影系统/AI电影系统.md'; then
             echo 'No canonical append needed'
+          else
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add '01_AI电影系统/AI电影系统.md'
+            git commit -m 'Integrate cinematic visual grammar into canonical AI film system'
+            git push origin HEAD:gpt/cinematic-visual-grammar-integration
+          fi
+      - name: Run bounded integration finalizer
+        if: github.event.pull_request.number == 21 && github.head_ref == 'gpt/cinematic-visual-grammar-integration'
+        run: |
+          python tools/tmp_finalize_cinematic_visual_grammar.py
+      - name: Commit bounded integration finalization
+        if: github.event.pull_request.number == 21 && github.head_ref == 'gpt/cinematic-visual-grammar-integration'
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo 'No finalization changes needed'
             exit 0
           fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add '01_AI电影系统/AI电影系统.md'
-          git commit -m 'Integrate cinematic visual grammar into canonical AI film system'
+          git add \
+            'PROJECT_INDEX.yaml' \
+            '01_AI电影系统/AI电影系统.md' \
+            '10_运行时/read_sets.yaml' \
+            '10_运行时/write_routes.yaml' \
+            '10_运行时/screen_observable_audible_ir_schema.yaml' \
+            '11_验收/cinematic_visual_grammar_regression_cases.yaml' \
+            'tools/learning_retriever/learning_retriever/feature_compiler.py'
+          git commit -m 'Finalize cinematic visual grammar runtime bindings'
           git push origin HEAD:gpt/cinematic-visual-grammar-integration
