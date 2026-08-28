@@ -27,6 +27,54 @@ V1.1 remains deterministic and fail-closed. An empty or unrecognized natural-lan
 
 Cross-surface regressions are canonicalized in `11_验收/director_feature_compiler_regression_cases.yaml` and CI executes that file directly, including different characters, scenes and wording that must resolve to compatible mechanisms or the same canonical learning case when such a case exists.
 
+## CinematicIntent contract runtime
+
+When the canonical SOAC schema contains `CinematicIntentIR`, this package also exposes a bounded mechanical contract runtime in `learning_retriever.cinematic_intent`. It does **not** decide how a shot should look. Directing method remains in `01_AI电影系统/AI电影系统.md#CINEMATIC-VISUAL-GRAMMAR-001`; the executable field/static-check vocabulary remains in `10_运行时/screen_observable_audible_ir_schema.yaml#CinematicIntentIR`.
+
+The contract runtime can:
+
+- reject unknown or authority-violating fields before compilation;
+- reuse canonical SOAC warning/error IDs for static evaluation;
+- compare a declared camera position against a locked camera contract;
+- compile only explicitly material visual-intent fields into the current-generation overlay;
+- require provenance for every emitted material field;
+- emit reverse-eval expectations by carrying the declared value and provenance forward without inventing new observations.
+
+It cannot mutate Blocking, map, story, character, asset, continuity or learning truth. Aesthetic incompleteness remains a warning unless a canonical or locked contract is actually violated.
+
+Example YAML contract:
+
+```yaml
+contract_id: DEMO-CINEMATIC-INTENT
+intent:
+  composition:
+    primary_mechanism: lateral_pressure
+    camera_reason: 保持右到左逃亡方向清楚可读
+  color_intent:
+    color_thesis: 阴冷石城中保留人物真实肤色与布料差异
+    physical_color_sources: [灰石墙, 阴天自然光, 衣物本色]
+provenance:
+  composition:
+    source: director_locked_camera_plan
+  color_intent:
+    source: scene_look_plan
+context:
+  material_fields: [composition, color_intent]
+locked_contracts:
+  camera:
+    position: exterior_side
+```
+
+Run it directly:
+
+```bash
+PYTHONPATH=tools/learning_retriever python -m learning_retriever.cinematic_intent \
+  --project-root . \
+  --contract cinematic_intent.yaml
+```
+
+Targeted contract regressions live in `11_验收/cinematic_intent_contract_regression_cases.yaml` and are executed explicitly by CI.
+
 ## CLI
 
 Validate the existing recall index:
