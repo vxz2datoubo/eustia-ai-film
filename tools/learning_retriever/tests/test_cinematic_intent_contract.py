@@ -109,6 +109,34 @@ class CinematicIntentContractTests(unittest.TestCase):
         self.assertIn("REFERENCE_APPEARANCE_LEAK_RISK", {item["code"] for item in result["diagnostics"]})
         self.assertTrue(SUITE["gates"]["no_model_specific_behavior_universalized"])
 
+    def test_project_index_registers_contract_regression_without_new_method_authority(self):
+        project = yaml.safe_load((REPO_ROOT / "PROJECT_INDEX.yaml").read_text(encoding="utf-8"))
+        expected = "11_验收/cinematic_intent_contract_regression_cases.yaml"
+        self.assertEqual(project["canonical"]["cinematic_intent_contract_regression_cases"], expected)
+        self.assertEqual(project["effective_sources"][expected], "github_verified")
+        self.assertTrue(project["policy"]["cinematic_intent_contract_runtime_is_execution_only"])
+        self.assertEqual(
+            project["canonical"]["ai_film_system"],
+            "01_AI电影系统/AI电影系统.md",
+        )
+        self.assertEqual(
+            project["canonical"]["screen_observable_audible_ir_schema"],
+            "10_运行时/screen_observable_audible_ir_schema.yaml",
+        )
+
+    def test_write_route_for_contract_regression_is_unique(self):
+        routes = yaml.safe_load((REPO_ROOT / "10_运行时/write_routes.yaml").read_text(encoding="utf-8"))["routes"]
+        expected = "11_验收/cinematic_intent_contract_regression_cases.yaml"
+        self.assertEqual(routes["cinematic_intent_contract_regression_case"], expected)
+        matches = [name for name, target in routes.items() if target == expected]
+        self.assertEqual(matches, ["cinematic_intent_contract_regression_case"])
+
+    def test_ci_triggers_and_executes_contract_regression(self):
+        workflow = (REPO_ROOT / ".github/workflows/learning-feature-compiler.yml").read_text(encoding="utf-8")
+        self.assertIn("11_验收/cinematic_intent_contract_regression_cases.yaml", workflow)
+        self.assertIn("test_cinematic_intent_contract.py", workflow)
+        self.assertNotIn("contents: write", workflow)
+
 
 if __name__ == "__main__":
     unittest.main()
