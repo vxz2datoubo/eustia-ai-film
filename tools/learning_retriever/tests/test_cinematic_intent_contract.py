@@ -89,7 +89,6 @@ class CinematicIntentContractTests(unittest.TestCase):
             )
         self.assertEqual(ctx.exception.code, "MISSING_TRUSTED_UPSTREAM_BINDING")
 
-        # Plain mappings/digests are no longer accepted invocation channels at all.
         with self.assertRaises(TypeError):
             compile_cinematic_intent_contract(
                 case["contract"],
@@ -97,6 +96,9 @@ class CinematicIntentContractTests(unittest.TestCase):
                 upstream_lock_envelope={"source_authority_ref": "caller://forged", "camera": forged_camera},
                 trusted_upstream_source_digest="0" * 64,
             )
+        self.assertTrue(SUITE["policy"]["serialized_upstream_lock_authority_forbidden"])
+        self.assertTrue(SUITE["policy"]["trusted_camera_lock_capability_process_local_only"])
+        self.assertTrue(SUITE["gates"]["serialized_caller_cannot_mint_camera_lock_authority"])
 
     def test_unenforceable_lock_surfaces_fail_closed_at_trusted_boundary(self):
         for field in ("orientation", "shot_size", "camera_height", "camera_motion"):
@@ -104,7 +106,6 @@ class CinematicIntentContractTests(unittest.TestCase):
                 with self.assertRaises(CinematicIntentContractError) as ctx:
                     _trusted_lock({field: "forbidden_surface"})
                 self.assertEqual(ctx.exception.code, "UNENFORCEABLE_CAMERA_LOCK_SURFACE")
-
 
     def test_matching_trusted_position_lock_is_preserved_in_receipt(self):
         case = next(case for case in SUITE["compile_cases"] if case["id"] == "CIC-VALID-MINIMAL-001")
@@ -181,6 +182,8 @@ class CinematicIntentContractTests(unittest.TestCase):
         self.assertEqual(project["canonical"]["cinematic_intent_contract_regression_cases"], expected)
         self.assertEqual(project["effective_sources"][expected], "github_verified")
         self.assertTrue(project["policy"]["cinematic_intent_contract_runtime_is_execution_only"])
+        self.assertTrue(project["policy"]["cinematic_intent_camera_lock_authority_must_be_process_local_non_serialized"])
+        self.assertTrue(project["policy"]["cinematic_intent_serialized_callers_cannot_mint_camera_lock_authority"])
         self.assertEqual(
             project["canonical"]["ai_film_system"],
             "01_AI电影系统/AI电影系统.md",
