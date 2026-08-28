@@ -25,7 +25,6 @@ def insert_after(text: str, anchor: str, addition: str, *, path: str) -> str:
     return text.replace(anchor, anchor + addition, 1)
 
 
-# 1. Restore an existing PROJECT_INDEX effective-source line accidentally lost in the draft delta.
 path = "PROJECT_INDEX.yaml"
 text = load(path)
 text = insert_after(
@@ -36,7 +35,6 @@ text = insert_after(
 )
 save(path, text)
 
-# 2. Wire the dedicated evidence/regression files into minimum targeted read sets.
 path = "10_运行时/read_sets.yaml"
 text = load(path)
 text = insert_after(
@@ -55,7 +53,6 @@ text = insert_after(
 )
 save(path, text)
 
-# 3. Give write_routes explicit unique destinations for this evidence and targeted regression family.
 path = "10_运行时/write_routes.yaml"
 text = load(path)
 text = insert_after(
@@ -67,7 +64,6 @@ text = insert_after(
 )
 save(path, text)
 
-# 4. Correct the SOAC evidence pointer to the newly registered evidence source.
 path = "10_运行时/screen_observable_audible_ir_schema.yaml"
 text = load(path)
 text = replace_exact(
@@ -78,7 +74,6 @@ text = replace_exact(
 )
 save(path, text)
 
-# 5. Register the new method in the existing DirectorSkills invocation list instead of leaving it as an orphan chapter.
 path = "01_AI电影系统/AI电影系统.md"
 text = load(path)
 text = replace_exact(
@@ -95,8 +90,6 @@ text = insert_after(
 )
 save(path, text)
 
-# 6. Tighten natural-language semantics: generic camera/composition discussion may invoke visual design,
-#    but must not fabricate a relation-pressure relation unless pressure/viewer-position evidence exists.
 path = "tools/learning_retriever/learning_retriever/feature_compiler.py"
 text = load(path)
 old = '''    composition_terms = (\n        "构图", "机位", "空间压力", "关系压力", "观看立场", "摄影机为什么", "画面关系", "负空间", "前景遮挡",\n    )\n    composition_problem_terms = (\n        "构图没有理由", "构图没理由", "机位没有理由", "机位没理由", "构图漂亮但没意思", "像摆拍", "人物和空间没关系",\n        "没有空间压力", "没有关系压力", "随机构图", "套构图模板",\n    )\n    if _contains_any(text, composition_terms) or _contains_any(text, composition_problem_terms):\n        add(dramatic, "cinematic_visual_design")\n        add(relation, "relation_pressure")\n        add(spatial, "motivated_composition")\n        if _contains_any(text, composition_problem_terms):\n            add(failure, "composition_without_pressure")\n        trace(\n            "relation_pressure_composition",\n            "BlockingIR.power_center",\n            "CinematicIntentIR.relation_pressure",\n            "CinematicIntentIR.composition",\n        )\n'''
@@ -104,10 +97,9 @@ new = '''    composition_terms = (\n        "构图", "机位", "摄影机位置
 text = replace_exact(text, old, new, path=path)
 save(path, text)
 
-# 7. Extend the machine regression suite with a positive guard for ordinary camera language.
 path = "11_验收/cinematic_visual_grammar_regression_cases.yaml"
 text = load(path)
-anchor = '''  - id: REG-CAPTURE-SUBSTRATE-POSITIVE-001\n'''
+anchor = '''  - id: REG-CVG-CAPTURE-GUARD-001\n'''
 case = '''  - id: REG-COMPOSITION-CAMERA-POSITIVE-001\n    input: "固定机位拍摄，保持现有构图。"\n    expected_present:\n      dramatic_function: cinematic_visual_design\n      spatial_action_feature: motivated_composition\n    expected_absent:\n      relation_type: relation_pressure\n      failure_mechanism: composition_without_pressure\n    expected_route: CINEMATIC_VISUAL_GRAMMAR\n\n'''
 if "REG-COMPOSITION-CAMERA-POSITIVE-001" not in text:
     if anchor not in text:
