@@ -35,7 +35,7 @@ The contract runtime can:
 
 - reject unknown or authority-violating fields before compilation;
 - reuse canonical SOAC warning/error IDs for static evaluation;
-- compare a declared camera position against a locked camera contract;
+- compare declared camera position and lens intent against trusted upstream camera locks;
 - compile only explicitly material visual-intent fields into the current-generation overlay;
 - require provenance for every emitted material field;
 - emit reverse-eval expectations by carrying the declared value and provenance forward without inventing new observations.
