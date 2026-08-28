@@ -62,27 +62,9 @@ context:
   material_fields: [composition, color_intent]
 ```
 
-The downstream proposal cannot carry camera locks. Camera-lock authority enters through a separate upstream envelope whose canonical `source_authority_ref + camera` payload is SHA-256 hashed by the runtime and must exactly match both the envelope digest and a separately supplied trusted upstream digest. Current canonical `capture_intent` can mechanically propose only camera physical position and lens intent, so those are the only accepted lock surfaces in this runtime. Orientation, shot size, camera height and camera motion remain owned by upstream ShotPlan/Visible camera state and fail closed here rather than being accepted inertly.
+The downstream proposal cannot carry camera locks, and serialized YAML/JSON/CLI inputs cannot mint camera-lock authority through an envelope, digest, or caller-supplied token. Camera-sensitive `capture_intent` requires a process-local trusted upstream capability injected by orchestration; without it compilation fails closed. Current canonical `capture_intent` can mechanically propose only camera physical position and lens intent, so those are the only accepted lock surfaces. Orientation, shot size, camera height and camera motion remain upstream-owned and fail closed rather than being accepted inertly.
 
-Example upstream lock envelope:
-
-```yaml
-source_authority_ref: shot_plan://current_generation/camera_state
-source_material_digest: <sha256-of-trusted-upstream-source-material>
-camera:
-  position: exterior_side
-  lens_intent: side_profile_readability
-```
-
-Run it directly:
-
-```bash
-PYTHONPATH=tools/learning_retriever python -m learning_retriever.cinematic_intent \
-  --project-root . \
-  --contract cinematic_intent.yaml \
-  --upstream-lock-envelope upstream_camera_lock.yaml \
-  --trusted-upstream-source-digest <trusted-sha256-from-upstream-orchestration>
-```
+CLI note: the standalone contract CLI intentionally has no camera-lock authority input. Contracts that materially propose camera position/lens must run through the trusted orchestration path or fail closed.
 
 Targeted contract regressions live in `11_验收/cinematic_intent_contract_regression_cases.yaml` and are executed explicitly by CI.
 

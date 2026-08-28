@@ -8,10 +8,8 @@ remains in ``10_运行时/screen_observable_audible_ir_schema.yaml``.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-import hashlib
+from dataclasses import dataclass, field
 import json
-import re
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -51,13 +49,58 @@ class CinematicIntentContract:
     context: dict[str, Any]
 
 
+_TRUSTED_UPSTREAM_AUTHORITY_TOKEN = object()
+
+
 @dataclass(frozen=True)
 class TrustedUpstreamLockEnvelope:
-    """Invocation-bound upstream constraints, never deserialized from proposal intent."""
+    """Process-local trusted upstream constraints.
+
+    This value is intentionally not deserializable from YAML/JSON or CLI input.
+    It may only be minted by the trusted orchestration boundary inside this module.
+    Serialized downstream callers can never manufacture camera-lock authority.
+    """
 
     source_authority_ref: str
-    source_material_digest: str
     camera: dict[str, Any]
+    _authority_token: object = field(repr=False, compare=False)
+
+    def __post_init__(self) -> None:
+        if self._authority_token is not _TRUSTED_UPSTREAM_AUTHORITY_TOKEN:
+            raise CinematicIntentContractError(
+                "MISSING_TRUSTED_UPSTREAM_BINDING",
+                "trusted upstream lock capability cannot be constructed from downstream invocation data",
+            )
+
+
+def _mint_trusted_upstream_lock_for_orchestration(
+    *, source_authority_ref: str, camera: Mapping[str, Any]
+) -> TrustedUpstreamLockEnvelope:
+    """Internal orchestration boundary. Not exported and not reachable from CLI data."""
+    source_ref = str(source_authority_ref or "").strip()
+    if not source_ref:
+        raise CinematicIntentContractError(
+            "MISSING_TRUSTED_UPSTREAM_BINDING", "trusted source authority ref is required"
+        )
+    camera_map = _as_mapping(camera, field="trusted_upstream.camera")
+    unknown_camera = set(camera_map) - _UPSTREAM_CAMERA_LOCK_KEYS
+    if unknown_camera:
+        raise CinematicIntentContractError(
+            "CONTRACT_UNKNOWN_NESTED_FIELD",
+            f"unknown upstream camera lock fields: {sorted(unknown_camera)}",
+        )
+    un_enforceable = set(camera_map) & _UNENFORCEABLE_CAMERA_LOCK_KEYS
+    if un_enforceable:
+        raise CinematicIntentContractError(
+            "UNENFORCEABLE_CAMERA_LOCK_SURFACE",
+            "current CinematicIntentIR cannot mechanically propose/compare camera lock fields "
+            f"{sorted(un_enforceable)}; refusing inert lock authority",
+        )
+    return TrustedUpstreamLockEnvelope(
+        source_authority_ref=source_ref,
+        camera=camera_map,
+        _authority_token=_TRUSTED_UPSTREAM_AUTHORITY_TOKEN,
+    )
 
 
 _TOP_LEVEL_KEYS = {"contract_id", "intent", "provenance", "context"}
@@ -86,11 +129,9 @@ _CONTEXT_KEYS = {
     "model_version",
 }
 _CONTEXT_BOOLEAN_KEYS = {"material_attention_reveal", "reference_decoupling_applied"}
-_UPSTREAM_LOCK_ENVELOPE_KEYS = {"source_authority_ref", "source_material_digest", "camera"}
 _UPSTREAM_CAMERA_LOCK_KEYS = {"position", "orientation", "shot_size", "camera_height", "lens_intent", "camera_motion"}
 _ENFORCEABLE_CAMERA_LOCK_KEYS = {"position", "lens_intent"}
 _UNENFORCEABLE_CAMERA_LOCK_KEYS = _UPSTREAM_CAMERA_LOCK_KEYS - _ENFORCEABLE_CAMERA_LOCK_KEYS
-_SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 
 _NESTED_FIELD_MAP = {
     "relation_pressure": "relation_pressure_fields",
@@ -164,85 +205,6 @@ def _schema_contract(schema: Mapping[str, Any]) -> tuple[set[str], dict[str, set
     for intent_field, schema_field in _NESTED_FIELD_MAP.items():
         nested[intent_field] = set(layer.get(schema_field) or [])
     return fields, nested
-
-
-def _validate_trusted_upstream_lock_envelope(
-    raw: Mapping[str, Any] | None,
-    *,
-    trusted_upstream_source_digest: str | None,
-) -> TrustedUpstreamLockEnvelope:
-    """Cross-bind a separately supplied upstream lock envelope to trusted invocation evidence.
-
-    The downstream CinematicIntent proposal cannot carry this envelope.  The trusted
-    digest is a separate invocation input owned by the upstream orchestration path.
-    This runtime verifies equality and refuses lock surfaces it cannot mechanically
-    enforce instead of accepting inert authority-shaped fields.
-    """
-
-    if raw is None or _is_empty(trusted_upstream_source_digest):
-        raise CinematicIntentContractError(
-            "MISSING_TRUSTED_UPSTREAM_BINDING",
-            "CinematicIntent compilation requires a separate upstream lock envelope and trusted source digest",
-        )
-    envelope = _as_mapping(raw, field="upstream_lock_envelope")
-    unknown = set(envelope) - _UPSTREAM_LOCK_ENVELOPE_KEYS
-    if unknown:
-        raise CinematicIntentContractError(
-            "CONTRACT_UNKNOWN_FIELD",
-            f"unknown upstream lock envelope fields: {sorted(unknown)}",
-        )
-
-    source_ref = str(envelope.get("source_authority_ref") or "").strip()
-    source_digest = str(envelope.get("source_material_digest") or "").strip().lower()
-    trusted_digest = str(trusted_upstream_source_digest or "").strip().lower()
-    if not source_ref or not _SHA256_RE.fullmatch(source_digest) or not _SHA256_RE.fullmatch(trusted_digest):
-        raise CinematicIntentContractError(
-            "UPSTREAM_BINDING_MISMATCH",
-            "upstream lock binding requires a non-empty authority ref and exact SHA-256 source digests",
-        )
-    if source_digest != trusted_digest:
-        raise CinematicIntentContractError(
-            "UPSTREAM_BINDING_MISMATCH",
-            "upstream lock envelope source digest does not match trusted invocation digest",
-        )
-
-    camera = _as_mapping(envelope.get("camera"), field="upstream_lock_envelope.camera")
-    unknown_camera = set(camera) - _UPSTREAM_CAMERA_LOCK_KEYS
-    if unknown_camera:
-        raise CinematicIntentContractError(
-            "CONTRACT_UNKNOWN_NESTED_FIELD",
-            f"unknown upstream camera lock fields: {sorted(unknown_camera)}",
-        )
-    binding_payload = {
-        "source_authority_ref": source_ref,
-        "camera": camera,
-    }
-    canonical_binding = json.dumps(
-        binding_payload,
-        ensure_ascii=False,
-        sort_keys=True,
-        separators=(",", ":"),
-    ).encode("utf-8")
-    computed_digest = hashlib.sha256(canonical_binding).hexdigest()
-    if source_digest != computed_digest or trusted_digest != computed_digest:
-        raise CinematicIntentContractError(
-            "UPSTREAM_BINDING_MISMATCH",
-            "upstream lock payload, declared source digest and trusted invocation digest must match exactly",
-        )
-
-    un_enforceable = set(camera) & _UNENFORCEABLE_CAMERA_LOCK_KEYS
-    if un_enforceable:
-        raise CinematicIntentContractError(
-            "UNENFORCEABLE_CAMERA_LOCK_SURFACE",
-            "current CinematicIntentIR cannot mechanically propose/compare camera lock fields "
-            f"{sorted(un_enforceable)}; refusing inert lock authority",
-        )
-
-    return TrustedUpstreamLockEnvelope(
-        source_authority_ref=source_ref,
-        source_material_digest=source_digest,
-        camera=camera,
-    )
 
 
 def validate_cinematic_intent_contract(
@@ -511,16 +473,36 @@ def compile_cinematic_intent_contract(
     raw: Mapping[str, Any],
     *,
     project_root: str | Path,
-    upstream_lock_envelope: Mapping[str, Any] | None = None,
-    trusted_upstream_source_digest: str | None = None,
+    trusted_upstream_lock: TrustedUpstreamLockEnvelope | None = None,
 ) -> dict[str, Any]:
-    """Validate, cross-bind upstream locks, and compile a minimal material overlay."""
+    """Validate and compile a minimal material overlay.
+
+    Camera-sensitive intent requires a process-local trusted capability. Ordinary
+    serialized invocation data has no field or digest knob that can mint authority.
+    """
 
     contract = validate_cinematic_intent_contract(raw, project_root=project_root)
-    trusted_locks = _validate_trusted_upstream_lock_envelope(
-        upstream_lock_envelope,
-        trusted_upstream_source_digest=trusted_upstream_source_digest,
+    capture = dict(contract.intent.get("capture_intent") or {})
+    camera_sensitive = any(
+        not _is_empty(capture.get(key))
+        for key in ("camera_physical_position", "lens_intent")
     )
+    if trusted_upstream_lock is None:
+        if camera_sensitive:
+            raise CinematicIntentContractError(
+                "MISSING_TRUSTED_UPSTREAM_BINDING",
+                "camera-sensitive CinematicIntent requires process-local trusted upstream authority",
+            )
+        trusted_locks = _mint_trusted_upstream_lock_for_orchestration(
+            source_authority_ref="runtime://no-camera-lock-required", camera={}
+        )
+    elif not isinstance(trusted_upstream_lock, TrustedUpstreamLockEnvelope):
+        raise CinematicIntentContractError(
+            "MISSING_TRUSTED_UPSTREAM_BINDING",
+            "trusted upstream lock must be a process-local capability, not serialized invocation data",
+        )
+    else:
+        trusted_locks = trusted_upstream_lock
     diagnostics = evaluate_cinematic_intent(
         contract,
         project_root=project_root,
@@ -561,7 +543,6 @@ def compile_cinematic_intent_contract(
         "reverse_eval_expectations": reverse_expectations,
         "upstream_lock_binding": {
             "source_authority_ref": trusted_locks.source_authority_ref,
-            "source_material_digest": trusted_locks.source_material_digest,
             "camera": dict(trusted_locks.camera),
             "proposal_can_mutate": False,
         },
@@ -575,16 +556,6 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Validate/compile canonical CinematicIntentIR contract")
     parser.add_argument("--project-root", default=str(Path(__file__).resolve().parents[3]))
     parser.add_argument("--contract", required=True, help="JSON or YAML downstream proposal file")
-    parser.add_argument(
-        "--upstream-lock-envelope",
-        required=True,
-        help="JSON or YAML upstream lock envelope supplied separately from the proposal",
-    )
-    parser.add_argument(
-        "--trusted-upstream-source-digest",
-        required=True,
-        help="trusted upstream source SHA-256 supplied by the orchestration boundary",
-    )
     args = parser.parse_args()
 
     path = Path(args.contract)
@@ -594,18 +565,10 @@ def main() -> int:
     else:
         raw = yaml.safe_load(text)
 
-    upstream_path = Path(args.upstream_lock_envelope)
-    upstream_text = upstream_path.read_text(encoding="utf-8")
-    if upstream_path.suffix.lower() == ".json":
-        upstream_raw = json.loads(upstream_text)
-    else:
-        upstream_raw = yaml.safe_load(upstream_text)
     try:
         result = compile_cinematic_intent_contract(
             raw,
             project_root=args.project_root,
-            upstream_lock_envelope=upstream_raw,
-            trusted_upstream_source_digest=args.trusted_upstream_source_digest,
         )
     except CinematicIntentContractError as exc:
         print(json.dumps({"status": "FAIL", "stage": "contract_gate", "code": exc.code, "error": exc.message}, ensure_ascii=False, indent=2))

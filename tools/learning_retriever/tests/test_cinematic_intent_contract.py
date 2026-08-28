@@ -1,6 +1,4 @@
 from pathlib import Path
-import hashlib
-import json
 import unittest
 
 import yaml
@@ -8,6 +6,8 @@ import yaml
 from learning_retriever.cinematic_intent import (
     CinematicIntentContractError,
     STRUCTURAL_GATE_CODES,
+    TrustedUpstreamLockEnvelope,
+    _mint_trusted_upstream_lock_for_orchestration,
     compile_cinematic_intent_contract,
     validate_cinematic_intent_contract,
 )
@@ -23,20 +23,24 @@ SCHEMA = yaml.safe_load(
 UPSTREAM_FIXTURE = SUITE["trusted_upstream_fixture"]
 
 
-def _trusted_binding_digest(source_ref, camera):
-    payload = {"source_authority_ref": source_ref, "camera": camera}
-    canonical = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
-    return hashlib.sha256(canonical).hexdigest()
+def _trusted_lock(camera=None, source_ref="test_fixture://trusted_orchestration/shot_plan"):
+    return _mint_trusted_upstream_lock_for_orchestration(
+        source_authority_ref=source_ref, camera=camera or {}
+    )
 
 
 def _compile_case(case):
+    envelope = case.get("upstream_lock_envelope")
+    if envelope:
+        camera = envelope.get("camera") or {}
+        source_ref = envelope.get("source_authority_ref") or "test_fixture://trusted_orchestration/shot_plan"
+    else:
+        camera = (UPSTREAM_FIXTURE.get("envelope") or {}).get("camera") or {}
+        source_ref = (UPSTREAM_FIXTURE.get("envelope") or {}).get("source_authority_ref") or "test_fixture://trusted_orchestration/shot_plan"
     return compile_cinematic_intent_contract(
         case["contract"],
         project_root=REPO_ROOT,
-        upstream_lock_envelope=case.get("upstream_lock_envelope", UPSTREAM_FIXTURE["envelope"]),
-        trusted_upstream_source_digest=case.get(
-            "trusted_upstream_source_digest", UPSTREAM_FIXTURE["trusted_source_digest"]
-        ),
+        trusted_upstream_lock=_trusted_lock(camera, source_ref),
     )
 
 
@@ -74,30 +78,33 @@ class CinematicIntentContractTests(unittest.TestCase):
         self.assertEqual(ctx.exception.code, "MISSING_TRUSTED_UPSTREAM_BINDING")
         self.assertIn(ctx.exception.code, STRUCTURAL_GATE_CODES)
 
-    def test_upstream_binding_and_unenforceable_lock_attacks_fail_closed(self):
-        contract_by_id = {case["id"]: case["contract"] for case in SUITE["compile_cases"]}
-        for case in SUITE["upstream_gate_cases"]:
-            with self.subTest(case=case["id"]):
-                if "upstream_lock_envelope" in case:
-                    envelope = case["upstream_lock_envelope"]
-                    trusted_digest = case["trusted_upstream_source_digest"]
-                else:
-                    source_ref = "test_fixture://shot_plan/unrepresentable_camera_lock"
-                    trusted_digest = _trusted_binding_digest(source_ref, case["camera_lock"])
-                    envelope = {
-                        "source_authority_ref": source_ref,
-                        "source_material_digest": trusted_digest,
-                        "camera": case["camera_lock"],
-                    }
+    def test_serialized_caller_cannot_mint_trusted_lock_authority(self):
+        case = next(case for case in SUITE["compile_cases"] if case["id"] == "CIC-VALID-MINIMAL-001")
+        forged_camera = {"position": "forged_downstream_position"}
+        with self.assertRaises(CinematicIntentContractError) as ctx:
+            TrustedUpstreamLockEnvelope(
+                source_authority_ref="caller://forged",
+                camera=forged_camera,
+                _authority_token=object(),
+            )
+        self.assertEqual(ctx.exception.code, "MISSING_TRUSTED_UPSTREAM_BINDING")
+
+        # Plain mappings/digests are no longer accepted invocation channels at all.
+        with self.assertRaises(TypeError):
+            compile_cinematic_intent_contract(
+                case["contract"],
+                project_root=REPO_ROOT,
+                upstream_lock_envelope={"source_authority_ref": "caller://forged", "camera": forged_camera},
+                trusted_upstream_source_digest="0" * 64,
+            )
+
+    def test_unenforceable_lock_surfaces_fail_closed_at_trusted_boundary(self):
+        for field in ("orientation", "shot_size", "camera_height", "camera_motion"):
+            with self.subTest(field=field):
                 with self.assertRaises(CinematicIntentContractError) as ctx:
-                    compile_cinematic_intent_contract(
-                        contract_by_id[case["contract_ref"]],
-                        project_root=REPO_ROOT,
-                        upstream_lock_envelope=envelope,
-                        trusted_upstream_source_digest=trusted_digest,
-                    )
-                self.assertEqual(ctx.exception.code, case["expected_error_code"])
-                self.assertIn(ctx.exception.code, STRUCTURAL_GATE_CODES)
+                    _trusted_lock({field: "forbidden_surface"})
+                self.assertEqual(ctx.exception.code, "UNENFORCEABLE_CAMERA_LOCK_SURFACE")
+
 
     def test_matching_trusted_position_lock_is_preserved_in_receipt(self):
         case = next(case for case in SUITE["compile_cases"] if case["id"] == "CIC-VALID-MINIMAL-001")
@@ -105,10 +112,6 @@ class CinematicIntentContractTests(unittest.TestCase):
         self.assertEqual(result["status"], "PASS")
         self.assertEqual(result["upstream_lock_binding"]["camera"], {"position": "exterior_side"})
         self.assertFalse(result["upstream_lock_binding"]["proposal_can_mutate"])
-        self.assertEqual(
-            result["upstream_lock_binding"]["source_material_digest"],
-            case["trusted_upstream_source_digest"],
-        )
 
     def test_runtime_diagnostics_are_declared_by_canonical_schema(self):
         declared = set()

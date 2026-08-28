@@ -1,10 +1,9 @@
 from pathlib import Path
-import hashlib
-import json
 import unittest
 
 from learning_retriever.cinematic_intent import (
     CinematicIntentContractError,
+    _mint_trusted_upstream_lock_for_orchestration,
     compile_cinematic_intent_contract,
     validate_cinematic_intent_contract,
 )
@@ -13,29 +12,12 @@ from learning_retriever.cinematic_intent import (
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
-def _binding(source_ref, camera):
-    payload = {"source_authority_ref": source_ref, "camera": camera}
-    canonical = json.dumps(
-        payload,
-        ensure_ascii=False,
-        sort_keys=True,
-        separators=(",", ":"),
-    ).encode("utf-8")
-    digest = hashlib.sha256(canonical).hexdigest()
-    return {
-        "source_authority_ref": source_ref,
-        "source_material_digest": digest,
-        "camera": camera,
-    }, digest
-
-
-def _compile(raw, *, camera=None, source_ref="test_fixture://shot_plan/no_camera_lock"):
-    envelope, digest = _binding(source_ref, camera or {})
+def _compile(raw, *, camera=None, source_ref="test_fixture://trusted_orchestration/no_camera_lock"):
+    trusted = _mint_trusted_upstream_lock_for_orchestration(
+        source_authority_ref=source_ref, camera=camera or {}
+    )
     return compile_cinematic_intent_contract(
-        raw,
-        project_root=REPO_ROOT,
-        upstream_lock_envelope=envelope,
-        trusted_upstream_source_digest=digest,
+        raw, project_root=REPO_ROOT, trusted_upstream_lock=trusted
     )
 
 
