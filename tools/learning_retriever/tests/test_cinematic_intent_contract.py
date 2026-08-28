@@ -124,6 +124,15 @@ class CinematicIntentContractTests(unittest.TestCase):
             "10_运行时/screen_observable_audible_ir_schema.yaml",
         )
 
+    def test_read_sets_bind_contract_regression_only_when_relevant(self):
+        read_sets = yaml.safe_load((REPO_ROOT / "10_运行时/read_sets.yaml").read_text(encoding="utf-8"))["read_sets"]
+        expected = "cinematic_intent_contract_regression_cases"
+        self.assertIn("cinematic_intent_contract_regression", read_sets["directing"]["conditional"])
+        self.assertIn(expected, read_sets["directing"]["conditional"]["cinematic_intent_contract_regression"])
+        self.assertIn("cinematic_intent_contract_regression", read_sets["system_research"]["conditional"])
+        self.assertIn(expected, read_sets["system_research"]["conditional"]["cinematic_intent_contract_regression"])
+        self.assertNotIn("cinematic_intent_contract_regression", read_sets["directing"]["always"])
+
     def test_write_route_for_contract_regression_is_unique(self):
         routes = yaml.safe_load((REPO_ROOT / "10_运行时/write_routes.yaml").read_text(encoding="utf-8"))["routes"]
         expected = "11_验收/cinematic_intent_contract_regression_cases.yaml"
