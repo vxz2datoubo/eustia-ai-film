@@ -580,6 +580,91 @@ routes:
       - targeted_repair
       - controlled_A_B_validation
 
+  - id: CINEMATIC_VISUAL_GRAMMAR
+    symptoms:
+      - 高级电影感但像广告
+      - 只会堆电影感质量词
+      - 构图漂亮但没有叙事理由
+      - 摄影机机位没有理由
+      - 人物和空间没有关系压力
+      - 观众不知道看哪里
+      - 切镜注意力交接失败
+      - 色彩像统一滤镜
+      - 颜色没有物理来源
+      - 画面纹理和高频细节太满
+      - 所有区域都又锐又亮又复杂
+      - 动作参考图把错误纹理材质光线带进成片
+      - 不同镜头反复套同一种构图模板
+      - 胶片鱼眼监控等成像方式只有电影感理由没有剧情理由
+    machine_triggers:
+      any_of:
+        dramatic_function:
+          - cinematic_visual_design
+          - attention_design
+          - look_design
+          - visual_hierarchy
+          - reference_control
+          - shot_variation
+        relation_type:
+          - viewer_to_screen_information
+          - relation_pressure
+          - reference_to_generation
+        spatial_action_features:
+          - attention_path
+          - motivated_composition
+          - motivated_light_color
+          - detail_hierarchy
+          - reference_responsibility_split
+          - capture_substrate
+        failure_mechanism:
+          - generic_cinematic_style_stacking
+          - composition_without_pressure
+          - attention_flow_break
+          - color_as_filter
+          - visual_density_overload
+          - reference_appearance_contamination
+          - template_composition_repetition
+          - unmotivated_capture_style
+    maturity: candidate
+    mandatory_reads:
+      - 10_运行时/screen_observable_audible_ir_schema.yaml#CinematicIntentIR
+      - 01_AI电影系统/AI电影系统.md#CINEMATIC-VISUAL-GRAMMAR-001
+    mandatory_scans:
+      - unresolved_state
+      - viewer_position
+      - relation_pressure
+      - blocking_before_camera
+      - attention_entry_roi
+      - attention_modulator_or_occluder
+      - decisive_information_roi
+      - withheld_or_peripheral_information
+      - attention_exit_roi
+      - attention_handoff_across_cut
+      - primary_composition_mechanism
+      - camera_reason
+      - color_thesis
+      - physical_color_sources
+      - practical_light_sources
+      - visual_density_budget
+      - primary_story_clue
+      - secondary_clue
+      - mundane_or_soft_regions
+      - capture_substrate_motivation
+      - reference_signal_roles
+      - non_authoritative_reference_signal_strength
+      - recent_composition_similarity
+      - anti_template_reuse_justification
+      - prompt_constraint_budget
+    candidate_axes:
+      - UNRESOLVED-STATE-VISUALIZATION-001
+      - RELATION-PRESSURE-COMPOSITION-001
+      - ATTENTIONAL-FLOW-001
+      - COLOR-THESIS-001
+      - VISUAL-DENSITY-BUDGET-001
+      - MOTIVATED-CAPTURE-SUBSTRATE-001
+      - ANTI-TEMPLATE-COMPOSITION-001
+      - REFERENCE-SIGNAL-DECOUPLING-002
+
   - id: MINIMAX_H3_PROMPT_COMPILATION
     symptoms:
       - MiniMax H3
