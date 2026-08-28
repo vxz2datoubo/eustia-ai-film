@@ -1,0 +1,5 @@
+Traceback (most recent call last):
+  File "/home/runner/work/eustia-ai-film/eustia-ai-film/tools/learning_retriever/_tmp_p1_lock_authority_remediation_v2.py", line 16, in <module>
+    assert n == 1, f'validator remove count={n}'
+           ^^^^^^
+AssertionError: validator remove count=0
