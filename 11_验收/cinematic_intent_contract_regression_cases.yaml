@@ -1,0 +1,276 @@
+suite_id: CINEMATIC_INTENT_CONTRACT_REGRESSION_V1
+status: candidate
+schema_authority: 10_运行时/screen_observable_audible_ir_schema.yaml#CinematicIntentIR
+method_authority: 01_AI电影系统/AI电影系统.md#CINEMATIC-VISUAL-GRAMMAR-001
+runtime: tools/learning_retriever/learning_retriever/cinematic_intent.py
+
+policy:
+  runtime_is_mechanical_contract_layer_only: true
+  may_invent_director_choices: false
+  may_rewrite_canonical_or_blocking: false
+  aesthetic_incompleteness_default_severity: WARNING
+  canonical_or_locked_contract_violation_may_be_ERROR: true
+  unknown_fields_fail_closed: true
+  material_overlay_requires_provenance: true
+  non_material_fields_must_not_enter_overlay: true
+  learning_maturity_unchanged: true
+
+compile_cases:
+  - id: CIC-VALID-MINIMAL-001
+    contract:
+      contract_id: CIC-VALID-MINIMAL-001
+      intent:
+        unresolved_state: "凯姆必须在被追上前穿过街区。"
+        composition:
+          primary_mechanism: lateral_pressure
+          camera_reason: "保持右到左的逃亡方向在画面中清楚可读。"
+          screen_pressure: "凯姆从画面右侧向左侧推进。"
+        color_intent:
+          color_thesis: "阴冷石城中保留人物肤色与布料真实差异。"
+          physical_color_sources: [灰石墙, 晴阴天自然光, 衣物本色]
+        visual_density:
+          primary_story_clue: 凯姆的横向移动
+          mundane_or_soft_regions: [远处屋顶, 非关键摊位]
+          detail_budget: selective
+        capture_intent:
+          lens_intent: side_profile_readability
+          camera_physical_position: exterior_side
+      provenance:
+        composition:
+          source: director_locked_camera_plan
+          source_field: camera_side
+        color_intent:
+          source: scene_look_plan
+          source_field: physical_sources
+      context:
+        material_fields: [composition, color_intent]
+      locked_contracts:
+        camera:
+          position: exterior_side
+    expected_status: PASS
+    expected_overlay_fields: [composition, color_intent]
+    expected_absent_overlay_fields: [unresolved_state, visual_density, capture_intent]
+    expected_diagnostics: []
+
+  - id: CIC-COMPOSITION-WARN-001
+    contract:
+      contract_id: CIC-COMPOSITION-WARN-001
+      intent:
+        composition:
+          primary_mechanism: centered_symmetry
+      provenance:
+        composition:
+          source: director_draft
+      context:
+        material_fields: [composition]
+    expected_status: WARN
+    expected_diagnostics: [COMPOSITION_MISSING_DRAMATIC_REASON]
+
+  - id: CIC-LOCKED-CAMERA-ERROR-001
+    contract:
+      contract_id: CIC-LOCKED-CAMERA-ERROR-001
+      intent:
+        capture_intent:
+          camera_physical_position: front_three_quarter
+      provenance:
+        capture_intent:
+          source: downstream_adapter_draft
+      context:
+        material_fields: [capture_intent]
+      locked_contracts:
+        camera:
+          position: exterior_side
+    expected_status: FAIL
+    expected_diagnostics: [CAMERA_SCOPE_CONFLICT]
+    expected_overlay_fields: []
+
+  - id: CIC-COLOR-WARN-001
+    contract:
+      contract_id: CIC-COLOR-WARN-001
+      intent:
+        color_intent:
+          color_thesis: "统一青橙电影感"
+      provenance:
+        color_intent:
+          source: look_draft
+      context:
+        material_fields: [color_intent]
+    expected_status: WARN
+    expected_diagnostics: [COLOR_SOURCE_UNGROUNDED]
+
+  - id: CIC-ATTENTION-HANDOFF-WARN-001
+    contract:
+      contract_id: CIC-ATTENTION-HANDOFF-WARN-001
+      intent:
+        attention_flow:
+          entry_roi: 凯姆
+          decisive_roi: 窗口
+      provenance:
+        attention_flow:
+          source: shot_plan
+      context:
+        material_fields: [attention_flow]
+        material_attention_reveal: true
+    expected_status: WARN
+    expected_diagnostics: [CUT_ATTENTION_HANDOFF_RISK]
+
+  - id: CIC-ATTENTION-FLOW-WARN-001
+    contract:
+      contract_id: CIC-ATTENTION-FLOW-WARN-001
+      intent:
+        attention_flow:
+          entry_roi: 群众
+          exit_roi: 钟楼
+      provenance:
+        attention_flow:
+          source: shot_plan
+      context:
+        material_fields: [attention_flow]
+    expected_status: WARN
+    expected_diagnostics: [ATTENTION_FLOW_UNRESOLVED]
+
+  - id: CIC-DENSITY-WARN-001
+    contract:
+      contract_id: CIC-DENSITY-WARN-001
+      intent:
+        visual_density:
+          primary_story_clue: 凯姆
+          detail_budget: all_regions_high
+          highlight_budget: max
+      provenance:
+        visual_density:
+          source: visual_draft
+      context:
+        material_fields: [visual_density]
+    expected_status: WARN
+    expected_diagnostics: [VISUAL_DENSITY_OVERLOAD]
+
+  - id: CIC-CAPTURE-MOTIVATED-001
+    contract:
+      contract_id: CIC-CAPTURE-MOTIVATED-001
+      intent:
+        capture_intent:
+          substrate_optional: 35mm_film
+          substrate_story_reason: "角色记忆段需要不同时间感知与颗粒响应。"
+          lens_intent: restrained_memory_distance
+      provenance:
+        capture_intent:
+          source: director_capture_plan
+      context:
+        material_fields: [capture_intent]
+    expected_status: PASS
+    expected_diagnostics_absent: [CAPTURE_SUBSTRATE_UNMOTIVATED]
+
+  - id: CIC-CAPTURE-UNMOTIVATED-001
+    contract:
+      contract_id: CIC-CAPTURE-UNMOTIVATED-001
+      intent:
+        capture_intent:
+          substrate_optional: 35mm_film
+      provenance:
+        capture_intent:
+          source: style_token_draft
+      context:
+        material_fields: [capture_intent]
+    expected_status: WARN
+    expected_diagnostics: [CAPTURE_SUBSTRATE_UNMOTIVATED]
+
+  - id: CIC-REFERENCE-LEAK-WARN-001
+    contract:
+      contract_id: CIC-REFERENCE-LEAK-WARN-001
+      intent:
+        reference_signal_roles:
+          action: clean_motion_reference
+          non_authoritative_signals_to_suppress: [wrong_texture, wrong_lighting]
+      provenance:
+        reference_signal_roles:
+          source: multimodal_reference_plan
+      context:
+        material_fields: [reference_signal_roles]
+        reference_decoupling_applied: false
+        model: C-DANCE
+        model_version: "2.5"
+    expected_status: WARN
+    expected_diagnostics: [REFERENCE_APPEARANCE_LEAK_RISK]
+
+  - id: CIC-TEMPLATE-WARN-001
+    contract:
+      contract_id: CIC-TEMPLATE-WARN-001
+      intent:
+        anti_template_signature:
+          recent_composition_similarity: high
+          repeated_mechanism: centered_back_view
+      provenance:
+        anti_template_signature:
+          source: recent_shot_comparison
+      context:
+        material_fields: [anti_template_signature]
+    expected_status: WARN
+    expected_diagnostics: [TEMPLATE_COMPOSITION_REPETITION]
+
+structural_gate_cases:
+  - id: CIC-AUTHORITY-BLOCKING-001
+    contract:
+      contract_id: CIC-AUTHORITY-BLOCKING-001
+      blocking_override:
+        final_positions: changed_for_prettier_frame
+      intent: {}
+    expected_error_code: CINEMATIC_INTENT_AUTHORITY_VIOLATION
+
+  - id: CIC-AUTHORITY-MAP-001
+    contract:
+      contract_id: CIC-AUTHORITY-MAP-001
+      map_override:
+        street_direction: reversed
+      intent: {}
+    expected_error_code: CINEMATIC_INTENT_AUTHORITY_VIOLATION
+
+  - id: CIC-UNKNOWN-TOP-FIELD-001
+    contract:
+      contract_id: CIC-UNKNOWN-TOP-FIELD-001
+      intent: {}
+      magic_style_score: 9
+    expected_error_code: CONTRACT_UNKNOWN_FIELD
+
+  - id: CIC-UNKNOWN-IR-FIELD-001
+    contract:
+      contract_id: CIC-UNKNOWN-IR-FIELD-001
+      intent:
+        cinematic_magic: beautiful
+    expected_error_code: CONTRACT_UNKNOWN_FIELD
+
+  - id: CIC-UNKNOWN-NESTED-FIELD-001
+    contract:
+      contract_id: CIC-UNKNOWN-NESTED-FIELD-001
+      intent:
+        composition:
+          primary_mechanism: lateral_pressure
+          secret_magic: true
+    expected_error_code: CONTRACT_UNKNOWN_NESTED_FIELD
+
+  - id: CIC-MISSING-PROVENANCE-001
+    contract:
+      contract_id: CIC-MISSING-PROVENANCE-001
+      intent:
+        composition:
+          primary_mechanism: lateral_pressure
+          camera_reason: "保持人物横向运动方向。"
+      context:
+        material_fields: [composition]
+    expected_error_code: MISSING_PROVENANCE
+
+  - id: CIC-INVALID-MATERIAL-FIELD-001
+    contract:
+      contract_id: CIC-INVALID-MATERIAL-FIELD-001
+      intent: {}
+      context:
+        material_fields: [future_magic_field]
+    expected_error_code: INVALID_MATERIAL_FIELD
+
+gates:
+  schema_static_check_vocabulary_is_reused: true
+  structural_runtime_codes_are_not_director_method_rules: true
+  fail_closed_authority_boundary: true
+  overlay_omits_non_material_fields: true
+  reverse_expectations_preserve_declared_value_and_provenance_only: true
+  no_model_specific_behavior_universalized: true
