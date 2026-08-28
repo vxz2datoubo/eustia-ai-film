@@ -1,0 +1,202 @@
+name: tmp-cinematic-visual-grammar-canonical-append
+
+on:
+  push:
+    branches:
+      - gpt/cinematic-visual-grammar-integration
+
+permissions:
+  contents: write
+
+jobs:
+  append-canonical-method:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: gpt/cinematic-visual-grammar-integration
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Append candidate method without rewriting existing canonical content
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('01_AI电影系统/AI电影系统.md')
+          text = path.read_text(encoding='utf-8')
+          anchor = 'CINEMATIC-VISUAL-GRAMMAR-001'
+          if anchor in text:
+              print('anchor already exists; no append needed')
+              raise SystemExit(0)
+
+          section = r'''
+
+# 16. Cinematic Visual Grammar｜CINEMATIC-VISUAL-GRAMMAR-001
+
+状态：`candidate`。本章把外部 Cinema DNA 研究、专业导演/摄影/剪辑知识与项目现有 SOAC、最小充分提示、多模态职责分离做机制级融合。它是本文件内部的候选导演知识域，不是第二套导演系统，不改变剧情、角色、地图、资产、连续性或模型 adapter authority。
+
+运行接口：`Director Feature Compiler → CINEMATIC_VISUAL_GRAMMAR hard route → CinematicIntentIR → ShotPlanIR → VisibleIR / PerformanceIR / AudibleIR → TransitionContract → Model Adapter → Eval → Learning`。
+
+## 16.1 CinematicIntentIR：Blocking之后、ShotPlan之前
+
+剧情事实、人物目标、EventGraph 与 Blocking 先成立，再回答“为什么摄影机这样看”。`CinematicIntentIR` 只保存会影响画面、剪辑、光色或参考控制的视觉导演意图：
+
+- `unresolved_state`：人物/关系/事件当前尚未解决、但画面需要承载的问题；不能用“忧郁、神秘、高级”替代剧情状态。
+- `viewer_position`：观众被放在事件内部、外部、错误一侧、被观察位置或其他明确观看关系中的原因。
+- `relation_pressure`：人物目标、权力、信息差和空间限制怎样转成二维画面压力。
+- `attention_flow`：关键镜头的注意入口、阻挡/加速、决定性信息落点、被延迟的信息与余韵出口。
+- `composition`：主要构图机制与摄影机为何在此处；构图不能为了漂亮改写 Blocking 或空间拓扑。
+- `color_intent`：综合色命题、物理颜色来源、实际光源与强调色职责。
+- `capture_intent`：焦段、光学限制与可选成像介质的叙事/感知理由。
+- `visual_density`：主线索、副线索、允许普通/暗/软/遮挡的区域以及细节、高光、微反差预算。
+- `reference_signal_roles`：身份、几何、动作、摄影机、风格、声音各参考的 authority，以及应压低的非职责信号。
+- `anti_template_signature`：最近镜头是否无理由重复相同机位、构图压力或注意流。
+- `attention_handoff`：切镜前注意点、切点事件、下一镜目标、暂时隐藏的信息与回切揭示。
+
+`CinematicIntentIR` 的 runtime schema 以 `10_运行时/screen_observable_audible_ir_schema.yaml` 为字段与静态检查接口；本文件仍是导演方法 authority。
+
+## 16.2 UNRESOLVED-STATE-VISUALIZATION-001｜未解决状态先于视觉装饰
+
+- maturity：`candidate`。
+- trigger：镜头只有姿态、情绪或“高级感”，人物没有正在处理的问题，或画面像摆拍/壁纸。
+- operational rule：先明确人物或关系当前不能立刻解决的状态，以及这一状态必须通过什么行动、空间、物件或等待被看见，再讨论构图与质感。
+- boundary：功能性建立镜头、转场、节奏停顿不必强行制造悬念；“未解决”不是每镜都塞反转。
+- failure condition：为了避免平淡而人为添加与剧情无关的秘密、危机或不可逆事件。
+- eval：`REG-CINEMATIC-PRESSURE-001` 与跨场景导演必要性检查。
+
+## 16.3 RELATION-PRESSURE-COMPOSITION-001｜关系压力产生构图
+
+- maturity：`candidate`。
+- trigger：构图漂亮但没叙事理由、人物像摆拍、摄影机位置与人物目标/权力/空间无关。
+- operational rule：顺序固定为 `人物目标与观众信息 → Blocking/空间压力 → viewer position → 一个主要构图机制 → 焦段/高度/遮挡`。低机位、门框、负空间、对称、俯拍、长焦压缩都只是可能结果，不是默认模板。
+- boundary：形式主义、对称、重复构图可以在主题、仪式、节奏或视觉母题有明确理由时主动使用。
+- failure condition：为了“关系压力”硬改 canonical 方位、人物路径或让摄影机占据不可能的实体位置。
+- eval：`REG-CINEMATIC-PRESSURE-001`。
+
+## 16.4 ATTENTIONAL-FLOW-001｜关键镜头注意流与跨切镜交接
+
+- maturity：`candidate`。
+- terminology boundary：`attention flow / 视线流量` 是本项目工程字段，不冒充行业固定术语；其机制参考电影眼动、连续性剪辑与注意研究。
+- trigger：关键揭示、遮挡、误导、absence reveal、镜外行动、回原机位找人/找物、多个同等显著元素抢注意。
+- operational rule：按需记录 `entry ROI → modulator/occluder → decisive ROI → withheld/peripheral information → exit ROI`；跨切镜再记录 `from ROI → cut event → to ROI → withheld action → reveal on return`。
+- boundary：普通动作镜头不需要把每个观看点都硬编码；注意设计不能把摄影机退化为仅为“让模型看清全部动作”的 coverage。
+- failure condition：为了制造注意流强迫无意义前景遮挡、过度 rack focus 或让观众错过理解当前因果所需的信息。
+- eval：`REG-ATTENTION-FLOW-001`。
+
+## 16.5 COLOR-THESIS-001｜色彩命题必须落到物理来源
+
+- maturity：`candidate`。
+- trigger：综合色像廉价滤镜、所有物体被统一染色、冷暖关系没有布景/服装/天气/材质/光源支撑。
+- operational rule：先写一句综合色叙事命题，再把主色、过渡色、强调色分别绑定到场景材料、服装、天气、自然光、practical light、反射或明确后期 look 职责；强调色服务信息层级而非装饰。
+- boundary：不禁止后期调色；要求的是目的与来源可解释，不要求所有颜色都必须是现场原始光谱。
+- failure condition：为了“物理来源”牺牲项目既有色彩连续性或把每个物件都染成说明色。
+- eval：`REG-COLOR-THESIS-001`。
+
+## 16.6 VISUAL-DENSITY-BUDGET-001｜视觉信息与纹理密度预算
+
+- maturity：`candidate`。
+- trigger：画面脏、所有区域同时高锐/高细节/高微反差/高亮、背景和主信息抢戏、AI伪纹理显著。
+- operational rule：重要镜头至少明确一个 primary story clue 和可选 secondary clue；非关键区域允许普通、暗、软、遮挡、失焦或较低细节。细节、反射、高光、颗粒、雾、粒子、锐度都属于有限预算。
+- boundary：群像、production design、史诗建立镜头可以信息丰富，但仍必须有层级；不机械限制物件数量。
+- failure condition：把“少细节”误解成低清、涂抹、过度虚化或让空间证据消失。
+- eval：`REG-VISUAL-DENSITY-001`。
+
+## 16.7 MOTIVATED-CAPTURE-SUBSTRATE-001｜成像介质按动机调用
+
+- maturity：`candidate`。
+- trigger：35mm/16mm/MiniDV/监控/鱼眼/旧广播转拍等被当成通用电影感 token，而不是剧情、角色感知或生产需要。
+- operational rule：只有成像介质会改变观众如何理解时间、信息来源、主观经验、媒介内嵌或摄影限制时提高其权重；否则优先描述真正需要的光学、曝光、动态范围、焦段和质感结果。
+- boundary：摄影师可基于审美选择 capture substrate；规则只反对无理由模板化，不把“叙事理由”变成唯一合法理由。
+- failure condition：为证明动机而给普通镜头强行附会“记忆/纪录片/监控”语义。
+- eval：`REG-CAPTURE-SUBSTRATE-001`。
+
+## 16.8 ANTI-TEMPLATE-COMPOSITION-001｜防套路但允许有意重复
+
+- maturity：`candidate`。
+- trigger：不同剧情反复出现同一背影、中心透视、门框、极端俯拍、眼部特写、同一注意流，且没有新信息或主题理由。
+- operational rule：比较最近镜头的 camera position、composition pressure、attention flow、shot function；若高度重复，必须给出 `new information / escalation / contrast / temporal change / motif payoff / continuity need` 中至少一个理由，否则进入 necessity review。
+- boundary：不为了“创新”破坏轴线、连续性、角色空间或已经建立的视觉母题。
+- failure condition：系统随机换角度只为避免重复，结果摄影机失去剧情理由。
+- eval：`REG-ANTI-TEMPLATE-001`。
+
+## 16.9 REFERENCE-SIGNAL-DECOUPLING-002｜参考职责不仅写在文字里，也要降低非职责强信号
+
+- maturity：`candidate`；Seedance/C-DANCE 具体表现属于 model/version-bound，需要持续 revalidation。
+- trigger：动作/几何/摄影参考带有强烈错误纹理、材质、色彩、光线或角色身份，导致模型在完成主要参考职责时同时继承不需要的外观信号。
+- operational rule：继续使用现有身份/几何/动作/摄影机/风格/声音六通道 authority；在平台允许时，让参考本体本身也尽量职责纯化。动作/几何 reference 可优先 clean previs / clay / white model：保留姿态、接触、路径、摄影机与可读明暗，降低非职责高频纹理和材质。风格/身份 reference 则保留其真正需要的高质量像素。
+- positive rule：不是“所有参考都白模化”，而是 `authoritative signal high, non-authoritative signal low`。
+- boundary：正式身份、服装、材质、场景质感和风格任务不能因为去污染而丢失必要像素；参考图禁止输入不是本项目规则。
+- failure condition：白模过度扁平导致动作体积、接触、方向或明暗可读性下降；或为了纯化动作参考而改变原本要测试的摄影机/几何变量。
+- eval：`REG-REFERENCE-DECOUPLING-001`。当前凯姆市集滑绳的高纹理动作参考 vs clean white-model 是天然 candidate A/B；未完成 B 的真实目标模型生成前不得晋级。
+
+## 16.10 部门 Overlay 与信息传递
+
+本系统不建立八套独立数据库。一次导演任务内部按职责形成结构化 packet，并通过 SOAC/TransitionContract 传递：
+
+```text
+Story / Director
+→ Character / Performance
+→ Space / Blocking
+→ Cinematography / CinematicIntentIR
+→ Lighting / Art / Look
+→ Editorial / Attention Handoff
+→ Sound / AudibleIR
+→ Model Adapter / Minimal Execution Prompt
+```
+
+交接原则：
+
+1. 下游只能补充职责内信息，不能静默覆盖上游 canonical。
+2. Story packet 给 dramatic function、audience knowledge、unresolved state；Performance 给 action task/subtext/body choice；Blocking 给 path/orientation/contact/occlusion；Cinematography 给 viewer position/attention/composition/camera reason；Look 给 color/light/material hierarchy；Editorial 给 cut reason/attention handoff/state transition；Sound 给 diegesis/foley/ambience/dialogue priority；Model Adapter 只做当前模型能力映射。
+3. 参考图、视频、音频与媒体本体继续由现有资产/Library policy 管理；GitHub 保存职责、身份、版本、关系、状态、时间证据与 eval，不建立第二份二进制媒体库。
+4. 最终模型执行稿仍遵守“最小充分信息”：内部 CinematicIntent 可以复杂，只有当前生成单位真正改变像素、声音、摄影机、剪辑或参考职责的字段才下发。
+
+## 16.11 Film-grade Eval 接口
+
+视觉 Grammar 不用单一“电影感分数”验收，也不采用外部 Skill 的固定 82 分门槛。按需拆分：
+
+- instruction following / key reveal
+- shot scale / angle / camera position / lens intent / camera movement
+- composition and relation pressure
+- attention flow / attention handoff
+- character action / expression / gaze / blocking
+- temporal / spatial / identity / prop continuity
+- color source / lighting / material hierarchy
+- visual density / microcontrast / false texture / highlight competition
+- reference fidelity and cross-channel contamination
+- dynamic aesthetics / physical plausibility
+- dialogue / sound source / AV sync / ambience / silence
+
+`screen_observable_audible_ir_schema.yaml` 的 ReverseObservation / ExpectedVsObservedEval 为机器接口；自动 film-operator 工具当前只作为未来 PoC，不是生产硬依赖。
+
+## 16.12 证据、成熟度与禁止项
+
+- 外部 Cinema DNA、AFI/DGA/ASC、OpenUSD/OTIO/ACES、Seedance 官方、论文和 benchmark 只提供 candidate 证据与接口设计，不自动晋级。
+- 证据索引：`09_资料证据/Cinematic Visual Grammar外部研究与融合证据.md`。
+- targeted regression：`11_验收/cinematic_visual_grammar_regression_cases.yaml`。
+- 真实生成按 `candidate → scene_verified → project_verified → general_stable` 晋级；一次成功不能通用化。
+- 不复制 Cinema DNA SKILL 正文，不建立 `CinemaDNA系统.md` 或“高级电影感系统.md”。
+- 不默认 21:9×3，不禁止参考图输入，不把导演/摄影师/影片名字作为魔法词，不用审美 warning 覆盖剧情、身份、空间与关键因果。
+- 新视觉技能与既有 `SCREEN-EVIDENCE-001`、`POSITIVE-SPEC-001`、`SHOT-SCOPE-001`、`SOAC-001` 冲突时，按 Learning Application Gate 做 scope/context/evidence/maturity 裁决，不静默覆盖。
+'''
+
+          text = text.replace('last_updated: 2026-08-13', 'last_updated: 2026-08-28', 1)
+          path.write_text(text.rstrip() + section + '\n', encoding='utf-8')
+          print('canonical append complete')
+          PY
+      - name: Commit canonical append
+        shell: bash
+        run: |
+          if git diff --quiet -- '01_AI电影系统/AI电影系统.md'; then
+            echo 'No canonical change required'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add '01_AI电影系统/AI电影系统.md'
+          git commit -m 'Integrate cinematic visual grammar into canonical AI film system'
+          git push origin HEAD:gpt/cinematic-visual-grammar-integration
