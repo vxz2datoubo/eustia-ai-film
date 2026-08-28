@@ -60,9 +60,18 @@ provenance:
     source: scene_look_plan
 context:
   material_fields: [composition, color_intent]
-locked_contracts:
-  camera:
-    position: exterior_side
+```
+
+The downstream proposal cannot carry camera locks. Camera-lock authority enters through a separate upstream envelope, cross-bound to a trusted source digest. Current canonical `capture_intent` can mechanically propose only camera physical position and lens intent, so those are the only accepted lock surfaces in this runtime. Orientation, shot size, camera height and camera motion remain owned by upstream ShotPlan/Visible camera state and fail closed here rather than being accepted inertly.
+
+Example upstream lock envelope:
+
+```yaml
+source_authority_ref: shot_plan://current_generation/camera_state
+source_material_digest: <sha256-of-trusted-upstream-source-material>
+camera:
+  position: exterior_side
+  lens_intent: side_profile_readability
 ```
 
 Run it directly:
@@ -70,7 +79,9 @@ Run it directly:
 ```bash
 PYTHONPATH=tools/learning_retriever python -m learning_retriever.cinematic_intent \
   --project-root . \
-  --contract cinematic_intent.yaml
+  --contract cinematic_intent.yaml \
+  --upstream-lock-envelope upstream_camera_lock.yaml \
+  --trusted-upstream-source-digest <trusted-sha256-from-upstream-orchestration>
 ```
 
 Targeted contract regressions live in `11_验收/cinematic_intent_contract_regression_cases.yaml` and are executed explicitly by CI.

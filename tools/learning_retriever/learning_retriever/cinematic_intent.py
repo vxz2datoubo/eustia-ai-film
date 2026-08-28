@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import json
+import re
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -47,10 +48,18 @@ class CinematicIntentContract:
     intent: dict[str, Any]
     provenance: dict[str, Any]
     context: dict[str, Any]
-    locked_contracts: dict[str, Any]
 
 
-_TOP_LEVEL_KEYS = {"contract_id", "intent", "provenance", "context", "locked_contracts"}
+@dataclass(frozen=True)
+class TrustedUpstreamLockEnvelope:
+    """Invocation-bound upstream constraints, never deserialized from proposal intent."""
+
+    source_authority_ref: str
+    source_material_digest: str
+    camera: dict[str, Any]
+
+
+_TOP_LEVEL_KEYS = {"contract_id", "intent", "provenance", "context"}
 _FORBIDDEN_AUTHORITY_KEYS = {
     "blocking",
     "blocking_ir",
@@ -66,6 +75,7 @@ _FORBIDDEN_AUTHORITY_KEYS = {
     "character_override",
     "asset_override",
     "continuity_override",
+    "locked_contracts",
 }
 _CONTEXT_KEYS = {
     "material_fields",
@@ -75,8 +85,11 @@ _CONTEXT_KEYS = {
     "model_version",
 }
 _CONTEXT_BOOLEAN_KEYS = {"material_attention_reveal", "reference_decoupling_applied"}
-_LOCKED_CONTRACT_KEYS = {"camera", "blocking_fingerprint", "map_fingerprint"}
-_CAMERA_LOCK_KEYS = {"position", "orientation", "shot_size", "camera_height", "lens_intent", "camera_motion"}
+_UPSTREAM_LOCK_ENVELOPE_KEYS = {"source_authority_ref", "source_material_digest", "camera"}
+_UPSTREAM_CAMERA_LOCK_KEYS = {"position", "orientation", "shot_size", "camera_height", "lens_intent", "camera_motion"}
+_ENFORCEABLE_CAMERA_LOCK_KEYS = {"position", "lens_intent"}
+_UNENFORCEABLE_CAMERA_LOCK_KEYS = _UPSTREAM_CAMERA_LOCK_KEYS - _ENFORCEABLE_CAMERA_LOCK_KEYS
+_SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 
 _NESTED_FIELD_MAP = {
     "relation_pressure": "relation_pressure_fields",
@@ -99,6 +112,9 @@ STRUCTURAL_GATE_CODES = {
     "MISSING_PROVENANCE",
     "INVALID_MATERIAL_FIELD",
     "INVALID_CONTRACT_SHAPE",
+    "MISSING_TRUSTED_UPSTREAM_BINDING",
+    "UPSTREAM_BINDING_MISMATCH",
+    "UNENFORCEABLE_CAMERA_LOCK_SURFACE",
 }
 
 
@@ -147,6 +163,68 @@ def _schema_contract(schema: Mapping[str, Any]) -> tuple[set[str], dict[str, set
     for intent_field, schema_field in _NESTED_FIELD_MAP.items():
         nested[intent_field] = set(layer.get(schema_field) or [])
     return fields, nested
+
+
+def _validate_trusted_upstream_lock_envelope(
+    raw: Mapping[str, Any] | None,
+    *,
+    trusted_upstream_source_digest: str | None,
+) -> TrustedUpstreamLockEnvelope:
+    """Cross-bind a separately supplied upstream lock envelope to trusted invocation evidence.
+
+    The downstream CinematicIntent proposal cannot carry this envelope.  The trusted
+    digest is a separate invocation input owned by the upstream orchestration path.
+    This runtime verifies equality and refuses lock surfaces it cannot mechanically
+    enforce instead of accepting inert authority-shaped fields.
+    """
+
+    if raw is None or _is_empty(trusted_upstream_source_digest):
+        raise CinematicIntentContractError(
+            "MISSING_TRUSTED_UPSTREAM_BINDING",
+            "CinematicIntent compilation requires a separate upstream lock envelope and trusted source digest",
+        )
+    envelope = _as_mapping(raw, field="upstream_lock_envelope")
+    unknown = set(envelope) - _UPSTREAM_LOCK_ENVELOPE_KEYS
+    if unknown:
+        raise CinematicIntentContractError(
+            "CONTRACT_UNKNOWN_FIELD",
+            f"unknown upstream lock envelope fields: {sorted(unknown)}",
+        )
+
+    source_ref = str(envelope.get("source_authority_ref") or "").strip()
+    source_digest = str(envelope.get("source_material_digest") or "").strip().lower()
+    trusted_digest = str(trusted_upstream_source_digest or "").strip().lower()
+    if not source_ref or not _SHA256_RE.fullmatch(source_digest) or not _SHA256_RE.fullmatch(trusted_digest):
+        raise CinematicIntentContractError(
+            "UPSTREAM_BINDING_MISMATCH",
+            "upstream lock binding requires a non-empty authority ref and exact SHA-256 source digests",
+        )
+    if source_digest != trusted_digest:
+        raise CinematicIntentContractError(
+            "UPSTREAM_BINDING_MISMATCH",
+            "upstream lock envelope source digest does not match trusted invocation digest",
+        )
+
+    camera = _as_mapping(envelope.get("camera"), field="upstream_lock_envelope.camera")
+    unknown_camera = set(camera) - _UPSTREAM_CAMERA_LOCK_KEYS
+    if unknown_camera:
+        raise CinematicIntentContractError(
+            "CONTRACT_UNKNOWN_NESTED_FIELD",
+            f"unknown upstream camera lock fields: {sorted(unknown_camera)}",
+        )
+    un_enforceable = set(camera) & _UNENFORCEABLE_CAMERA_LOCK_KEYS
+    if un_enforceable:
+        raise CinematicIntentContractError(
+            "UNENFORCEABLE_CAMERA_LOCK_SURFACE",
+            "current CinematicIntentIR cannot mechanically propose/compare camera lock fields "
+            f"{sorted(un_enforceable)}; refusing inert lock authority",
+        )
+
+    return TrustedUpstreamLockEnvelope(
+        source_authority_ref=source_ref,
+        source_material_digest=source_digest,
+        camera=camera,
+    )
 
 
 def validate_cinematic_intent_contract(
@@ -240,22 +318,6 @@ def validate_cinematic_intent_contract(
             "INVALID_MATERIAL_FIELD", f"unknown material fields: {sorted(invalid_material)}"
         )
 
-    locked_contracts = _as_mapping(raw.get("locked_contracts"), field="locked_contracts")
-    unknown_locks = set(locked_contracts) - _LOCKED_CONTRACT_KEYS
-    if unknown_locks:
-        raise CinematicIntentContractError(
-            "CONTRACT_UNKNOWN_FIELD", f"unknown locked contract fields: {sorted(unknown_locks)}"
-        )
-    if "camera" in locked_contracts:
-        camera = _as_mapping(locked_contracts["camera"], field="locked_contracts.camera")
-        unknown_camera = set(camera) - _CAMERA_LOCK_KEYS
-        if unknown_camera:
-            raise CinematicIntentContractError(
-                "CONTRACT_UNKNOWN_NESTED_FIELD",
-                f"unknown locked camera fields: {sorted(unknown_camera)}",
-            )
-        locked_contracts["camera"] = camera
-
     for field in material_fields:
         if field in intent and not _is_empty(intent[field]):
             if field not in provenance or _is_empty(provenance[field]):
@@ -269,7 +331,6 @@ def validate_cinematic_intent_contract(
         intent=intent,
         provenance=provenance,
         context=context,
-        locked_contracts=locked_contracts,
     )
 
 
@@ -296,7 +357,10 @@ def _diag(
 
 
 def evaluate_cinematic_intent(
-    contract: CinematicIntentContract, *, project_root: str | Path
+    contract: CinematicIntentContract,
+    *,
+    project_root: str | Path,
+    upstream_lock_envelope: TrustedUpstreamLockEnvelope,
 ) -> list[Diagnostic]:
     """Evaluate only static checks already declared by the canonical SOAC schema."""
 
@@ -399,7 +463,7 @@ def evaluate_cinematic_intent(
             "capture substrate is declared without a story/perceptual/production reason",
         )
 
-    locked_camera = dict(contract.locked_contracts.get("camera") or {})
+    locked_camera = dict(upstream_lock_envelope.camera or {})
     proposed_position = capture.get("camera_physical_position")
     locked_position = locked_camera.get("position")
     if not _is_empty(proposed_position) and not _is_empty(locked_position) and proposed_position != locked_position:
@@ -426,12 +490,24 @@ def evaluate_cinematic_intent(
 
 
 def compile_cinematic_intent_contract(
-    raw: Mapping[str, Any], *, project_root: str | Path
+    raw: Mapping[str, Any],
+    *,
+    project_root: str | Path,
+    upstream_lock_envelope: Mapping[str, Any] | None = None,
+    trusted_upstream_source_digest: str | None = None,
 ) -> dict[str, Any]:
-    """Validate, evaluate and compile a minimal material execution overlay."""
+    """Validate, cross-bind upstream locks, and compile a minimal material overlay."""
 
     contract = validate_cinematic_intent_contract(raw, project_root=project_root)
-    diagnostics = evaluate_cinematic_intent(contract, project_root=project_root)
+    trusted_locks = _validate_trusted_upstream_lock_envelope(
+        upstream_lock_envelope,
+        trusted_upstream_source_digest=trusted_upstream_source_digest,
+    )
+    diagnostics = evaluate_cinematic_intent(
+        contract,
+        project_root=project_root,
+        upstream_lock_envelope=trusted_locks,
+    )
     has_error = any(item.severity == "ERROR" for item in diagnostics)
     has_warning = any(item.severity == "WARNING" for item in diagnostics)
 
@@ -465,6 +541,12 @@ def compile_cinematic_intent_contract(
         "execution_overlay": overlay,
         "overlay_provenance": overlay_provenance,
         "reverse_eval_expectations": reverse_expectations,
+        "upstream_lock_binding": {
+            "source_authority_ref": trusted_locks.source_authority_ref,
+            "source_material_digest": trusted_locks.source_material_digest,
+            "camera": dict(trusted_locks.camera),
+            "proposal_can_mutate": False,
+        },
         "authority_mutation_allowed": False,
     }
 
@@ -474,7 +556,17 @@ def main() -> int:
 
     parser = argparse.ArgumentParser(description="Validate/compile canonical CinematicIntentIR contract")
     parser.add_argument("--project-root", default=str(Path(__file__).resolve().parents[3]))
-    parser.add_argument("--contract", required=True, help="JSON or YAML contract file")
+    parser.add_argument("--contract", required=True, help="JSON or YAML downstream proposal file")
+    parser.add_argument(
+        "--upstream-lock-envelope",
+        required=True,
+        help="JSON or YAML upstream lock envelope supplied separately from the proposal",
+    )
+    parser.add_argument(
+        "--trusted-upstream-source-digest",
+        required=True,
+        help="trusted upstream source SHA-256 supplied by the orchestration boundary",
+    )
     args = parser.parse_args()
 
     path = Path(args.contract)
@@ -483,8 +575,20 @@ def main() -> int:
         raw = json.loads(text)
     else:
         raw = yaml.safe_load(text)
+
+    upstream_path = Path(args.upstream_lock_envelope)
+    upstream_text = upstream_path.read_text(encoding="utf-8")
+    if upstream_path.suffix.lower() == ".json":
+        upstream_raw = json.loads(upstream_text)
+    else:
+        upstream_raw = yaml.safe_load(upstream_text)
     try:
-        result = compile_cinematic_intent_contract(raw, project_root=args.project_root)
+        result = compile_cinematic_intent_contract(
+            raw,
+            project_root=args.project_root,
+            upstream_lock_envelope=upstream_raw,
+            trusted_upstream_source_digest=args.trusted_upstream_source_digest,
+        )
     except CinematicIntentContractError as exc:
         print(json.dumps({"status": "FAIL", "stage": "contract_gate", "code": exc.code, "error": exc.message}, ensure_ascii=False, indent=2))
         return 2

@@ -14,6 +14,17 @@ policy:
   material_overlay_requires_provenance: true
   non_material_fields_must_not_enter_overlay: true
   learning_maturity_unchanged: true
+  proposal_cannot_supply_locked_contracts: true
+  upstream_lock_envelope_is_separate_invocation_input: true
+  upstream_source_digest_cross_binding_required: true
+  unsupported_camera_lock_surfaces_fail_closed: true
+
+trusted_upstream_fixture:
+  trusted_source_digest: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  envelope:
+    source_authority_ref: test_fixture://shot_plan/no_camera_lock
+    source_material_digest: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    camera: {}
 
 compile_cases:
   - id: CIC-VALID-MINIMAL-001
@@ -44,9 +55,12 @@ compile_cases:
           source_field: physical_sources
       context:
         material_fields: [composition, color_intent]
-      locked_contracts:
-        camera:
-          position: exterior_side
+    upstream_lock_envelope:
+      source_authority_ref: test_fixture://shot_plan/locked_side_camera
+      source_material_digest: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      camera:
+        position: exterior_side
+    trusted_upstream_source_digest: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
     expected_status: PASS
     expected_overlay_fields: [composition, color_intent]
     expected_absent_overlay_fields: [unresolved_state, visual_density, capture_intent]
@@ -77,9 +91,12 @@ compile_cases:
           source: downstream_adapter_draft
       context:
         material_fields: [capture_intent]
-      locked_contracts:
-        camera:
-          position: exterior_side
+    upstream_lock_envelope:
+      source_authority_ref: test_fixture://shot_plan/locked_side_camera
+      source_material_digest: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      camera:
+        position: exterior_side
+    trusted_upstream_source_digest: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
     expected_status: FAIL
     expected_diagnostics: [CAMERA_SCOPE_CONFLICT]
     expected_overlay_fields: []
@@ -225,6 +242,17 @@ structural_gate_cases:
       intent: {}
     expected_error_code: CINEMATIC_INTENT_AUTHORITY_VIOLATION
 
+  - id: CIC-CALLER-MINTED-LOCK-001
+    contract:
+      contract_id: CIC-CALLER-MINTED-LOCK-001
+      intent:
+        capture_intent:
+          camera_physical_position: front_three_quarter
+      locked_contracts:
+        camera:
+          position: front_three_quarter
+    expected_error_code: CINEMATIC_INTENT_AUTHORITY_VIOLATION
+
   - id: CIC-UNKNOWN-TOP-FIELD-001
     contract:
       contract_id: CIC-UNKNOWN-TOP-FIELD-001
@@ -267,6 +295,37 @@ structural_gate_cases:
         material_fields: [future_magic_field]
     expected_error_code: INVALID_MATERIAL_FIELD
 
+upstream_gate_cases:
+  - id: CIC-UPSTREAM-DIGEST-SUBSTITUTION-001
+    contract_ref: CIC-VALID-MINIMAL-001
+    upstream_lock_envelope:
+      source_authority_ref: test_fixture://shot_plan/substituted
+      source_material_digest: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      camera:
+        position: exterior_side
+    trusted_upstream_source_digest: "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    expected_error_code: UPSTREAM_BINDING_MISMATCH
+
+  - id: CIC-UPSTREAM-ORIENTATION-UNENFORCEABLE-001
+    contract_ref: CIC-VALID-MINIMAL-001
+    camera_lock: {orientation: side_on}
+    expected_error_code: UNENFORCEABLE_CAMERA_LOCK_SURFACE
+
+  - id: CIC-UPSTREAM-SHOT-SIZE-UNENFORCEABLE-001
+    contract_ref: CIC-VALID-MINIMAL-001
+    camera_lock: {shot_size: wide}
+    expected_error_code: UNENFORCEABLE_CAMERA_LOCK_SURFACE
+
+  - id: CIC-UPSTREAM-CAMERA-HEIGHT-UNENFORCEABLE-001
+    contract_ref: CIC-VALID-MINIMAL-001
+    camera_lock: {camera_height: rooftop_level}
+    expected_error_code: UNENFORCEABLE_CAMERA_LOCK_SURFACE
+
+  - id: CIC-UPSTREAM-CAMERA-MOTION-UNENFORCEABLE-001
+    contract_ref: CIC-VALID-MINIMAL-001
+    camera_lock: {camera_motion: locked_off}
+    expected_error_code: UNENFORCEABLE_CAMERA_LOCK_SURFACE
+
 gates:
   schema_static_check_vocabulary_is_reused: true
   structural_runtime_codes_are_not_director_method_rules: true
@@ -274,3 +333,5 @@ gates:
   overlay_omits_non_material_fields: true
   reverse_expectations_preserve_declared_value_and_provenance_only: true
   no_model_specific_behavior_universalized: true
+  downstream_proposal_cannot_mint_lock_authority: true
+  every_accepted_camera_lock_surface_is_mechanically_enforced: true
