@@ -35,6 +35,8 @@ policy:
   cinematic_visual_grammar_external_source_is_evidence_only: true
   cinematic_visual_grammar_cannot_become_second_director_authority: true
   cinematic_intent_contract_runtime_is_execution_only: true
+  cinematic_intent_camera_lock_authority_must_be_process_local_non_serialized: true
+  cinematic_intent_serialized_callers_cannot_mint_camera_lock_authority: true
 
 canonical:
   project_entry: 项目入口.md
