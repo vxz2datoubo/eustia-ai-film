@@ -33,7 +33,7 @@ authority_and_interfaces:
   asset_identity: 10_运行时/scene_asset_identity_schema.yaml
   feedback_learning: 08_系统学习/反馈反推与系统反哺引擎.md
   model_version_real_generation_feedback: 08_系统学习/C-DANCE2.5真实生成反馈库.md
-  research_evidence: 09_资料证据/官方资料与证据索引.md#CINEMATIC-VISUAL-GRAMMAR-RESEARCH-001
+  research_evidence: 09_资料证据/Cinematic Visual Grammar外部研究与融合证据.md
   regressions: 11_验收/director_regression_cases.yaml#REG-SOAC-001
   constraints:
     - SHOT-SCOPE-001 controls per-shot camera_state_visible_set_audible_set_and_in_shot_reveal

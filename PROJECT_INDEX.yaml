@@ -145,6 +145,7 @@ effective_sources:
   11_验收/suno_prompt_regression_cases.yaml: github_verified
   11_验收/minimax_h3_prompt_regression_cases.yaml: github_verified
   11_验收/legacy_authority_regression_cases.yaml: github_verified
+  11_验收/canonical_migration_integrity_audit.md: github_verified
   12_未知项/UNKNOWN_REGISTRY.yaml: github_verified
   12_未知项/SOUND_UNKNOWN_REGISTRY.yaml: github_verified
   01_AI电影系统/AI电影系统.md: github_verified

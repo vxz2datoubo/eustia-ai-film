@@ -82,6 +82,16 @@ static_runtime_cases:
       matched_rule: cinematic_visual_design
 
 positive_guard_cases:
+  - id: REG-COMPOSITION-CAMERA-POSITIVE-001
+    input: "固定机位拍摄，保持现有构图。"
+    expected_present:
+      dramatic_function: cinematic_visual_design
+      spatial_action_feature: motivated_composition
+    expected_absent:
+      relation_type: relation_pressure
+      failure_mechanism: composition_without_pressure
+    expected_route: CINEMATIC_VISUAL_GRAMMAR
+
   - id: REG-CVG-CAPTURE-GUARD-001
     input: "角色记忆段使用35mm胶片作为成像介质，保持真实光学限制。"
     expected_present:

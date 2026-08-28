@@ -1665,7 +1665,7 @@ Seedream干净顶视场景
 
 区分官方原文、媒体归纳和项目推导，禁止伪造缺失章节。
 
-### S25-14 至 S25-22 Candidate 调用入口
+### S25-14 至 S25-23 Candidate 调用入口
 
 - `S25-14 / SCREEN-EVIDENCE-001`：当 `SCREEN_EVIDENCE_GAP` 命中时，用最小充分屏幕证据编译关键画面。
 - `S25-15 / POSITIVE-SPEC-001`：当 `NEGATIVE_CONSTRAINT_OVERLOAD` 命中时，优先正向动作规格与受控约束预算。
@@ -1676,6 +1676,7 @@ Seedream干净顶视场景
 - `S25-20 / SHOT-SCOPE-001`：当 `SHOT_SCOPE_LEAK` 命中时，将全局计划与逐 shot 执行稿分层，只编译当前 camera state 的 visible / audible set、合法 in-shot reveal 与 next-shot contract。
 - `S25-21 / SEQUENCE-CONTEXT-001`：当 `SEQUENCE_CONTEXT_UNDERCONDITIONED` 命中、且任务是约 15–30 秒的多镜头剧情段时，可在逐 shot 块前编译受限本段剧情语境；不以此授权任何实体越过 `SHOT-SCOPE-001` 进入当前 visible set。
 - `S25-22 / SOAC-001`：完整导演、剧情转镜头、可见/可听诊断、AI 执行编译或反向验收需要从 canonical facts 形成可检查的世界、事件、调度、镜头、Visible/Audible 与 transition 合同时调用；先读 runtime schema，再按需定向调用既有技能。
+- `S25-23 / CINEMATIC-VISUAL-GRAMMAR-001`：当 `CINEMATIC_VISUAL_GRAMMAR` 命中时，在 Blocking 成立后用 CinematicIntentIR 处理观看立场、关系压力、注意流、综合色来源、视觉密度、成像动机、参考信号职责和反套路检查；只把当前生成单位会改变像素、声音、摄影机、剪辑或参考控制的字段下发。
 
 以上均为 `candidate`，按需定向调用，不因登记成为默认全局激活项。
 

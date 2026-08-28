@@ -422,16 +422,22 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
         trace("unresolved_state_visualization", "CinematicIntentIR.unresolved_state", "ShotPlanIR.dramatic_function")
 
     composition_terms = (
-        "构图", "机位", "空间压力", "关系压力", "观看立场", "摄影机为什么", "画面关系", "负空间", "前景遮挡",
+        "构图", "机位", "摄影机位置", "镜头构图", "摄影机为什么", "负空间", "前景遮挡",
     )
+    relation_pressure_terms = ("空间压力", "关系压力", "观看立场", "画面关系", "人物和空间")
     composition_problem_terms = (
         "构图没有理由", "构图没理由", "机位没有理由", "机位没理由", "构图漂亮但没意思", "像摆拍", "人物和空间没关系",
         "没有空间压力", "没有关系压力", "随机构图", "套构图模板",
     )
-    if _contains_any(text, composition_terms) or _contains_any(text, composition_problem_terms):
+    if (
+        _contains_any(text, composition_terms)
+        or _contains_any(text, relation_pressure_terms)
+        or _contains_any(text, composition_problem_terms)
+    ):
         add(dramatic, "cinematic_visual_design")
-        add(relation, "relation_pressure")
         add(spatial, "motivated_composition")
+        if _contains_any(text, relation_pressure_terms) or _contains_any(text, composition_problem_terms):
+            add(relation, "relation_pressure")
         if _contains_any(text, composition_problem_terms):
             add(failure, "composition_without_pressure")
         trace(
