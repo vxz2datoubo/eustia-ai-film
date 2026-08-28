@@ -74,6 +74,7 @@ _CONTEXT_KEYS = {
     "model",
     "model_version",
 }
+_CONTEXT_BOOLEAN_KEYS = {"material_attention_reveal", "reference_decoupling_applied"}
 _LOCKED_CONTRACT_KEYS = {"camera", "blocking_fingerprint", "map_fingerprint"}
 _CAMERA_LOCK_KEYS = {"position", "orientation", "shot_size", "camera_height", "lens_intent", "camera_motion"}
 
@@ -114,6 +115,14 @@ def _is_empty(value: Any) -> bool:
     if isinstance(value, (list, tuple, set, dict)):
         return not value
     return False
+
+
+def _is_enabled_option(value: Any) -> bool:
+    """Treat an explicit false option as disabled rather than materially declared."""
+
+    if value is False:
+        return False
+    return not _is_empty(value)
 
 
 def _as_mapping(value: Any, *, field: str) -> dict[str, Any]:
@@ -214,6 +223,11 @@ def validate_cinematic_intent_contract(
         raise CinematicIntentContractError(
             "CONTRACT_UNKNOWN_FIELD", f"unknown context fields: {sorted(unknown_context)}"
         )
+    for boolean_field in _CONTEXT_BOOLEAN_KEYS:
+        if boolean_field in context and not isinstance(context[boolean_field], bool):
+            raise CinematicIntentContractError(
+                "INVALID_CONTRACT_SHAPE", f"context.{boolean_field} must be boolean"
+            )
 
     material_fields = context.get("material_fields") or []
     if not isinstance(material_fields, list) or not all(isinstance(item, str) for item in material_fields):
@@ -243,10 +257,11 @@ def validate_cinematic_intent_contract(
         locked_contracts["camera"] = camera
 
     for field in material_fields:
-        if field in intent and not _is_empty(intent[field]) and field not in provenance:
-            raise CinematicIntentContractError(
-                "MISSING_PROVENANCE", f"material field {field!r} has no provenance"
-            )
+        if field in intent and not _is_empty(intent[field]):
+            if field not in provenance or _is_empty(provenance[field]):
+                raise CinematicIntentContractError(
+                    "MISSING_PROVENANCE", f"material field {field!r} has no non-empty provenance"
+                )
 
     contract_id = str(raw.get("contract_id") or "UNSPECIFIED_CINEMATIC_INTENT")
     return CinematicIntentContract(
@@ -374,7 +389,8 @@ def evaluate_cinematic_intent(
         )
 
     capture = dict(intent.get("capture_intent") or {})
-    if capture and not _is_empty(capture.get("substrate_optional")) and _is_empty(capture.get("substrate_story_reason")):
+    substrate = capture.get("substrate_optional")
+    if capture and _is_enabled_option(substrate) and _is_empty(capture.get("substrate_story_reason")):
         _diag(
             diagnostics,
             declared,
@@ -393,6 +409,17 @@ def evaluate_cinematic_intent(
             "CAMERA_SCOPE_CONFLICT",
             "capture_intent.camera_physical_position",
             f"proposed camera position {proposed_position!r} conflicts with locked position {locked_position!r}",
+        )
+
+    proposed_lens = capture.get("lens_intent")
+    locked_lens = locked_camera.get("lens_intent")
+    if not _is_empty(proposed_lens) and not _is_empty(locked_lens) and proposed_lens != locked_lens:
+        _diag(
+            diagnostics,
+            declared,
+            "CAMERA_SCOPE_CONFLICT",
+            "capture_intent.lens_intent",
+            f"proposed lens intent {proposed_lens!r} conflicts with locked lens intent {locked_lens!r}",
         )
 
     return diagnostics
