@@ -173,7 +173,7 @@ external_skills:
     upstream_skill_path: skills/h3-prompt-writing
     source_blobs:
       SKILL.md: b6d9b2839384a588763a9c24315225dd8ce19d56
-      references/base-en.txt: 40cf586a634d6775a0f189016f1e9aa
+      references/base-en.txt: 40cf586a634d677d6b7107b367cf0ec9621be728
       references/ref-en.txt: 7ae1b2d07d743fd2392258a96449be9e9e322d35
       agents/openai.yaml: 8151bd25e3dc29bdb67c8049e39c34c60c3f08f8
     authority_role: h3_prompt_structure_and_syntax_only
