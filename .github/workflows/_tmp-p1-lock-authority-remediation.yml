@@ -5,7 +5,7 @@ on:
     branches:
       - gpt/cinematic-intent-contract-compiler
     paths:
-      - 'tools/learning_retriever/_tmp_p1_lock_authority_remediation_v3.py'
+      - 'tools/learning_retriever/_tmp_p1_lock_authority_remediation_v4.py'
       - '.github/workflows/_tmp-p1-lock-authority-remediation.yml'
 
 permissions:
@@ -25,7 +25,7 @@ jobs:
         shell: bash
         run: |
           set +e
-          python tools/learning_retriever/_tmp_p1_lock_authority_remediation_v3.py > /tmp/p1.out 2>&1
+          python tools/learning_retriever/_tmp_p1_lock_authority_remediation_v4.py > /tmp/p1.out 2>&1
           code=$?
           cat /tmp/p1.out
           if [ "$code" -ne 0 ]; then
@@ -51,4 +51,4 @@ jobs:
           git commit -m "Harden CinematicIntent lock authority capability"
           git push origin HEAD:gpt/cinematic-intent-contract-compiler
 
-# corrected-helper-v3
+# deterministic-helper-v4
