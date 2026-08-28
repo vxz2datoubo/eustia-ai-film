@@ -1,8 +1,1 @@
-stage: wrapper-rewrite-ok
-Traceback (most recent call last):
-  File "/home/runner/work/eustia-ai-film/eustia-ai-film/tools/learning_retriever/_tmp_p1_lock_authority_remediation_v4.py", line 21, in <module>
-    exec(compile(source, str(src_path), 'exec'))
-  File "/home/runner/work/eustia-ai-film/eustia-ai-film/tools/learning_retriever/_tmp_p1_lock_authority_remediation_v2.py", line 17, in <module>
-    s = s2
-           
-AssertionError: validator bounds start=-1 end=-1
+python: can't open file '/home/runner/work/eustia-ai-film/eustia-ai-film/tools/learning_retriever/_tmp_p1_lock_authority_remediation_v4.py': [Errno 2] No such file or directory
