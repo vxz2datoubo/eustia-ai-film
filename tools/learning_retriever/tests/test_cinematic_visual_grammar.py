@@ -90,26 +90,29 @@ class CinematicVisualGrammarCompilerTests(unittest.TestCase):
             (
                 "capture-motivated",
                 "角色记忆段使用35mm胶片作为成像介质，保持真实光学限制。",
+                "spatial_action_features",
                 "capture_substrate",
                 "unmotivated_capture_style",
             ),
             (
                 "reference-role",
                 "参考图只负责人物身份，白模负责动作和空间关系。",
+                "spatial_action_features",
                 "reference_responsibility_split",
                 "reference_appearance_contamination",
             ),
             (
                 "cinematic-goal",
                 "希望这个场景有电影感，但先从人物关系和空间设计出发。",
-                "motivated_composition",
+                "dramatic_function",
+                "cinematic_visual_design",
                 "generic_cinematic_style_stacking",
             ),
         ]
-        for task_id, description, expected_spatial, forbidden_failure in cases:
+        for task_id, description, field, expected_value, forbidden_failure in cases:
             with self.subTest(task_id=task_id):
                 compiled = compile_director_features(description)
-                self.assertIn(expected_spatial, compiled.spatial_action_features)
+                self.assertIn(expected_value, getattr(compiled, field))
                 self.assertNotIn(forbidden_failure, compiled.failure_mechanism)
                 self._runtime(description, f"REG-CVG-{task_id}")
 
@@ -132,10 +135,7 @@ class CinematicVisualGrammarCompilerTests(unittest.TestCase):
                 "unmotivated_capture_style",
             },
         )
-        self.assertEqual(
-            set(compiler["output"]),
-            allowed,
-        )
+        self.assertEqual(set(compiler["output"]), allowed)
 
     def test_cinematic_intent_ir_is_between_blocking_and_shot_plan(self):
         schema = yaml.safe_load((REPO_ROOT / "10_运行时/screen_observable_audible_ir_schema.yaml").read_text(encoding="utf-8"))
