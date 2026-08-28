@@ -1,5 +1,5 @@
 schema_id: EUSTIA_SCREEN_OBSERVABLE_AUDIBLE_IR
-version: 1.0.2
+version: 1.1.0
 status: candidate
 scope: story_to_shot_compilation_observable_audible_contracts_and_reverse_evaluation
 purpose:
@@ -7,13 +7,16 @@ purpose:
   - 将World Truth与Shot Observable Truth显式分层
   - 将VisibleIR与AudibleIR作为平级执行合同，并保留跨镜头连续性与反向验收接口
   - 在多镜头与多模态生成中显式保护实体语义、持续场景状态、canonical背景世界状态、群众动机动作和序列镜头功能不被模型自由补全破坏
+  - 在Blocking与ShotPlan之间显式保存“为什么这样看”的电影视觉意图，使构图、注意力、色彩、视觉密度、成像基底和参考职责可传递、可验收而不泄漏完整导演分析
 non_goals:
   - 不替代AI电影系统的导演方法
   - 不复制声音导演系统的声音方法
+  - 不建立第二套Cinematic DNA或高级电影感导演authority
   - 不直接规定任一模型的私有prompt语法
   - 不声明自动视觉或音频验收已经实现
   - 不以可观察性为理由自动把摄影机退化成只求记录完整的coverage机位
   - 不把所有描述词冻结为硬约束；只保护canonical身份与当前work item真正不可漂移的语义
+  - 不把审美candidate当作剧情/空间/身份硬不变量
 
 authority_and_interfaces:
   canonical_facts:
@@ -25,17 +28,21 @@ authority_and_interfaces:
     - 06_视觉资产/视觉资产登记库.md
     - 07_连续性与生产状态/连续性与当前生产状态.md
   director_method: 01_AI电影系统/AI电影系统.md#SOAC-001
+  cinematic_visual_method: 01_AI电影系统/AI电影系统.md#CINEMATIC-VISUAL-GRAMMAR-001
   sound_method: 01_AI电影系统/声音导演系统.md
   asset_identity: 10_运行时/scene_asset_identity_schema.yaml
   feedback_learning: 08_系统学习/反馈反推与系统反哺引擎.md
   model_version_real_generation_feedback: 08_系统学习/C-DANCE2.5真实生成反馈库.md
+  research_evidence: 09_资料证据/Cinematic Visual Grammar外部研究与融合证据.md
   regressions: 11_验收/director_regression_cases.yaml#REG-SOAC-001
   constraints:
     - SHOT-SCOPE-001 controls per-shot camera_state_visible_set_audible_set_and_in_shot_reveal
     - SEQUENCE-CONTEXT-001 may supply a constrained segment prior but grants no visual embodiment
+    - CinematicIntentIR is a downstream visual-intent layer after BlockingIR and cannot rewrite canonical story character map or blocking causality
     - SoundDirectorIR remains the unique sound-method authority
     - model_adapter_capability_changes_require_needs_revalidation
     - observable_readability_does_not_override_director_camera_design
+    - aesthetic_preference_does_not_override_story_space_identity_or_key_reveal
     - omission_does_not_revoke_inherited_scene_state_without_an_explicit_state_change
     - descriptive_attributes_cannot_override_canonical_entity_class_age_gender_role_or_relationship_without_explicit_user_change
 
@@ -44,6 +51,7 @@ compiler_chain:
   - WorldStateIR
   - Beat_EventGraphIR
   - BlockingIR
+  - CinematicIntentIR
   - ShotPlanIR
   - VisibleIR_PerformanceIR_AudibleIR
   - TransitionContract
@@ -76,16 +84,53 @@ ir_layers:
   BlockingIR:
     fields: [initial_positions, relative_positions, orientations, distances, movement_paths, approach_or_retreat, crossing, occlusion, depth_relationship, power_center, forced_movement, prop_interaction, final_positions]
     rule: character_goal_relationship_and_spatial_causality_precede_camera_choice
+  CinematicIntentIR:
+    meaning: why_this_shot_is_seen_this_way_after_story_event_and_blocking_are_resolved
+    maturity: candidate
+    fields:
+      - unresolved_state
+      - viewer_position
+      - relation_pressure
+      - attention_flow
+      - composition
+      - color_intent
+      - capture_intent
+      - visual_density
+      - reference_signal_roles
+      - anti_template_signature
+      - attention_handoff
+    relation_pressure_fields: [source, target, pressure_type, narrative_reason, spatial_expression]
+    attention_flow_fields: [entry_roi, modulator_or_occluder, decisive_roi, withheld_or_peripheral_info, exit_roi]
+    composition_fields: [primary_mechanism, secondary_mechanism_optional, camera_reason, screen_pressure, negative_space_function]
+    color_intent_fields: [color_thesis, physical_color_sources, practical_light_sources, accent_color_role, exposure_continuity]
+    capture_intent_fields: [substrate_optional, substrate_story_reason, lens_intent, optical_constraints, camera_physical_position]
+    visual_density_fields: [primary_story_clue, secondary_clue, mundane_or_soft_regions, detail_budget, highlight_budget, controlled_imperfection]
+    reference_signal_role_fields: [identity, geometry, action, camera, style, sound, non_authoritative_signals_to_suppress]
+    anti_template_fields: [recent_composition_similarity, repeated_mechanism, reuse_justification, required_variation_if_unjustified]
+    attention_handoff_fields: [from_roi, cut_or_transition_event, to_roi, withheld_information, reveal_on_return, next_shot_target]
+    rules:
+      - unresolved_state_is_a_director_question_not_a_required_prompt_phrase
+      - relation_pressure_must_derive_from_character_goal_power_information_or_space_not_from_aesthetic_template_choice
+      - attention_flow_is_an_engineering_term_for_planned_viewer_attention_not_a_claimed_universal_film_theory_term
+      - composition_requires_a_story_or_spatial_reason_when_it_is_material_to_the_shot
+      - color_thesis_must_resolve_to_physical_scene_costume_weather_material_or_light_sources_before_model_prompt_compilation
+      - visual_density_budget_protects_hierarchy_and_may_leave_noncritical_regions_ordinary_soft_dark_occluded_or_low_detail
+      - capture_substrate_is_optional_and_requires_a_story_perceptual_or_production_reason_when_material
+      - reference_responsibility_is_not_only_textual_the_source_media_should_minimize_strong_non_authoritative_signals_when_feasible
+      - anti_template_check_may_warn_on_repetition_but_cannot_force_novelty_that_harms_story_continuity
+      - attention_handoff_must_be_explicit_when_a_cut_relies_on_viewer_search_surprise_absence_reveal_or_hidden_offscreen_action
+      - cinematic_intent_cannot_override_BlockingIR_or_canonical_topology_to_make_a_prettier_frame
   ShotPlanIR:
-    shot_fields: [shot_id, dramatic_function, audience_knowledge_before, audience_knowledge_after, entry_state, events, camera_state, cut_in_reason, cut_out_reason, exit_state, next_shot_contract, sequence_function_signature, prior_function_overlap]
+    shot_fields: [shot_id, dramatic_function, audience_knowledge_before, audience_knowledge_after, entry_state, events, cinematic_intent_ref, camera_state, cut_in_reason, cut_out_reason, attention_handoff, exit_state, next_shot_contract, sequence_function_signature, prior_function_overlap]
     rule: shot_without_information_relationship_space_emotion_rhythm_or_state_change_requires_necessity_review
     camera_design_guard: Blocking_and_visible_readability_may_inform_camera_but_must_not_replace_the_director_camera_plan_with_a_convenience_coverage_angle
+    cinematic_reason_guard: camera_and_composition_choices_that_materially_control_viewer_information_should_resolve_back_to_CinematicIntentIR
     sequence_redundancy_rule: repeated_composition_or_establishing_function_requires_new_information_contrast_escalation_temporal_change_or_theme_payoff_otherwise_route_to_necessity_review
   VisibleIR:
     camera_fields: [position, orientation, shot_size, camera_height, lens_intent, camera_motion]
     frame_fields: [foreground, midground, background]
     entity_fields: [identity, screen_region, depth_layer, visibility, occlusion, relative_position, body_orientation, gaze_target, body_state, current_action, support_or_contact, expression_evidence, performance_evidence]
-    environment_fields: [visible_objects, visible_geometry, environmental_response, lighting_evidence, material_evidence, canonical_background_evidence]
+    environment_fields: [visible_objects, visible_geometry, environmental_response, lighting_evidence, material_evidence, canonical_background_evidence, visual_hierarchy_evidence, reference_leak_evidence]
     rule: current_camera_state_only_and_SHOT-SCOPE-001_is_binding
     camera_aesthetic_boundary: visible_set_completeness_cannot_by_itself_authorize_camera_position_orientation_shot_size_or_composition_changes
     background_integrity_rule: wide_high_pullback_or_aerial_shots_must_validate_exposed_background_against_WorldStateIR_invariants_not_only_foreground_subjects
@@ -99,27 +144,31 @@ ir_layers:
     environment_music_fields: [ambience, crowd, source_music, score, silence, acoustic_space, reverb, distance, occlusion]
     rule: audible_set_does_not_grant_visual_embodiment_and_VO_speaker_is_not_auto_visible
   TransitionContract:
-    fields: [from_shot, to_shot, inherited_state, changed_state, persistent_entities, explicit_exits_or_removals, world_invariants_carry, visual_match, eyeline_relation, action_relation, sound_relation, reveal_relation, continuity_requirement]
+    fields: [from_shot, to_shot, inherited_state, changed_state, persistent_entities, explicit_exits_or_removals, world_invariants_carry, visual_match, eyeline_relation, action_relation, sound_relation, reveal_relation, attention_handoff, continuity_requirement]
     rules:
       - shot_A_exit_state_must_resolve_to_shot_B_entry_state
       - inherited_persistent_entities_continue_until_explicit_exit_removal_occlusion_or_camera_exclusion_is_resolved
       - world_invariants_continue_across_shots_until_a_canonical_change_event
+      - when_attention_handoff_is_material_the_target_roi_or_search_region_must_be_preserved_across_the_transition_or_deliberately_broken_for_a_stated_reveal
   ConstraintAutonomyContract:
-    fields: [hard_invariants, semantic_entity_locks, guided_choices, free_model_space, constraint_budget, final_state]
+    fields: [hard_invariants, semantic_entity_locks, guided_choices, free_model_space, constraint_budget, cinematic_intent_budget, final_state]
     rules:
       - hard_constraints_protect_canonical_facts_identity_topology_key_reveals_world_state_persistent_scene_state_and_final_state_only
       - semantic_entity_locks_resolve_entity_class_age_gender_role_relationship_before_style_traits_or_free_descriptors_are_applied
+      - aesthetic_preferences_remain_guided_unless_they_are_required_for_a_key_reveal_attention_handoff_or_locked_camera_contract
 
 model_adapter:
   model_fields: [model, version, generation_mode, image_reference, video_reference, audio_reference, first_frame, last_frame, camera_control, motion_control, native_audio, dialogue_support, editing_support, extension_support, negative_prompt_semantics, known_failure_modes, last_revalidated]
   rule: adapters_compile_SOAC_to_model_capabilities_without_making_a_model_behavior_a_director_core_rule
   empirical_feedback_rule: model_version_specific_prompt_output_observations_may_inform_known_failure_modes_only_when_they_are_recorded_with_scope_boundary_and_maturity
+  reference_signal_rule: adapter_may_use_reference_responsibility_text_but_should_also_prefer_source_references_with_low_non_authoritative_signal_strength_when_the_platform_workflow_allows_it
 
 minimal_execution_compiler:
-  pipeline: [RichDirectorIR, RelevanceFilter, ModelCapabilityFilter, ReferenceResponsibilitySplit, SemanticAttributeBinding, InheritedSceneStateCarry, CanonicalBackgroundIntegrity, ConstraintBudget, MinimalSufficientExecutionPrompt]
-  output_only: [shot_purpose, current_visible_set, current_audible_set, subject_action, key_event_order, camera, key_sound, inherited_state_when_material, semantic_entity_locks_when_material, hard_invariants, autonomy, final_state, catastrophic_local_exclusions]
-  forbidden_output: [full_internal_analysis, matrices, compiler_metadata, future_shot_entities]
+  pipeline: [RichDirectorIR, RelevanceFilter, CinematicIntentFilter, ModelCapabilityFilter, ReferenceResponsibilitySplit, ReferenceSignalDecoupling, SemanticAttributeBinding, InheritedSceneStateCarry, CanonicalBackgroundIntegrity, ConstraintBudget, MinimalSufficientExecutionPrompt]
+  output_only: [shot_purpose, current_visible_set, current_audible_set, subject_action, key_event_order, camera, cinematic_intent_when_material, key_sound, inherited_state_when_material, semantic_entity_locks_when_material, reference_responsibilities_when_material, hard_invariants, autonomy, final_state, catastrophic_local_exclusions]
+  forbidden_output: [full_internal_analysis, matrices, compiler_metadata, future_shot_entities, research_citations, skill_names_as_magic_words]
   camera_preservation_guard: when_a_director_camera_plan_is_locked_or_used_as_an_AB_control_the_compiler_must_preserve_it_instead_of_selecting_a_more_convenient_coverage_view
+  cinematic_filter_rule: only_transmit_cinematic_intent_fields_that_change_pixels_sound_camera_editing_or_reference_control_for_the_current_generation_unit
   semantic_binding_rule: descriptive_traits_modify_only_allowed_attributes_after_canonical_entity_identity_is_resolved
   state_carry_rule: prompt_omission_cannot_remove_a_persistent_entity_or_world_invariant_that_remains_live_in_the_transition_contract
 
@@ -149,9 +198,18 @@ static_checks:
     - SEQUENCE_FUNCTION_REDUNDANCY
     - CROWD_MOTION_MOTIVE_MISMATCH
     - AESTHETIC_QUALITY_NOT_SEPARATELY_EVALUATED
+    - COMPOSITION_MISSING_DRAMATIC_REASON
+    - ATTENTION_FLOW_UNRESOLVED
+    - CUT_ATTENTION_HANDOFF_RISK
+    - COLOR_SOURCE_UNGROUNDED
+    - VISUAL_DENSITY_OVERLOAD
+    - REFERENCE_APPEARANCE_LEAK_RISK
+    - TEMPLATE_COMPOSITION_REPETITION
+    - CAPTURE_SUBSTRATE_UNMOTIVATED
   INFO:
     - NEEDS_MODEL_ADAPTER_REVALIDATION
     - REVERSE_OBSERVATION_MANUAL_OR_AI_ASSISTED
+    - CINEMATIC_INTENT_CANDIDATE_NOT_GLOBAL_STYLE_DEFAULT
   applicability:
     UNBOUND_ACTION_TARGET:
       trigger: only_when_action_semantics_require_a_target_or_affected_object
@@ -196,19 +254,44 @@ static_checks:
     AESTHETIC_QUALITY_NOT_SEPARATELY_EVALUATED:
       trigger: semantic_or_instruction_following_pass_is_used_as_evidence_that_composition_beauty_visual_hierarchy_or_memory_value_also_passed
       severity_when_triggered: WARNING
+    COMPOSITION_MISSING_DRAMATIC_REASON:
+      trigger: composition_or_camera_is_selected_as_a_style_template_without_a_relation_space_information_or_story_reason
+      severity_when_triggered: WARNING_AND_CINEMATIC_INTENT_REVIEW
+    ATTENTION_FLOW_UNRESOLVED:
+      trigger: key_information_exists_but_the_planned_frame_has_no_decisive_attention_target_or_multiple_equal_competing_targets
+      severity_when_triggered: WARNING_AND_CINEMATIC_INTENT_REVIEW
+    CUT_ATTENTION_HANDOFF_RISK:
+      trigger: a_cut_relies_on_hidden_action_absence_reveal_surprise_or_viewer_search_but_from_roi_cut_event_and_to_roi_are_not_resolved
+      severity_when_triggered: WARNING_AND_TRANSITION_REVIEW
+      escalation: ERROR_ONLY_WHEN_key_reveal_contract_explicitly_requires_the_handoff_and_failure_would_break_story_causality
+    COLOR_SOURCE_UNGROUNDED:
+      trigger: a_material_color_or_look_requirement_has_no_scene_costume_weather_material_practical_light_or_explicit_postprocess_source
+      severity_when_triggered: WARNING_AND_LOOK_REVIEW
+    VISUAL_DENSITY_OVERLOAD:
+      trigger: noncritical_regions_compete_with_primary_story_information_through_simultaneous_high_detail_high_contrast_high_sharpness_or_highlight_density
+      severity_when_triggered: WARNING_AND_HIERARCHY_REVIEW
+    REFERENCE_APPEARANCE_LEAK_RISK:
+      trigger: a_reference_intended_for_geometry_action_or_camera_contains_strong_unwanted_texture_lighting_color_or_style_signals_that_can_compete_with_the_authoritative_style_reference
+      severity_when_triggered: WARNING_AND_REFERENCE_DECOUPLING_REVIEW
+    TEMPLATE_COMPOSITION_REPETITION:
+      trigger: recent_shots_repeat_the_same_camera_position_composition_pressure_or_attention_flow_without_new_story_information_contrast_or_deliberate_motif_reason
+      severity_when_triggered: WARNING_AND_NECESSITY_REVIEW
+    CAPTURE_SUBSTRATE_UNMOTIVATED:
+      trigger: film_stock_sensor_transfer_surveillance_fisheye_or_other_capture_substrate_is_added_only_as_a_generic_cinematic_quality_token_without_story_perceptual_or_production_reason
+      severity_when_triggered: WARNING_AND_CAPTURE_REVIEW
   gate: severe_ERROR_must_not_enter_formal_generation_without_targeted_repair_or_explicit_override
 
 reverse_compiler:
   status: candidate_interface
-  observed_fields: [observed_visible_state, observed_audible_state, observed_event_order, observed_camera_state, observed_final_state, observed_world_background_state, observed_persistent_entities, observed_semantic_identity, observed_crowd_motion, observed_sequence_function]
-  comparison: ExpectedSOACContract_vs_ObservedOutput
-  failure_categories: [identity, semantic_entity_drift, space, world_state, continuity_state, visibility, action_binding, contact, body_mechanics, event_order, performance, crowd_behavior, camera, aesthetic_composition, sequence_redundancy, lighting, dialogue, audio_source, AV_sync, transition, final_state]
+  observed_fields: [observed_visible_state, observed_audible_state, observed_event_order, observed_camera_state, observed_final_state, observed_world_background_state, observed_persistent_entities, observed_semantic_identity, observed_crowd_motion, observed_sequence_function, observed_attention_flow, observed_attention_handoff, observed_color_sources, observed_visual_hierarchy, observed_capture_characteristics, observed_reference_leak_signals]
+  comparison: ExpectedSOAC_CinematicIntentContract_vs_ObservedOutput
+  failure_categories: [identity, semantic_entity_drift, space, world_state, continuity_state, visibility, action_binding, contact, body_mechanics, event_order, performance, crowd_behavior, camera, aesthetic_composition, attention_flow, attention_handoff, color_grounding, visual_density, capture_motivation, reference_contamination, sequence_redundancy, lighting, dialogue, audio_source, AV_sync, transition, final_state]
   current_input_mode: manual_or_AI_assisted_observation
   boundary: not_an_implemented_fully_automatic_vision_or_audio_grader
 
 validation:
   candidate_maturity_required: true
-  required_links: [SHOT-SCOPE-001, SCREEN-EVIDENCE-001, SoundDirectorIR, scene_asset_identity_schema, feedback_engine]
+  required_links: [SHOT-SCOPE-001, SCREEN-EVIDENCE-001, CINEMATIC-VISUAL-GRAMMAR-001, SoundDirectorIR, scene_asset_identity_schema, feedback_engine]
   controlled_eval_requirements:
     - same_screenplay
     - same_assets_and_reference_responsibilities
@@ -218,8 +301,9 @@ validation:
     - same_story_goal
     - same_camera_position_orientation_shot_size_height_lens_intent_and_motion_unless_camera_is_the_variable_under_test
     - similar_final_prompt_information_budget_when_prompt_method_is_the_variable_under_test
+    - same_identity_geometry_action_and_style_authorities_when_reference_signal_decoupling_is_not_the_test_variable
   controlled_eval_result_policy:
     clean: target_variable_is_the_only_material_difference
     confounded: one_or_more_material_non_target_variables_changed
-    maturity_rule: confounded_result_may_generate_learning_hypotheses_but_cannot_support_SOAC_maturity_promotion
-  required_before_promotion: [controlled_generation_evidence, REG-SOAC-001, no_material_increase_in_scope_leaks_or_constraint_overload]
+    maturity_rule: confounded_result_may_generate_learning_hypotheses_but_cannot_support_SOAC_or_cinematic_visual_grammar_maturity_promotion
+  required_before_promotion: [controlled_generation_evidence, targeted_cinematic_regression, no_material_increase_in_scope_leaks_constraint_overload_or_camera_aesthetic_degradation]

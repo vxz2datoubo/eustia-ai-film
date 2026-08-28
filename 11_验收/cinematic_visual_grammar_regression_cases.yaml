@@ -1,0 +1,246 @@
+schema_version: "1.0"
+suite_id: CINEMATIC_VISUAL_GRAMMAR_REGRESSION
+status: candidate
+method_authority: 01_AI电影系统/AI电影系统.md
+runtime_ir: 10_运行时/screen_observable_audible_ir_schema.yaml#CinematicIntentIR
+route_authority: 10_运行时/director_route_index.yaml#CINEMATIC_VISUAL_GRAMMAR
+research_evidence: 09_资料证据/Cinematic Visual Grammar外部研究与融合证据.md
+maturity_rule: external_research_and_static_regression_cannot_promote_beyond_candidate
+
+static_runtime_cases:
+  - id: REG-CVG-COMPILER-001
+    input: "这镜头构图漂亮但没意思，人物和空间没关系，机位没有理由。"
+    expected:
+      hard_route: CINEMATIC_VISUAL_GRAMMAR
+      dramatic_function: cinematic_visual_design
+      relation_type: relation_pressure
+      spatial_action_feature: motivated_composition
+      failure_mechanism: composition_without_pressure
+      matched_rule: relation_pressure_composition
+
+  - id: REG-CVG-ATTENTION-001
+    input: "女人扯下衣服后切回来找不到凯姆原来的位置，注意力落点乱了。"
+    expected:
+      hard_route: CINEMATIC_VISUAL_GRAMMAR
+      dramatic_function: attention_design
+      relation_type: viewer_to_screen_information
+      spatial_action_feature: attention_path
+      failure_mechanism: attention_flow_break
+      matched_rule: attentional_flow
+
+  - id: REG-CVG-COLOR-001
+    input: "这个调色像统一滤镜，颜色没有物理来源。"
+    expected:
+      hard_route: CINEMATIC_VISUAL_GRAMMAR
+      dramatic_function: look_design
+      spatial_action_feature: motivated_light_color
+      failure_mechanism: color_as_filter
+      matched_rule: color_thesis
+
+  - id: REG-CVG-DENSITY-001
+    input: "画面纹理太多，所有区域都又锐又亮又复杂，细节抢戏。"
+    expected:
+      hard_route: CINEMATIC_VISUAL_GRAMMAR
+      dramatic_function: visual_hierarchy
+      spatial_action_feature: detail_hierarchy
+      failure_mechanism: visual_density_overload
+      matched_rule: visual_density_budget
+
+  - id: REG-CVG-REFERENCE-001
+    input: "动作参考图太脏，把错误纹理和光线带进成片，参考图影响画质。"
+    expected:
+      hard_route: CINEMATIC_VISUAL_GRAMMAR
+      dramatic_function: reference_control
+      relation_type: reference_to_generation
+      spatial_action_feature: reference_responsibility_split
+      failure_mechanism: reference_appearance_contamination
+      matched_rule: reference_signal_decoupling
+
+  - id: REG-CVG-TEMPLATE-001
+    input: "这几个镜头都一样，总是同一种构图和重复机位。"
+    expected:
+      hard_route: CINEMATIC_VISUAL_GRAMMAR
+      dramatic_function: shot_variation
+      failure_mechanism: template_composition_repetition
+      matched_rule: anti_template_composition
+
+  - id: REG-CVG-CAPTURE-001
+    input: "只是为了高级感乱加胶片和35mm，没有成像理由。"
+    expected:
+      hard_route: CINEMATIC_VISUAL_GRAMMAR
+      dramatic_function: look_design
+      spatial_action_feature: capture_substrate
+      failure_mechanism: unmotivated_capture_style
+      matched_rule: motivated_capture_substrate
+
+  - id: REG-CVG-STYLE-STACK-001
+    input: "只会堆电影感质量词，结果像广告和CG。"
+    expected:
+      hard_route: CINEMATIC_VISUAL_GRAMMAR
+      dramatic_function: cinematic_visual_design
+      failure_mechanism: generic_cinematic_style_stacking
+      matched_rule: cinematic_visual_design
+
+positive_guard_cases:
+  - id: REG-COMPOSITION-CAMERA-POSITIVE-001
+    input: "固定机位拍摄，保持现有构图。"
+    expected_present:
+      dramatic_function: cinematic_visual_design
+      spatial_action_feature: motivated_composition
+    expected_absent:
+      relation_type: relation_pressure
+      failure_mechanism: composition_without_pressure
+    expected_route: CINEMATIC_VISUAL_GRAMMAR
+
+  - id: REG-CVG-CAPTURE-GUARD-001
+    input: "角色记忆段使用35mm胶片作为成像介质，保持真实光学限制。"
+    expected_present:
+      spatial_action_feature: capture_substrate
+    expected_absent:
+      failure_mechanism: unmotivated_capture_style
+    expected_route: CINEMATIC_VISUAL_GRAMMAR
+
+  - id: REG-CVG-REFERENCE-GUARD-001
+    input: "参考图只负责人物身份，白模负责动作和空间关系。"
+    expected_present:
+      spatial_action_feature: reference_responsibility_split
+    expected_absent:
+      failure_mechanism: reference_appearance_contamination
+    expected_route: CINEMATIC_VISUAL_GRAMMAR
+
+  - id: REG-CVG-STYLE-GUARD-001
+    input: "希望这个场景有电影感，但先从人物关系和空间设计出发。"
+    expected_present:
+      dramatic_function: cinematic_visual_design
+    expected_absent:
+      failure_mechanism: generic_cinematic_style_stacking
+    expected_route: CINEMATIC_VISUAL_GRAMMAR
+
+cinematic_intent_ir_gate:
+  required_position:
+    after: BlockingIR
+    before: ShotPlanIR
+  required_fields:
+    - unresolved_state
+    - viewer_position
+    - relation_pressure
+    - attention_flow
+    - composition
+    - color_intent
+    - capture_intent
+    - visual_density
+    - reference_signal_roles
+    - anti_template_signature
+    - attention_handoff
+  authority_boundary:
+    cannot_override:
+      - canonical_story
+      - character_identity
+      - map_topology
+      - blocking_causality
+      - formal_asset_identity
+      - sound_director_method
+
+candidate_skill_cases:
+  - id: REG-CINEMATIC-PRESSURE-001
+    skill: RELATION-PRESSURE-COMPOSITION-001
+    method: controlled_A_B
+    A: "同剧情同空间下先选漂亮构图/焦段，再安排人物。"
+    B: "同剧情同空间下先解析人物目标、权力、信息差和空间压力，再选观看立场与构图。"
+    controls: [same_story, same_characters, same_space, same_assets, same_model_version, same_duration, comparable_prompt_budget]
+    compare: [story_readability, spatial_relation, camera_reason, visual_memory, template_feel, generation_stability]
+    promotion_gate: real_project_generation_required
+
+  - id: REG-ATTENTION-FLOW-001
+    skill: ATTENTIONAL-FLOW-001
+    method: controlled_A_B
+    target_pattern: absence_reveal_after_occluding_cutaway
+    A: "只规定结果：女人拿开衣服后凯姆已经离开。"
+    B: "明确 from ROI → cut on action → reaction cutaway → offscreen exit → return to same master → empty former position。"
+    controls: [same_story, same_assets, same_model_version, same_camera_master, same_duration, comparable_prompt_budget]
+    compare: [reveal_success, premature_character_visibility, viewer_search_target, edit_naturalness, overconstraint_rigidity]
+    promotion_gate: real_project_generation_required
+
+  - id: REG-COLOR-THESIS-001
+    skill: COLOR-THESIS-001
+    method: controlled_A_B
+    A: "用统一综合色/电影滤镜描述目标色调。"
+    B: "同一综合色目标拆成物理场景色、服装色、天气、实际光源与强调色职责。"
+    controls: [same_story, same_scene, same_character_assets, same_camera, same_model_version]
+    compare: [local_color_separation, material_credibility, skin_tone, filter_feel, continuity]
+    promotion_gate: real_project_generation_required
+
+  - id: REG-VISUAL-DENSITY-001
+    skill: VISUAL-DENSITY-BUDGET-001
+    method: controlled_A_B
+    A: "全画面高锐、高细节、高微对比和高光竞争。"
+    B: "剧情主线索不变，仅降低非关键区域纹理、锐度、高光和微对比竞争。"
+    controls: [same_story, same_composition, same_assets, same_model_version]
+    compare: [primary_clue_readability, false_texture_noise, visual_hierarchy, material_naturalness, useful_detail_loss]
+    promotion_gate: real_project_generation_required
+
+  - id: REG-REFERENCE-DECOUPLING-001
+    skill: REFERENCE-SIGNAL-DECOUPLING-002
+    method: controlled_A_B
+    production_opportunity: KAIM_MARKET_ROPE_SLIDE
+    evidence_status: candidate_planned_AB
+    A: "原高频、强纹理、强材质/风格的滑绳动作构图参考。"
+    B: "相同核心几何、身体、绳索、围巾、摄影关系的clean white-model/clay previs；保留可读明暗，去除非职责高频纹理和风格。"
+    controls:
+      - same_story
+      - same_execution_prompt
+      - same_model_and_version
+      - same_duration
+      - same_identity_reference
+      - same_style_scene_authority_reference
+      - same_camera_goal
+      - same_generation_settings_when_available
+    compare:
+      - scarf_rope_body_topology
+      - lateral_motion_and_camera_geometry
+      - identity_fidelity
+      - environment_style_fidelity
+      - unwanted_texture_light_style_inheritance
+      - microcontrast_noise
+      - overall_naturalness
+      - prompt_complexity
+    success_condition: B降低非职责纹理/光线/风格继承且不显著损害动作几何、身份、场景和摄影目标
+    promotion_gate: B必须真实生成并与A可比；当前不得晋级scene_verified
+
+  - id: REG-ANTI-TEMPLATE-001
+    skill: ANTI-TEMPLATE-COMPOSITION-001
+    method: cross_scene_regression
+    cases_required: 3
+    compare: [camera_position_repetition, composition_pressure_repetition, attention_flow_repetition, justified_motif_reuse, story_fit]
+    promotion_gate: cross_scene_project_evidence_required
+
+  - id: REG-CAPTURE-SUBSTRATE-001
+    skill: MOTIVATED-CAPTURE-SUBSTRATE-001
+    method: controlled_A_B
+    A: "无剧情理由加入film stock/grain/fisheye/monitor等高级感词。"
+    B: "只有记忆、监控、媒介内嵌、主观感知或明确生产目的时启用相应成像介质。"
+    compare: [story_function, style_fit, visual_contamination, template_feel]
+    promotion_gate: real_project_generation_required
+
+pre_output_checks:
+  warnings:
+    - COMPOSITION_MISSING_DRAMATIC_REASON
+    - ATTENTION_FLOW_UNRESOLVED
+    - CUT_ATTENTION_HANDOFF_RISK
+    - COLOR_SOURCE_UNGROUNDED
+    - VISUAL_DENSITY_OVERLOAD
+    - REFERENCE_APPEARANCE_LEAK_RISK
+    - TEMPLATE_COMPOSITION_REPETITION
+    - CAPTURE_SUBSTRATE_UNMOTIVATED
+  severity_rule: aesthetic_warning_must_not_become_error_unless_story_causality_key_reveal_identity_or_locked_camera_contract_is_materially_broken
+
+gates:
+  no_second_director_authority: true
+  no_second_learning_authority: true
+  four_feature_keys_unchanged: true
+  cinema_dna_is_evidence_only: true
+  no_wholesale_vendor_copy: true
+  all_new_skills_candidate: true
+  external_research_cannot_promote_maturity: true
+  real_generation_required_for_scene_verified: true
+  model_version_reference_behavior_requires_revalidation: true
