@@ -79,6 +79,7 @@ canonical:
   maturity_model: 10_运行时/maturity_model.yaml
   pending_canonical_writes: 10_运行时/pending_canonical_writes.yaml
   regression_cases: 11_验收/director_regression_cases.yaml
+  cinematic_visual_grammar_regression_cases: 11_验收/cinematic_visual_grammar_regression_cases.yaml
   asset_retrieval_regression_cases: 11_验收/asset_retrieval_regression_cases.yaml
   learning_application_gate_regression_cases: 11_验收/learning_application_gate_regression_cases.yaml
   golden_prompt_cases: 11_验收/golden_prompt_cases.yaml
@@ -133,6 +134,7 @@ effective_sources:
   10_运行时/pending_canonical_writes.yaml: github_verified
   10_运行时/director_route_index.yaml: github_verified
   11_验收/director_regression_cases.yaml: github_verified
+  11_验收/cinematic_visual_grammar_regression_cases.yaml: github_verified
   11_验收/asset_retrieval_regression_cases.yaml: github_verified
   11_验收/learning_application_gate_regression_cases.yaml: github_verified
   11_验收/golden_prompt_cases.yaml: github_verified
@@ -143,7 +145,6 @@ effective_sources:
   11_验收/suno_prompt_regression_cases.yaml: github_verified
   11_验收/minimax_h3_prompt_regression_cases.yaml: github_verified
   11_验收/legacy_authority_regression_cases.yaml: github_verified
-  11_验收/canonical_migration_integrity_audit.md: github_verified
   12_未知项/UNKNOWN_REGISTRY.yaml: github_verified
   12_未知项/SOUND_UNKNOWN_REGISTRY.yaml: github_verified
   01_AI电影系统/AI电影系统.md: github_verified
