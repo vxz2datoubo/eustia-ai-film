@@ -235,9 +235,6 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
                 return True
         return False
 
-    # Shared action vocabulary. Target-oriented semantics are added only when a
-    # story-material target/source relation is present after the action, never
-    # merely because an actor noun appears elsewhere in the sentence.
     gaze_terms = ("看向", "望向", "盯着", "注视", "视线朝", "目光朝", "观察")
     perception_terms = ("看到", "看见", "见到")
     facing_terms = ("面向", "朝向", "转向", "身体朝", "正对")
@@ -327,7 +324,6 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
     escape_source_evidence = has_escape and action_has_object(escape_source_terms, target_object_terms)
     occlusion_target_evidence = has_occlusion and action_has_object(occlusion_terms, target_object_terms)
 
-    # Observable direction/orientation may exist without a story-material target.
     if (has_gaze and not gaze_camera_agent) or (has_perception and not perception_camera_agent):
         add(spatial, "gaze_direction")
         trace("observable_gaze_direction", "VisibleIR.gaze_target", "BlockingIR.orientations")
@@ -398,8 +394,6 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
             "PerformanceIR.pause",
         )
 
-    # Cinematic visual grammar. These rules make visual-intent language
-    # retrievable without turning a style noun into a failure diagnosis.
     generic_cinematic_terms = (
         "电影感", "高级感", "cinematic", "masterpiece", "史诗感", "大片感", "dramatic lighting", "电影级",
     )
@@ -470,7 +464,7 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
 
     color_terms = ("色彩", "调色", "综合色", "色温", "颜色来源", "色彩命题", "光色", "强调色", "色域")
     color_problem_terms = (
-        "像滤镜", "滤镜感", "直接染色", "统一染色", "全局滤镜", "颜色没有来源", "色彩没有来源", "调色太滤镜",
+        "像滤镜", "像统一滤镜", "统一滤镜", "滤镜感", "直接染色", "统一染色", "全局滤镜", "颜色没有来源", "色彩没有来源", "调色太滤镜",
     )
     if _contains_any(text, color_terms) or _contains_any(text, color_problem_terms):
         add(dramatic, "look_design")
@@ -553,8 +547,6 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
         add(failure, "unmotivated_capture_style")
         trace("motivated_capture_substrate", "CinematicIntentIR.capture_intent", "VisibleIR.camera_fields")
 
-    # Pursuit/escape can exist without a known target. Keep the action observable,
-    # but do not fabricate a locatable target or target relation.
     if has_pursuit:
         add(dramatic, "pursuit")
         add(spatial, "pursuit")
