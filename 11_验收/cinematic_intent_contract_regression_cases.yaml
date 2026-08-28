@@ -15,15 +15,14 @@ policy:
   non_material_fields_must_not_enter_overlay: true
   learning_maturity_unchanged: true
   proposal_cannot_supply_locked_contracts: true
-  upstream_lock_envelope_is_separate_invocation_input: true
-  upstream_source_digest_cross_binding_required: true
+  serialized_upstream_lock_authority_forbidden: true
+  trusted_camera_lock_capability_process_local_only: true
   unsupported_camera_lock_surfaces_fail_closed: true
 
 trusted_upstream_fixture:
-  trusted_source_digest: "a60a9346e6e40a68ee6506e8f2a86605897ee835e7f75c2a83b92694258e0e6f"
+  authority_boundary: process_local_orchestration_capability_only
   envelope:
     source_authority_ref: test_fixture://shot_plan/no_camera_lock
-    source_material_digest: "a60a9346e6e40a68ee6506e8f2a86605897ee835e7f75c2a83b92694258e0e6f"
     camera: {}
 
 compile_cases:
@@ -57,10 +56,8 @@ compile_cases:
         material_fields: [composition, color_intent]
     upstream_lock_envelope:
       source_authority_ref: test_fixture://shot_plan/locked_side_camera
-      source_material_digest: "8833c812d840f1a0b34b1dbd38a80a30dc91bdb2cfb37c1a2a9ff0735a5af30e"
       camera:
         position: exterior_side
-    trusted_upstream_source_digest: "8833c812d840f1a0b34b1dbd38a80a30dc91bdb2cfb37c1a2a9ff0735a5af30e"
     expected_status: PASS
     expected_overlay_fields: [composition, color_intent]
     expected_absent_overlay_fields: [unresolved_state, visual_density, capture_intent]
@@ -93,10 +90,8 @@ compile_cases:
         material_fields: [capture_intent]
     upstream_lock_envelope:
       source_authority_ref: test_fixture://shot_plan/locked_side_camera
-      source_material_digest: "8833c812d840f1a0b34b1dbd38a80a30dc91bdb2cfb37c1a2a9ff0735a5af30e"
       camera:
         position: exterior_side
-    trusted_upstream_source_digest: "8833c812d840f1a0b34b1dbd38a80a30dc91bdb2cfb37c1a2a9ff0735a5af30e"
     expected_status: FAIL
     expected_diagnostics: [CAMERA_SCOPE_CONFLICT]
     expected_overlay_fields: []
@@ -296,15 +291,15 @@ structural_gate_cases:
     expected_error_code: INVALID_MATERIAL_FIELD
 
 upstream_gate_cases:
-  - id: CIC-UPSTREAM-DIGEST-SUBSTITUTION-001
+  - id: CIC-SERIALIZED-LOCK-AUTHORITY-FORGED-001
     contract_ref: CIC-VALID-MINIMAL-001
-    upstream_lock_envelope:
-      source_authority_ref: test_fixture://shot_plan/substituted
-      source_material_digest: "9b6ff06a40ca3ce724a047c47c053647887bc567bb5edfedb2ff0456799fce67"
+    serialized_attempt:
+      source_authority_ref: caller://forged_downstream
       camera:
-        position: exterior_side
-    trusted_upstream_source_digest: "8833c812d840f1a0b34b1dbd38a80a30dc91bdb2cfb37c1a2a9ff0735a5af30e"
-    expected_error_code: UPSTREAM_BINDING_MISMATCH
+        position: forged_position
+      caller_computable_digest: ignored_because_serialized_authority_channel_does_not_exist
+    expected_error_code: MISSING_TRUSTED_UPSTREAM_BINDING_or_signature_rejection
+    expected_authority_granted: false
 
   - id: CIC-UPSTREAM-ORIENTATION-UNENFORCEABLE-001
     contract_ref: CIC-VALID-MINIMAL-001
@@ -334,4 +329,6 @@ gates:
   reverse_expectations_preserve_declared_value_and_provenance_only: true
   no_model_specific_behavior_universalized: true
   downstream_proposal_cannot_mint_lock_authority: true
+  serialized_caller_cannot_mint_camera_lock_authority: true
+  trusted_camera_lock_capability_is_process_local: true
   every_accepted_camera_lock_surface_is_mechanically_enforced: true
