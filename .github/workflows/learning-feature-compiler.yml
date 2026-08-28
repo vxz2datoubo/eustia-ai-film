@@ -4,19 +4,20 @@ on:
   pull_request:
     paths:
       - 'PROJECT_INDEX.yaml'
+      - '01_AI电影系统/AI电影系统.md'
+      - '09_资料证据/Cinematic Visual Grammar外部研究与融合证据.md'
       - 'tools/learning_retriever/**'
       - '10_运行时/director_feature_compiler.yaml'
       - '10_运行时/director_route_index.yaml'
       - '10_运行时/read_sets.yaml'
+      - '10_运行时/write_routes.yaml'
       - '10_运行时/learning_application_gate.yaml'
       - '10_运行时/source_authority.yaml'
       - '10_运行时/screen_observable_audible_ir_schema.yaml'
       - '10_运行时/learning_recall_index.yaml'
       - '11_验收/director_feature_compiler_regression_cases.yaml'
+      - '11_验收/cinematic_visual_grammar_regression_cases.yaml'
       - '.github/workflows/learning-feature-compiler.yml'
-
-permissions:
-  contents: write
 
 jobs:
   feature-compiler-regression:
@@ -48,65 +49,3 @@ jobs:
       - name: Run full learning retriever tests
         run: |
           PYTHONPATH=tools/learning_retriever python -m pytest tools/learning_retriever/tests
-      - name: Run branch-only canonical appender
-        if: github.event.pull_request.number == 21 && github.head_ref == 'gpt/cinematic-visual-grammar-integration'
-        shell: bash
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-
-          carrier = Path('.github/workflows/tmp-cinematic-visual-grammar-append.yml').read_text(encoding='utf-8')
-          begin_marker = "          section = r'''\n"
-          end_marker = "\n'''\n\n          text = text.replace"
-          begin = carrier.index(begin_marker) + len(begin_marker)
-          end = carrier.index(end_marker, begin)
-          section = carrier[begin:end]
-
-          path = Path('01_AI电影系统/AI电影系统.md')
-          text = path.read_text(encoding='utf-8')
-          anchor = 'CINEMATIC-VISUAL-GRAMMAR-001'
-          if anchor in text:
-              print('anchor already exists; no append needed')
-              raise SystemExit(0)
-
-          text = text.replace('last_updated: 2026-08-13', 'last_updated: 2026-08-28', 1)
-          path.write_text(text.rstrip() + '\n\n' + section.strip() + '\n', encoding='utf-8')
-          print('canonical append complete')
-          PY
-      - name: Commit canonical append to integration branch
-        if: github.event.pull_request.number == 21 && github.head_ref == 'gpt/cinematic-visual-grammar-integration'
-        shell: bash
-        run: |
-          if git diff --quiet -- '01_AI电影系统/AI电影系统.md'; then
-            echo 'No canonical append needed'
-          else
-            git config user.name 'github-actions[bot]'
-            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-            git add '01_AI电影系统/AI电影系统.md'
-            git commit -m 'Integrate cinematic visual grammar into canonical AI film system'
-            git push origin HEAD:gpt/cinematic-visual-grammar-integration
-          fi
-      - name: Run bounded integration finalizer
-        if: github.event.pull_request.number == 21 && github.head_ref == 'gpt/cinematic-visual-grammar-integration'
-        run: |
-          python tools/tmp_finalize_cinematic_visual_grammar.py
-      - name: Commit bounded integration finalization
-        if: github.event.pull_request.number == 21 && github.head_ref == 'gpt/cinematic-visual-grammar-integration'
-        shell: bash
-        run: |
-          if git diff --quiet; then
-            echo 'No finalization changes needed'
-            exit 0
-          fi
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add \
-            'PROJECT_INDEX.yaml' \
-            '01_AI电影系统/AI电影系统.md' \
-            '10_运行时/read_sets.yaml' \
-            '10_运行时/write_routes.yaml' \
-            '10_运行时/screen_observable_audible_ir_schema.yaml' \
-            '11_验收/cinematic_visual_grammar_regression_cases.yaml' \
-            'tools/learning_retriever/learning_retriever/feature_compiler.py'
-          git commit -m 'Finalize cinematic visual grammar runtime bindings'
-          git push origin HEAD:gpt/cinematic-visual-grammar-integration
