@@ -36,3 +36,5 @@ jobs:
           git add tools/learning_retriever/learning_retriever/cinematic_intent.py tools/learning_retriever/tests/test_cinematic_intent_contract.py tools/learning_retriever/tests/test_cinematic_intent_contract_hardening.py tools/learning_retriever/README.md
           git commit -m "Harden CinematicIntent lock authority capability"
           git push origin HEAD:gpt/cinematic-intent-contract-compiler
+
+# trigger: p1-review-remediation-v2
