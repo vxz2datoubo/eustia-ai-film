@@ -34,6 +34,7 @@ policy:
   minimax_h3_official_format_authority_over_local_h3_syntax: true
   cinematic_visual_grammar_external_source_is_evidence_only: true
   cinematic_visual_grammar_cannot_become_second_director_authority: true
+  cinematic_intent_contract_runtime_is_execution_only: true
 
 canonical:
   project_entry: 项目入口.md
@@ -80,6 +81,7 @@ canonical:
   pending_canonical_writes: 10_运行时/pending_canonical_writes.yaml
   regression_cases: 11_验收/director_regression_cases.yaml
   cinematic_visual_grammar_regression_cases: 11_验收/cinematic_visual_grammar_regression_cases.yaml
+  cinematic_intent_contract_regression_cases: 11_验收/cinematic_intent_contract_regression_cases.yaml
   asset_retrieval_regression_cases: 11_验收/asset_retrieval_regression_cases.yaml
   learning_application_gate_regression_cases: 11_验收/learning_application_gate_regression_cases.yaml
   golden_prompt_cases: 11_验收/golden_prompt_cases.yaml
@@ -135,6 +137,7 @@ effective_sources:
   10_运行时/director_route_index.yaml: github_verified
   11_验收/director_regression_cases.yaml: github_verified
   11_验收/cinematic_visual_grammar_regression_cases.yaml: github_verified
+  11_验收/cinematic_intent_contract_regression_cases.yaml: github_verified
   11_验收/asset_retrieval_regression_cases.yaml: github_verified
   11_验收/learning_application_gate_regression_cases.yaml: github_verified
   11_验收/golden_prompt_cases.yaml: github_verified
@@ -170,7 +173,7 @@ external_skills:
     upstream_skill_path: skills/h3-prompt-writing
     source_blobs:
       SKILL.md: b6d9b2839384a588763a9c24315225dd8ce19d56
-      references/base-en.txt: 40cf586a634d677d6b7107b367cf0ec9621be728
+      references/base-en.txt: 40cf586a634d6775a0f189016f1e9aa
       references/ref-en.txt: 7ae1b2d07d743fd2392258a96449be9e9e322d35
       agents/openai.yaml: 8151bd25e3dc29bdb67c8049e39c34c60c3f08f8
     authority_role: h3_prompt_structure_and_syntax_only
