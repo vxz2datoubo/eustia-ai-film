@@ -16,11 +16,13 @@ on:
       - '10_运行时/screen_observable_audible_ir_schema.yaml'
       - '10_运行时/learning_recall_index.yaml'
       - '10_运行时/targeted_repair_policy.yaml'
+      - '10_运行时/final_delta_learning_policy.yaml'
       - '11_验收/director_feature_compiler_regression_cases.yaml'
       - '11_验收/cinematic_visual_grammar_regression_cases.yaml'
       - '11_验收/cinematic_intent_contract_regression_cases.yaml'
       - '11_验收/expected_observed_eval_regression_cases.yaml'
       - '11_验收/targeted_repair_regression_cases.yaml'
+      - '11_验收/final_delta_learning_regression_cases.yaml'
       - '.github/workflows/learning-feature-compiler.yml'
 
 jobs:
@@ -59,6 +61,10 @@ jobs:
       - name: Run targeted repair planner regressions
         run: |
           PYTHONPATH=tools/learning_retriever python -m pytest tools/learning_retriever/tests/test_targeted_repair.py
+      - name: Run targeted Final-Delta learning regressions
+        run: |
+          PYTHONPATH=tools/learning_retriever python -m pytest tools/learning_retriever/tests/test_final_delta_learning.py
+          PYTHONPATH=tools/learning_retriever python -m pytest tools/learning_retriever/tests/test_final_delta_bindings.py
       - name: Run full learning retriever tests
         run: |
           PYTHONPATH=tools/learning_retriever python -m pytest tools/learning_retriever/tests
