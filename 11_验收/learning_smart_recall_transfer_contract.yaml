@@ -13,6 +13,7 @@ variation_policy:
   min_non_wording_axes_per_family: 2
   require_cross_scene_positive_per_family: true
   require_metamorphic_positive_per_family: true
+  metamorphic_description_must_differ_from_parent: true
   allowed_non_wording_axes:
     - character
     - scene
