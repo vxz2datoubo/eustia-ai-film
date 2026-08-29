@@ -1,4 +1,4 @@
-schema_version: "1.0"
+schema_version: "1.1"
 regression_suite_id: EUSTIA_ACTIVE_WORK_ITEM_CHECKPOINT_COMPILER_REGRESSIONS
 status: active
 runtime_contract: 10_运行时/active_work_item_checkpoint_compiler.yaml
@@ -6,13 +6,12 @@ authority_boundary:
   eval_fixture_only: true
   continuity_authority: 07_连续性与生产状态/连续性与当前生产状态.md#ACTIVE_WORK_ITEM_STATE
   proposal_is_not_persistence: true
+  source_issue_revision_trace_is_not_canonical_truth: true
 
 cases:
   - case_id: AWCP-ISSUE19-TRAJECTORY-001
     class: revision_trajectory_to_pending_snapshot
-    baseline:
-      work_item_id: KAIM-SCARF-CLOTHESLINE-TRAVERSE
-      checkpoint_ref: "5454103847"
+    baseline: {work_item_id: KAIM-SCARF-CLOTHESLINE-TRAVERSE, checkpoint_ref: "5454103847"}
     revisions:
       - {revision_id: R1, event_type: MODIFY, parent_revision: null}
       - {revision_id: R2, event_type: LOCK, parent_revision: R1}
@@ -27,15 +26,56 @@ cases:
 
   - case_id: AWCP-OMISSION-PRESERVE-001
     class: omission_is_not_revocation
-    expected:
-      existing_locked_constraints_preserved: true
-      existing_preserved_constraints_preserved: true
+    expected: {existing_locked_constraints_preserved: true, existing_preserved_constraints_preserved: true}
 
   - case_id: AWCP-EXPLICIT-REVOKE-001
     class: explicit_revoke_only
+    expected: {named_constraint_removed_only: true, unrelated_constraints_preserved: true}
+
+  - case_id: AWCP-REINTRODUCE-MODIFY-NEG-001
+    class: revoked_constraint_cannot_return_through_modify
+    expected_error: CHECKPOINT_REINTRODUCTION_REQUIRES_ADD_OR_LOCK
+
+  - case_id: AWCP-REINTRODUCE-ADD-001
+    class: revoked_constraint_explicit_add_reactivation
+    expected: {removed_from_revoked: true, restored_to_preserved: true}
+
+  - case_id: AWCP-REINTRODUCE-LOCK-001
+    class: revoked_constraint_explicit_lock_reactivation
+    expected: {removed_from_revoked: true, restored_to_locked: true}
+
+  - case_id: AWCP-REINTRODUCE-EXPERIMENT-001
+    class: revoked_constraint_experiment_without_effective_reactivation
     expected:
-      named_constraint_removed_only: true
-      unrelated_constraints_preserved: true
+      remains_revoked: true
+      enters_experimental: true
+      not_restored_to_locked_or_preserved: true
+
+  - case_id: AWCP-PRESERVE-REVOKED-NEG-001
+    class: preserved_field_cannot_resurrect_revoked
+    expected_error: CHECKPOINT_PRESERVE_REVOKED_CONFLICT
+
+  - case_id: AWCP-SAME-EVENT-ADD-REVOKE-NEG-001
+    class: same_event_constraint_conflict
+    expected_error: CHECKPOINT_EVENT_CONSTRAINT_CONFLICT
+
+  - case_id: AWCP-AUTHORITY-STORY-SCOPE-NEG-001
+    class: source_issue_revision_cannot_mint_story_scope
+    forbidden_field: story_scope_ref
+    expected_error: CHECKPOINT_EVENT_AUTHORITY_FIELD_FORBIDDEN
+
+  - case_id: AWCP-AUTHORITY-STATE-NEG-001
+    class: source_issue_revision_cannot_mint_work_item_or_persistence_state
+    forbidden_fields: [status, checkpoint_writeback_status, writeback_verified_commit, canonical_merge_status, previous_work_item_id]
+    expected_error: CHECKPOINT_EVENT_AUTHORITY_FIELD_FORBIDDEN
+
+  - case_id: AWCP-UNKNOWN-FIRST-PARENT-001
+    class: unverified_initial_parent_fails_closed
+    expected_error: CHECKPOINT_PARENT_BASELINE_UNKNOWN
+
+  - case_id: AWCP-VERIFIED-FIRST-PARENT-001
+    class: explicitly_verified_parent_allows_chain_start
+    expected: {first_parent_matches_expected_parent_revision: true}
 
   - case_id: AWCP-LOCK-CONFLICT-001
     class: lock_conflict_fail_closed
@@ -76,7 +116,16 @@ cases:
       caller_write_succeeded_shortcut: rejected
       github_writer_api: absent
 
+  - case_id: AWCP-TWO-PHASE-BOUNDARY-001
+    class: materialization_verification_is_not_final_canonicalization
+    expected:
+      first_materialized_snapshot_status: pending_write
+      post_write_document_verifier_may_not_set_verified: true
+      second_governed_finalization_required: true
+
 acceptance:
-  all_cases_machine_backed_by: tools/learning_retriever/tests/test_checkpoint_compiler.py
+  primary_machine_suite: tools/learning_retriever/tests/test_checkpoint_compiler.py
+  hardening_machine_suite: tools/learning_retriever/tests/test_checkpoint_compiler_hardening.py
+  authority_machine_suite: tools/learning_retriever/tests/test_checkpoint_compiler_authority.py
   exact_head_ci_required: true
   stacked_dependency_must_be_resolved_before_merge: PR_37
