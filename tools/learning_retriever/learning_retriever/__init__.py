@@ -2,11 +2,13 @@ from .active_work_item import (
     ActiveWorkItemResolutionError,
     WorkItemResolution,
     apply_constraint_ledger,
+    build_work_item_context_packet,
     is_continuation_request,
     load_active_work_item_state,
     resolve_work_item,
     validate_output_work_item,
     validate_state_transition,
+    validate_work_item_context_packet,
 )
 from .feature_compiler import (
     DirectorFeatures,
@@ -29,6 +31,7 @@ __all__ = [
     "RouteResolutionError",
     "WorkItemResolution",
     "apply_constraint_ledger",
+    "build_work_item_context_packet",
     "compile_director_features",
     "compile_retrieval_task",
     "is_continuation_request",
@@ -39,4 +42,5 @@ __all__ = [
     "validate_output_work_item",
     "validate_semantic_dependencies",
     "validate_state_transition",
+    "validate_work_item_context_packet",
 ]
