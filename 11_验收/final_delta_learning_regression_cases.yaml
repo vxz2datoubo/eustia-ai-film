@@ -1,0 +1,99 @@
+suite_id: FINAL_DELTA_LEARNING_EVIDENCE_REGRESSION_V1
+status: candidate
+policy_authority: 10_运行时/final_delta_learning_policy.yaml
+learning_authority: 08_系统学习/反馈反推与系统反哺引擎.md
+maturity_authority: 10_运行时/maturity_model.yaml
+runtime: tools/learning_retriever/learning_retriever/final_delta.py
+source_eval_suite: 11_验收/expected_observed_eval_regression_cases.yaml
+source_repair_suite: 11_验收/targeted_repair_regression_cases.yaml
+
+policy:
+  observation_is_not_causality: true
+  one_success_cannot_promote: true
+  candidate_learning_evidence_only: true
+  automatic_writeback_forbidden: true
+  automatic_maturity_promotion_forbidden: true
+  model_version_mismatch_not_aggregated: true
+  pass_regression_blocks_clean_repair_claim: true
+  missing_alternative_explanations_remain_unknown: true
+  missing_counterfactuals_remain_unknown: true
+  camera_authority_cannot_reappear: true
+
+cases:
+  - id: FD-PROD-KAIM-RESOLVED-001
+    source_before_eval_case: EOE-PROD-KAIM-DISAPPEARANCE-001
+    target_field: attention_handoff
+    after_observation: PASS
+    expected_transition: RESOLVED
+    expected_causal_evidence_status: OBSERVATIONAL_ONLY
+    expected_maturity: candidate
+    expected_generalization_authorized: false
+    expected_promotion_authorized: false
+    expected_writeback_authorized: false
+
+  - id: FD-CLEAN-SINGLE-VARIABLE-001
+    target_field: visual_density
+    protected_pass_field: composition
+    before_control_status: CLEAN
+    after_control_status: CLEAN
+    changed_variables: [reference_signal_decoupling]
+    expected_target_transition: RESOLVED
+    expected_protected_transition: PRESERVED
+    expected_causal_evidence_status: CONTROLLED_SINGLE_VARIABLE_CANDIDATE
+    expected_causal_claim_authorized: false
+    expected_generalization_authorized: false
+
+  - id: FD-PASS-REGRESSION-001
+    target_field: visual_density
+    regressed_field: composition
+    expected_target_transition: RESOLVED
+    expected_regressed_transition: REGRESSED
+    expected_causal_evidence_status: TARGET_IMPROVED_WITH_REGRESSION
+    expected_regression_candidate_eligible: false
+
+  - id: FD-MODEL-VERSION-SPLIT-001
+    before_model_version: "2.5"
+    after_model_version: "2.6"
+    expected_comparison_status: NOT_COMPARABLE
+    expected_reason: MODEL_VERSION_MISMATCH
+    expected_causal_evidence_status: NOT_ELIGIBLE_NOT_COMPARABLE
+
+  - id: FD-UNKNOWN-EVIDENCE-GAIN-001
+    before_outcome: UNKNOWN
+    after_outcome: PASS
+    expected_transition: EVIDENCE_GAINED_PASS
+    expected_not_transition: RESOLVED
+
+structural_gate_cases:
+  - id: FD-TAMPERED-REPAIR-PLAN-001
+    mutation: remove_source_repair_item
+    expected_error_code: FINAL_DELTA_REPAIR_PLAN_MISMATCH
+
+  - id: FD-AUTHORITY-ESCALATION-001
+    mutation: set_learning_writeback_authorized_true
+    expected_error_code: FINAL_DELTA_AUTHORITY_VIOLATION
+
+  - id: FD-CAMERA-AUTHORITY-ESCALATION-001
+    mutation: set_camera_authority_mutation_authorized_true
+    expected_error_code: FINAL_DELTA_AUTHORITY_VIOLATION
+
+  - id: FD-MISSING-CHANGE-RECORD-001
+    mutation: remove_changed_variables
+    expected_error_code: FINAL_DELTA_CHANGE_RECORD_REQUIRED
+
+  - id: FD-MISSING-CHANGE-EVIDENCE-001
+    mutation: remove_change_evidence_refs
+    expected_error_code: FINAL_DELTA_CHANGE_RECORD_REQUIRED
+
+gates:
+  source_eval_learning_handoff_must_be_non_promoting: true
+  repair_plan_must_exactly_match_before_fail_unknown: true
+  pass_dimensions_must_be_compared_for_regression: true
+  single_success_cannot_promote: true
+  causal_claim_never_auto_authorized: true
+  candidate_lesson_never_invented: true
+  missing_alternatives_and_counterfactuals_are_unknown: true
+  model_version_split_is_fail_closed_for_attribution: true
+  camera_authority_cannot_reappear: true
+  regression_candidate_does_not_authorize_regression_write: true
+  no_second_learning_authority: true
