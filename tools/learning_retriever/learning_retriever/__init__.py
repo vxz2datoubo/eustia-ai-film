@@ -18,6 +18,13 @@ from .checkpoint_compiler import (
     compile_checkpoint_proposal,
     verify_post_write_document,
 )
+from .checkpoint_finalizer import (
+    CheckpointFinalizationError,
+    CheckpointFinalizationProposal,
+    apply_finalization_to_document,
+    compile_checkpoint_finalization_proposal,
+    verify_finalization_document,
+)
 from .feature_compiler import (
     DirectorFeatures,
     FeatureCompilationError,
@@ -32,6 +39,8 @@ from .runtime import DirectorLearningRuntime
 __all__ = [
     "ActiveWorkItemResolutionError",
     "CheckpointCompilationError",
+    "CheckpointFinalizationError",
+    "CheckpointFinalizationProposal",
     "CheckpointProposal",
     "DirectorFeatures",
     "DirectorLearningRuntime",
@@ -41,8 +50,10 @@ __all__ = [
     "RouteResolutionError",
     "WorkItemResolution",
     "apply_constraint_ledger",
+    "apply_finalization_to_document",
     "apply_proposal_to_document",
     "build_work_item_context_packet",
+    "compile_checkpoint_finalization_proposal",
     "compile_checkpoint_from_project",
     "compile_checkpoint_proposal",
     "compile_director_features",
@@ -56,5 +67,6 @@ __all__ = [
     "validate_semantic_dependencies",
     "validate_state_transition",
     "validate_work_item_context_packet",
+    "verify_finalization_document",
     "verify_post_write_document",
 ]
