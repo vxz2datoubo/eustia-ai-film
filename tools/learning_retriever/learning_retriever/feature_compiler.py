@@ -110,6 +110,53 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
                 return True
         return False
 
+    def directional_object_precedes_action(
+        actions: tuple[str, ...],
+        objects: tuple[str, ...],
+        *,
+        max_chars: int = 16,
+    ) -> bool:
+        """Recognize bounded Chinese preposed direction such as `朝她跪下`.
+
+        Bare `朝` is intentionally not a global substring action token because it
+        also occurs lexically inside words such as `王朝` and `朝代`. This helper
+        only accepts a directional marker when the bounded material between the
+        marker and the following action reduces to an explicit locatable target.
+        """
+        separators = ("，", "。", "；", "！", "？", ",", ";", "!", "?")
+        markers = ("朝着", "对着", "向着", "朝", "向")
+        trailing_adverbs = ("缓缓", "慢慢", "纷纷", "共同", "一起", "一同", "都")
+        object_candidates = tuple(sorted(set(objects), key=len, reverse=True))
+
+        for action in actions:
+            search_from = 0
+            while True:
+                hit = text.find(action, search_from)
+                if hit < 0:
+                    break
+                prefix = text[max(0, hit - max_chars):hit]
+                for separator in separators:
+                    prefix = prefix.rsplit(separator, 1)[-1]
+                prefix = prefix.strip()
+
+                for marker in markers:
+                    marker_pos = prefix.rfind(marker)
+                    if marker_pos < 0:
+                        continue
+                    candidate = prefix[marker_pos + len(marker):].strip()
+                    changed = True
+                    while changed and candidate:
+                        changed = False
+                        for adverb in trailing_adverbs:
+                            if candidate.endswith(adverb):
+                                candidate = candidate[:-len(adverb)].strip()
+                                changed = True
+                                break
+                    if any(candidate == obj for obj in object_candidates):
+                        return True
+                search_from = hit + len(action)
+        return False
+
     def first_action_object_match(
         actions: tuple[str, ...], objects: tuple[str, ...], *, max_chars: int = 32
     ) -> dict[str, Any] | None:
@@ -237,7 +284,7 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
 
     gaze_terms = ("看向", "望向", "盯着", "注视", "视线朝", "目光朝", "观察")
     perception_terms = ("看到", "看见", "见到")
-    facing_terms = ("面向", "朝向", "转向", "身体朝", "正对", "朝")
+    facing_terms = ("面向", "朝向", "转向", "身体朝", "正对")
     ritual_kneel_terms = ("跪拜", "拜下", "拜倒", "伏地跪拜", "跪下")
     kneel_terms = ("下跪", "跪向", "跪着朝") + ritual_kneel_terms
     pursuit_terms = ("追逐", "追击", "追赶", "追捕", "追杀")
@@ -317,8 +364,14 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
                 )
 
     direct_kneel_target_evidence = has_kneel and action_has_object(kneel_terms, target_object_terms)
+    preposed_kneel_target_evidence = has_kneel and directional_object_precedes_action(
+        ritual_kneel_terms, target_object_terms
+    )
     kneel_target_evidence = has_kneel and (
-        direct_kneel_target_evidence or facing_target_evidence or ritual_target_carry
+        direct_kneel_target_evidence
+        or preposed_kneel_target_evidence
+        or facing_target_evidence
+        or ritual_target_carry
     )
     pursuit_target_evidence = has_pursuit and action_has_object(pursuit_terms, target_object_terms)
     escape_source_evidence = has_escape and action_has_object(escape_source_terms, target_object_terms)
