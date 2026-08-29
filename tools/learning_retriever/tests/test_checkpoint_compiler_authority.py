@@ -80,21 +80,36 @@ class CheckpointCompilerAuthorityBindingTests(unittest.TestCase):
         boundary = self.contract["authority_boundary"]
         self.assertTrue(boundary["this_component_has_no_persistence_authority"])
         self.assertTrue(boundary["proposal_is_not_committed_state"])
+        self.assertTrue(boundary["finalization_proposal_is_not_committed_state"])
         self.assertTrue(boundary["runtime_may_not_write_github"])
         self.assertTrue(boundary["runtime_may_not_accept_serialized_write_success_claim"])
-        self.assertEqual(
-            self.contract["write_transaction_external_contract"]["steps"][:2],
-            ["FETCH_current_continuity", "compile_checkpoint_proposal"],
-        )
+        self.assertTrue(boundary["runtime_may_not_claim_governed_branch_or_ref"])
+        steps = self.contract["write_transaction_external_contract"]["steps"]
+        self.assertEqual(steps[:2], ["FETCH_current_continuity", "compile_checkpoint_proposal"])
+        self.assertIn("compile_checkpoint_finalization_proposal", steps)
+        self.assertIn("verify_finalization_document", steps)
+
+    def test_finalization_is_two_phase_and_non_self_referential(self) -> None:
+        finalization = self.contract["finalization_phase"]
+        proposal = finalization["finalization_proposal"]
+        self.assertEqual(proposal["status"], "PENDING_FINALIZATION_WRITE")
+        self.assertTrue(proposal["self_referential_commit_sha_forbidden"])
+        rules = proposal["proposed_snapshot_rules"]
+        self.assertEqual(rules["checkpoint_writeback_status"], "verified")
+        self.assertEqual(rules["writeback_verified_commit"], "verified_materialization_commit_sha")
+        receipt_boundary = finalization["second_write_verification"]["receipt_boundary"]
+        self.assertIn("runtime does not confirm governed branch or ref", receipt_boundary)
 
     def test_regression_contract_is_eval_only_and_machine_backed(self) -> None:
         self.assertTrue(self.regressions["authority_boundary"]["eval_fixture_only"])
         self.assertTrue(self.regressions["authority_boundary"]["proposal_is_not_persistence"])
+        self.assertTrue(self.regressions["authority_boundary"]["finalization_proposal_is_not_persistence"])
         acceptance = self.regressions["acceptance"]
         expected_suites = {
             "primary_machine_suite": "tools/learning_retriever/tests/test_checkpoint_compiler.py",
             "hardening_machine_suite": "tools/learning_retriever/tests/test_checkpoint_compiler_hardening.py",
             "authority_machine_suite": "tools/learning_retriever/tests/test_checkpoint_compiler_authority.py",
+            "finalization_machine_suite": "tools/learning_retriever/tests/test_checkpoint_finalizer.py",
         }
         for field, path in expected_suites.items():
             self.assertEqual(acceptance[field], path)
