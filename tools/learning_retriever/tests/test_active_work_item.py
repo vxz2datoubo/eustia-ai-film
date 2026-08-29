@@ -191,9 +191,36 @@ class ActiveWorkItemResolutionTests(unittest.TestCase):
         self.assertIn("AWIR-OUTPUT-MISMATCH-001", ids)
 
     def test_continuation_signal_detection_is_bounded(self):
-        for text in ("继续那30秒", "刚才那个镜头", "接着做下一镜"):
-            self.assertTrue(is_continuation_request(text))
-        self.assertFalse(is_continuation_request("设计一个新的群众仪式镜头"))
+        positive = (
+            "继续",
+            "继续上一版",
+            "继续那30秒",
+            "刚才那个镜头",
+            "接着做下一镜",
+            "重新导演之前那个30秒",
+        )
+        for text in positive:
+            with self.subTest(text=text):
+                self.assertTrue(is_continuation_request(text))
+
+        action_language = (
+            "卫兵盯着门口逃犯继续追击",
+            "凯姆继续向左滑行，镜头侧面跟随",
+            "格兰继续攀爬并抓住屋檐",
+            "妇女接着推开窗户",
+            "设计一个新的群众仪式镜头",
+        )
+        for text in action_language:
+            with self.subTest(text=text):
+                self.assertFalse(is_continuation_request(text))
+
+    def test_in_scene_continue_action_never_requires_source_issue_freshness(self):
+        result = resolve_work_item(
+            "卫兵盯着门口逃犯继续追击",
+            project_root=REPO_ROOT,
+        )
+        self.assertFalse(result.resolution_required)
+        self.assertEqual(result.gate_status, "NOT_REQUIRED")
 
 
 if __name__ == "__main__":
