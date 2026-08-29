@@ -71,12 +71,7 @@ class LearningSmartRecallProductionValidationTests(unittest.TestCase):
 
     def test_matrix_executes_through_canonical_runtime(self) -> None:
         report = run_production_validation_matrix(REPO_ROOT)
-        failures = {
-            case["case_id"]: case.get("failures")
-            for case in report["cases"]
-            if case["verdict"] != "PASS"
-        }
-        self.assertEqual(report["aggregate"]["verdict"], "PASS", failures)
+        self.assertEqual(report["aggregate"]["verdict"], "PASS", report["aggregate"])
         self.assertEqual(report["aggregate"]["false_positive_routes"], [])
         self.assertEqual(report["aggregate"]["false_negative_mandatory_recalls"], [])
         self.assertEqual(report["aggregate"]["authority_boundary_violations"], [])
