@@ -18,6 +18,7 @@ on:
       - '11_验收/director_feature_compiler_regression_cases.yaml'
       - '11_验收/cinematic_visual_grammar_regression_cases.yaml'
       - '11_验收/learning_smart_recall_production_validation_matrix.yaml'
+      - '11_验收/learning_smart_recall_transfer_contract.yaml'
       - '.github/workflows/learning-feature-compiler.yml'
 
 jobs:
