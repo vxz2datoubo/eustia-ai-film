@@ -18,6 +18,10 @@ from .feature_compiler import (
     compile_retrieval_task,
     validate_semantic_dependencies,
 )
+from .final_delta import (
+    FinalDeltaEvidenceError,
+    compile_final_delta_learning_evidence,
+)
 from .retriever import LearningRetriever, RetrievalGateError, validate_index
 from .route_resolver import RouteResolutionError, resolve_hard_routes
 from .runtime import DirectorLearningRuntime
@@ -34,6 +38,7 @@ __all__ = [
     "DirectorLearningRuntime",
     "ExpectedObservedEvalError",
     "FeatureCompilationError",
+    "FinalDeltaEvidenceError",
     "LearningRetriever",
     "ObservationProvenance",
     "RetrievalGateError",
@@ -41,6 +46,7 @@ __all__ = [
     "TargetedRepairPlanError",
     "compile_cinematic_intent_contract",
     "compile_director_features",
+    "compile_final_delta_learning_evidence",
     "compile_retrieval_task",
     "evaluate_cinematic_intent",
     "evaluate_expected_vs_observed",
