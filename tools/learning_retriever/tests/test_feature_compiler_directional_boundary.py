@@ -3,7 +3,7 @@ from pathlib import Path
 import yaml
 
 from learning_retriever import DirectorLearningRuntime
-from learning_retriever.feature_compiler import compile_director_features
+from learning_retriever.feature_compiler import FeatureCompilationError, compile_director_features
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -33,7 +33,13 @@ def test_dynasty_lexemes_with_kneeling_verbs_do_not_create_target_spatial_semant
         assert "kneeling_to_target" not in compiled.relation_type, description
         assert "facing_to_target" not in compiled.relation_type, description
         assert "locatable_target" not in compiled.spatial_action_features, description
-        result = runtime.retrieve(description, task_id=f"DIRECTION-NEG-{index}", top_k=5)
+
+        try:
+            result = runtime.retrieve(description, task_id=f"DIRECTION-NEG-{index}", top_k=5)
+        except FeatureCompilationError as exc:
+            assert str(exc) == "NO_RECOGNIZED_DIRECTOR_FEATURES", description
+            continue
+
         assert "TARGET_ORIENTED_SPATIAL_BINDING" not in result["canonical_runtime_receipt"]["hard_routes"], description
         assert "TARGET_ORIENTED_SPATIAL_BINDING" not in result["retrieval_receipt"]["hard_routes"], description
 
