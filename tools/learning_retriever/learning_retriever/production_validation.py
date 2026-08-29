@@ -11,6 +11,7 @@ from .runtime import DirectorLearningRuntime
 
 
 DEFAULT_MATRIX_PATH = Path("11_验收/learning_smart_recall_production_validation_matrix.yaml")
+DEFAULT_TRANSFER_CONTRACT_PATH = Path("11_验收/learning_smart_recall_transfer_contract.yaml")
 FEATURE_KEYS = (
     "dramatic_function",
     "relation_type",
@@ -25,6 +26,114 @@ def _as_set(value: Any) -> set[str]:
     if isinstance(value, (list, tuple, set)):
         return {str(item) for item in value}
     return {str(value)}
+
+
+def _load_yaml(path: Path) -> dict[str, Any]:
+    return yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+
+
+def _validate_transfer_contract(
+    matrix: dict[str, Any],
+    transfer_contract: dict[str, Any],
+) -> list[str]:
+    """Validate that cross-surface transfer claims are machine-enforced.
+
+    The contract is eval metadata only. It cannot add routes, change weights, or
+    alter learning truth; it merely proves that the current fixture really spans
+    explicit variation axes and includes metamorphic paraphrase probes.
+    """
+    errors: list[str] = []
+    if not transfer_contract:
+        return ["missing transfer contract"]
+
+    expected_base = str(DEFAULT_MATRIX_PATH)
+    if str(transfer_contract.get("base_matrix") or "") != expected_base:
+        errors.append(
+            f"transfer contract base_matrix mismatch: expected {expected_base}, "
+            f"observed {transfer_contract.get('base_matrix')}"
+        )
+
+    policy = transfer_contract.get("variation_policy") or {}
+    allowed_axes = {str(item) for item in policy.get("allowed_non_wording_axes") or []}
+    min_non_wording = int(policy.get("min_non_wording_axes_per_family") or 0)
+    wording_required = bool(policy.get("wording_axis_required_per_positive_case"))
+    require_cross_scene = bool(policy.get("require_cross_scene_positive_per_family"))
+    require_metamorphic = bool(policy.get("require_metamorphic_positive_per_family"))
+
+    required_families = {str(item) for item in matrix.get("required_families") or []}
+    base_cases = matrix.get("cases") or []
+    contract_families = transfer_contract.get("families") or {}
+    meta_cases = transfer_contract.get("metamorphic_cases") or []
+
+    base_case_ids = {str(case.get("id")) for case in base_cases}
+    meta_case_ids = [str(case.get("id")) for case in meta_cases]
+    duplicate_meta_ids = sorted({case_id for case_id in meta_case_ids if meta_case_ids.count(case_id) > 1})
+    if duplicate_meta_ids:
+        errors.append(f"duplicate metamorphic case ids: {duplicate_meta_ids}")
+    overlap = sorted(base_case_ids.intersection(meta_case_ids))
+    if overlap:
+        errors.append(f"metamorphic case ids collide with base matrix: {overlap}")
+
+    observed_contract_families = {str(key) for key in contract_families}
+    missing_contract_families = sorted(required_families - observed_contract_families)
+    extra_contract_families = sorted(observed_contract_families - required_families)
+    if missing_contract_families:
+        errors.append(f"missing transfer-contract families: {missing_contract_families}")
+    if extra_contract_families:
+        errors.append(f"unknown transfer-contract families: {extra_contract_families}")
+
+    for family in sorted(required_families):
+        positives = [
+            case
+            for case in base_cases
+            if str(case.get("family")) == family and str(case.get("kind")) == "positive"
+        ]
+        positive_ids = {str(case.get("id")) for case in positives}
+        section = contract_families.get(family) or {}
+        axes_map = section.get("positive_case_axes") or {}
+        axes_ids = {str(case_id) for case_id in axes_map}
+
+        missing_axes = sorted(positive_ids - axes_ids)
+        unknown_axes = sorted(axes_ids - positive_ids)
+        if missing_axes:
+            errors.append(f"{family}: positive cases missing explicit variation axes: {missing_axes}")
+        if unknown_axes:
+            errors.append(f"{family}: variation axes reference non-positive/unknown cases: {unknown_axes}")
+
+        family_non_wording_axes: set[str] = set()
+        for case_id in sorted(positive_ids.intersection(axes_ids)):
+            axes = {str(item) for item in axes_map.get(case_id) or []}
+            if wording_required and "wording" not in axes:
+                errors.append(f"{family}/{case_id}: wording axis missing")
+            invalid_axes = sorted((axes - {"wording"}) - allowed_axes)
+            if invalid_axes:
+                errors.append(f"{family}/{case_id}: unsupported variation axes {invalid_axes}")
+            family_non_wording_axes.update((axes - {"wording"}).intersection(allowed_axes))
+
+        if len(family_non_wording_axes) < min_non_wording:
+            errors.append(
+                f"{family}: only {sorted(family_non_wording_axes)} non-wording axes; "
+                f"requires at least {min_non_wording}"
+            )
+
+        if require_cross_scene and not any(case.get("production_context") == "cross_scene" for case in positives):
+            errors.append(f"{family}: no cross_scene positive case")
+
+        family_meta = [
+            case
+            for case in meta_cases
+            if str(case.get("family")) == family and str(case.get("kind")) == "positive"
+        ]
+        if require_metamorphic and not family_meta:
+            errors.append(f"{family}: no metamorphic positive case")
+        for case in family_meta:
+            parent = str(case.get("metamorphic_of") or "")
+            if parent not in positive_ids:
+                errors.append(
+                    f"{family}/{case.get('id')}: metamorphic_of must reference a base positive case, observed {parent}"
+                )
+
+    return errors
 
 
 def _check_expected_result(case: dict[str, Any], result: dict[str, Any]) -> list[str]:
@@ -105,8 +214,9 @@ def run_production_validation_matrix(
     project_root: str | Path,
     *,
     matrix_path: str | Path | None = None,
+    transfer_contract_path: str | Path | None = None,
 ) -> dict[str, Any]:
-    """Run the production matrix through the canonical director learning runtime.
+    """Run production and metamorphic transfer cases through canonical runtime.
 
     This is an eval harness only. It does not own retrieval, route definitions,
     learning payloads, maturity or scope. Every executable positive case enters
@@ -117,8 +227,21 @@ def run_production_validation_matrix(
     path = Path(matrix_path) if matrix_path else root / DEFAULT_MATRIX_PATH
     if not path.is_absolute():
         path = root / path
-    matrix = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-    cases = matrix.get("cases") or []
+    contract_path = (
+        Path(transfer_contract_path)
+        if transfer_contract_path
+        else root / DEFAULT_TRANSFER_CONTRACT_PATH
+    )
+    if not contract_path.is_absolute():
+        contract_path = root / contract_path
+
+    matrix = _load_yaml(path)
+    transfer_contract = _load_yaml(contract_path)
+    contract_errors = _validate_transfer_contract(matrix, transfer_contract)
+
+    base_cases = matrix.get("cases") or []
+    metamorphic_cases = transfer_contract.get("metamorphic_cases") or []
+    cases = list(base_cases) + list(metamorphic_cases)
     runtime = DirectorLearningRuntime(root)
 
     reports: list[dict[str, Any]] = []
@@ -130,6 +253,14 @@ def run_production_validation_matrix(
         case_id = str(case.get("id") or "UNSPECIFIED_MATRIX_CASE")
         description = str(case.get("description") or "")
         expected_error = case.get("expected_error") or {}
+        common_report = {
+            "case_id": case_id,
+            "family": case.get("family"),
+            "kind": case.get("kind"),
+            "production_context": case.get("production_context"),
+            "metamorphic_of": case.get("metamorphic_of"),
+            "input": description,
+        }
         try:
             result = runtime.retrieve(
                 description,
@@ -145,11 +276,7 @@ def run_production_validation_matrix(
             passed = expected_stage == "feature_compiler" and code == expected_code
             reports.append(
                 {
-                    "case_id": case_id,
-                    "family": case.get("family"),
-                    "kind": case.get("kind"),
-                    "production_context": case.get("production_context"),
-                    "input": description,
+                    **common_report,
                     "compiled_features": {},
                     "hard_routes": [],
                     "mandatory_cases": [],
@@ -171,11 +298,7 @@ def run_production_validation_matrix(
             passed = expected_stage == "retriever" and code == expected_code
             reports.append(
                 {
-                    "case_id": case_id,
-                    "family": case.get("family"),
-                    "kind": case.get("kind"),
-                    "production_context": case.get("production_context"),
-                    "input": description,
+                    **common_report,
                     "compiled_features": {},
                     "hard_routes": [],
                     "mandatory_cases": [],
@@ -216,11 +339,7 @@ def run_production_validation_matrix(
 
         reports.append(
             {
-                "case_id": case_id,
-                "family": case.get("family"),
-                "kind": case.get("kind"),
-                "production_context": case.get("production_context"),
-                "input": description,
+                **common_report,
                 "compiled_features": runtime_receipt.get("compiled_features") or {},
                 "hard_routes": list(receipt.get("hard_routes") or []),
                 "mandatory_cases": list(receipt.get("mandatory_case_ids") or []),
@@ -241,8 +360,12 @@ def run_production_validation_matrix(
     required_families = {str(item) for item in matrix.get("required_families") or []}
     missing_families = sorted(required_families - observed_families)
 
+    metamorphic_reports = [item for item in reports if item.get("metamorphic_of")]
     aggregate = {
         "total_cases": len(reports),
+        "base_cases": len(base_cases),
+        "metamorphic_cases": len(metamorphic_reports),
+        "metamorphic_passes": sum(item["verdict"] == "PASS" for item in metamorphic_reports),
         "positive_passes": sum(item["verdict"] == "PASS" for item in positive_reports),
         "positive_total": len(positive_reports),
         "negative_fail_closed_passes": sum(item["verdict"] == "PASS" for item in negative_reports),
@@ -251,14 +374,23 @@ def run_production_validation_matrix(
         "false_negative_mandatory_recalls": false_negative_mandatory,
         "authority_boundary_violations": authority_violations,
         "missing_required_families": missing_families,
+        "matrix_contract_violations": contract_errors,
         "failed_case_ids": failed,
         "verdict": "PASS"
-        if not failed and not false_positive_routes and not false_negative_mandatory and not authority_violations and not missing_families
+        if not failed
+        and not false_positive_routes
+        and not false_negative_mandatory
+        and not authority_violations
+        and not missing_families
+        and not contract_errors
         else "FAIL",
     }
     return {
-        "schema": "LEARNING_SMART_RECALL_PRODUCTION_VALIDATION_REPORT/v1",
+        "schema": "LEARNING_SMART_RECALL_PRODUCTION_VALIDATION_REPORT/v1.1",
         "matrix": str(path.relative_to(root) if path.is_relative_to(root) else path),
+        "transfer_contract": str(
+            contract_path.relative_to(root) if contract_path.is_relative_to(root) else contract_path
+        ),
         "cases": reports,
         "aggregate": aggregate,
     }
