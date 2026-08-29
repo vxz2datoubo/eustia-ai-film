@@ -21,6 +21,42 @@ REGRESSIONS = yaml.safe_load(REGRESSION_PATH.read_text(encoding="utf-8"))
 
 
 class ActiveWorkItemResolutionTests(unittest.TestCase):
+    @staticmethod
+    def freshness_provider(
+        checkpoint: str = "5454103847",
+        *,
+        accessible: bool = True,
+        include_checkpoint: bool = True,
+    ):
+        def provider(state):
+            receipt = {
+                "source_issue": state.get("source_issue"),
+                "source_issue_accessible": accessible,
+            }
+            if include_checkpoint:
+                receipt["latest_source_checkpoint_ref"] = checkpoint
+            return receipt
+
+        return provider
+
+    @staticmethod
+    def explicit_old_target_provider(description, state):
+        if "之前" not in description and "爬楼" not in description:
+            return None
+        return {
+            "verified": True,
+            "work_item_id": "KAIM-HIGH-SEARCH-30S",
+            "checkpoint_ref": "HIGH-SEARCH-CHECKPOINT",
+            "source_issue": None,
+            "story_scope_ref": "03_剧本与改编/当前改编剧本.md#凯姆高位搜索",
+            "summary": "凯姆攀爬外立面、经过开窗妇女与菲奥奈巡查，最终登顶搜索男孩。",
+            "locked_constraints": ["kaim_vertical_climb"],
+            "preserved_constraints": ["boy_not_found_yet"],
+            "revoked_constraints": [],
+            "experimental_constraints": [],
+            "unresolved_failures": [],
+        }
+
     def test_current_continuity_exposes_machine_readable_active_state(self):
         state = load_active_work_item_state(REPO_ROOT)
         self.assertEqual(state["work_item_id"], "KAIM-SCARF-CLOTHESLINE-TRAVERSE")
@@ -33,10 +69,7 @@ class ActiveWorkItemResolutionTests(unittest.TestCase):
         result = resolve_work_item(
             "重新导演上次那30秒",
             project_root=REPO_ROOT,
-            context={
-                "source_issue_accessible": True,
-                "latest_source_checkpoint_ref": "5454103847",
-            },
+            freshness_provider=self.freshness_provider(),
         )
         self.assertTrue(result.resolution_required)
         self.assertEqual(result.resolved_work_item_id, "KAIM-SCARF-CLOTHESLINE-TRAVERSE")
@@ -44,7 +77,7 @@ class ActiveWorkItemResolutionTests(unittest.TestCase):
         self.assertTrue(result.freshness_verified)
         self.assertEqual(result.gate_status, "RESOLVED_VERIFIED")
 
-    def test_explicit_old_work_item_override_requires_verified_target(self):
+    def test_explicit_old_work_item_override_requires_verified_target_provider(self):
         with self.assertRaisesRegex(
             ActiveWorkItemResolutionError,
             "EXPLICIT_NONACTIVE_REFERENT_REQUIRES_RESOLUTION",
@@ -52,19 +85,21 @@ class ActiveWorkItemResolutionTests(unittest.TestCase):
             resolve_work_item(
                 "重新导演之前爬楼那30秒",
                 project_root=REPO_ROOT,
-                context={"explicit_work_item_id": "KAIM-HIGH-SEARCH-30S"},
+                freshness_provider=self.freshness_provider(),
             )
 
         result = resolve_work_item(
             "重新导演之前爬楼那30秒",
             project_root=REPO_ROOT,
-            context={
-                "explicit_work_item_id": "KAIM-HIGH-SEARCH-30S",
-                "explicit_target_verified": True,
-            },
+            freshness_provider=self.freshness_provider(),
+            explicit_target_provider=self.explicit_old_target_provider,
         )
         self.assertEqual(result.resolved_work_item_id, "KAIM-HIGH-SEARCH-30S")
-        self.assertEqual(result.continuation_resolution_source, "user_explicit")
+        self.assertEqual(
+            result.continuation_resolution_source,
+            "user_explicit_trusted_target_resolution",
+        )
+        self.assertTrue(result.freshness_verified)
 
     def test_checkpoint_lag_fails_before_compilation(self):
         with self.assertRaisesRegex(
@@ -74,10 +109,7 @@ class ActiveWorkItemResolutionTests(unittest.TestCase):
             resolve_work_item(
                 "继续上一版",
                 project_root=REPO_ROOT,
-                context={
-                    "source_issue_accessible": True,
-                    "latest_source_checkpoint_ref": "NEWER-CHECKPOINT",
-                },
+                freshness_provider=self.freshness_provider("NEWER-CHECKPOINT"),
             )
 
     def test_source_issue_must_be_freshly_verified(self):
@@ -88,7 +120,7 @@ class ActiveWorkItemResolutionTests(unittest.TestCase):
             resolve_work_item(
                 "继续那30秒",
                 project_root=REPO_ROOT,
-                context={"source_issue_accessible": False},
+                freshness_provider=self.freshness_provider(accessible=False),
             )
 
         with self.assertRaisesRegex(
@@ -98,7 +130,17 @@ class ActiveWorkItemResolutionTests(unittest.TestCase):
             resolve_work_item(
                 "继续那30秒",
                 project_root=REPO_ROOT,
-                context={"source_issue_accessible": True},
+                freshness_provider=self.freshness_provider(include_checkpoint=False),
+            )
+
+    def test_source_issue_requires_provider_capability_not_serialized_claim(self):
+        with self.assertRaisesRegex(
+            ActiveWorkItemResolutionError,
+            "WORK_ITEM_FRESHNESS_PROVIDER_REQUIRED",
+        ):
+            resolve_work_item(
+                "继续那30秒",
+                project_root=REPO_ROOT,
             )
 
     def test_noncontinuation_request_does_not_add_read_amplification(self):
@@ -122,17 +164,14 @@ class ActiveWorkItemResolutionTests(unittest.TestCase):
                 resolve_work_item(
                     "继续下一镜",
                     project_root=root,
-                    context={"source_issue_accessible": True},
+                    freshness_provider=self.freshness_provider(),
                 )
 
     def test_output_guard_rejects_wrong_work_item(self):
         resolution = resolve_work_item(
             "继续那30秒",
             project_root=REPO_ROOT,
-            context={
-                "source_issue_accessible": True,
-                "latest_source_checkpoint_ref": "5454103847",
-            },
+            freshness_provider=self.freshness_provider(),
         )
         with self.assertRaisesRegex(
             ActiveWorkItemResolutionError,
