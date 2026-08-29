@@ -35,12 +35,12 @@ The contract runtime can:
 
 - reject unknown or authority-violating fields before compilation;
 - reuse canonical SOAC warning/error IDs for static evaluation;
-- compare declared camera position and lens intent against trusted upstream camera locks;
+- fail closed on camera position/lens intent until a canonical machine-readable upstream camera binding can be read back;
 - compile only explicitly material visual-intent fields into the current-generation overlay;
 - require provenance for every emitted material field;
 - emit reverse-eval expectations by carrying the declared value and provenance forward without inventing new observations.
 
-It cannot mutate Blocking, map, story, character, asset, continuity or learning truth. Aesthetic incompleteness remains a warning unless a canonical or locked contract is actually violated.
+It cannot mutate Blocking, map, story, character, asset, continuity or learning truth. Aesthetic incompleteness remains a warning; structural authority violations fail closed before overlay compilation.
 
 Example YAML contract:
 
@@ -62,9 +62,9 @@ context:
   material_fields: [composition, color_intent]
 ```
 
-The downstream proposal cannot carry camera locks, and serialized YAML/JSON/CLI inputs cannot mint camera-lock authority through an envelope, digest, or caller-supplied token. Camera-sensitive `capture_intent` requires a process-local trusted upstream capability injected by orchestration; without it compilation fails closed. Current canonical `capture_intent` can mechanically propose only camera physical position and lens intent, so those are the only accepted lock surfaces. Orientation, shot size, camera height and camera motion remain upstream-owned and fail closed rather than being accepted inertly.
+The downstream proposal cannot carry camera locks, and no Python/YAML/JSON/CLI invocation surface can supply or mint camera-lock authority. The current project does not yet expose a canonical machine-readable ShotPlan/Blocking camera-lock readback to this runtime. Therefore any `capture_intent` that materially proposes `camera_physical_position` or `lens_intent` fails closed with `MISSING_CANONICAL_UPSTREAM_BINDING`. This is an intentional capability gap, not a hidden token mechanism. Re-opening camera-sensitive compilation requires a later canonical upstream readback integration and regression, not a private Python name, digest, envelope, or caller-provided capability.
 
-CLI note: the standalone contract CLI intentionally has no camera-lock authority input. Contracts that materially propose camera position/lens must run through the trusted orchestration path or fail closed.
+CLI note: the standalone contract CLI has no camera-authority input. Camera-sensitive contracts fail closed identically through CLI and Python until canonical readback exists.
 
 Targeted contract regressions live in `11_验收/cinematic_intent_contract_regression_cases.yaml` and are executed explicitly by CI.
 

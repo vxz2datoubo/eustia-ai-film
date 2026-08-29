@@ -8,7 +8,7 @@ remains in ``10_运行时/screen_observable_audible_ir_schema.yaml``.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 import json
 from pathlib import Path
 from typing import Any, Mapping
@@ -49,59 +49,6 @@ class CinematicIntentContract:
     context: dict[str, Any]
 
 
-_TRUSTED_UPSTREAM_AUTHORITY_TOKEN = object()
-
-
-@dataclass(frozen=True)
-class TrustedUpstreamLockEnvelope:
-    """Process-local trusted upstream constraints.
-
-    This value is intentionally not deserializable from YAML/JSON or CLI input.
-    It may only be minted by the trusted orchestration boundary inside this module.
-    Serialized downstream callers can never manufacture camera-lock authority.
-    """
-
-    source_authority_ref: str
-    camera: dict[str, Any]
-    _authority_token: object = field(repr=False, compare=False)
-
-    def __post_init__(self) -> None:
-        if self._authority_token is not _TRUSTED_UPSTREAM_AUTHORITY_TOKEN:
-            raise CinematicIntentContractError(
-                "MISSING_TRUSTED_UPSTREAM_BINDING",
-                "trusted upstream lock capability cannot be constructed from downstream invocation data",
-            )
-
-
-def _mint_trusted_upstream_lock_for_orchestration(
-    *, source_authority_ref: str, camera: Mapping[str, Any]
-) -> TrustedUpstreamLockEnvelope:
-    """Internal orchestration boundary. Not exported and not reachable from CLI data."""
-    source_ref = str(source_authority_ref or "").strip()
-    if not source_ref:
-        raise CinematicIntentContractError(
-            "MISSING_TRUSTED_UPSTREAM_BINDING", "trusted source authority ref is required"
-        )
-    camera_map = _as_mapping(camera, field="trusted_upstream.camera")
-    unknown_camera = set(camera_map) - _UPSTREAM_CAMERA_LOCK_KEYS
-    if unknown_camera:
-        raise CinematicIntentContractError(
-            "CONTRACT_UNKNOWN_NESTED_FIELD",
-            f"unknown upstream camera lock fields: {sorted(unknown_camera)}",
-        )
-    un_enforceable = set(camera_map) & _UNENFORCEABLE_CAMERA_LOCK_KEYS
-    if un_enforceable:
-        raise CinematicIntentContractError(
-            "UNENFORCEABLE_CAMERA_LOCK_SURFACE",
-            "current CinematicIntentIR cannot mechanically propose/compare camera lock fields "
-            f"{sorted(un_enforceable)}; refusing inert lock authority",
-        )
-    return TrustedUpstreamLockEnvelope(
-        source_authority_ref=source_ref,
-        camera=camera_map,
-        _authority_token=_TRUSTED_UPSTREAM_AUTHORITY_TOKEN,
-    )
-
 
 _TOP_LEVEL_KEYS = {"contract_id", "intent", "provenance", "context"}
 _FORBIDDEN_AUTHORITY_KEYS = {
@@ -129,9 +76,7 @@ _CONTEXT_KEYS = {
     "model_version",
 }
 _CONTEXT_BOOLEAN_KEYS = {"material_attention_reveal", "reference_decoupling_applied"}
-_UPSTREAM_CAMERA_LOCK_KEYS = {"position", "orientation", "shot_size", "camera_height", "lens_intent", "camera_motion"}
-_ENFORCEABLE_CAMERA_LOCK_KEYS = {"position", "lens_intent"}
-_UNENFORCEABLE_CAMERA_LOCK_KEYS = _UPSTREAM_CAMERA_LOCK_KEYS - _ENFORCEABLE_CAMERA_LOCK_KEYS
+_CAMERA_SENSITIVE_CAPTURE_KEYS = {"camera_physical_position", "lens_intent"}
 
 _NESTED_FIELD_MAP = {
     "relation_pressure": "relation_pressure_fields",
@@ -154,9 +99,7 @@ STRUCTURAL_GATE_CODES = {
     "MISSING_PROVENANCE",
     "INVALID_MATERIAL_FIELD",
     "INVALID_CONTRACT_SHAPE",
-    "MISSING_TRUSTED_UPSTREAM_BINDING",
-    "UPSTREAM_BINDING_MISMATCH",
-    "UNENFORCEABLE_CAMERA_LOCK_SURFACE",
+    "MISSING_CANONICAL_UPSTREAM_BINDING",
 }
 
 
@@ -340,7 +283,6 @@ def evaluate_cinematic_intent(
     contract: CinematicIntentContract,
     *,
     project_root: str | Path,
-    upstream_lock_envelope: TrustedUpstreamLockEnvelope,
 ) -> list[Diagnostic]:
     """Evaluate only static checks already declared by the canonical SOAC schema."""
 
@@ -443,28 +385,6 @@ def evaluate_cinematic_intent(
             "capture substrate is declared without a story/perceptual/production reason",
         )
 
-    locked_camera = dict(upstream_lock_envelope.camera or {})
-    proposed_position = capture.get("camera_physical_position")
-    locked_position = locked_camera.get("position")
-    if not _is_empty(proposed_position) and not _is_empty(locked_position) and proposed_position != locked_position:
-        _diag(
-            diagnostics,
-            declared,
-            "CAMERA_SCOPE_CONFLICT",
-            "capture_intent.camera_physical_position",
-            f"proposed camera position {proposed_position!r} conflicts with locked position {locked_position!r}",
-        )
-
-    proposed_lens = capture.get("lens_intent")
-    locked_lens = locked_camera.get("lens_intent")
-    if not _is_empty(proposed_lens) and not _is_empty(locked_lens) and proposed_lens != locked_lens:
-        _diag(
-            diagnostics,
-            declared,
-            "CAMERA_SCOPE_CONFLICT",
-            "capture_intent.lens_intent",
-            f"proposed lens intent {proposed_lens!r} conflicts with locked lens intent {locked_lens!r}",
-        )
 
     return diagnostics
 
@@ -473,40 +393,33 @@ def compile_cinematic_intent_contract(
     raw: Mapping[str, Any],
     *,
     project_root: str | Path,
-    trusted_upstream_lock: TrustedUpstreamLockEnvelope | None = None,
 ) -> dict[str, Any]:
     """Validate and compile a minimal material overlay.
 
-    Camera-sensitive intent requires a process-local trusted capability. Ordinary
-    serialized invocation data has no field or digest knob that can mint authority.
+    Camera position/lens intent remain upstream-owned. This slice has no
+    canonical machine-readable ShotPlan/Blocking camera-lock readback, so any
+    camera-sensitive proposal fails closed instead of accepting caller-supplied
+    authority. Re-opening that surface requires a later canonical readback
+    integration, not a token, digest, private Python name, or serialized knob.
     """
 
     contract = validate_cinematic_intent_contract(raw, project_root=project_root)
     capture = dict(contract.intent.get("capture_intent") or {})
-    camera_sensitive = any(
-        not _is_empty(capture.get(key))
-        for key in ("camera_physical_position", "lens_intent")
-    )
-    if trusted_upstream_lock is None:
-        if camera_sensitive:
-            raise CinematicIntentContractError(
-                "MISSING_TRUSTED_UPSTREAM_BINDING",
-                "camera-sensitive CinematicIntent requires process-local trusted upstream authority",
-            )
-        trusted_locks = _mint_trusted_upstream_lock_for_orchestration(
-            source_authority_ref="runtime://no-camera-lock-required", camera={}
-        )
-    elif not isinstance(trusted_upstream_lock, TrustedUpstreamLockEnvelope):
+    camera_sensitive = [
+        key for key in sorted(_CAMERA_SENSITIVE_CAPTURE_KEYS)
+        if not _is_empty(capture.get(key))
+    ]
+    if camera_sensitive:
         raise CinematicIntentContractError(
-            "MISSING_TRUSTED_UPSTREAM_BINDING",
-            "trusted upstream lock must be a process-local capability, not serialized invocation data",
+            "MISSING_CANONICAL_UPSTREAM_BINDING",
+            "camera-sensitive CinematicIntent cannot compile until canonical "
+            "machine-readable upstream camera authority is available; refusing "
+            f"caller-mintable authority for {camera_sensitive}",
         )
-    else:
-        trusted_locks = trusted_upstream_lock
+
     diagnostics = evaluate_cinematic_intent(
         contract,
         project_root=project_root,
-        upstream_lock_envelope=trusted_locks,
     )
     has_error = any(item.severity == "ERROR" for item in diagnostics)
     has_warning = any(item.severity == "WARNING" for item in diagnostics)
@@ -541,9 +454,9 @@ def compile_cinematic_intent_contract(
         "execution_overlay": overlay,
         "overlay_provenance": overlay_provenance,
         "reverse_eval_expectations": reverse_expectations,
-        "upstream_lock_binding": {
-            "source_authority_ref": trusted_locks.source_authority_ref,
-            "camera": dict(trusted_locks.camera),
+        "upstream_camera_authority": {
+            "status": "CANONICAL_READBACK_REQUIRED_FOR_CAMERA_SENSITIVE_INTENT",
+            "caller_supplied_authority_accepted": False,
             "proposal_can_mutate": False,
         },
         "authority_mutation_allowed": False,

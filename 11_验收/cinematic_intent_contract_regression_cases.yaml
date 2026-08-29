@@ -9,21 +9,15 @@ policy:
   may_invent_director_choices: false
   may_rewrite_canonical_or_blocking: false
   aesthetic_incompleteness_default_severity: WARNING
-  canonical_or_locked_contract_violation_may_be_ERROR: true
   unknown_fields_fail_closed: true
   material_overlay_requires_provenance: true
   non_material_fields_must_not_enter_overlay: true
   learning_maturity_unchanged: true
   proposal_cannot_supply_locked_contracts: true
   serialized_upstream_lock_authority_forbidden: true
-  trusted_camera_lock_capability_process_local_only: true
-  unsupported_camera_lock_surfaces_fail_closed: true
-
-trusted_upstream_fixture:
-  authority_boundary: process_local_orchestration_capability_only
-  envelope:
-    source_authority_ref: test_fixture://shot_plan/no_camera_lock
-    camera: {}
+  python_reachable_minter_forbidden: true
+  camera_authority_requires_canonical_readback: true
+  camera_sensitive_compile_fails_closed_without_canonical_binding: true
 
 compile_cases:
   - id: CIC-VALID-MINIMAL-001
@@ -42,25 +36,18 @@ compile_cases:
           primary_story_clue: 凯姆的横向移动
           mundane_or_soft_regions: [远处屋顶, 非关键摊位]
           detail_budget: selective
-        capture_intent:
-          lens_intent: side_profile_readability
-          camera_physical_position: exterior_side
       provenance:
         composition:
-          source: director_locked_camera_plan
-          source_field: camera_side
+          source: director_visual_plan
+          source_field: composition
         color_intent:
           source: scene_look_plan
           source_field: physical_sources
       context:
         material_fields: [composition, color_intent]
-    upstream_lock_envelope:
-      source_authority_ref: test_fixture://shot_plan/locked_side_camera
-      camera:
-        position: exterior_side
     expected_status: PASS
     expected_overlay_fields: [composition, color_intent]
-    expected_absent_overlay_fields: [unresolved_state, visual_density, capture_intent]
+    expected_absent_overlay_fields: [unresolved_state, visual_density]
     expected_diagnostics: []
 
   - id: CIC-COMPOSITION-WARN-001
@@ -76,25 +63,6 @@ compile_cases:
         material_fields: [composition]
     expected_status: WARN
     expected_diagnostics: [COMPOSITION_MISSING_DRAMATIC_REASON]
-
-  - id: CIC-LOCKED-CAMERA-ERROR-001
-    contract:
-      contract_id: CIC-LOCKED-CAMERA-ERROR-001
-      intent:
-        capture_intent:
-          camera_physical_position: front_three_quarter
-      provenance:
-        capture_intent:
-          source: downstream_adapter_draft
-      context:
-        material_fields: [capture_intent]
-    upstream_lock_envelope:
-      source_authority_ref: test_fixture://shot_plan/locked_side_camera
-      camera:
-        position: exterior_side
-    expected_status: FAIL
-    expected_diagnostics: [CAMERA_SCOPE_CONFLICT]
-    expected_overlay_fields: []
 
   - id: CIC-COLOR-WARN-001
     contract:
@@ -164,7 +132,6 @@ compile_cases:
         capture_intent:
           substrate_optional: 35mm_film
           substrate_story_reason: "角色记忆段需要不同时间感知与颗粒响应。"
-          lens_intent: restrained_memory_distance
       provenance:
         capture_intent:
           source: director_capture_plan
@@ -240,9 +207,7 @@ structural_gate_cases:
   - id: CIC-CALLER-MINTED-LOCK-001
     contract:
       contract_id: CIC-CALLER-MINTED-LOCK-001
-      intent:
-        capture_intent:
-          camera_physical_position: front_three_quarter
+      intent: {}
       locked_contracts:
         camera:
           position: front_three_quarter
@@ -290,36 +255,32 @@ structural_gate_cases:
         material_fields: [future_magic_field]
     expected_error_code: INVALID_MATERIAL_FIELD
 
-upstream_gate_cases:
-  - id: CIC-SERIALIZED-LOCK-AUTHORITY-FORGED-001
-    contract_ref: CIC-VALID-MINIMAL-001
-    serialized_attempt:
-      source_authority_ref: caller://forged_downstream
-      camera:
-        position: forged_position
-      caller_computable_digest: ignored_because_serialized_authority_channel_does_not_exist
-    expected_error_code: MISSING_TRUSTED_UPSTREAM_BINDING_or_signature_rejection
-    expected_authority_granted: false
+camera_authority_gate_cases:
+  - id: CIC-CAMERA-POSITION-REQUIRES-CANONICAL-READBACK-001
+    contract:
+      contract_id: CIC-CAMERA-POSITION-REQUIRES-CANONICAL-READBACK-001
+      intent:
+        capture_intent:
+          camera_physical_position: exterior_side
+      provenance:
+        capture_intent:
+          source: downstream_camera_proposal
+      context:
+        material_fields: [capture_intent]
+    expected_error_code: MISSING_CANONICAL_UPSTREAM_BINDING
 
-  - id: CIC-UPSTREAM-ORIENTATION-UNENFORCEABLE-001
-    contract_ref: CIC-VALID-MINIMAL-001
-    camera_lock: {orientation: side_on}
-    expected_error_code: UNENFORCEABLE_CAMERA_LOCK_SURFACE
-
-  - id: CIC-UPSTREAM-SHOT-SIZE-UNENFORCEABLE-001
-    contract_ref: CIC-VALID-MINIMAL-001
-    camera_lock: {shot_size: wide}
-    expected_error_code: UNENFORCEABLE_CAMERA_LOCK_SURFACE
-
-  - id: CIC-UPSTREAM-CAMERA-HEIGHT-UNENFORCEABLE-001
-    contract_ref: CIC-VALID-MINIMAL-001
-    camera_lock: {camera_height: rooftop_level}
-    expected_error_code: UNENFORCEABLE_CAMERA_LOCK_SURFACE
-
-  - id: CIC-UPSTREAM-CAMERA-MOTION-UNENFORCEABLE-001
-    contract_ref: CIC-VALID-MINIMAL-001
-    camera_lock: {camera_motion: locked_off}
-    expected_error_code: UNENFORCEABLE_CAMERA_LOCK_SURFACE
+  - id: CIC-LENS-INTENT-REQUIRES-CANONICAL-READBACK-001
+    contract:
+      contract_id: CIC-LENS-INTENT-REQUIRES-CANONICAL-READBACK-001
+      intent:
+        capture_intent:
+          lens_intent: side_profile_readability
+      provenance:
+        capture_intent:
+          source: downstream_lens_proposal
+      context:
+        material_fields: [capture_intent]
+    expected_error_code: MISSING_CANONICAL_UPSTREAM_BINDING
 
 gates:
   schema_static_check_vocabulary_is_reused: true
@@ -329,6 +290,5 @@ gates:
   reverse_expectations_preserve_declared_value_and_provenance_only: true
   no_model_specific_behavior_universalized: true
   downstream_proposal_cannot_mint_lock_authority: true
-  serialized_caller_cannot_mint_camera_lock_authority: true
-  trusted_camera_lock_capability_is_process_local: true
-  every_accepted_camera_lock_surface_is_mechanically_enforced: true
+  python_downstream_caller_has_no_reachable_lock_minter: true
+  camera_sensitive_compile_requires_future_canonical_readback: true

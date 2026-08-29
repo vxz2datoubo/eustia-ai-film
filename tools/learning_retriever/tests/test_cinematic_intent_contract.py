@@ -1,14 +1,14 @@
 from pathlib import Path
+import inspect
 import unittest
 
 import yaml
 import learning_retriever
+import learning_retriever.cinematic_intent as cinematic_intent_module
 
 from learning_retriever.cinematic_intent import (
     CinematicIntentContractError,
     STRUCTURAL_GATE_CODES,
-    TrustedUpstreamLockEnvelope,
-    _mint_trusted_upstream_lock_for_orchestration,
     compile_cinematic_intent_contract,
     validate_cinematic_intent_contract,
 )
@@ -21,28 +21,10 @@ SUITE = yaml.safe_load(
 SCHEMA = yaml.safe_load(
     (REPO_ROOT / "10_运行时/screen_observable_audible_ir_schema.yaml").read_text(encoding="utf-8")
 )
-UPSTREAM_FIXTURE = SUITE["trusted_upstream_fixture"]
-
-
-def _trusted_lock(camera=None, source_ref="test_fixture://trusted_orchestration/shot_plan"):
-    return _mint_trusted_upstream_lock_for_orchestration(
-        source_authority_ref=source_ref, camera=camera or {}
-    )
 
 
 def _compile_case(case):
-    envelope = case.get("upstream_lock_envelope")
-    if envelope:
-        camera = envelope.get("camera") or {}
-        source_ref = envelope.get("source_authority_ref") or "test_fixture://trusted_orchestration/shot_plan"
-    else:
-        camera = (UPSTREAM_FIXTURE.get("envelope") or {}).get("camera") or {}
-        source_ref = (UPSTREAM_FIXTURE.get("envelope") or {}).get("source_authority_ref") or "test_fixture://trusted_orchestration/shot_plan"
-    return compile_cinematic_intent_contract(
-        case["contract"],
-        project_root=REPO_ROOT,
-        trusted_upstream_lock=_trusted_lock(camera, source_ref),
-    )
+    return compile_cinematic_intent_contract(case["contract"], project_root=REPO_ROOT)
 
 
 class CinematicIntentContractTests(unittest.TestCase):
@@ -63,6 +45,7 @@ class CinematicIntentContractTests(unittest.TestCase):
                     self.assertNotIn(field, result["execution_overlay"])
                 if case.get("expected_overlay_fields") == []:
                     self.assertEqual(result["execution_overlay"], {})
+                self.assertFalse(result["upstream_camera_authority"]["caller_supplied_authority_accepted"])
 
     def test_structural_gate_cases_fail_closed(self):
         for case in SUITE["structural_gate_cases"]:
@@ -72,54 +55,53 @@ class CinematicIntentContractTests(unittest.TestCase):
                 self.assertEqual(ctx.exception.code, case["expected_error_code"])
                 self.assertIn(ctx.exception.code, STRUCTURAL_GATE_CODES)
 
-    def test_missing_separate_upstream_binding_fails_closed(self):
-        case = next(case for case in SUITE["compile_cases"] if case["id"] == "CIC-VALID-MINIMAL-001")
-        with self.assertRaises(CinematicIntentContractError) as ctx:
-            compile_cinematic_intent_contract(case["contract"], project_root=REPO_ROOT)
-        self.assertEqual(ctx.exception.code, "MISSING_TRUSTED_UPSTREAM_BINDING")
-        self.assertIn(ctx.exception.code, STRUCTURAL_GATE_CODES)
+    def test_camera_sensitive_cases_require_canonical_readback(self):
+        for case in SUITE["camera_authority_gate_cases"]:
+            with self.subTest(case=case["id"]):
+                with self.assertRaises(CinematicIntentContractError) as ctx:
+                    _compile_case(case)
+                self.assertEqual(ctx.exception.code, case["expected_error_code"])
+                self.assertEqual(ctx.exception.code, "MISSING_CANONICAL_UPSTREAM_BINDING")
+                self.assertIn(ctx.exception.code, STRUCTURAL_GATE_CODES)
 
-    def test_trusted_camera_capability_is_not_public_package_api(self):
-        self.assertFalse(hasattr(learning_retriever, "TrustedUpstreamLockEnvelope"))
-        self.assertFalse(hasattr(learning_retriever, "_mint_trusted_upstream_lock_for_orchestration"))
-        self.assertNotIn("TrustedUpstreamLockEnvelope", getattr(learning_retriever, "__all__", []))
-        self.assertNotIn("_mint_trusted_upstream_lock_for_orchestration", getattr(learning_retriever, "__all__", []))
+    def test_reviewer_attack_surface_has_no_reachable_python_minter(self):
+        forbidden = {
+            "TrustedUpstreamLockEnvelope",
+            "_mint_trusted_upstream_lock_for_orchestration",
+            "_TRUSTED_UPSTREAM_AUTHORITY_TOKEN",
+        }
+        for name in forbidden:
+            self.assertFalse(hasattr(cinematic_intent_module, name), name)
+            self.assertFalse(hasattr(learning_retriever, name), name)
+            self.assertNotIn(name, getattr(learning_retriever, "__all__", []))
 
-    def test_serialized_caller_cannot_mint_trusted_lock_authority(self):
-        case = next(case for case in SUITE["compile_cases"] if case["id"] == "CIC-VALID-MINIMAL-001")
-        forged_camera = {"position": "forged_downstream_position"}
-        with self.assertRaises(CinematicIntentContractError) as ctx:
-            TrustedUpstreamLockEnvelope(
-                source_authority_ref="caller://forged",
-                camera=forged_camera,
-                _authority_token=object(),
-            )
-        self.assertEqual(ctx.exception.code, "MISSING_TRUSTED_UPSTREAM_BINDING")
+    def test_compile_signature_has_no_caller_authority_channel(self):
+        params = set(inspect.signature(compile_cinematic_intent_contract).parameters)
+        self.assertEqual(params, {"raw", "project_root"})
+        forbidden = {
+            "trusted_upstream_lock",
+            "upstream_lock_envelope",
+            "trusted_upstream_source_digest",
+            "camera_lock",
+            "authority_token",
+        }
+        self.assertFalse(params & forbidden)
 
+    def test_legacy_authority_kwargs_are_rejected_by_python_call_surface(self):
+        valid = next(case for case in SUITE["compile_cases"] if case["id"] == "CIC-VALID-MINIMAL-001")
         with self.assertRaises(TypeError):
             compile_cinematic_intent_contract(
-                case["contract"],
+                valid["contract"],
                 project_root=REPO_ROOT,
-                upstream_lock_envelope={"source_authority_ref": "caller://forged", "camera": forged_camera},
+                trusted_upstream_lock=object(),
+            )
+        with self.assertRaises(TypeError):
+            compile_cinematic_intent_contract(
+                valid["contract"],
+                project_root=REPO_ROOT,
+                upstream_lock_envelope={"camera": {"position": "forged"}},
                 trusted_upstream_source_digest="0" * 64,
             )
-        self.assertTrue(SUITE["policy"]["serialized_upstream_lock_authority_forbidden"])
-        self.assertTrue(SUITE["policy"]["trusted_camera_lock_capability_process_local_only"])
-        self.assertTrue(SUITE["gates"]["serialized_caller_cannot_mint_camera_lock_authority"])
-
-    def test_unenforceable_lock_surfaces_fail_closed_at_trusted_boundary(self):
-        for field in ("orientation", "shot_size", "camera_height", "camera_motion"):
-            with self.subTest(field=field):
-                with self.assertRaises(CinematicIntentContractError) as ctx:
-                    _trusted_lock({field: "forbidden_surface"})
-                self.assertEqual(ctx.exception.code, "UNENFORCEABLE_CAMERA_LOCK_SURFACE")
-
-    def test_matching_trusted_position_lock_is_preserved_in_receipt(self):
-        case = next(case for case in SUITE["compile_cases"] if case["id"] == "CIC-VALID-MINIMAL-001")
-        result = _compile_case(case)
-        self.assertEqual(result["status"], "PASS")
-        self.assertEqual(result["upstream_lock_binding"]["camera"], {"position": "exterior_side"})
-        self.assertFalse(result["upstream_lock_binding"]["proposal_can_mutate"])
 
     def test_runtime_diagnostics_are_declared_by_canonical_schema(self):
         declared = set()
@@ -132,14 +114,6 @@ class CinematicIntentContractTests(unittest.TestCase):
         self.assertTrue(emitted)
         self.assertTrue(emitted <= declared)
         self.assertTrue(SUITE["gates"]["schema_static_check_vocabulary_is_reused"])
-
-    def test_fail_result_suppresses_execution_overlay(self):
-        case = next(case for case in SUITE["compile_cases"] if case["id"] == "CIC-LOCKED-CAMERA-ERROR-001")
-        result = _compile_case(case)
-        self.assertEqual(result["status"], "FAIL")
-        self.assertEqual(result["execution_overlay"], {})
-        self.assertEqual(result["overlay_provenance"], {})
-        self.assertEqual(result["reverse_eval_expectations"], [])
 
     def test_reverse_expectations_do_not_invent_new_values(self):
         case = next(case for case in SUITE["compile_cases"] if case["id"] == "CIC-VALID-MINIMAL-001")
@@ -183,18 +157,17 @@ class CinematicIntentContractTests(unittest.TestCase):
         self.assertIn("REFERENCE_APPEARANCE_LEAK_RISK", {item["code"] for item in result["diagnostics"]})
         self.assertTrue(SUITE["gates"]["no_model_specific_behavior_universalized"])
 
-    def test_project_index_registers_contract_regression_without_new_method_authority(self):
+    def test_project_index_registers_canonical_readback_boundary(self):
         project = yaml.safe_load((REPO_ROOT / "PROJECT_INDEX.yaml").read_text(encoding="utf-8"))
         expected = "11_验收/cinematic_intent_contract_regression_cases.yaml"
         self.assertEqual(project["canonical"]["cinematic_intent_contract_regression_cases"], expected)
         self.assertEqual(project["effective_sources"][expected], "github_verified")
         self.assertTrue(project["policy"]["cinematic_intent_contract_runtime_is_execution_only"])
-        self.assertTrue(project["policy"]["cinematic_intent_camera_lock_authority_must_be_process_local_non_serialized"])
-        self.assertTrue(project["policy"]["cinematic_intent_serialized_callers_cannot_mint_camera_lock_authority"])
-        self.assertEqual(
-            project["canonical"]["ai_film_system"],
-            "01_AI电影系统/AI电影系统.md",
-        )
+        self.assertTrue(project["policy"]["cinematic_intent_camera_authority_requires_canonical_readback"])
+        self.assertTrue(project["policy"]["cinematic_intent_camera_sensitive_compile_fails_closed_without_canonical_binding"])
+        self.assertTrue(project["policy"]["cinematic_intent_callers_cannot_supply_or_mint_camera_authority"])
+        self.assertNotIn("cinematic_intent_camera_lock_authority_must_be_process_local_non_serialized", project["policy"])
+        self.assertEqual(project["canonical"]["ai_film_system"], "01_AI电影系统/AI电影系统.md")
         self.assertEqual(
             project["canonical"]["screen_observable_audible_ir_schema"],
             "10_运行时/screen_observable_audible_ir_schema.yaml",
@@ -216,7 +189,7 @@ class CinematicIntentContractTests(unittest.TestCase):
         matches = [name for name, target in routes.items() if target == expected]
         self.assertEqual(matches, ["cinematic_intent_contract_regression_case"])
 
-    def test_ci_triggers_and_executes_contract_regression(self):
+    def test_ci_triggers_and_executes_contract_regression_without_write_permission(self):
         workflow = (REPO_ROOT / ".github/workflows/learning-feature-compiler.yml").read_text(encoding="utf-8")
         self.assertIn("11_验收/cinematic_intent_contract_regression_cases.yaml", workflow)
         self.assertIn("test_cinematic_intent_contract.py", workflow)
