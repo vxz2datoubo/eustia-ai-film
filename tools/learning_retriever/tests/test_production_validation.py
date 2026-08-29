@@ -58,12 +58,16 @@ class LearningSmartRecallProductionValidationTests(unittest.TestCase):
         meta = TRANSFER["metamorphic_cases"]
         observed = {case["family"] for case in meta if case["kind"] == "positive"}
         self.assertEqual(observed, required)
-        base_positive_ids = {
-            case["id"]
+        base_positives = {
+            case["id"]: case
             for case in MATRIX["cases"]
             if case["kind"] == "positive"
         }
-        self.assertTrue(all(case["metamorphic_of"] in base_positive_ids for case in meta))
+        self.assertTrue(all(case["metamorphic_of"] in base_positives for case in meta))
+        if TRANSFER["variation_policy"].get("metamorphic_description_must_differ_from_parent"):
+            for case in meta:
+                parent = base_positives[case["metamorphic_of"]]
+                self.assertNotEqual(case["description"].strip(), parent["description"].strip(), case["id"])
 
     def test_matrix_executes_through_canonical_runtime(self) -> None:
         report = run_production_validation_matrix(REPO_ROOT)
