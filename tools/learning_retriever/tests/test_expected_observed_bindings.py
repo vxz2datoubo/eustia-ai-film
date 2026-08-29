@@ -3,6 +3,8 @@ import unittest
 
 import yaml
 
+import learning_retriever
+
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 REGRESSION = "11_验收/expected_observed_eval_regression_cases.yaml"
@@ -15,6 +17,17 @@ class ExpectedObservedBindingTests(unittest.TestCase):
         self.assertTrue(project["policy"]["expected_observed_eval_cannot_claim_automatic_media_grading"])
         self.assertEqual(project["canonical"]["expected_observed_eval_regression_cases"], REGRESSION)
         self.assertEqual(project["effective_sources"][REGRESSION], "github_verified")
+
+    def test_downstream_eval_cannot_relax_upstream_camera_authority_boundary(self):
+        project = yaml.safe_load((REPO_ROOT / "PROJECT_INDEX.yaml").read_text(encoding="utf-8"))
+        self.assertTrue(
+            project["policy"]["cinematic_intent_camera_lock_authority_must_be_process_local_non_serialized"]
+        )
+        self.assertTrue(
+            project["policy"]["cinematic_intent_serialized_callers_cannot_mint_camera_lock_authority"]
+        )
+        self.assertFalse(hasattr(learning_retriever, "TrustedUpstreamLockEnvelope"))
+        self.assertFalse(hasattr(learning_retriever, "_mint_trusted_upstream_lock_for_orchestration"))
 
     def test_read_sets_bind_reverse_eval_without_making_it_always_on(self):
         read_sets = yaml.safe_load((REPO_ROOT / "10_运行时/read_sets.yaml").read_text(encoding="utf-8"))
@@ -51,6 +64,9 @@ class ExpectedObservedBindingTests(unittest.TestCase):
         self.assertFalse((REPO_ROOT / ".github/workflows/_tmp-harden-expected-observed.yml").exists())
         self.assertFalse((REPO_ROOT / "tools/learning_retriever/_tmp_wire_expected_observed.py").exists())
         self.assertFalse((REPO_ROOT / "tools/learning_retriever/_tmp_harden_expected_observed.py").exists())
+        self.assertFalse((REPO_ROOT / ".github/workflows/_tmp-rebase-eoe-to-capability-head.yml").exists())
+        self.assertFalse((REPO_ROOT / "tools/learning_retriever/_tmp_resolve_eoe_rebase.py").exists())
+        self.assertFalse((REPO_ROOT / "tools/learning_retriever/_tmp_eoe_rebase_conflicts.txt").exists())
 
 
 if __name__ == "__main__":
