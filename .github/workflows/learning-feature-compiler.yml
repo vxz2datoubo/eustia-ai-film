@@ -18,6 +18,7 @@ on:
       - '11_验收/director_feature_compiler_regression_cases.yaml'
       - '11_验收/cinematic_visual_grammar_regression_cases.yaml'
       - '11_验收/cinematic_intent_contract_regression_cases.yaml'
+      - '11_验收/expected_observed_eval_regression_cases.yaml'
       - '.github/workflows/learning-feature-compiler.yml'
 
 jobs:
@@ -50,6 +51,9 @@ jobs:
       - name: Run targeted CinematicIntent contract regressions
         run: |
           PYTHONPATH=tools/learning_retriever python -m pytest tools/learning_retriever/tests/test_cinematic_intent_contract.py
+      - name: Run targeted Expected-vs-Observed eval regressions
+        run: |
+          PYTHONPATH=tools/learning_retriever python -m pytest tools/learning_retriever/tests/test_expected_observed_eval.py
       - name: Run full learning retriever tests
         run: |
           PYTHONPATH=tools/learning_retriever python -m pytest tools/learning_retriever/tests
