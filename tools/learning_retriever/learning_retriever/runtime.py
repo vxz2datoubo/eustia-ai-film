@@ -14,6 +14,7 @@ from typing import Any
 
 from .active_work_item import (
     ActiveWorkItemResolutionError,
+    ExplicitTargetProvider,
     FreshnessProvider,
     build_work_item_context_packet,
     resolve_work_item,
@@ -25,9 +26,10 @@ from .retriever import LearningRetriever
 class DirectorLearningRuntime:
     """Bind directing requests to work-item identity and existing recall runtime.
 
-    A freshness provider is an in-process orchestration capability. It is expected
-    to perform the real source-Issue read and return its structured checkpoint
-    receipt. CLI/JSON inputs cannot synthesize this capability.
+    Providers are in-process orchestration capabilities. A freshness provider
+    performs the real source-Issue checkpoint read. An explicit-target provider
+    resolves a user-requested historical/non-active item from targeted canonical
+    metadata. Serialized CLI/JSON inputs cannot synthesize either capability.
     """
 
     def __init__(
@@ -35,10 +37,12 @@ class DirectorLearningRuntime:
         project_root: str | Path,
         *,
         freshness_provider: FreshnessProvider | None = None,
+        explicit_target_provider: ExplicitTargetProvider | None = None,
     ) -> None:
         self.project_root = Path(project_root)
         self.retriever = LearningRetriever(self.project_root)
         self.freshness_provider = freshness_provider
+        self.explicit_target_provider = explicit_target_provider
 
     def retrieve(
         self,
@@ -53,6 +57,7 @@ class DirectorLearningRuntime:
             description,
             project_root=self.project_root,
             freshness_provider=self.freshness_provider,
+            explicit_target_provider=self.explicit_target_provider,
         )
 
         merged_base = dict(base_task or {})
@@ -91,7 +96,7 @@ class DirectorLearningRuntime:
             "active_work_item_gate_invoked": True,
             "active_work_item_resolution": resolution.as_dict(),
             "work_item_context_packet": work_item_packet,
-            "serialized_freshness_authority_accepted": False,
+            "serialized_work_item_authority_accepted": False,
             "compiler_invoked": True,
             "work_item_resolution_authority": "10_运行时/active_work_item_resolution_gate.yaml",
             "route_authority": "10_运行时/director_route_index.yaml",
