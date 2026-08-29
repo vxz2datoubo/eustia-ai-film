@@ -51,6 +51,7 @@ STRUCTURAL_GATE_CODES = {
     "REPAIR_HANDOFF_MISMATCH",
     "REPAIR_AUTHORITY_VIOLATION",
     "REPAIR_STATUS_MISMATCH",
+    "REPAIR_CONTROL_PROJECTION_MISMATCH",
 }
 
 
@@ -60,7 +61,7 @@ def _mapping(value: Any, *, field: str) -> dict[str, Any]:
     return dict(value)
 
 
-def _load_policy(project_root: str | Path) -> tuple[dict[str, Any], set[str]]:
+def _load_policy(project_root: str | Path) -> tuple[dict[str, Any], set[str], list[str]]:
     root = Path(project_root)
     policy_path = root / "10_运行时/targeted_repair_policy.yaml"
     schema_path = root / "10_运行时/screen_observable_audible_ir_schema.yaml"
@@ -72,9 +73,18 @@ def _load_policy(project_root: str | Path) -> tuple[dict[str, Any], set[str]]:
     failure_categories = {
         str(item) for item in ((schema.get("reverse_compiler") or {}).get("failure_categories") or [])
     }
+    control_requirements = [
+        str(item).strip()
+        for item in ((schema.get("validation") or {}).get("controlled_eval_requirements") or [])
+        if str(item).strip()
+    ]
     if not failure_categories:
         raise TargetedRepairPlanError(
             "REPAIR_POLICY_INCOMPLETE", "canonical reverse-compiler failure vocabulary is empty"
+        )
+    if not control_requirements:
+        raise TargetedRepairPlanError(
+            "REPAIR_POLICY_INCOMPLETE", "canonical SOAC controlled-eval requirements are empty"
         )
     if set(routes) != failure_categories:
         missing = sorted(failure_categories - set(routes))
@@ -94,7 +104,7 @@ def _load_policy(project_root: str | Path) -> tuple[dict[str, Any], set[str]]:
         raise TargetedRepairPlanError(
             "REPAIR_POLICY_INCOMPLETE", "unknown outcome route is missing or undeclared"
         )
-    return policy, failure_categories
+    return policy, failure_categories, control_requirements
 
 
 def _normalize_repair_item(result: Mapping[str, Any]) -> dict[str, Any]:
@@ -166,13 +176,84 @@ def _validate_eval_status(status: str, results: list[dict[str, Any]]) -> None:
         )
 
 
+def _validate_control_projection(
+    control_status: str,
+    controlled_eval: Mapping[str, Any],
+    *,
+    canonical_requirements: list[str],
+) -> None:
+    """Validate the normalized upstream control projection without redefining SOAC controls."""
+
+    target_variable = str(controlled_eval.get("target_variable") or "").strip()
+    confounds = controlled_eval.get("confounds") or []
+    if not isinstance(confounds, list) or not all(isinstance(item, str) for item in confounds):
+        raise TargetedRepairPlanError(
+            "REPAIR_CONTROL_PROJECTION_MISMATCH", "controlled_eval.confounds is not normalized"
+        )
+    controls_verified = controlled_eval.get("non_target_controls_verified", False)
+    if not isinstance(controls_verified, bool):
+        raise TargetedRepairPlanError(
+            "REPAIR_CONTROL_PROJECTION_MISMATCH", "non_target_controls_verified is not boolean"
+        )
+
+    projected_requirements = controlled_eval.get("canonical_control_requirements")
+    if not isinstance(projected_requirements, list) or projected_requirements != canonical_requirements:
+        raise TargetedRepairPlanError(
+            "REPAIR_CONTROL_PROJECTION_MISMATCH",
+            "controlled_eval canonical requirement projection does not match current SOAC authority",
+        )
+
+    provenance_raw = controlled_eval.get("control_provenance")
+    provenance = dict(provenance_raw) if isinstance(provenance_raw, Mapping) else None
+    if controls_verified:
+        if provenance is None:
+            raise TargetedRepairPlanError(
+                "REPAIR_CONTROL_PROJECTION_MISMATCH", "verified controls have no normalized provenance"
+            )
+        if provenance.get("complete_against_canonical") is not True:
+            raise TargetedRepairPlanError(
+                "REPAIR_CONTROL_PROJECTION_MISMATCH", "verified controls are not complete against SOAC authority"
+            )
+        covered = provenance.get("canonical_requirements_covered")
+        if not isinstance(covered, list) or set(covered) != set(canonical_requirements):
+            raise TargetedRepairPlanError(
+                "REPAIR_CONTROL_PROJECTION_MISMATCH", "verified control coverage does not match SOAC authority"
+            )
+        evidence_refs = provenance.get("evidence_refs") or []
+        if not isinstance(evidence_refs, list) or not evidence_refs or not all(isinstance(item, str) and item.strip() for item in evidence_refs):
+            raise TargetedRepairPlanError(
+                "REPAIR_CONTROL_PROJECTION_MISMATCH", "verified controls lack evidence refs"
+            )
+
+    if control_status == "CLEAN":
+        if not target_variable or confounds or controls_verified is not True:
+            raise TargetedRepairPlanError(
+                "REPAIR_CONTROL_PROJECTION_MISMATCH", "CLEAN status is inconsistent with normalized control evidence"
+            )
+    elif control_status == "CONFOUNDED":
+        if not confounds:
+            raise TargetedRepairPlanError(
+                "REPAIR_CONTROL_PROJECTION_MISMATCH", "CONFOUNDED status requires explicit confounds"
+            )
+    elif control_status == "UNVERIFIED_CONTROL":
+        if not target_variable or controls_verified:
+            raise TargetedRepairPlanError(
+                "REPAIR_CONTROL_PROJECTION_MISMATCH", "UNVERIFIED_CONTROL projection is inconsistent"
+            )
+    elif control_status == "UNCONTROLLED":
+        if target_variable or confounds or controls_verified:
+            raise TargetedRepairPlanError(
+                "REPAIR_CONTROL_PROJECTION_MISMATCH", "UNCONTROLLED projection is inconsistent"
+            )
+
+
 def plan_targeted_repair(raw_eval_result: Mapping[str, Any], *, project_root: str | Path) -> dict[str, Any]:
     """Validate evaluator output and emit a non-mutating repair-routing plan."""
 
     if not isinstance(raw_eval_result, Mapping):
         raise TargetedRepairPlanError("REPAIR_INVALID_SHAPE", "evaluation result root must be a mapping")
     raw = dict(raw_eval_result)
-    policy, failure_categories = _load_policy(project_root)
+    policy, failure_categories, canonical_control_requirements = _load_policy(project_root)
 
     required_root = {
         "status",
@@ -199,6 +280,11 @@ def plan_targeted_repair(raw_eval_result: Mapping[str, Any], *, project_root: st
             "REPAIR_INVALID_SHAPE", f"invalid control_status {control_status!r}"
         )
     controlled_eval = _mapping(raw.get("controlled_eval"), field="controlled_eval")
+    _validate_control_projection(
+        control_status,
+        controlled_eval,
+        canonical_requirements=canonical_control_requirements,
+    )
     provenance = _mapping(raw.get("observation_provenance"), field="observation_provenance")
 
     handoff = _mapping(raw.get("targeted_repair_handoff"), field="targeted_repair_handoff")
