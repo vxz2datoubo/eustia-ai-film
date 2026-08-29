@@ -1,10 +1,10 @@
 """Canonical natural-language directing entrypoint for Learning Smart Recall.
 
 Continuation-style requests first pass the Active Work Item Resolution Gate.
-After identity/freshness binding, flow continues as Director Feature Compiler ->
-director_route_index hard route -> existing LearningRetriever semantic recall.
-LearningRetriever remains retrieval authority and work-item resolution does not
-become story, continuity, or learning authority.
+After identity/freshness binding, the runtime reconstructs a compact complete
+task description from the resolved WorkItemContext, then continues as Director
+Feature Compiler -> director_route_index hard route -> existing LearningRetriever
+semantic recall. Retrieval authority is unchanged.
 """
 
 from __future__ import annotations
@@ -21,6 +21,39 @@ from .active_work_item import (
 )
 from .feature_compiler import compile_retrieval_task
 from .retriever import LearningRetriever
+
+
+def _reconstruct_feature_input(
+    user_description: str,
+    packet: dict[str, Any] | None,
+) -> tuple[str, bool]:
+    """Create a pragmatically complete feature-compiler input for ellipsis.
+
+    This is not a prompt sent to a video model. It is compact retrieval context
+    so phrases like “重新导演上次那30秒” compile features from the resolved work
+    item rather than from an empty anaphora shell.
+    """
+    if not packet:
+        return user_description, False
+
+    summary = str(packet.get("effective_state_summary") or "").strip()
+    constraints = packet.get("constraints") or {}
+    unresolved = [str(v).strip() for v in constraints.get("unresolved") or [] if str(v).strip()]
+    locked = [str(v).strip() for v in constraints.get("locked") or [] if str(v).strip()]
+
+    parts = [
+        user_description.strip(),
+        f"resolved_work_item={packet['work_item_id']}",
+    ]
+    if summary:
+        parts.append(f"current_effective_state={summary}")
+    if unresolved:
+        parts.append("unresolved_failures=" + ", ".join(unresolved))
+    if locked:
+        # Locks are bounded to retrieval identity/mechanism cues. The full
+        # Constraint Ledger remains in the packet and canonical continuity.
+        parts.append("locked_mechanisms=" + ", ".join(locked[:12]))
+    return "\n".join(parts), True
 
 
 class DirectorLearningRuntime:
@@ -77,8 +110,11 @@ class DirectorLearningRuntime:
                 self.project_root, resolution
             )
 
+        feature_input, reconstructed = _reconstruct_feature_input(
+            description, work_item_packet
+        )
         task = compile_retrieval_task(
-            description,
+            feature_input,
             task_id=task_id,
             base_task=merged_base,
             route_data=self.retriever.routes,
@@ -89,6 +125,7 @@ class DirectorLearningRuntime:
             "entrypoint": "DirectorLearningRuntime.retrieve",
             "flow": [
                 "active_work_item_resolution",
+                "continuation_task_reconstruction",
                 "director_feature_compiler",
                 "hard_route",
                 "semantic_recall",
@@ -96,6 +133,7 @@ class DirectorLearningRuntime:
             "active_work_item_gate_invoked": True,
             "active_work_item_resolution": resolution.as_dict(),
             "work_item_context_packet": work_item_packet,
+            "continuation_task_reconstructed": reconstructed,
             "serialized_work_item_authority_accepted": False,
             "compiler_invoked": True,
             "work_item_resolution_authority": "10_运行时/active_work_item_resolution_gate.yaml",
