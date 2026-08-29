@@ -10,7 +10,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from .feature_compiler import compile_retrieval_task
+from .feature_compiler import FEATURE_KEYS, compile_retrieval_task
 from .retriever import LearningRetriever
 
 
@@ -44,6 +44,7 @@ class DirectorLearningRuntime:
             "compiler_invoked": True,
             "route_authority": "10_运行时/director_route_index.yaml",
             "retriever_authority": "tools/learning_retriever/learning_retriever/retriever.py",
+            "compiled_features": {key: list(task.get(key) or []) for key in FEATURE_KEYS},
             "hard_routes": list(task.get("hard_routes") or []),
             "feature_compiler_receipt": dict(task.get("feature_compiler_receipt") or {}),
         }
