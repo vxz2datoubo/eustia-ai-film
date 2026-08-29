@@ -1,0 +1,45 @@
+name: tmp-wire-post-final-delta
+
+on:
+  push:
+    branches:
+      - gpt/post-final-delta-validation
+    paths:
+      - '.github/workflows/_tmp-wire-post-final-delta.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  wire-validate-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: gpt/post-final-delta-validation
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Apply guarded bindings
+        run: |
+          python tools/learning_retriever/_tmp_wire_post_final_delta.py
+          git diff --check
+      - name: Validate stacked runtime
+        run: |
+          python -m pip install pytest PyYAML
+          PYTHONPATH=tools/learning_retriever python -m learning_retriever.cli --project-root . --validate-index
+          PYTHONPATH=tools/learning_retriever python -m learning_retriever.cli --project-root . --validate-feature-compiler
+          PYTHONPATH=tools/learning_retriever python -m pytest tools/learning_retriever/tests/test_final_delta_learning.py -q
+          PYTHONPATH=tools/learning_retriever python -m pytest tools/learning_retriever/tests/test_final_delta_bindings.py -q
+          PYTHONPATH=tools/learning_retriever python -m pytest tools/learning_retriever/tests/test_post_final_delta_validation.py -q
+          PYTHONPATH=tools/learning_retriever python -m pytest tools/learning_retriever/tests/test_post_final_delta_bindings.py -q
+          PYTHONPATH=tools/learning_retriever python -m pytest tools/learning_retriever/tests -q
+      - name: Publish tested non-workflow bindings
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add PROJECT_INDEX.yaml 10_运行时/read_sets.yaml 10_运行时/write_routes.yaml tools/learning_retriever/README.md
+          git diff --cached --check
+          git commit -m "Wire post-Final-Delta validation into project runtime"
+          git push origin HEAD:gpt/post-final-delta-validation
