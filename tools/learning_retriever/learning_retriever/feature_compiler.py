@@ -238,7 +238,7 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
     gaze_terms = ("看向", "望向", "盯着", "注视", "视线朝", "目光朝", "观察")
     perception_terms = ("看到", "看见", "见到")
     facing_terms = ("面向", "朝向", "转向", "身体朝", "正对")
-    ritual_kneel_terms = ("跪拜", "拜下", "拜倒", "伏地跪拜")
+    ritual_kneel_terms = ("跪拜", "拜下", "拜倒", "伏地跪拜", "跪下")
     kneel_terms = ("下跪", "跪向", "跪着朝") + ritual_kneel_terms
     pursuit_terms = ("追逐", "追击", "追赶", "追捕", "追杀")
     escape_terms = ("逃离", "逃跑", "逃开", "撤离", "远离", "躲避", "摆脱")
@@ -337,7 +337,7 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
     )
     crowd_relation_cues = (
         "看向", "望向", "注视", "观察", "看到", "看见", "见到", "等待救济", "等待施粥", "聆听", "欢呼", "沉默",
-        "嘲笑", "反应", "态度", "跪向", "下跪", "跪拜", "拜下", "拜倒", "转向", "聚焦",
+        "嘲笑", "反应", "态度", "跪向", "下跪", "跪拜", "拜下", "拜倒", "跪下", "转向", "聚焦",
     )
     crowd_has_relation = (
         _contains_any(text, crowd_terms)
@@ -372,7 +372,10 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
             add(relation, "speaker_to_history")
         else:
             add(relation, "speaker_to_listener")
-        if _contains_any(text, ("拖慢", "停滞", "冗长", "啰嗦", "卡住", "节奏慢", "信息段")):
+        if _contains_any(
+            text,
+            ("拖慢", "停滞", "冗长", "啰嗦", "卡住", "节奏慢", "信息段", "停下来", "推进停", "不能推进", "推进不动"),
+        ):
             add(failure, "exposition_stall")
         trace(
             "exposition",
@@ -664,7 +667,10 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
             "VisibleIR.environmental_response",
         )
 
-    if _contains_any(text, ("先后顺序", "事件顺序", "先再", "先…再", "顺序不对", "动作顺序")):
+    if _contains_any(
+        text,
+        ("先后顺序", "事件顺序", "先再", "先…再", "顺序不对", "动作顺序", "动作先后"),
+    ):
         add(dramatic, "event_order")
         add(failure, "event_order_fail")
         trace("event_order", "EventGraphIR.temporal_relation", "EventGraphIR.precondition", "EventGraphIR.result")
