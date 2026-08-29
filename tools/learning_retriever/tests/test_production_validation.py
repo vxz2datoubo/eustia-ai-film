@@ -11,7 +11,9 @@ from learning_retriever.production_validation import run_production_validation_m
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 MATRIX_PATH = REPO_ROOT / "11_验收/learning_smart_recall_production_validation_matrix.yaml"
+TRANSFER_PATH = REPO_ROOT / "11_验收/learning_smart_recall_transfer_contract.yaml"
 MATRIX = yaml.safe_load(MATRIX_PATH.read_text(encoding="utf-8"))
+TRANSFER = yaml.safe_load(TRANSFER_PATH.read_text(encoding="utf-8"))
 
 
 class LearningSmartRecallProductionValidationTests(unittest.TestCase):
@@ -25,6 +27,9 @@ class LearningSmartRecallProductionValidationTests(unittest.TestCase):
             self.assertTrue(any(case["kind"] in {"negative", "fail_closed"} for case in family_cases), family)
 
     def test_cross_surface_requirements_are_not_exact_phrase_only(self) -> None:
+        policy = TRANSFER["variation_policy"]
+        allowed_non_wording = set(policy["allowed_non_wording_axes"])
+        min_non_wording = int(policy["min_non_wording_axes_per_family"])
         for family in MATRIX["required_families"]:
             positives = [
                 case
@@ -36,6 +41,29 @@ class LearningSmartRecallProductionValidationTests(unittest.TestCase):
             self.assertEqual(len(descriptions), len(positives), family)
             contexts = {case.get("production_context") for case in positives}
             self.assertIn("cross_scene", contexts, family)
+
+            axes_map = TRANSFER["families"][family]["positive_case_axes"]
+            positive_ids = {case["id"] for case in positives}
+            self.assertEqual(set(axes_map), positive_ids, family)
+            non_wording_axes: set[str] = set()
+            for case_id, axes in axes_map.items():
+                axes_set = set(axes)
+                self.assertIn("wording", axes_set, case_id)
+                self.assertTrue((axes_set - {"wording"}).issubset(allowed_non_wording), case_id)
+                non_wording_axes.update((axes_set - {"wording"}) & allowed_non_wording)
+            self.assertGreaterEqual(len(non_wording_axes), min_non_wording, family)
+
+    def test_each_family_has_executable_metamorphic_paraphrase_probe(self) -> None:
+        required = set(MATRIX["required_families"])
+        meta = TRANSFER["metamorphic_cases"]
+        observed = {case["family"] for case in meta if case["kind"] == "positive"}
+        self.assertEqual(observed, required)
+        base_positive_ids = {
+            case["id"]
+            for case in MATRIX["cases"]
+            if case["kind"] == "positive"
+        }
+        self.assertTrue(all(case["metamorphic_of"] in base_positive_ids for case in meta))
 
     def test_matrix_executes_through_canonical_runtime(self) -> None:
         report = run_production_validation_matrix(REPO_ROOT)
@@ -49,6 +77,9 @@ class LearningSmartRecallProductionValidationTests(unittest.TestCase):
         self.assertEqual(report["aggregate"]["false_negative_mandatory_recalls"], [])
         self.assertEqual(report["aggregate"]["authority_boundary_violations"], [])
         self.assertEqual(report["aggregate"]["missing_required_families"], [])
+        self.assertEqual(report["aggregate"]["matrix_contract_violations"], [])
+        self.assertEqual(report["aggregate"]["metamorphic_cases"], 6)
+        self.assertEqual(report["aggregate"]["metamorphic_passes"], 6)
 
     def test_first_episode_inputs_are_part_of_the_executable_matrix(self) -> None:
         report = run_production_validation_matrix(REPO_ROOT)
