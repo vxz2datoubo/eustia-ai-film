@@ -121,15 +121,15 @@ class DirectorLearningRuntime:
             strict=True,
         )
         result = self.retriever.retrieve(task, top_k=top_k, expand=expand, fail_closed=True)
+
+        runtime_flow = ["active_work_item_resolution"]
+        if reconstructed:
+            runtime_flow.append("continuation_task_reconstruction")
+        runtime_flow.extend(["director_feature_compiler", "hard_route", "semantic_recall"])
+
         result["canonical_runtime_receipt"] = {
             "entrypoint": "DirectorLearningRuntime.retrieve",
-            "flow": [
-                "active_work_item_resolution",
-                "continuation_task_reconstruction",
-                "director_feature_compiler",
-                "hard_route",
-                "semantic_recall",
-            ],
+            "flow": runtime_flow,
             "active_work_item_gate_invoked": True,
             "active_work_item_resolution": resolution.as_dict(),
             "work_item_context_packet": work_item_packet,
