@@ -1,4 +1,4 @@
-schema_version: "1.1"
+schema_version: "1.2"
 regression_suite_id: EUSTIA_ACTIVE_WORK_ITEM_CHECKPOINT_COMPILER_REGRESSIONS
 status: active
 runtime_contract: 10_运行时/active_work_item_checkpoint_compiler.yaml
@@ -6,6 +6,7 @@ authority_boundary:
   eval_fixture_only: true
   continuity_authority: 07_连续性与生产状态/连续性与当前生产状态.md#ACTIVE_WORK_ITEM_STATE
   proposal_is_not_persistence: true
+  finalization_proposal_is_not_persistence: true
   source_issue_revision_trace_is_not_canonical_truth: true
 
 cases:
@@ -123,9 +124,36 @@ cases:
       post_write_document_verifier_may_not_set_verified: true
       second_governed_finalization_required: true
 
+  - case_id: AWCP-FINALIZATION-PROPOSAL-001
+    class: verified_materialization_to_second_pending_proposal
+    expected:
+      finalization_proposal_status: PENDING_FINALIZATION_WRITE
+      checkpoint_writeback_status: verified
+      writeback_verified_commit_role: first_materialization_commit
+      finalization_persistence_verified: false
+
+  - case_id: AWCP-FINALIZATION-RECEIPT-FINGERPRINT-NEG-001
+    class: finalization_requires_exact_first_write_receipt_and_pending_document
+    expected_error: CHECKPOINT_FINALIZATION_RECEIPT_MISMATCH
+
+  - case_id: AWCP-FINALIZATION-STATE-NEG-001
+    class: finalization_only_accepts_pending_unstamped_state
+    expected_error: CHECKPOINT_FINALIZATION_STATE_NOT_PENDING
+
+  - case_id: AWCP-FINALIZATION-OUTSIDE-MUTATION-NEG-001
+    class: second_write_cannot_mutate_continuity_outside_active_block
+    expected_error: CHECKPOINT_FINALIZATION_UNRELATED_MUTATION
+
+  - case_id: AWCP-FINALIZATION-REF-BOUNDARY-001
+    class: finalizer_cannot_claim_governed_target_ref
+    expected:
+      runtime_confirms_governed_branch_or_ref: false
+      canonical_reporting_requires_external_ref_confirmation: true
+
 acceptance:
   primary_machine_suite: tools/learning_retriever/tests/test_checkpoint_compiler.py
   hardening_machine_suite: tools/learning_retriever/tests/test_checkpoint_compiler_hardening.py
   authority_machine_suite: tools/learning_retriever/tests/test_checkpoint_compiler_authority.py
+  finalization_machine_suite: tools/learning_retriever/tests/test_checkpoint_finalizer.py
   exact_head_ci_required: true
   stacked_dependency_must_be_resolved_before_merge: PR_37
