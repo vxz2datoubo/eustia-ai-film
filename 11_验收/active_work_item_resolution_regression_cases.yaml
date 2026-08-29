@@ -1,4 +1,4 @@
-schema_version: "1.0"
+schema_version: "1.1"
 regression_suite_id: EUSTIA_ACTIVE_WORK_ITEM_RESOLUTION_REGRESSIONS
 status: active
 runtime_contract: 10_运行时/active_work_item_resolution_gate.yaml
@@ -10,6 +10,7 @@ cases:
       user_text: 重新导演上次那30秒
       active_work_item_id: KAIM-SCARF-CLOTHESLINE-TRAVERSE
       active_source_issue: 19
+      freshness_provider: trusted_runtime_capability
       latest_applied_checkpoint_ref: "5454103847"
       latest_source_checkpoint_ref: "5454103847"
       stale_competitor:
@@ -28,19 +29,21 @@ cases:
     input:
       user_text: 重新导演之前爬楼那30秒
       active_work_item_id: KAIM-SCARF-CLOTHESLINE-TRAVERSE
-      explicit_work_item_id: KAIM-HIGH-SEARCH-30S
-      explicit_target_verified: true
+      explicit_target_provider: trusted_runtime_capability
+      verified_target_work_item_id: KAIM-HIGH-SEARCH-30S
     expected:
       resolved_work_item_id: KAIM-HIGH-SEARCH-30S
-      continuation_resolution_source: user_explicit
+      continuation_resolution_source: user_explicit_trusted_target_resolution
       gate_status: RESOLVED_VERIFIED
       active_pointer_mutated: false
+      serialized_claim_may_mint_target_identity: false
 
   - case_id: AWIR-ALIAS-COLLISION-001
     class: semantic_similarity_cannot_define_identity
     input:
       user_text: 继续凯姆那个30秒
       active_work_item_id: KAIM-SCARF-CLOTHESLINE-TRAVERSE
+      freshness_provider: trusted_runtime_capability
       candidates:
         - KAIM-SCARF-CLOTHESLINE-TRAVERSE
         - KAIM-HIGH-SEARCH-30S
@@ -55,6 +58,7 @@ cases:
     input:
       user_text: 继续上一版
       active_work_item_id: KAIM-SCARF-CLOTHESLINE-TRAVERSE
+      freshness_provider: trusted_runtime_capability
       latest_applied_checkpoint_ref: "5427171891"
       latest_source_checkpoint_ref: "5454103847"
     expected_error: WORK_ITEM_CHECKPOINT_RECONCILE_REQUIRED
@@ -66,9 +70,24 @@ cases:
       user_text: 继续那30秒
       active_work_item_id: KAIM-SCARF-CLOTHESLINE-TRAVERSE
       source_issue: 19
+      freshness_provider: trusted_runtime_capability
       source_issue_accessible: false
     expected_error: WORK_ITEM_FRESHNESS_UNVERIFIED
     director_feature_compiler_invoked: false
+
+  - case_id: AWIR-FRESHNESS-PROVIDER-REQUIRED-001
+    class: serialized_freshness_claim_cannot_mint_canonical_freshness
+    input:
+      user_text: 继续那30秒
+      active_work_item_id: KAIM-SCARF-CLOTHESLINE-TRAVERSE
+      source_issue: 19
+      freshness_provider: null
+      serialized_claim:
+        source_issue_accessible: true
+        latest_source_checkpoint_ref: "5454103847"
+    expected_error: WORK_ITEM_FRESHNESS_PROVIDER_REQUIRED
+    director_feature_compiler_invoked: false
+    serialized_claim_accepted: false
 
   - case_id: AWIR-POINTER-MISSING-001
     class: missing_pointer_fail_closed
@@ -87,6 +106,7 @@ cases:
       resolution_required: false
       gate_status: NOT_REQUIRED
       director_feature_compiler_allowed: true
+      continuation_task_reconstruction_performed: false
 
   - case_id: AWIR-OUTPUT-MISMATCH-001
     class: pre_output_scope_guard
