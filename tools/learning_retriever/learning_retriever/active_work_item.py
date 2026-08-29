@@ -2,16 +2,20 @@
 
 This module binds a continuation request to the canonical current-production
 snapshot before Director Feature Compiler runs. It is intentionally bounded:
-it does not fetch GitHub, choose screenplay facts, mutate continuity, or become
-a second project authority. Callers supply freshness evidence for source Issue
-checkpoints when the active snapshot declares one.
+it does not choose screenplay facts, mutate continuity, or become a second
+project authority.
+
+Freshness is deliberately NOT accepted from serialized JSON/CLI flags. A host
+orchestrator that can actually read the source Issue supplies an in-process
+freshness provider. This mirrors the project rule that callers cannot mint
+canonical authority by merely asserting that a read occurred.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Callable, Iterable
 
 import yaml
 
@@ -20,10 +24,6 @@ CONTINUITY_PATH = Path("07_连续性与生产状态/连续性与当前生产状�
 STATE_BEGIN = "<!-- ACTIVE_WORK_ITEM_STATE_BEGIN -->"
 STATE_END = "<!-- ACTIVE_WORK_ITEM_STATE_END -->"
 
-# These expressions are intrinsically discourse/anaphora references rather than
-# ordinary in-scene action language. Generic verbs such as “继续” and “接着” are
-# deliberately handled separately because “继续追击/继续攀爬” describe character
-# action and must not invoke project-state reconciliation.
 STRONG_CONTINUATION_SIGNALS = (
     "上次",
     "刚才",
@@ -86,6 +86,8 @@ ALLOWED_TRANSITIONS = {
     "CLOSED": set(),
 }
 
+FreshnessProvider = Callable[[dict[str, Any]], dict[str, Any]]
+
 
 class ActiveWorkItemResolutionError(ValueError):
     """Fail-closed error raised before director feature compilation."""
@@ -131,11 +133,6 @@ def _normalize_discourse_text(description: str) -> str:
 
 
 def _continuation_verb_targets_discourse_object(text: str, verb: str) -> bool:
-    """Return true only when a generic continuation verb points to prior work.
-
-    A bounded window is used so a later unrelated mention of “镜头” does not turn
-    an in-scene action such as “角色继续追击，镜头跟随” into a continuation request.
-    """
     search_from = 0
     while True:
         hit = text.find(verb, search_from)
@@ -148,12 +145,7 @@ def _continuation_verb_targets_discourse_object(text: str, verb: str) -> bool:
 
 
 def is_continuation_request(description: str) -> bool:
-    """Detect discourse continuation without confusing it with scene action.
-
-    Strong anaphora such as “上次/刚才/那30秒/下一镜” always require resolution.
-    Generic “继续/接着” only count when used alone as a short discourse command or
-    when they directly target a bounded discourse object such as “上一版/下一镜”.
-    """
+    """Detect discourse continuation without confusing it with scene action."""
     if not isinstance(description, str):
         return False
     normalized = _normalize_discourse_text(description)
@@ -167,10 +159,10 @@ def is_continuation_request(description: str) -> bool:
     if compact in CONTINUATION_VERBS:
         return True
 
-    for verb in CONTINUATION_VERBS:
-        if _continuation_verb_targets_discourse_object(normalized, verb):
-            return True
-    return False
+    return any(
+        _continuation_verb_targets_discourse_object(normalized, verb)
+        for verb in CONTINUATION_VERBS
+    )
 
 
 def _normalize_checkpoint(value: Any) -> str | None:
@@ -230,6 +222,12 @@ def _extract_state_payload(markdown: str) -> dict[str, Any]:
             raise ActiveWorkItemResolutionError(
                 "ACTIVE_WORK_ITEM_STATE_INVALID", details={"field": key}
             )
+
+    recent = state.get("recent_work_items", [])
+    if recent is not None and not isinstance(recent, list):
+        raise ActiveWorkItemResolutionError(
+            "ACTIVE_WORK_ITEM_STATE_INVALID", details={"field": "recent_work_items"}
+        )
     return state
 
 
@@ -242,19 +240,96 @@ def load_active_work_item_state(project_root: str | Path) -> dict[str, Any]:
     return _extract_state_payload(markdown)
 
 
+def _candidate_alias_matches(description: str, state: dict[str, Any]) -> list[dict[str, Any]]:
+    normalized = _normalize_discourse_text(description)
+    matches: list[dict[str, Any]] = []
+    for candidate in state.get("recent_work_items") or []:
+        if not isinstance(candidate, dict):
+            continue
+        candidate_id = str(candidate.get("work_item_id") or "").strip()
+        aliases = candidate.get("aliases") or []
+        if not candidate_id or not isinstance(aliases, list):
+            continue
+        if any(str(alias).strip().casefold() in normalized for alias in aliases if str(alias).strip()):
+            matches.append(candidate)
+    return matches
+
+
+def _resolve_explicit_catalog_candidate(
+    description: str, state: dict[str, Any]
+) -> dict[str, Any] | None:
+    matches = _candidate_alias_matches(description, state)
+    unique_ids = {str(item.get("work_item_id") or "").strip() for item in matches}
+    unique_ids.discard("")
+    if len(unique_ids) > 1:
+        raise ActiveWorkItemResolutionError(
+            "CONTINUATION_REFERENT_AMBIGUOUS",
+            details={"candidate_ids": sorted(unique_ids)},
+        )
+    return matches[0] if matches else None
+
+
+def _verify_active_freshness(
+    state: dict[str, Any],
+    freshness_provider: FreshnessProvider | None,
+) -> tuple[bool, str | None]:
+    source_issue = state.get("source_issue")
+    checkpoint = _normalize_checkpoint(state.get("latest_applied_checkpoint_ref"))
+    checkpoint_status = str(state.get("checkpoint_writeback_status") or "").strip().casefold()
+
+    if source_issue in (None, "", 0, "0"):
+        if checkpoint_status != "verified":
+            raise ActiveWorkItemResolutionError(
+                "WORK_ITEM_FRESHNESS_UNVERIFIED",
+                details={"reason": "snapshot_writeback_not_verified"},
+            )
+        return True, checkpoint
+
+    if freshness_provider is None:
+        raise ActiveWorkItemResolutionError(
+            "WORK_ITEM_FRESHNESS_PROVIDER_REQUIRED",
+            details={"source_issue": source_issue},
+        )
+
+    receipt = freshness_provider(dict(state))
+    if not isinstance(receipt, dict):
+        raise ActiveWorkItemResolutionError(
+            "WORK_ITEM_FRESHNESS_UNVERIFIED",
+            details={"source_issue": source_issue, "reason": "invalid_freshness_receipt"},
+        )
+
+    receipt_issue = receipt.get("source_issue")
+    if str(receipt_issue) != str(source_issue) or receipt.get("source_issue_accessible") is not True:
+        raise ActiveWorkItemResolutionError(
+            "WORK_ITEM_FRESHNESS_UNVERIFIED",
+            details={"source_issue": source_issue, "reason": "source_issue_not_verified_accessible"},
+        )
+
+    latest = _normalize_checkpoint(receipt.get("latest_source_checkpoint_ref"))
+    if latest is None:
+        raise ActiveWorkItemResolutionError(
+            "WORK_ITEM_FRESHNESS_UNVERIFIED",
+            details={"source_issue": source_issue, "reason": "latest_source_checkpoint_ref_missing"},
+        )
+    if latest != checkpoint:
+        raise ActiveWorkItemResolutionError(
+            "WORK_ITEM_CHECKPOINT_RECONCILE_REQUIRED",
+            details={
+                "source_issue": source_issue,
+                "latest_applied_checkpoint_ref": checkpoint,
+                "latest_source_checkpoint_ref": latest,
+            },
+        )
+    return True, latest
+
+
 def resolve_work_item(
     description: str,
     *,
     project_root: str | Path,
-    context: dict[str, Any] | None = None,
+    freshness_provider: FreshnessProvider | None = None,
 ) -> WorkItemResolution:
-    """Resolve continuation work-item identity before downstream compilation.
-
-    `context` is an orchestration receipt, not an authority store. The caller may
-    pass exact source-Issue freshness evidence or an explicit user-selected
-    non-active work-item identity. Semantic search results are deliberately not
-    accepted as identity proof.
-    """
+    """Resolve work-item identity and freshness before downstream compilation."""
     if not is_continuation_request(description):
         return WorkItemResolution(
             resolution_required=False,
@@ -265,76 +340,124 @@ def resolve_work_item(
             gate_status="NOT_REQUIRED",
         )
 
-    context = dict(context or {})
     state = load_active_work_item_state(project_root)
     active_id = str(state["work_item_id"]).strip()
+    explicit_candidate = _resolve_explicit_catalog_candidate(description, state)
 
-    explicit_id = str(context.get("explicit_work_item_id") or "").strip() or None
-    if explicit_id:
-        if explicit_id != active_id and context.get("explicit_target_verified") is not True:
-            raise ActiveWorkItemResolutionError(
-                "EXPLICIT_NONACTIVE_REFERENT_REQUIRES_RESOLUTION",
-                details={"active_work_item_id": active_id, "explicit_work_item_id": explicit_id},
+    if explicit_candidate is not None:
+        target_id = str(explicit_candidate["work_item_id"]).strip()
+        if target_id != active_id:
+            return WorkItemResolution(
+                resolution_required=True,
+                resolved_work_item_id=target_id,
+                continuation_resolution_source="user_explicit_catalog_alias",
+                checkpoint_ref=_normalize_checkpoint(explicit_candidate.get("checkpoint_ref")),
+                freshness_verified=True,
+                gate_status="RESOLVED_VERIFIED",
+                source_issue=explicit_candidate.get("source_issue"),
+                latest_source_checkpoint_ref=_normalize_checkpoint(
+                    explicit_candidate.get("checkpoint_ref")
+                ),
             )
-        return WorkItemResolution(
-            resolution_required=True,
-            resolved_work_item_id=explicit_id,
-            continuation_resolution_source="user_explicit",
-            checkpoint_ref=_normalize_checkpoint(context.get("explicit_checkpoint_ref")),
-            freshness_verified=True,
-            gate_status="RESOLVED_VERIFIED",
-            source_issue=context.get("explicit_source_issue"),
-            latest_source_checkpoint_ref=_normalize_checkpoint(
-                context.get("explicit_checkpoint_ref")
-            ),
-        )
 
-    source_issue = state.get("source_issue")
-    checkpoint = _normalize_checkpoint(state.get("latest_applied_checkpoint_ref"))
-    checkpoint_status = str(state.get("checkpoint_writeback_status") or "").strip().casefold()
-
-    if source_issue not in (None, "", 0, "0"):
-        if context.get("source_issue_accessible") is not True:
-            raise ActiveWorkItemResolutionError(
-                "WORK_ITEM_FRESHNESS_UNVERIFIED",
-                details={"source_issue": source_issue, "reason": "source_issue_not_verified_accessible"},
-            )
-        latest = _normalize_checkpoint(context.get("latest_source_checkpoint_ref"))
-        if latest is None:
-            raise ActiveWorkItemResolutionError(
-                "WORK_ITEM_FRESHNESS_UNVERIFIED",
-                details={"source_issue": source_issue, "reason": "latest_source_checkpoint_ref_missing"},
-            )
-        if latest != checkpoint:
-            raise ActiveWorkItemResolutionError(
-                "WORK_ITEM_CHECKPOINT_RECONCILE_REQUIRED",
-                details={
-                    "source_issue": source_issue,
-                    "latest_applied_checkpoint_ref": checkpoint,
-                    "latest_source_checkpoint_ref": latest,
-                },
-            )
-        freshness_verified = True
-        latest_source = latest
-    else:
-        if checkpoint_status != "verified":
-            raise ActiveWorkItemResolutionError(
-                "WORK_ITEM_FRESHNESS_UNVERIFIED",
-                details={"reason": "snapshot_writeback_not_verified"},
-            )
-        freshness_verified = True
-        latest_source = checkpoint
-
+    freshness_verified, latest = _verify_active_freshness(state, freshness_provider)
     return WorkItemResolution(
         resolution_required=True,
         resolved_work_item_id=active_id,
         continuation_resolution_source="active_work_item_pointer",
-        checkpoint_ref=checkpoint,
+        checkpoint_ref=_normalize_checkpoint(state.get("latest_applied_checkpoint_ref")),
         freshness_verified=freshness_verified,
         gate_status="RESOLVED_VERIFIED",
-        source_issue=source_issue,
-        latest_source_checkpoint_ref=latest_source,
+        source_issue=state.get("source_issue"),
+        latest_source_checkpoint_ref=latest,
     )
+
+
+def build_work_item_context_packet(
+    project_root: str | Path,
+    resolution: WorkItemResolution,
+) -> dict[str, Any]:
+    """Build the minimal structured packet handed to specialist departments.
+
+    It is a projection for coordination, not a new authority. The receiving
+    department still reads its canonical source for any fact it owns.
+    """
+    if not resolution.resolution_required or not resolution.resolved_work_item_id:
+        raise ActiveWorkItemResolutionError("WORK_ITEM_CONTEXT_PACKET_REQUIRES_RESOLUTION")
+
+    state = load_active_work_item_state(project_root)
+    active_id = str(state["work_item_id"]).strip()
+    if resolution.resolved_work_item_id == active_id:
+        target: dict[str, Any] = state
+        constraints = {
+            "locked": list(state.get("locked_constraints") or []),
+            "preserved": list(state.get("preserved_constraints") or []),
+            "revoked": list(state.get("revoked_constraints") or []),
+            "experimental": list(state.get("experimental_constraints") or []),
+            "unresolved": list(state.get("unresolved_failures") or []),
+        }
+    else:
+        candidates = [
+            item
+            for item in state.get("recent_work_items") or []
+            if isinstance(item, dict)
+            and str(item.get("work_item_id") or "").strip() == resolution.resolved_work_item_id
+        ]
+        if len(candidates) != 1:
+            raise ActiveWorkItemResolutionError(
+                "WORK_ITEM_CONTEXT_PACKET_TARGET_NOT_FOUND",
+                details={"work_item_id": resolution.resolved_work_item_id},
+            )
+        target = candidates[0]
+        constraints = {
+            "locked": list(target.get("locked_constraints") or []),
+            "preserved": list(target.get("preserved_constraints") or []),
+            "revoked": list(target.get("revoked_constraints") or []),
+            "experimental": list(target.get("experimental_constraints") or []),
+            "unresolved": list(target.get("unresolved_failures") or []),
+        }
+
+    return {
+        "schema_version": "1.0",
+        "packet_type": "WorkItemContext",
+        "work_item_id": resolution.resolved_work_item_id,
+        "resolution_source": resolution.continuation_resolution_source,
+        "checkpoint_ref": resolution.checkpoint_ref,
+        "freshness_verified": resolution.freshness_verified,
+        "source_issue": resolution.source_issue,
+        "story_scope_ref": target.get("story_scope_ref"),
+        "effective_state_summary": target.get(
+            "current_effective_state_summary", target.get("summary")
+        ),
+        "constraints": constraints,
+        "bound_media_or_reference_refs": list(target.get("bound_media_or_reference_refs") or []),
+        "authority_refs": {
+            "project_registry": "PROJECT_INDEX.yaml",
+            "continuity": str(CONTINUITY_PATH),
+            "director_method": "01_AI电影系统/AI电影系统.md",
+            "screenplay": "03_剧本与改编/当前改编剧本.md",
+        },
+        "authority_boundary": "coordination_projection_only",
+    }
+
+
+def validate_work_item_context_packet(
+    packet: dict[str, Any], *, expected_work_item_id: str
+) -> bool:
+    if not isinstance(packet, dict) or packet.get("packet_type") != "WorkItemContext":
+        raise ActiveWorkItemResolutionError("WORK_ITEM_CONTEXT_PACKET_INVALID")
+    observed = str(packet.get("work_item_id") or "").strip()
+    expected = str(expected_work_item_id or "").strip()
+    if not observed or observed != expected:
+        raise ActiveWorkItemResolutionError(
+            "WORK_ITEM_CONTEXT_PACKET_MISMATCH",
+            details={"expected_work_item_id": expected or None, "observed_work_item_id": observed or None},
+        )
+    if packet.get("freshness_verified") is not True:
+        raise ActiveWorkItemResolutionError("WORK_ITEM_CONTEXT_PACKET_STALE")
+    if packet.get("authority_boundary") != "coordination_projection_only":
+        raise ActiveWorkItemResolutionError("WORK_ITEM_CONTEXT_PACKET_INVALID")
+    return True
 
 
 def validate_output_work_item(
