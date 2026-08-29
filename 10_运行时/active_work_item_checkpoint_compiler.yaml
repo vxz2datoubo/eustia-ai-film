@@ -1,5 +1,5 @@
 component_id: EUSTIA_ACTIVE_WORK_ITEM_CHECKPOINT_COMPILER
-version: 1.0.0
+version: 1.1.0
 status: candidate
 name: ACTIVE-WORK-ITEM-CHECKPOINT-COMPILER-001
 scope: structured_revision_events_to_pending_active_work_item_snapshot_proposal
@@ -13,7 +13,7 @@ dependency:
 purpose:
   - 将多轮 revision 事件机械压缩为下一份 ACTIVE_WORK_ITEM_STATE proposal
   - 在真正 GitHub 写入前暴露 work item、checkpoint、parent chain、LOCK/REVOKE、Effective State 冲突
-  - 把“计算当前有效状态”和“声明 canonical 已写成功”彻底分离
+  - 把计算当前有效状态、materialize proposal、验证已写文档、最终 canonical 声明分离
   - 为外部受控 FETCH -> EDIT -> COMMIT -> FETCH VERIFY 事务提供最小可审计 patch
 
 authority_boundary:
@@ -25,6 +25,10 @@ authority_boundary:
   runtime_may_not_write_github: true
   runtime_may_not_accept_serialized_write_success_claim: true
   external_orchestrator_must_execute_governed_write_protocol: true
+  revision_event_cannot_mint_story_scope: true
+  revision_event_cannot_mint_work_item_status: true
+  revision_event_cannot_mint_writeback_or_merge_status: true
+  revision_event_cannot_change_previous_work_item_identity: true
 
 input_contract:
   baseline:
@@ -44,25 +48,55 @@ input_contract:
     - preserved
     - revoked
     - experimental
-  allowed_event_types:
-    - ADD
-    - MODIFY
-    - REVOKE
-    - EXPERIMENT
-    - LOCK
-    - CHECKPOINT
-    - CLOSE
-  terminal_event_required:
-    - CHECKPOINT
-    - CLOSE
+  revision_event_forbidden_authority_fields:
+    - story_scope_ref
+    - status
+    - writeback_verified_commit
+    - checkpoint_writeback_status
+    - canonical_merge_status
+    - previous_work_item_id
+  allowed_optional_evidence_fields:
+    - effective_state_summary
+    - next_expected_action
+    - current_best_ref
+    - bound_media_or_reference_refs
+    - unresolved_failures
+    - resolved_failures
+  allowed_event_types: [ADD, MODIFY, REVOKE, EXPERIMENT, LOCK, CHECKPOINT, CLOSE]
+  parent_chain:
+    first_event_parent_must_be_null_when_no_verified_expected_parent_exists: true
+    first_event_parent_must_equal_expected_parent_when_verified_parent_is_supplied: true
+    every_later_parent_must_equal_previous_revision_id: true
+  terminal_event_required: [CHECKPOINT, CLOSE]
 
 constraint_semantics:
   formula: Effective State = Baseline + Accepted_or_Locked_Deltas - Explicitly_Revoked_Deltas
   omission_is_not_revocation: true
   latest_wins_forbidden: true
+  same_event_add_and_revoke_same_constraint: fail_closed
+  preserved_cannot_resurrect_revoked_constraint: true
+  revoked_constraint_reintroduction:
+    ADD:
+      allowed: true
+      effect: remove_from_revoked_and_add_to_preserved
+    LOCK:
+      allowed: true
+      effect: remove_from_revoked_and_add_to_locked
+    MODIFY:
+      allowed: false
+      fail_code: CHECKPOINT_REINTRODUCTION_REQUIRES_ADD_OR_LOCK
+    CHECKPOINT:
+      allowed: false
+      fail_code: CHECKPOINT_REINTRODUCTION_REQUIRES_ADD_OR_LOCK
+    CLOSE:
+      allowed: false
+      fail_code: CHECKPOINT_REINTRODUCTION_REQUIRES_ADD_OR_LOCK
+    EXPERIMENT:
+      allowed: true
+      effect: may_enter_experimental_pool_but_remains_revoked_from_effective_locked_preserved_state
   ADD_MODIFY:
-    changed: accepted_preserved_constraint
-    preserved: preserve_or_reassert
+    changed: accepted_preserved_constraint_except_revoked_reintroduction_rule
+    preserved: preserve_or_reassert_nonrevoked_constraint
     experimental: experiment_pool
     revoked: explicit_removal_only
   LOCK:
@@ -72,7 +106,7 @@ constraint_semantics:
   EXPERIMENT:
     changed: experimental_constraint
     experimental: experimental_constraint
-    preserved: remains_preserved
+    preserved: remains_preserved_when_not_revoked
   REVOKE:
     changed_must_be_empty: true
     revoked: remove_named_constraint_from_locked_preserved_experimental_and_record_revoked
@@ -85,6 +119,7 @@ proposal_contract:
   schema: ACTIVE_WORK_ITEM_CHECKPOINT_PROPOSAL/v1
   status: PENDING_WRITE
   proposed_snapshot_rules:
+    status: terminal_event_CLOSE_then_CLOSED_else_CHECKPOINTED
     latest_applied_checkpoint_ref: proposed_checkpoint_ref
     latest_evidence_ref: terminal_event.source_ref
     checkpoint_writeback_status: pending_write
@@ -98,6 +133,7 @@ proposal_contract:
     - replacement_block
   may_not_include:
     - write_succeeded_boolean_as_authority
+    - caller_verified_boolean_as_authority
     - fake_commit_sha
     - github_token
     - automatic_story_or_asset_mutation
@@ -117,7 +153,8 @@ post_write_verification:
   receipt_boundary:
     - proves supplied fetched document matches proposal
     - does not itself prove commit is on governed target branch
-    - external orchestrator must separately confirm branch/ref and then write CANONICAL_CHECKPOINT receipt to source Issue
+    - does not change checkpoint_writeback_status from pending_write to verified
+    - external orchestrator must separately confirm branch/ref before canonical completion
 
 forbidden_runtime_capabilities:
   - GitHub REST or GraphQL writer
@@ -125,7 +162,7 @@ forbidden_runtime_capabilities:
   - network token possession
   - caller-supplied persisted=true shortcut
   - caller-supplied verified=true shortcut
-  - mutation of screenplay
+  - mutation of screenplay or story_scope_ref
   - mutation of map topology
   - mutation of formal asset defaults
   - mutation of learning maturity weights scope or conflict authority
@@ -138,13 +175,18 @@ fail_codes:
   - CHECKPOINT_EVENTS_EMPTY
   - CHECKPOINT_EVENT_INVALID
   - CHECKPOINT_EVENT_TYPE_INVALID
+  - CHECKPOINT_EVENT_AUTHORITY_FIELD_FORBIDDEN
   - CHECKPOINT_REVISION_DUPLICATE
+  - CHECKPOINT_PARENT_BASELINE_UNKNOWN
   - CHECKPOINT_PARENT_CHAIN_BROKEN
   - CHECKPOINT_WORK_ITEM_MISMATCH
   - CHECKPOINT_EVENT_AFTER_TERMINAL
   - CHECKPOINT_TERMINAL_EVENT_REQUIRED
   - CHECKPOINT_REF_INVALID
   - CHECKPOINT_LOCK_CONFLICT
+  - CHECKPOINT_EVENT_CONSTRAINT_CONFLICT
+  - CHECKPOINT_PRESERVE_REVOKED_CONFLICT
+  - CHECKPOINT_REINTRODUCTION_REQUIRES_ADD_OR_LOCK
   - CHECKPOINT_REVOKE_AMBIGUOUS
   - CHECKPOINT_SOURCE_CHANGED
   - CHECKPOINT_VERIFIED_COMMIT_INVALID
@@ -153,22 +195,31 @@ fail_codes:
   - CHECKPOINT_POST_WRITE_STATE_MISMATCH
 
 write_transaction_external_contract:
+  current_phase_supported: proposal_materialization_and_post_write_document_verification
   steps:
     - FETCH_current_continuity
     - compile_checkpoint_proposal
     - human_or_governed_policy_gate_if_high_impact
     - EDIT_only_ACTIVE_WORK_ITEM_STATE_block
-    - COMMIT_serially
+    - COMMIT_serially_materialization
     - FETCH_post_write_document
     - verify_post_write_document
-    - verify_target_branch_or_ref
-    - write_CANONICAL_CHECKPOINT_receipt_to_source_issue
-  success_reporting_rule: only after external fetch/ref verification may orchestration report checkpoint canonicalized
+    - verify_materialization_commit_is_on_governed_target_branch
+  remaining_finalization_requirement:
+    - materialized snapshot still says checkpoint_writeback_status=pending_write
+    - a second governed finalization transaction is required before runtime may treat new checkpoint as verified baseline
+    - finalization must record the verified materialization commit without attempting impossible self-referential commit SHA embedding
+    - finalization document itself must be fetched and verified before CANONICAL_CHECKPOINT receipt/reporting
+  success_reporting_rule: do_not_report_checkpoint_canonicalized_until_finalization_transaction_is_implemented_and_verified
 
 regression_requirements:
   - issue19_like_revision_series_compiles_deterministically
   - omission_preserves_existing_constraints
   - explicit_revoke_removes_only_named_constraint
+  - revoked_reintroduction_requires_explicit_ADD_or_LOCK
+  - EXPERIMENT_may_retest_revoked_without_restoring_effective_state
+  - revision_event_cannot_mint_story_scope_status_or_persistence
+  - unknown_initial_parent_fails_closed
   - lock_conflict_fails_closed
   - duplicate_revision_id_fails_closed
   - broken_parent_chain_fails_closed
@@ -185,6 +236,6 @@ maturity:
   promotion_gate:
     - targeted_regression_pass
     - independent_review
-    - one_real_checkpoint_transaction_completed_via_external_governed_write_and_fetch_verify
+    - full_two_phase_real_checkpoint_transaction_completed_via_external_governed_write_and_fetch_verify
     - no_false_persistence_claim
     - no_second_continuity_authority
