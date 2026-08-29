@@ -16,7 +16,6 @@ def main() -> int:
     parser.add_argument("--task", help="JSON structured task feature file")
     parser.add_argument("--description", help="natural-language director task description")
     parser.add_argument("--task-id", default="UNSPECIFIED_TASK")
-    parser.add_argument("--work-item-context", help="JSON orchestration receipt for continuation work-item freshness/explicit binding")
     parser.add_argument("--top-k", type=int, default=None)
     parser.add_argument("--expand", action="store_true", help="expand only selected Top-K canonical cases")
     parser.add_argument("--validate-index", action="store_true")
@@ -38,16 +37,14 @@ def main() -> int:
     if not args.task and not args.description:
         parser.error("--task or --description is required unless a validation flag is used")
 
-    work_item_context = None
-    if args.work_item_context:
-        work_item_context = json.loads(Path(args.work_item_context).read_text(encoding="utf-8"))
-
     try:
         if args.description:
+            # CLI intentionally has no serialized freshness override. Continuation
+            # requests with a source Issue fail closed until a host runtime supplies
+            # an in-process freshness provider backed by a real source read.
             result = DirectorLearningRuntime(root).retrieve(
                 args.description,
                 task_id=args.task_id,
-                work_item_context=work_item_context,
                 top_k=args.top_k,
                 expand=args.expand,
             )
@@ -59,7 +56,6 @@ def main() -> int:
                     str(description),
                     task_id=str(raw_task.get("task_id") or args.task_id),
                     base_task=raw_task,
-                    work_item_context=work_item_context,
                     top_k=args.top_k,
                     expand=args.expand,
                 )
