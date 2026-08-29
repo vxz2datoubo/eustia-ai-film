@@ -1,0 +1,82 @@
+schema_version: "1.0"
+regression_suite_id: EUSTIA_ACTIVE_WORK_ITEM_CHECKPOINT_COMPILER_REGRESSIONS
+status: active
+runtime_contract: 10_运行时/active_work_item_checkpoint_compiler.yaml
+authority_boundary:
+  eval_fixture_only: true
+  continuity_authority: 07_连续性与生产状态/连续性与当前生产状态.md#ACTIVE_WORK_ITEM_STATE
+  proposal_is_not_persistence: true
+
+cases:
+  - case_id: AWCP-ISSUE19-TRAJECTORY-001
+    class: revision_trajectory_to_pending_snapshot
+    baseline:
+      work_item_id: KAIM-SCARF-CLOTHESLINE-TRAVERSE
+      checkpoint_ref: "5454103847"
+    revisions:
+      - {revision_id: R1, event_type: MODIFY, parent_revision: null}
+      - {revision_id: R2, event_type: LOCK, parent_revision: R1}
+      - {revision_id: R3, event_type: EXPERIMENT, parent_revision: R2}
+      - {revision_id: R4, event_type: REVOKE, parent_revision: R3}
+      - {revision_id: R5, event_type: CHECKPOINT, parent_revision: R4}
+    expected:
+      proposal_status: PENDING_WRITE
+      checkpoint_writeback_status: pending_write
+      persistence_verified: false
+      omission_is_not_revocation: true
+
+  - case_id: AWCP-OMISSION-PRESERVE-001
+    class: omission_is_not_revocation
+    expected:
+      existing_locked_constraints_preserved: true
+      existing_preserved_constraints_preserved: true
+
+  - case_id: AWCP-EXPLICIT-REVOKE-001
+    class: explicit_revoke_only
+    expected:
+      named_constraint_removed_only: true
+      unrelated_constraints_preserved: true
+
+  - case_id: AWCP-LOCK-CONFLICT-001
+    class: lock_conflict_fail_closed
+    expected_error: CHECKPOINT_LOCK_CONFLICT
+
+  - case_id: AWCP-DUPLICATE-REVISION-001
+    class: duplicate_revision_identity_fail_closed
+    expected_error: CHECKPOINT_REVISION_DUPLICATE
+
+  - case_id: AWCP-PARENT-CHAIN-001
+    class: broken_parent_chain_fail_closed
+    expected_error: CHECKPOINT_PARENT_CHAIN_BROKEN
+
+  - case_id: AWCP-WORK-ITEM-MISMATCH-001
+    class: cross_work_item_revision_fail_closed
+    expected_error: CHECKPOINT_WORK_ITEM_MISMATCH
+
+  - case_id: AWCP-STALE-BASELINE-001
+    class: stale_baseline_checkpoint_fail_closed
+    expected_error: CHECKPOINT_BASELINE_STALE
+
+  - case_id: AWCP-TERMINAL-REQUIRED-001
+    class: checkpoint_or_close_terminal_required
+    expected_error: CHECKPOINT_TERMINAL_EVENT_REQUIRED
+
+  - case_id: AWCP-OUTSIDE-MUTATION-001
+    class: post_write_unrelated_continuity_mutation_rejected
+    expected_error: CHECKPOINT_UNRELATED_CONTINUITY_MUTATION
+
+  - case_id: AWCP-COMMIT-SHA-001
+    class: concrete_commit_required_for_post_write_verification
+    expected_error: CHECKPOINT_VERIFIED_COMMIT_INVALID
+
+  - case_id: AWCP-NO-WRITER-001
+    class: runtime_persistence_authority_absent
+    expected:
+      forbidden_imports_absent: [requests, httpx, urllib, socket, subprocess, git, github]
+      caller_write_succeeded_shortcut: rejected
+      github_writer_api: absent
+
+acceptance:
+  all_cases_machine_backed_by: tools/learning_retriever/tests/test_checkpoint_compiler.py
+  exact_head_ci_required: true
+  stacked_dependency_must_be_resolved_before_merge: PR_37
