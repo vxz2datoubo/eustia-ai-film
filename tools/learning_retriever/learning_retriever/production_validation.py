@@ -46,7 +46,7 @@ def _validate_transfer_contract(
     if not transfer_contract:
         return ["missing transfer contract"]
 
-    expected_base = str(DEFAULT_MATRIX_PATH)
+    expected_base = DEFAULT_MATRIX_PATH.as_posix()
     if str(transfer_contract.get("base_matrix") or "") != expected_base:
         errors.append(
             f"transfer contract base_matrix mismatch: expected {expected_base}, "
