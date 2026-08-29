@@ -3,8 +3,8 @@
 This module compares declared CinematicIntent execution expectations with
 manual or AI-assisted observations. It does not inspect media, define film
 method, score aesthetics, rewrite prompts, or promote learning maturity.
-Canonical observed-field and failure-category vocabularies come from
-``10_运行时/screen_observable_audible_ir_schema.yaml#reverse_compiler``.
+Canonical observed-field, failure-category, and controlled-eval requirements
+come from ``10_运行时/screen_observable_audible_ir_schema.yaml``.
 """
 
 from __future__ import annotations
@@ -53,6 +53,13 @@ _ALLOWED_PROVENANCE_KEYS = {
 }
 _ALLOWED_CONTEXT_KEYS = {"model", "model_version", "generation_id", "work_item_id"}
 _ALLOWED_CONTROL_KEYS = {"target_variable", "confounds", "non_target_controls_verified", "control_provenance"}
+_ALLOWED_CONTROL_PROVENANCE_KEYS = {
+    "source",
+    "verified_equal",
+    "not_applicable",
+    "not_applicable_reasons",
+    "evidence_refs",
+}
 _ALLOWED_OBSERVATION_KEYS = {
     "comparison_mode",
     "observed_value",
@@ -81,6 +88,8 @@ STRUCTURAL_GATE_CODES = {
     "EVAL_INVALID_FAILURE_CATEGORY",
     "EVAL_FRAME_BY_FRAME_CLAIM_CONFLICT",
     "EVAL_EXPECTATION_PROVENANCE_MISSING",
+    "EVAL_CONTROL_PROVENANCE_INVALID",
+    "EVAL_CONTROL_REQUIREMENTS_INCOMPLETE",
 }
 
 
@@ -126,6 +135,121 @@ def _validate_keys(mapping: Mapping[str, Any], allowed: set[str], *, field: str)
         raise ExpectedObservedEvalError(
             "EVAL_UNKNOWN_FIELD", f"unknown {field} fields: {sorted(unknown)}"
         )
+
+
+def _string_list(value: Any, *, field: str) -> list[str]:
+    if value is None:
+        return []
+    if not isinstance(value, list) or not all(isinstance(item, str) and item.strip() for item in value):
+        raise ExpectedObservedEvalError(
+            "EVAL_CONTROL_PROVENANCE_INVALID", f"{field} must be a list of non-empty strings"
+        )
+    return [item.strip() for item in value]
+
+
+def _canonical_control_requirements(schema: Mapping[str, Any]) -> list[str]:
+    requirements = [
+        str(item).strip()
+        for item in ((schema.get("validation") or {}).get("controlled_eval_requirements") or [])
+        if str(item).strip()
+    ]
+    if not requirements:
+        raise ExpectedObservedEvalError(
+            "EVAL_INVALID_SHAPE", "canonical SOAC schema has no controlled_eval_requirements"
+        )
+    return requirements
+
+
+def _validate_control_provenance(
+    raw: Any,
+    *,
+    canonical_requirements: list[str],
+    target_variable: str,
+    require_complete: bool,
+) -> dict[str, Any] | None:
+    if raw is None:
+        if require_complete:
+            raise ExpectedObservedEvalError(
+                "EVAL_MISSING_PROVENANCE", "verified non-target controls require control_provenance"
+            )
+        return None
+
+    provenance = _mapping(raw, field="controlled_eval.control_provenance")
+    _validate_keys(provenance, _ALLOWED_CONTROL_PROVENANCE_KEYS, field="control_provenance")
+    source = str(provenance.get("source") or "").strip()
+    if not source:
+        raise ExpectedObservedEvalError(
+            "EVAL_MISSING_PROVENANCE", "control_provenance.source is required"
+        )
+
+    verified_equal = _string_list(provenance.get("verified_equal"), field="control_provenance.verified_equal")
+    not_applicable = _string_list(provenance.get("not_applicable"), field="control_provenance.not_applicable")
+    evidence_refs = _string_list(provenance.get("evidence_refs"), field="control_provenance.evidence_refs")
+    reasons = _mapping(provenance.get("not_applicable_reasons"), field="control_provenance.not_applicable_reasons")
+
+    canonical = set(canonical_requirements)
+    declared = set(verified_equal) | set(not_applicable)
+    unknown = declared - canonical
+    if unknown:
+        raise ExpectedObservedEvalError(
+            "EVAL_CONTROL_PROVENANCE_INVALID",
+            f"control provenance references non-canonical requirements: {sorted(unknown)}",
+        )
+    overlap = set(verified_equal) & set(not_applicable)
+    if overlap:
+        raise ExpectedObservedEvalError(
+            "EVAL_CONTROL_PROVENANCE_INVALID",
+            f"control requirements cannot be both verified and not applicable: {sorted(overlap)}",
+        )
+    unknown_reason_keys = set(reasons) - set(not_applicable)
+    if unknown_reason_keys:
+        raise ExpectedObservedEvalError(
+            "EVAL_CONTROL_PROVENANCE_INVALID",
+            f"not_applicable_reasons reference undeclared requirements: {sorted(unknown_reason_keys)}",
+        )
+    missing_reasons = [
+        requirement
+        for requirement in not_applicable
+        if not _nonempty(reasons.get(requirement))
+    ]
+    if missing_reasons:
+        raise ExpectedObservedEvalError(
+            "EVAL_CONTROL_PROVENANCE_INVALID",
+            f"not-applicable requirements require explicit reasons: {missing_reasons}",
+        )
+    if not_applicable and not target_variable:
+        raise ExpectedObservedEvalError(
+            "EVAL_CONTROL_PROVENANCE_INVALID",
+            "not-applicable control requirements require an explicit target_variable",
+        )
+
+    if require_complete:
+        if not target_variable:
+            raise ExpectedObservedEvalError(
+                "EVAL_CONTROL_PROVENANCE_INVALID",
+                "non_target_controls_verified=true requires target_variable",
+            )
+        if not evidence_refs:
+            raise ExpectedObservedEvalError(
+                "EVAL_MISSING_PROVENANCE",
+                "verified non-target controls require control_provenance.evidence_refs",
+            )
+        missing = canonical - declared
+        if missing:
+            raise ExpectedObservedEvalError(
+                "EVAL_CONTROL_REQUIREMENTS_INCOMPLETE",
+                f"CLEAN control claim does not cover canonical SOAC requirements: {sorted(missing)}",
+            )
+
+    return {
+        "source": source,
+        "verified_equal": verified_equal,
+        "not_applicable": not_applicable,
+        "not_applicable_reasons": reasons,
+        "evidence_refs": evidence_refs,
+        "canonical_requirements_covered": sorted(declared),
+        "complete_against_canonical": declared == canonical,
+    }
 
 
 def _validate_expectations(
@@ -285,6 +409,7 @@ def evaluate_expected_vs_observed(
     _validate_keys(raw, _ALLOWED_ROOT_KEYS, field="root")
 
     schema, observed_vocabulary, failure_vocabulary, cinematic_fields = _load_reverse_schema(project_root)
+    canonical_control_requirements = _canonical_control_requirements(schema)
     expectations = _validate_expectations(raw.get("expectations"), cinematic_fields=cinematic_fields)
     expectation_by_field = {item["field"]: item for item in expectations}
 
@@ -326,12 +451,12 @@ def evaluate_expected_vs_observed(
             "EVAL_INVALID_SHAPE",
             "controlled_eval.non_target_controls_verified must be boolean",
         )
-    control_provenance = controlled.get("control_provenance")
-    if controls_verified and not _nonempty(control_provenance):
-        raise ExpectedObservedEvalError(
-            "EVAL_MISSING_PROVENANCE",
-            "verified non-target controls require control_provenance",
-        )
+    control_provenance = _validate_control_provenance(
+        controlled.get("control_provenance"),
+        canonical_requirements=canonical_control_requirements,
+        target_variable=target_variable,
+        require_complete=controls_verified,
+    )
     if confounds:
         control_status = "CONFOUNDED"
     elif target_variable and controls_verified:
@@ -441,6 +566,7 @@ def evaluate_expected_vs_observed(
             "confounds": confounds,
             "non_target_controls_verified": controls_verified,
             "control_provenance": control_provenance,
+            "canonical_control_requirements": canonical_control_requirements,
         },
         "targeted_repair_handoff": {
             "items": repair_items,
