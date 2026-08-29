@@ -114,18 +114,35 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
         actions: tuple[str, ...],
         objects: tuple[str, ...],
         *,
+        subject_terms: tuple[str, ...],
         max_chars: int = 16,
     ) -> bool:
-        """Recognize bounded Chinese preposed direction such as `朝她跪下`.
+        """Recognize bounded Chinese preposed direction such as `群众朝她跪下`.
 
-        Bare `朝` is intentionally not a global substring action token because it
-        also occurs lexically inside words such as `王朝` and `朝代`. This helper
-        only accepts a directional marker when the bounded material between the
-        marker and the following action reduces to an explicit locatable target.
+        Bare `朝/向` are accepted only when the material before the marker is
+        clause-start/continuation glue or ends in a known actor subject. This is
+        a grammar boundary rather than a dynasty-word blacklist: lexical nouns
+        such as `王朝圣女/前朝圣女/本朝圣女` cannot become target-oriented
+        blocking merely because a kneeling verb appears later in the clause.
         """
         separators = ("，", "。", "；", "！", "？", ",", ";", "!", "?")
-        markers = ("朝着", "对着", "向着", "朝", "向")
+        markers = ("面朝", "朝着", "对着", "向着", "朝", "向")
         trailing_adverbs = ("缓缓", "慢慢", "纷纷", "共同", "一起", "一同", "都")
+        leading_glue = tuple(
+            sorted(
+                set(
+                    (
+                        "随后", "随即", "然后", "接着", "继而", "再", "又", "便", "于是", "立刻", "马上",
+                        "纷纷", "共同", "一起", "一同", "全都", "都", "转身", "转过身", "回身",
+                    )
+                ),
+                key=len,
+                reverse=True,
+            )
+        )
+        subject_forms = set(subject_terms) | {"她", "他", "他们", "她们"}
+        subject_forms.update(f"{subject}们" for subject in subject_terms if not subject.endswith("们"))
+        bounded_subjects = tuple(sorted(subject_forms, key=len, reverse=True))
         object_candidates = tuple(sorted(set(objects), key=len, reverse=True))
 
         for action in actions:
@@ -152,8 +169,22 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
                                 candidate = candidate[:-len(adverb)].strip()
                                 changed = True
                                 break
-                    if any(candidate == obj for obj in object_candidates):
-                        return True
+                    if not any(candidate == obj for obj in object_candidates):
+                        continue
+
+                    if marker in {"朝", "向"}:
+                        leader = prefix[:marker_pos].strip()
+                        changed = True
+                        while changed and leader:
+                            changed = False
+                            for glue in leading_glue:
+                                if leader.endswith(glue):
+                                    leader = leader[:-len(glue)].strip()
+                                    changed = True
+                                    break
+                        if leader and not any(leader.endswith(subject) for subject in bounded_subjects):
+                            continue
+                    return True
                 search_from = hit + len(action)
         return False
 
@@ -365,7 +396,9 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
 
     direct_kneel_target_evidence = has_kneel and action_has_object(kneel_terms, target_object_terms)
     preposed_kneel_target_evidence = has_kneel and directional_object_precedes_action(
-        ritual_kneel_terms, target_object_terms
+        ritual_kneel_terms,
+        target_object_terms,
+        subject_terms=actor_terms,
     )
     kneel_target_evidence = has_kneel and (
         direct_kneel_target_evidence
