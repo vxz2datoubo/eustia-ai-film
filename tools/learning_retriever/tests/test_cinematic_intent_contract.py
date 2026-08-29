@@ -195,6 +195,10 @@ class CinematicIntentContractTests(unittest.TestCase):
         self.assertIn("test_cinematic_intent_contract.py", workflow)
         self.assertNotIn("contents: write", workflow)
 
+    def test_no_temporary_camera_authority_remediation_artifacts_remain(self):
+        self.assertFalse((REPO_ROOT / ".github/workflows/_tmp-remediate-camera-authority-v3.yml").exists())
+        self.assertFalse((REPO_ROOT / "tools/learning_retriever/_tmp_remediate_camera_authority_v3.py").exists())
+
 
 if __name__ == "__main__":
     unittest.main()
