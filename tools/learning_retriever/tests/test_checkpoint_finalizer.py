@@ -1,9 +1,8 @@
 import ast
 from pathlib import Path
+import unittest
 
-import pytest
-
-from learning_retriever.checkpoint_compiler import STATE_BEGIN, STATE_END, _fingerprint, _render_state_block
+from learning_retriever.checkpoint_compiler import _fingerprint, _render_state_block
 from learning_retriever.checkpoint_finalizer import (
     CheckpointFinalizationError,
     apply_finalization_to_document,
@@ -75,72 +74,37 @@ def compile_ok(markdown=None):
     )
 
 
-def test_compile_finalization_records_verified_materialization_without_claiming_final_write():
-    markdown = document()
-    proposal = compile_ok(markdown)
-    assert proposal.status == "PENDING_FINALIZATION_WRITE"
-    assert proposal.proposed_state["checkpoint_writeback_status"] == "verified"
-    assert proposal.proposed_state["writeback_verified_commit"] == MATERIALIZATION_SHA
-    assert proposal.proposed_state["canonical_merge_status"] == "checkpoint_materialization_verified"
-    assert proposal.as_dict()["finalization_persistence_verified"] is False
+class CheckpointFinalizerTests(unittest.TestCase):
+    def test_compile_finalization_records_verified_materialization_without_claiming_final_write(self):
+        markdown = document()
+        proposal = compile_ok(markdown)
+        self.assertEqual(proposal.status, "PENDING_FINALIZATION_WRITE")
+        self.assertEqual(proposal.proposed_state["checkpoint_writeback_status"], "verified")
+        self.assertEqual(proposal.proposed_state["writeback_verified_commit"], MATERIALIZATION_SHA)
+        self.assertEqual(proposal.proposed_state["canonical_merge_status"], "checkpoint_materialization_verified")
+        self.assertFalse(proposal.as_dict()["finalization_persistence_verified"])
 
-
-def test_apply_and_verify_second_phase_preserve_everything_outside_active_block():
-    pending = document(prefix="# exact-prefix\n", suffix="\n# exact-suffix\n")
-    proposal = compile_ok(pending)
-    final_doc = apply_finalization_to_document(pending, proposal)
-    result = verify_finalization_document(
-        pending,
-        final_doc,
-        proposal,
-        finalization_commit_sha=FINALIZATION_SHA,
-    )
-    assert result["status"] == "VERIFIED_FINALIZATION_DOCUMENT"
-    assert result["materialization_commit_sha"] == MATERIALIZATION_SHA
-    assert result["finalization_commit_sha"] == FINALIZATION_SHA
-    assert result["runtime_confirms_governed_branch_or_ref"] is False
-    assert result["canonical_reporting_requires_external_ref_confirmation"] is True
-
-
-def test_receipt_must_match_exact_pending_document_fingerprint():
-    pending = document()
-    bad = receipt(pending)
-    bad["post_write_fingerprint"] = "0" * 64
-    with pytest.raises(CheckpointFinalizationError, match="CHECKPOINT_FINALIZATION_RECEIPT_MISMATCH"):
-        compile_checkpoint_finalization_proposal(
+    def test_apply_and_verify_second_phase_preserve_everything_outside_active_block(self):
+        pending = document(prefix="# exact-prefix\n", suffix="\n# exact-suffix\n")
+        proposal = compile_ok(pending)
+        final_doc = apply_finalization_to_document(pending, proposal)
+        result = verify_finalization_document(
             pending,
-            bad,
-            expected_work_item_id=WORK_ITEM,
-            expected_checkpoint_ref=CHECKPOINT,
-            expected_materialization_commit_sha=MATERIALIZATION_SHA,
+            final_doc,
+            proposal,
+            finalization_commit_sha=FINALIZATION_SHA,
         )
+        self.assertEqual(result["status"], "VERIFIED_FINALIZATION_DOCUMENT")
+        self.assertEqual(result["materialization_commit_sha"], MATERIALIZATION_SHA)
+        self.assertEqual(result["finalization_commit_sha"], FINALIZATION_SHA)
+        self.assertFalse(result["runtime_confirms_governed_branch_or_ref"])
+        self.assertTrue(result["canonical_reporting_requires_external_ref_confirmation"])
 
-
-def test_caller_cannot_finalize_unverified_or_already_stamped_state():
-    state = pending_state()
-    state["checkpoint_writeback_status"] = "verified"
-    state["writeback_verified_commit"] = MATERIALIZATION_SHA
-    pending = document(state)
-    with pytest.raises(CheckpointFinalizationError, match="CHECKPOINT_FINALIZATION_STATE_NOT_PENDING"):
-        compile_checkpoint_finalization_proposal(
-            pending,
-            receipt(pending),
-            expected_work_item_id=WORK_ITEM,
-            expected_checkpoint_ref=CHECKPOINT,
-            expected_materialization_commit_sha=MATERIALIZATION_SHA,
-        )
-
-
-def test_materialization_receipt_cannot_swap_work_item_checkpoint_or_commit():
-    pending = document()
-    for field, value in (
-        ("work_item_id", "OTHER-WORK"),
-        ("checkpoint_ref", "OTHER-CHECKPOINT"),
-        ("verified_commit_sha", "3" * 40),
-    ):
+    def test_receipt_must_match_exact_pending_document_fingerprint(self):
+        pending = document()
         bad = receipt(pending)
-        bad[field] = value
-        with pytest.raises(CheckpointFinalizationError, match="CHECKPOINT_FINALIZATION_RECEIPT_MISMATCH"):
+        bad["post_write_fingerprint"] = "0" * 64
+        with self.assertRaisesRegex(CheckpointFinalizationError, "CHECKPOINT_FINALIZATION_RECEIPT_MISMATCH"):
             compile_checkpoint_finalization_proposal(
                 pending,
                 bad,
@@ -149,40 +113,74 @@ def test_materialization_receipt_cannot_swap_work_item_checkpoint_or_commit():
                 expected_materialization_commit_sha=MATERIALIZATION_SHA,
             )
 
+    def test_caller_cannot_finalize_unverified_or_already_stamped_state(self):
+        state = pending_state()
+        state["checkpoint_writeback_status"] = "verified"
+        state["writeback_verified_commit"] = MATERIALIZATION_SHA
+        pending = document(state)
+        with self.assertRaisesRegex(CheckpointFinalizationError, "CHECKPOINT_FINALIZATION_STATE_NOT_PENDING"):
+            compile_checkpoint_finalization_proposal(
+                pending,
+                receipt(pending),
+                expected_work_item_id=WORK_ITEM,
+                expected_checkpoint_ref=CHECKPOINT,
+                expected_materialization_commit_sha=MATERIALIZATION_SHA,
+            )
 
-def test_finalization_rejects_unrelated_continuity_mutation():
-    pending = document()
-    proposal = compile_ok(pending)
-    final_doc = apply_finalization_to_document(pending, proposal) + "outside mutation"
-    with pytest.raises(CheckpointFinalizationError, match="CHECKPOINT_FINALIZATION_UNRELATED_MUTATION"):
-        verify_finalization_document(
-            pending,
-            final_doc,
-            proposal,
-            finalization_commit_sha=FINALIZATION_SHA,
-        )
+    def test_materialization_receipt_cannot_swap_work_item_checkpoint_or_commit(self):
+        pending = document()
+        for field, value in (
+            ("work_item_id", "OTHER-WORK"),
+            ("checkpoint_ref", "OTHER-CHECKPOINT"),
+            ("verified_commit_sha", "3" * 40),
+        ):
+            with self.subTest(field=field):
+                bad = receipt(pending)
+                bad[field] = value
+                with self.assertRaisesRegex(CheckpointFinalizationError, "CHECKPOINT_FINALIZATION_RECEIPT_MISMATCH"):
+                    compile_checkpoint_finalization_proposal(
+                        pending,
+                        bad,
+                        expected_work_item_id=WORK_ITEM,
+                        expected_checkpoint_ref=CHECKPOINT,
+                        expected_materialization_commit_sha=MATERIALIZATION_SHA,
+                    )
+
+    def test_finalization_rejects_unrelated_continuity_mutation(self):
+        pending = document()
+        proposal = compile_ok(pending)
+        final_doc = apply_finalization_to_document(pending, proposal) + "outside mutation"
+        with self.assertRaisesRegex(CheckpointFinalizationError, "CHECKPOINT_FINALIZATION_UNRELATED_MUTATION"):
+            verify_finalization_document(
+                pending,
+                final_doc,
+                proposal,
+                finalization_commit_sha=FINALIZATION_SHA,
+            )
+
+    def test_finalization_requires_real_40_hex_commit(self):
+        pending = document()
+        proposal = compile_ok(pending)
+        final_doc = apply_finalization_to_document(pending, proposal)
+        with self.assertRaisesRegex(CheckpointFinalizationError, "CHECKPOINT_FINALIZATION_COMMIT_INVALID"):
+            verify_finalization_document(pending, final_doc, proposal, finalization_commit_sha="not-a-sha")
+
+    def test_finalizer_has_no_network_git_writer_or_branch_authority_input(self):
+        source_path = Path(__file__).resolve().parents[1] / "learning_retriever" / "checkpoint_finalizer.py"
+        source = source_path.read_text(encoding="utf-8")
+        tree = ast.parse(source)
+        forbidden_roots = {"requests", "httpx", "urllib", "socket", "subprocess", "git", "github"}
+        imported = set()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                imported.update(alias.name.split(".")[0] for alias in node.names)
+            elif isinstance(node, ast.ImportFrom) and node.module:
+                imported.add(node.module.split(".")[0])
+        self.assertTrue(imported.isdisjoint(forbidden_roots))
+        self.assertNotIn("governed_branch_verified", source)
+        self.assertNotIn("write_succeeded", source)
+        self.assertNotIn("git push", source.casefold())
 
 
-def test_finalization_requires_real_40_hex_commit():
-    pending = document()
-    proposal = compile_ok(pending)
-    final_doc = apply_finalization_to_document(pending, proposal)
-    with pytest.raises(CheckpointFinalizationError, match="CHECKPOINT_FINALIZATION_COMMIT_INVALID"):
-        verify_finalization_document(pending, final_doc, proposal, finalization_commit_sha="not-a-sha")
-
-
-def test_finalizer_has_no_network_git_writer_or_branch_authority_input():
-    source_path = Path(__file__).resolve().parents[1] / "learning_retriever" / "checkpoint_finalizer.py"
-    source = source_path.read_text(encoding="utf-8")
-    tree = ast.parse(source)
-    forbidden_roots = {"requests", "httpx", "urllib", "socket", "subprocess", "git", "github"}
-    imported = set()
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Import):
-            imported.update(alias.name.split(".")[0] for alias in node.names)
-        elif isinstance(node, ast.ImportFrom) and node.module:
-            imported.add(node.module.split(".")[0])
-    assert imported.isdisjoint(forbidden_roots)
-    assert "governed_branch_verified" not in source
-    assert "write_succeeded" not in source
-    assert "git push" not in source.casefold()
+if __name__ == "__main__":
+    unittest.main()
