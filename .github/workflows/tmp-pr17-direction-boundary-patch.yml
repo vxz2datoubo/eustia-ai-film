@@ -1,5 +1,6 @@
 name: tmp-pr17-direction-boundary-patch
 
+# second push intentionally verifies branch-local workflow activation
 on:
   push:
     branches:
