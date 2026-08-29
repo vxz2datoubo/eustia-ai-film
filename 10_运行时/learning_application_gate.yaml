@@ -12,6 +12,7 @@ authority:
   project_index: "PROJECT_INDEX.yaml"
   regression_suite: "11_验收/learning_application_gate_regression_cases.yaml"
   evidence_index: "09_资料证据/学习应用与冲突裁决证据索引.md"
+  active_work_item_resolution_gate: "10_运行时/active_work_item_resolution_gate.yaml"
   director_feature_compiler: "10_运行时/director_feature_compiler.yaml"
   director_route_index: "10_运行时/director_route_index.yaml"
   learning_recall_index: "10_运行时/learning_recall_index.yaml"
@@ -185,7 +186,8 @@ media_evidence_analysis_gate:
 pre_directing_gate:
   required: true
   steps:
-    - "Director Feature Compiler：自然语言导演任务必须先经 PROJECT_INDEX 注册的 director_feature_compiler，编译 dramatic_function、failure_mechanism、relation_type、spatial/action；缺失 compiler 或无法安全编译时 fail closed"
+    - "Active Work Item Resolution：含上次/继续/那30秒/刚才/下一镜等 continuation 指代的任务，必须先解析 resolved_work_item_id 并验证 checkpoint freshness；未解析或 stale 时 fail closed，不得进入 Director Feature Compiler"
+    - "Director Feature Compiler：完成必要的 work-item identity binding 后，自然语言导演任务必须经 PROJECT_INDEX 注册的 director_feature_compiler，编译 dramatic_function、failure_mechanism、relation_type、spatial/action；缺失 compiler 或无法安全编译时 fail closed"
     - "Hard route：编译后的语义与原始描述由 director_route_index 作为唯一 route authority 解析 hard_routes；命中 mandatory_reads 的学习案例必须进入 mandatory recall，不得被 Top-K、表面相似度或 embedding 候选挤掉"
     - "Semantic recall：再读 compact learning_recall_index，只用路由元数据按机制优先加权召回，不全文加载学习库"
     - "Scope / maturity / model / conflict filter：剔除过期 EPISODIC_WORK_ITEM / SCENE_LOCAL、deprecated、版本不匹配经验；candidate 只作候选/假设；同时保留反例与冲突"

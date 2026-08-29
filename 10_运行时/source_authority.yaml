@@ -21,3 +21,6 @@ rules:
   modified_time_cannot_define_authority: true
   legacy_may_be_used_for_migration_evidence_only: true
   migration_cutover_requires_fetch_verify: true
+  continuation_referent_must_be_resolved_before_directing: true
+  active_work_item_snapshot_is_current_production_projection_not_story_authority: true
+  source_issue_revision_trace_cannot_override_screenplay_map_asset_authority: true

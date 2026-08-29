@@ -4,6 +4,7 @@ import argparse
 import json
 from pathlib import Path
 
+from .active_work_item import ActiveWorkItemResolutionError
 from .feature_compiler import FeatureCompilationError, validate_semantic_dependencies
 from .retriever import LearningRetriever, RetrievalGateError, validate_index
 from .runtime import DirectorLearningRuntime
@@ -15,6 +16,7 @@ def main() -> int:
     parser.add_argument("--task", help="JSON structured task feature file")
     parser.add_argument("--description", help="natural-language director task description")
     parser.add_argument("--task-id", default="UNSPECIFIED_TASK")
+    parser.add_argument("--work-item-context", help="JSON orchestration receipt for continuation work-item freshness/explicit binding")
     parser.add_argument("--top-k", type=int, default=None)
     parser.add_argument("--expand", action="store_true", help="expand only selected Top-K canonical cases")
     parser.add_argument("--validate-index", action="store_true")
@@ -36,11 +38,16 @@ def main() -> int:
     if not args.task and not args.description:
         parser.error("--task or --description is required unless a validation flag is used")
 
+    work_item_context = None
+    if args.work_item_context:
+        work_item_context = json.loads(Path(args.work_item_context).read_text(encoding="utf-8"))
+
     try:
         if args.description:
             result = DirectorLearningRuntime(root).retrieve(
                 args.description,
                 task_id=args.task_id,
+                work_item_context=work_item_context,
                 top_k=args.top_k,
                 expand=args.expand,
             )
@@ -52,6 +59,7 @@ def main() -> int:
                     str(description),
                     task_id=str(raw_task.get("task_id") or args.task_id),
                     base_task=raw_task,
+                    work_item_context=work_item_context,
                     top_k=args.top_k,
                     expand=args.expand,
                 )
@@ -62,6 +70,9 @@ def main() -> int:
                     expand=args.expand,
                     fail_closed=True,
                 )
+    except ActiveWorkItemResolutionError as exc:
+        print(json.dumps({"status": "FAIL", "stage": "active_work_item_resolution", "error": exc.code, "details": exc.details}, ensure_ascii=False, indent=2))
+        return 2
     except FeatureCompilationError as exc:
         print(json.dumps({"status": "FAIL", "stage": "feature_compiler", "error": str(exc)}, ensure_ascii=False, indent=2))
         return 2

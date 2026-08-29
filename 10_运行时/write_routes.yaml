@@ -21,6 +21,7 @@ routes:
   formal_visual_asset: 06_视觉资产/视觉资产登记库.md
   current_shot_production_state: 07_连续性与生产状态/连续性与当前生产状态.md
   revision_checkpoint_current_state: 07_连续性与生产状态/连续性与当前生产状态.md
+  active_work_item_current_state: 07_连续性与生产状态/连续性与当前生产状态.md#ACTIVE_WORK_ITEM_STATE
   revision_trace_and_learning: 08_系统学习/反馈反推与系统反哺引擎.md
   learning_evidence_and_outcome: 08_系统学习/反馈反推与系统反哺引擎.md
   director_feedback_learning_case: 08_系统学习/导演反馈学习案例.yaml
@@ -287,3 +288,18 @@ rules:
   formal_asset_external_storage_is_exception_only: true
   model_version_feedback_cannot_override_general_directing_method_or_canonical_story_character_scene_asset_facts: true
   confounded_ab_result_cannot_promote_maturity: true
+
+
+active_work_item_checkpoint_transaction:
+  trigger: revision_checkpoint_or_work_item_switch
+  target: 07_连续性与生产状态/连续性与当前生产状态.md#ACTIVE_WORK_ITEM_STATE
+  protocol:
+    - fetch_current_continuity
+    - reconcile_source_revision_events
+    - apply_constraint_ledger
+    - update_active_work_item_snapshot
+    - commit_serially
+    - fetch_verify
+    - write_canonical_checkpoint_receipt_to_source_issue
+  idempotency_key: work_item_id+latest_applied_checkpoint_ref
+  failure_rule: do_not_report_checkpoint_canonicalized_until_readback_verified

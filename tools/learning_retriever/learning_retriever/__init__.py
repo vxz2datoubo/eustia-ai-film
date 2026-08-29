@@ -1,3 +1,13 @@
+from .active_work_item import (
+    ActiveWorkItemResolutionError,
+    WorkItemResolution,
+    apply_constraint_ledger,
+    is_continuation_request,
+    load_active_work_item_state,
+    resolve_work_item,
+    validate_output_work_item,
+    validate_state_transition,
+)
 from .feature_compiler import (
     DirectorFeatures,
     FeatureCompilationError,
@@ -10,15 +20,23 @@ from .route_resolver import RouteResolutionError, resolve_hard_routes
 from .runtime import DirectorLearningRuntime
 
 __all__ = [
+    "ActiveWorkItemResolutionError",
     "DirectorFeatures",
     "DirectorLearningRuntime",
     "FeatureCompilationError",
     "LearningRetriever",
     "RetrievalGateError",
     "RouteResolutionError",
+    "WorkItemResolution",
+    "apply_constraint_ledger",
     "compile_director_features",
     "compile_retrieval_task",
+    "is_continuation_request",
+    "load_active_work_item_state",
     "resolve_hard_routes",
+    "resolve_work_item",
     "validate_index",
+    "validate_output_work_item",
     "validate_semantic_dependencies",
+    "validate_state_transition",
 ]

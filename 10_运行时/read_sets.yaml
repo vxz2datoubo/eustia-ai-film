@@ -2,9 +2,11 @@ read_sets:
   directing:
     always:
       - PROJECT_INDEX.yaml
+      - active_work_item_resolution_gate#continuation_detection+resolution+freshness_gate
+      - 连续性与当前生产状态#ACTIVE_WORK_ITEM_STATE_first
       - AI电影系统#relevant_sections_only
-      - 当前改编剧本#hit_range
-      - 连续性与当前生产状态#relevant_work_item
+      - 当前改编剧本#resolved_work_item_hit_range
+      - 连续性与当前生产状态#resolved_work_item_details_only
       - director_feature_compiler#runtime_binding+fail_closed
       - director_route_index#symptom_scan+mandatory_reads
       - learning_application_gate#pre_directing_gate+pre_output_gate
@@ -201,6 +203,9 @@ read_sets:
       unknowns: UNKNOWN_REGISTRY#unresolved_K3_or_model_behavior
 
 rules:
+  directing_must_resolve_active_work_item_before_feature_compiler: true
+  unresolved_continuation_must_fail_closed: true
+  active_work_item_pointer_cannot_override_story_map_asset_authority: true
   full_repository_injection_default: false
   local_targeted_retrieval_default: true
   global_expand_on_route_uncertainty: true

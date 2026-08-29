@@ -61,3 +61,22 @@ PYTHONPATH=tools/learning_retriever python -m learning_retriever.cli --project-r
 A structured JSON task may also contain `director_task_description`; the compiler unions compiled features with any explicit structured features instead of replacing them.
 
 A director task that reaches prompt compilation without a complete retrieval receipt, misses a mandatory hard-route case, or fails natural-language feature compilation must fail closed before output.
+
+
+## Active Work Item Resolution Gate
+
+Continuation-style directing requests such as `上次` / `继续` / `那30秒` / `刚才那个镜头` must resolve a concrete work item before feature compilation. Runtime order is now:
+
+```text
+PROJECT_INDEX
+→ Active Work Item Resolution / freshness gate
+→ Director Feature Compiler
+→ Hard Route
+→ Semantic Recall
+```
+
+The gate reads the machine-readable `ACTIVE_WORK_ITEM_STATE` projection in the existing continuity canonical. If the snapshot points to a source Issue, orchestration must provide a freshly verified latest structured checkpoint ref. A mismatch fails with `WORK_ITEM_CHECKPOINT_RECONCILE_REQUIRED`; inaccessible or unverified freshness fails with `WORK_ITEM_FRESHNESS_UNVERIFIED`.
+
+This gate does not make Issue comments or the active pointer into story authority. Screenplay, character, map, formal asset and director-method authority remain unchanged. The pointer only binds which production work item the downstream system is allowed to process.
+
+CLI callers may provide the orchestration receipt with `--work-item-context <json>`.
