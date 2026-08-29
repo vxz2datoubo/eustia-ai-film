@@ -20,19 +20,44 @@ CONTINUITY_PATH = Path("07_连续性与生产状态/连续性与当前生产状�
 STATE_BEGIN = "<!-- ACTIVE_WORK_ITEM_STATE_BEGIN -->"
 STATE_END = "<!-- ACTIVE_WORK_ITEM_STATE_END -->"
 
-CONTINUATION_SIGNALS = (
+# These expressions are intrinsically discourse/anaphora references rather than
+# ordinary in-scene action language. Generic verbs such as “继续” and “接着” are
+# deliberately handled separately because “继续追击/继续攀爬” describe character
+# action and must not invoke project-state reconciliation.
+STRONG_CONTINUATION_SIGNALS = (
     "上次",
     "刚才",
     "那30秒",
     "那段",
     "那个镜头",
     "之前那个",
-    "继续",
-    "接着",
     "下一镜",
     "继续下面剧情",
     "重新导演那",
     "重新做那个",
+)
+
+CONTINUATION_VERBS = ("继续", "接着")
+DISCOURSE_OBJECTS = (
+    "上一版",
+    "上个版本",
+    "上次",
+    "刚才",
+    "那30秒",
+    "这30秒",
+    "那个30秒",
+    "那段",
+    "这段",
+    "那个镜头",
+    "这个镜头",
+    "当前镜头",
+    "之前那个",
+    "下一镜",
+    "下一个镜头",
+    "下面剧情",
+    "后面剧情",
+    "这个版本",
+    "那一版",
 )
 
 REQUIRED_STATE_FIELDS = (
@@ -101,11 +126,51 @@ class WorkItemResolution:
         }
 
 
+def _normalize_discourse_text(description: str) -> str:
+    return " ".join(description.casefold().split()).strip()
+
+
+def _continuation_verb_targets_discourse_object(text: str, verb: str) -> bool:
+    """Return true only when a generic continuation verb points to prior work.
+
+    A bounded window is used so a later unrelated mention of “镜头” does not turn
+    an in-scene action such as “角色继续追击，镜头跟随” into a continuation request.
+    """
+    search_from = 0
+    while True:
+        hit = text.find(verb, search_from)
+        if hit < 0:
+            return False
+        tail = text[hit + len(verb): hit + len(verb) + 18].lstrip(" ，,：:。；;！!？?")
+        if any(tail.startswith(obj) for obj in DISCOURSE_OBJECTS):
+            return True
+        search_from = hit + len(verb)
+
+
 def is_continuation_request(description: str) -> bool:
+    """Detect discourse continuation without confusing it with scene action.
+
+    Strong anaphora such as “上次/刚才/那30秒/下一镜” always require resolution.
+    Generic “继续/接着” only count when used alone as a short discourse command or
+    when they directly target a bounded discourse object such as “上一版/下一镜”.
+    """
     if not isinstance(description, str):
         return False
-    normalized = " ".join(description.casefold().split())
-    return any(signal.casefold() in normalized for signal in CONTINUATION_SIGNALS)
+    normalized = _normalize_discourse_text(description)
+    if not normalized:
+        return False
+
+    if any(signal.casefold() in normalized for signal in STRONG_CONTINUATION_SIGNALS):
+        return True
+
+    compact = normalized.strip(" ，,：:。；;！!？?")
+    if compact in CONTINUATION_VERBS:
+        return True
+
+    for verb in CONTINUATION_VERBS:
+        if _continuation_verb_targets_discourse_object(normalized, verb):
+            return True
+    return False
 
 
 def _normalize_checkpoint(value: Any) -> str | None:
