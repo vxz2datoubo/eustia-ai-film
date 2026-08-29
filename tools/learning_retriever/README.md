@@ -55,7 +55,7 @@ intent:
     physical_color_sources: [灰石墙, 阴天自然光, 衣物本色]
 provenance:
   composition:
-    source: director_locked_camera_plan
+    source: director_visual_plan
   color_intent:
     source: scene_look_plan
 context:
