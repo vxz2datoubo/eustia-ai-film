@@ -22,6 +22,10 @@ from .final_delta import (
     FinalDeltaEvidenceError,
     compile_final_delta_learning_evidence,
 )
+from .post_final_delta import (
+    PostFinalDeltaValidationError,
+    assess_post_final_delta_validation,
+)
 from .retriever import LearningRetriever, RetrievalGateError, validate_index
 from .route_resolver import RouteResolutionError, resolve_hard_routes
 from .runtime import DirectorLearningRuntime
@@ -41,9 +45,11 @@ __all__ = [
     "FinalDeltaEvidenceError",
     "LearningRetriever",
     "ObservationProvenance",
+    "PostFinalDeltaValidationError",
     "RetrievalGateError",
     "RouteResolutionError",
     "TargetedRepairPlanError",
+    "assess_post_final_delta_validation",
     "compile_cinematic_intent_contract",
     "compile_director_features",
     "compile_final_delta_learning_evidence",
