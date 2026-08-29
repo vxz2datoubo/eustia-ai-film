@@ -90,10 +90,16 @@ class CheckpointCompilerAuthorityBindingTests(unittest.TestCase):
     def test_regression_contract_is_eval_only_and_machine_backed(self) -> None:
         self.assertTrue(self.regressions["authority_boundary"]["eval_fixture_only"])
         self.assertTrue(self.regressions["authority_boundary"]["proposal_is_not_persistence"])
-        self.assertEqual(
-            self.regressions["acceptance"]["all_cases_machine_backed_by"],
-            "tools/learning_retriever/tests/test_checkpoint_compiler.py",
-        )
+        acceptance = self.regressions["acceptance"]
+        expected_suites = {
+            "primary_machine_suite": "tools/learning_retriever/tests/test_checkpoint_compiler.py",
+            "hardening_machine_suite": "tools/learning_retriever/tests/test_checkpoint_compiler_hardening.py",
+            "authority_machine_suite": "tools/learning_retriever/tests/test_checkpoint_compiler_authority.py",
+        }
+        for field, path in expected_suites.items():
+            self.assertEqual(acceptance[field], path)
+            self.assertTrue((REPO_ROOT / path).is_file(), path)
+        self.assertTrue(acceptance["exact_head_ci_required"])
 
 
 if __name__ == "__main__":
