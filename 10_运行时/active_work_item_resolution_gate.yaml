@@ -1,5 +1,5 @@
 gate_id: EUSTIA_ACTIVE_WORK_ITEM_RESOLUTION_GATE
-version: 1.0.0
+version: 1.0.1
 status: candidate
 name: ACTIVE-WORK-ITEM-RESOLUTION-001
 zh_name: 活动工作项解析与修订状态门
@@ -115,12 +115,13 @@ constraint_ledger:
     silent_override: forbidden
 
 resolution_precedence:
-  - user_current_explicit_work_item
-  - exact_active_work_item_pointer
-  - exact_source_issue_and_checkpoint_binding
-  - structured_recent_work_item_binding_if_supplied
-  - minimal_discriminating_question
-  - fail_closed
+  ordered:
+    - user_current_explicit_work_item
+    - exact_active_work_item_pointer
+    - exact_source_issue_and_checkpoint_binding
+    - structured_recent_work_item_binding_if_supplied
+    - minimal_discriminating_question
+    - fail_closed
   forbidden_deciders:
     - modified_time
     - search_rank
@@ -128,24 +129,35 @@ resolution_precedence:
     - memory_only
     - chat_history_only
 
+trusted_runtime_provider_boundary:
+  freshness_provider_role: perform_real_source_issue_checkpoint_read_and_return_runtime_receipt
+  explicit_target_provider_role: resolve_user_explicit_nonactive_target_from_targeted_canonical_or_source_evidence
+  serialized_json_cli_context_cannot_mint_freshness: true
+  serialized_json_cli_context_cannot_mint_nonactive_target_identity: true
+  caller_boolean_claim_is_not_verification: true
+  missing_required_provider_for_source_issue_action: WORK_ITEM_FRESHNESS_PROVIDER_REQUIRED
+  design_rule: trust is carried by an in-process orchestration capability that performs the read, not by caller-supplied metadata claiming the read happened.
+
 freshness_gate:
   source_issue_absent:
     action: active_snapshot_may_be_used_if_checkpoint_writeback_status_is_verified
   source_issue_present:
     required:
+      - trusted_freshness_provider_available
       - source_issue_accessible
       - latest_source_checkpoint_ref_known
       - latest_source_checkpoint_ref_equals_latest_applied_checkpoint_ref
     mismatch_action: WORK_ITEM_CHECKPOINT_RECONCILE_REQUIRED
   inaccessible_action: WORK_ITEM_FRESHNESS_UNVERIFIED
-  note: freshness is explicit checkpoint relation, never file modified time.
+  note: freshness is explicit checkpoint relation, never file modified time or caller-supplied serialized truth.
 
 explicit_override_rule:
   description: 用户明确说“之前爬楼那30秒”之类非当前 work item 时，当前用户指令优先。
   behavior:
     - do_not_force_active_pointer
+    - require_trusted_explicit_target_resolution_when_target_is_nonactive
     - resolve_the_explicit_target_from_structured_candidate_binding_or_targeted_canonical_read
-    - record_continuation_resolution_source_as_user_explicit
+    - record_continuation_resolution_source_as_user_explicit_trusted_target_resolution
     - do_not_mutate_active_pointer_until_the_user_actually_switches_current_production_work_item
 
 ambiguity_gate:
@@ -276,10 +288,12 @@ runtime_receipt:
 fail_codes:
   - ACTIVE_WORK_ITEM_STATE_MISSING
   - ACTIVE_WORK_ITEM_STATE_INVALID
+  - WORK_ITEM_FRESHNESS_PROVIDER_REQUIRED
   - WORK_ITEM_FRESHNESS_UNVERIFIED
   - WORK_ITEM_CHECKPOINT_RECONCILE_REQUIRED
   - CONTINUATION_REFERENT_AMBIGUOUS
   - EXPLICIT_NONACTIVE_REFERENT_REQUIRES_RESOLUTION
+  - WORK_ITEM_INPUT_SCOPE_MISMATCH
   - WORK_ITEM_OUTPUT_SCOPE_MISMATCH
   - INVALID_WORK_ITEM_STATE_TRANSITION
 
