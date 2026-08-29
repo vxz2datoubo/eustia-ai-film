@@ -25,6 +25,8 @@ policy:
   active_work_item_resolution_required_for_continuation_directing: true
   unresolved_continuation_must_fail_closed_before_feature_compiler: true
   active_work_item_snapshot_cannot_override_story_map_asset_authority: true
+  active_work_item_checkpoint_compiler_is_proposal_only: true
+  active_work_item_checkpoint_persistence_requires_external_governed_write: true
   director_feature_compiler_required_for_natural_language_directing: true
   director_learning_application_gate_required: true
   director_learning_smart_recall_required: true
@@ -74,6 +76,7 @@ canonical:
   high_dynamic_motion_prompt_compiler: 10_运行时/high_dynamic_motion_prompt_compiler.yaml
   minimax_h3_prompt_adapter: 10_运行时/minimax_h3_prompt_adapter.yaml
   active_work_item_resolution_gate: 10_运行时/active_work_item_resolution_gate.yaml
+  active_work_item_checkpoint_compiler: 10_运行时/active_work_item_checkpoint_compiler.yaml
   director_feature_compiler: 10_运行时/director_feature_compiler.yaml
   learning_application_gate: 10_运行时/learning_application_gate.yaml
   learning_recall_index: 10_运行时/learning_recall_index.yaml
@@ -85,6 +88,7 @@ canonical:
   pending_canonical_writes: 10_运行时/pending_canonical_writes.yaml
   regression_cases: 11_验收/director_regression_cases.yaml
   active_work_item_resolution_regression_cases: 11_验收/active_work_item_resolution_regression_cases.yaml
+  active_work_item_checkpoint_compiler_regression_cases: 11_验收/active_work_item_checkpoint_compiler_regression_cases.yaml
   cinematic_visual_grammar_regression_cases: 11_验收/cinematic_visual_grammar_regression_cases.yaml
   asset_retrieval_regression_cases: 11_验收/asset_retrieval_regression_cases.yaml
   learning_application_gate_regression_cases: 11_验收/learning_application_gate_regression_cases.yaml
@@ -132,6 +136,7 @@ effective_sources:
   10_运行时/high_dynamic_motion_prompt_compiler.yaml: github_verified
   10_运行时/minimax_h3_prompt_adapter.yaml: github_verified
   10_运行时/active_work_item_resolution_gate.yaml: github_verified
+  10_运行时/active_work_item_checkpoint_compiler.yaml: github_verified
   10_运行时/director_feature_compiler.yaml: github_verified
   10_运行时/learning_application_gate.yaml: github_verified
   10_运行时/learning_recall_index.yaml: github_verified
@@ -143,6 +148,7 @@ effective_sources:
   10_运行时/director_route_index.yaml: github_verified
   11_验收/director_regression_cases.yaml: github_verified
   11_验收/active_work_item_resolution_regression_cases.yaml: github_verified
+  11_验收/active_work_item_checkpoint_compiler_regression_cases.yaml: github_verified
   11_验收/cinematic_visual_grammar_regression_cases.yaml: github_verified
   11_验收/asset_retrieval_regression_cases.yaml: github_verified
   11_验收/learning_application_gate_regression_cases.yaml: github_verified
