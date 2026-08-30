@@ -2,11 +2,14 @@ from pathlib import Path
 import re
 import unittest
 
+import yaml
+
 from learning_retriever.active_work_item import load_active_work_item_state
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 CONTINUITY_PATH = REPO_ROOT / "07_连续性与生产状态/连续性与当前生产状态.md"
+CONTRACT_PATH = REPO_ROOT / "10_运行时/active_work_item_resolution_gate.yaml"
 ACTIVE_ID = "KAIM-SCARF-CLOTHESLINE-TRAVERSE"
 HISTORICAL_ID = "KAIM-HIGH-SEARCH-30S"
 
@@ -16,15 +19,29 @@ class ActiveWorkItemContinuityGuardTests(unittest.TestCase):
     def setUpClass(cls) -> None:
         cls.text = CONTINUITY_PATH.read_text(encoding="utf-8")
         cls.state = load_active_work_item_state(REPO_ROOT)
+        cls.contract = yaml.safe_load(CONTRACT_PATH.read_text(encoding="utf-8"))
 
     def test_top_snapshot_is_single_continuation_default(self) -> None:
         self.assertEqual(self.state["work_item_id"], ACTIVE_ID)
         self.assertEqual(int(self.state["source_issue"]), 19)
         self.assertEqual(self.state["previous_work_item_id"], HISTORICAL_ID)
-        self.assertEqual(self.state["checkpoint_writeback_status"], "verified")
-        verified_commit = str(self.state.get("writeback_verified_commit") or "")
-        self.assertRegex(verified_commit, r"^[0-9a-f]{40}$")
-        self.assertNotIn("candidate_branch", verified_commit)
+        self.assertIn("checkpoint_writeback_status", self.state)
+        self.assertIn("writeback_verified_commit", self.state)
+
+    def test_writeback_fields_are_not_standalone_runtime_authority(self) -> None:
+        boundary = self.contract["canonical_snapshot_trust_boundary"]
+        threat = boundary["threat_model"]
+        self.assertFalse(threat["nonempty_or_sha_shaped_commit_string_can_mint_freshness"])
+        self.assertFalse(threat["candidate_branch_can_mint_canonical_freshness"])
+        required = set(boundary["required_current_snapshot_checks"])
+        self.assertIn("current_HEAD_equals_canonical_main", required)
+        self.assertIn("materialization_commit_is_ancestor_of_canonical_main", required)
+        self.assertIn("materialization_snapshot_identity_equals_current_snapshot_identity_excluding_finalization_audit_fields", required)
+        receipt = boundary["two_phase_provenance"]
+        self.assertEqual(
+            receipt["writeback_verified_commit_role"],
+            "required_audit_receipt_consistency_constraint_not_standalone_authority",
+        )
 
     def test_historical_high_search_headings_cannot_claim_current_identity(self) -> None:
         required_markers = (
