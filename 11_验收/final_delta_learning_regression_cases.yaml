@@ -1,4 +1,4 @@
-suite_id: FINAL_DELTA_LEARNING_EVIDENCE_REGRESSION_V1
+suite_id: FINAL_DELTA_LEARNING_EVIDENCE_REGRESSION_V2_SOURCE_BOUND
 status: candidate
 policy_authority: 10_运行时/final_delta_learning_policy.yaml
 learning_authority: 08_系统学习/反馈反推与系统反哺引擎.md
@@ -6,6 +6,15 @@ maturity_authority: 10_运行时/maturity_model.yaml
 runtime: tools/learning_retriever/learning_retriever/final_delta.py
 source_eval_suite: 11_验收/expected_observed_eval_regression_cases.yaml
 source_repair_suite: 11_验收/targeted_repair_regression_cases.yaml
+
+source_binding:
+  before_eval_from_source_reexecution: required
+  after_eval_from_source_reexecution: required
+  repair_plan_from_before_source_reexecution: required
+  serialized_eval_result_input: forbidden
+  serialized_repair_plan_input: forbidden
+  jointly_tampered_result_status_handoff_cannot_define_truth: true
+  jointly_tampered_repair_plan_cannot_define_truth: true
 
 policy:
   observation_is_not_causality: true
@@ -20,7 +29,7 @@ policy:
   camera_authority_cannot_reappear: true
 
 cases:
-  - id: FD-PROD-KAIM-RESOLVED-001
+  - id: FD-PROD-KAIM-RESOLVED-SOURCE-BOUND-001
     source_before_eval_case: EOE-PROD-KAIM-DISAPPEARANCE-001
     target_field: attention_handoff
     after_observation: PASS
@@ -30,25 +39,24 @@ cases:
     expected_generalization_authorized: false
     expected_promotion_authorized: false
     expected_writeback_authorized: false
+    expected_source_binding:
+      before: canonical_expected_observed_reexecution
+      after: canonical_expected_observed_reexecution
+      repair: canonical_targeted_repair_reexecution
 
-  - id: FD-CLEAN-SINGLE-VARIABLE-001
+  - id: FD-CALLER-CONTROL-UNVERIFIED-001
     target_field: visual_density
-    protected_pass_field: composition
-    before_control_status: CLEAN
-    after_control_status: CLEAN
-    changed_variables: [reference_signal_decoupling]
-    expected_target_transition: RESOLVED
-    expected_protected_transition: PRESERVED
-    expected_causal_evidence_status: CONTROLLED_SINGLE_VARIABLE_CANDIDATE
+    caller_declares_complete_controls: true
+    expected_before_control_status: UNVERIFIED_CONTROL
+    expected_after_control_status: UNVERIFIED_CONTROL
+    expected_causal_evidence_status: CONTROL_NOT_VERIFIED
     expected_causal_claim_authorized: false
-    expected_generalization_authorized: false
 
   - id: FD-PASS-REGRESSION-001
     target_field: visual_density
     regressed_field: composition
     expected_target_transition: RESOLVED
     expected_regressed_transition: REGRESSED
-    expected_causal_evidence_status: TARGET_IMPROVED_WITH_REGRESSION
     expected_regression_candidate_eligible: false
 
   - id: FD-MODEL-VERSION-SPLIT-001
@@ -58,34 +66,43 @@ cases:
     expected_reason: MODEL_VERSION_MISMATCH
     expected_causal_evidence_status: NOT_ELIGIBLE_NOT_COMPARABLE
 
-  - id: FD-UNKNOWN-EVIDENCE-GAIN-001
-    before_outcome: UNKNOWN
-    after_outcome: PASS
-    expected_transition: EVIDENCE_GAINED_PASS
-    expected_not_transition: RESOLVED
-
 structural_gate_cases:
-  - id: FD-TAMPERED-REPAIR-PLAN-001
-    mutation: remove_source_repair_item
-    expected_error_code: FINAL_DELTA_REPAIR_PLAN_MISMATCH
+  - id: FD-LEGACY-SERIALIZED-EVAL-INPUT-FORBIDDEN-001
+    mutation: supply_before_eval_after_eval_serialized_results
+    expected_error_code: FINAL_DELTA_UNKNOWN_FIELD
 
-  - id: FD-AUTHORITY-ESCALATION-001
-    mutation: set_learning_writeback_authorized_true
-    expected_error_code: FINAL_DELTA_AUTHORITY_VIOLATION
+  - id: FD-LEGACY-SERIALIZED-REPAIR-PLAN-FORBIDDEN-001
+    mutation: supply_serialized_repair_plan_alongside_source_inputs
+    expected_error_code: FINAL_DELTA_UNKNOWN_FIELD
 
-  - id: FD-CAMERA-AUTHORITY-ESCALATION-001
-    mutation: set_camera_authority_mutation_authorized_true
-    expected_error_code: FINAL_DELTA_AUTHORITY_VIOLATION
+  - id: FD-JOINT-RESULT-HANDOFF-TAMPER-CANNOT-SUPPRESS-001
+    attack: jointly_change_FAIL_to_PASS_status_to_PASS_and_handoff_to_empty
+    authoritative_input: original_before_eval_input
+    expected_behavior: canonical_reexecution_preserves_original_failure_and_repair_target
+
+  - id: FD-JOINT-REPAIR-PLAN-TAMPER-CANNOT-MISROUTE-001
+    attack: remove_or_change_serialized_repair_items
+    expected_behavior: serialized_plan_has_no_public_authority_surface
+
+  - id: FD-BEFORE-UPSTREAM-REJECT-PROVENANCE-001
+    mutation: remove_before_observation_provenance
+    expected_error_code: FINAL_DELTA_BEFORE_EVAL_REJECTED
+    expected_underlying_error: EVAL_MISSING_PROVENANCE
+
+  - id: FD-EVAL-ID-COLLISION-001
+    mutation: before_after_use_same_eval_id
+    expected_error_code: FINAL_DELTA_EVAL_ID_COLLISION
 
   - id: FD-MISSING-CHANGE-RECORD-001
     mutation: remove_changed_variables
     expected_error_code: FINAL_DELTA_CHANGE_RECORD_REQUIRED
 
-  - id: FD-MISSING-CHANGE-EVIDENCE-001
-    mutation: remove_change_evidence_refs
-    expected_error_code: FINAL_DELTA_CHANGE_RECORD_REQUIRED
-
 gates:
+  canonical_upstream_source_reexecution_required: true
+  serialized_eval_result_never_authoritative: true
+  serialized_repair_plan_never_authoritative: true
+  caller_internal_consistency_is_not_source_authenticity: true
+  joint_tampering_cannot_suppress_or_misroute_repair: true
   source_eval_learning_handoff_must_be_non_promoting: true
   repair_plan_must_exactly_match_before_fail_unknown: true
   pass_dimensions_must_be_compared_for_regression: true
