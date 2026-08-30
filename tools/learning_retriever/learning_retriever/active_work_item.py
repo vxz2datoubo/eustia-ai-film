@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Iterable
@@ -159,6 +160,10 @@ def _normalize_checkpoint(value: Any) -> str | None:
     return text or None
 
 
+def _normalize_repo_text(value: str) -> str:
+    return value.replace("\r\n", "\n").rstrip("\n")
+
+
 def _load_continuity_markdown(project_root: str | Path) -> str:
     path = Path(project_root) / CONTINUITY_PATH
     try:
@@ -222,16 +227,7 @@ def load_active_work_item_state(project_root: str | Path) -> dict[str, Any]:
     return _extract_state_payload(_load_continuity_markdown(project_root))
 
 
-def _validate_project_authority_binding(project_root: str | Path) -> None:
-    root = Path(project_root)
-    index_path = root / PROJECT_INDEX_PATH
-    try:
-        index = yaml.safe_load(index_path.read_text(encoding="utf-8")) or {}
-    except FileNotFoundError as exc:
-        raise ActiveWorkItemResolutionError(
-            "WORK_ITEM_CANONICAL_AUTHORITY_UNAVAILABLE",
-            details={"missing": PROJECT_INDEX_PATH.as_posix()},
-        ) from exc
+def _validate_project_authority_payload(index: dict[str, Any]) -> None:
     if index.get("project_id") != "EUSTIA_AI_FILM":
         raise ActiveWorkItemResolutionError(
             "WORK_ITEM_CANONICAL_AUTHORITY_UNAVAILABLE",
@@ -243,6 +239,24 @@ def _validate_project_authority_binding(project_root: str | Path) -> None:
             "WORK_ITEM_CANONICAL_AUTHORITY_UNAVAILABLE",
             details={"reason": "continuity_not_registered_in_project_index"},
         )
+
+
+def _validate_project_authority_binding(project_root: str | Path) -> None:
+    root = Path(project_root)
+    index_path = root / PROJECT_INDEX_PATH
+    try:
+        index = yaml.safe_load(index_path.read_text(encoding="utf-8")) or {}
+    except FileNotFoundError as exc:
+        raise ActiveWorkItemResolutionError(
+            "WORK_ITEM_CANONICAL_AUTHORITY_UNAVAILABLE",
+            details={"missing": PROJECT_INDEX_PATH.as_posix()},
+        ) from exc
+    if not isinstance(index, dict):
+        raise ActiveWorkItemResolutionError(
+            "WORK_ITEM_CANONICAL_AUTHORITY_UNAVAILABLE",
+            details={"reason": "project_index_not_mapping"},
+        )
+    _validate_project_authority_payload(index)
 
 
 def _snapshot_projection(state: dict[str, Any]) -> dict[str, Any]:
@@ -272,33 +286,94 @@ def _snapshot_projection(state: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _git_capture(
+    project_root: str | Path,
+    *args: str,
+    allow_failure: bool = False,
+) -> tuple[int, str, str]:
+    try:
+        completed = subprocess.run(
+            ["git", "-C", str(Path(project_root)), *args],
+            check=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            encoding="utf-8",
+        )
+    except OSError as exc:
+        if allow_failure:
+            return 127, "", str(exc)
+        raise ActiveWorkItemResolutionError(
+            "WORK_ITEM_SNAPSHOT_UNVERIFIED",
+            details={"reason": "git_runtime_unavailable"},
+        ) from exc
+    if completed.returncode != 0 and not allow_failure:
+        raise ActiveWorkItemResolutionError(
+            "WORK_ITEM_SNAPSHOT_UNVERIFIED",
+            details={
+                "reason": "git_provenance_query_failed",
+                "args": list(args),
+                "stderr": completed.stderr.strip()[:400],
+            },
+        )
+    return completed.returncode, completed.stdout, completed.stderr
+
+
+def _resolve_canonical_main_commit(project_root: str | Path) -> str:
+    resolved: dict[str, str] = {}
+    for ref in ("refs/heads/main", "refs/remotes/origin/main"):
+        code, stdout, _ = _git_capture(
+            project_root,
+            "rev-parse",
+            "--verify",
+            ref,
+            allow_failure=True,
+        )
+        if code == 0 and stdout.strip():
+            resolved[ref] = stdout.strip()
+
+    if not resolved:
+        raise ActiveWorkItemResolutionError(
+            "WORK_ITEM_SNAPSHOT_UNVERIFIED",
+            details={"reason": "canonical_main_ref_missing"},
+        )
+    unique = set(resolved.values())
+    if len(unique) != 1:
+        raise ActiveWorkItemResolutionError(
+            "WORK_ITEM_SNAPSHOT_UNVERIFIED",
+            details={"reason": "canonical_main_ref_ambiguous", "refs": resolved},
+        )
+    return next(iter(unique))
+
+
+def _committed_text(
+    project_root: str | Path,
+    commit: str,
+    path: Path,
+) -> str:
+    _, stdout, _ = _git_capture(
+        project_root,
+        "show",
+        f"{commit}:{path.as_posix()}",
+    )
+    return stdout
+
+
 def _verify_canonical_snapshot(
     project_root: str | Path, state: dict[str, Any]
 ) -> tuple[str, str | None]:
-    """Verify the repository-controlled current-production snapshot.
+    """Bind freshness to the canonical main checkout and committed readback.
 
-    This gate intentionally does not call a caller-supplied source-Issue reader.
-    The source Issue was reconciled during the checkpoint write transaction; the
-    runtime consumes only the resulting canonical continuity snapshot.
+    Snapshot fields such as `checkpoint_writeback_status` and
+    `writeback_verified_commit` are retained for backward-compatible audit data,
+    but they are not trust inputs. Runtime freshness is granted only when the
+    checkout HEAD is exactly the repository's canonical main ref and both
+    PROJECT_INDEX plus continuity are byte-equivalent to the committed main
+    objects being consumed.
     """
-    _validate_project_authority_binding(project_root)
+    root = Path(project_root)
+    _validate_project_authority_binding(root)
     projection = _snapshot_projection(state)
-    if projection["checkpoint_writeback_status"] != "verified":
-        raise ActiveWorkItemResolutionError(
-            "WORK_ITEM_SNAPSHOT_UNVERIFIED",
-            details={"reason": "checkpoint_writeback_status_not_verified"},
-        )
-    commit_ref = projection["writeback_verified_commit"]
-    if not commit_ref or commit_ref in {
-        "candidate_branch_pending_review",
-        "pending",
-        "unknown",
-        "none",
-    }:
-        raise ActiveWorkItemResolutionError(
-            "WORK_ITEM_SNAPSHOT_UNVERIFIED",
-            details={"reason": "writeback_verified_commit_missing"},
-        )
     checkpoint = projection["latest_applied_checkpoint_ref"]
     if checkpoint is None:
         raise ActiveWorkItemResolutionError(
@@ -306,8 +381,68 @@ def _verify_canonical_snapshot(
             details={"reason": "latest_applied_checkpoint_ref_missing"},
         )
 
+    canonical_commit = _resolve_canonical_main_commit(root)
+    _, head_stdout, _ = _git_capture(root, "rev-parse", "HEAD")
+    head = head_stdout.strip()
+    if head != canonical_commit:
+        raise ActiveWorkItemResolutionError(
+            "WORK_ITEM_SNAPSHOT_UNVERIFIED",
+            details={
+                "reason": "current_head_is_not_canonical_main",
+                "head": head or None,
+                "canonical_main": canonical_commit,
+            },
+        )
+
+    committed_index_text = _committed_text(root, canonical_commit, PROJECT_INDEX_PATH)
+    try:
+        working_index_text = (root / PROJECT_INDEX_PATH).read_text(encoding="utf-8")
+    except FileNotFoundError as exc:
+        raise ActiveWorkItemResolutionError(
+            "WORK_ITEM_CANONICAL_AUTHORITY_UNAVAILABLE",
+            details={"missing": PROJECT_INDEX_PATH.as_posix()},
+        ) from exc
+    if _normalize_repo_text(committed_index_text) != _normalize_repo_text(working_index_text):
+        raise ActiveWorkItemResolutionError(
+            "WORK_ITEM_SNAPSHOT_UNVERIFIED",
+            details={"reason": "project_index_worktree_differs_from_canonical_main"},
+        )
+    committed_index = yaml.safe_load(committed_index_text) or {}
+    if not isinstance(committed_index, dict):
+        raise ActiveWorkItemResolutionError(
+            "WORK_ITEM_CANONICAL_AUTHORITY_UNAVAILABLE",
+            details={"reason": "canonical_project_index_not_mapping"},
+        )
+    _validate_project_authority_payload(committed_index)
+
+    committed_continuity = _committed_text(root, canonical_commit, CONTINUITY_PATH)
+    working_continuity = _load_continuity_markdown(root)
+    if _normalize_repo_text(committed_continuity) != _normalize_repo_text(working_continuity):
+        raise ActiveWorkItemResolutionError(
+            "WORK_ITEM_SNAPSHOT_UNVERIFIED",
+            details={"reason": "continuity_worktree_differs_from_canonical_main"},
+        )
+    committed_state = _extract_state_payload(committed_continuity)
+    if _snapshot_projection(committed_state) != projection:
+        raise ActiveWorkItemResolutionError(
+            "WORK_ITEM_SNAPSHOT_UNVERIFIED",
+            details={"reason": "active_snapshot_projection_differs_from_canonical_main"},
+        )
+
+    _, tree_stdout, _ = _git_capture(root, "rev-parse", f"{canonical_commit}^{{tree}}")
+    _, blob_stdout, _ = _git_capture(
+        root,
+        "rev-parse",
+        f"{canonical_commit}:{CONTINUITY_PATH.as_posix()}",
+    )
+    evidence = {
+        "projection": projection,
+        "canonical_commit": canonical_commit,
+        "canonical_tree": tree_stdout.strip(),
+        "continuity_blob": blob_stdout.strip(),
+    }
     encoded = json.dumps(
-        projection, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+        evidence, ensure_ascii=False, sort_keys=True, separators=(",", ":")
     ).encode("utf-8")
     fingerprint = hashlib.sha256(encoded).hexdigest()[:24]
     return fingerprint, checkpoint
