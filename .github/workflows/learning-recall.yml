@@ -4,6 +4,9 @@ on:
   pull_request:
     paths:
       - 'PROJECT_INDEX.yaml'
+      - '07_连续性与生产状态/连续性与当前生产状态.md'
+      - '09_资料证据/活动工作项解析与修订状态证据索引.md'
+      - '10_运行时/active_work_item_resolution_gate.yaml'
       - '10_运行时/director_feature_compiler.yaml'
       - '10_运行时/learning_recall_index.yaml'
       - '10_运行时/learning_application_gate.yaml'
@@ -11,6 +14,7 @@ on:
       - '10_运行时/read_sets.yaml'
       - '10_运行时/write_routes.yaml'
       - '08_系统学习/**'
+      - '11_验收/active_work_item_resolution_regression_cases.yaml'
       - '11_验收/director_feature_compiler_regression_cases.yaml'
       - '11_验收/learning_application_gate_regression_cases.yaml'
       - '11_验收/golden_prompt_cases.yaml'
@@ -22,6 +26,9 @@ on:
       - 'gpt/learning-smart-recall-v1'
     paths:
       - 'PROJECT_INDEX.yaml'
+      - '07_连续性与生产状态/连续性与当前生产状态.md'
+      - '09_资料证据/活动工作项解析与修订状态证据索引.md'
+      - '10_运行时/active_work_item_resolution_gate.yaml'
       - '10_运行时/director_feature_compiler.yaml'
       - '10_运行时/learning_recall_index.yaml'
       - '10_运行时/learning_application_gate.yaml'
@@ -29,6 +36,7 @@ on:
       - '10_运行时/read_sets.yaml'
       - '10_运行时/write_routes.yaml'
       - '08_系统学习/**'
+      - '11_验收/active_work_item_resolution_regression_cases.yaml'
       - '11_验收/director_feature_compiler_regression_cases.yaml'
       - '11_验收/learning_application_gate_regression_cases.yaml'
       - '11_验收/golden_prompt_cases.yaml'
@@ -63,5 +71,7 @@ jobs:
         run: python -c "from pathlib import Path; import yaml; [yaml.safe_load(p.read_text(encoding='utf-8')) for p in Path('../..').rglob('*.yaml')]; print('YAML_PARSE=PASS')"
       - name: Validate compact recall index
         run: python -m learning_retriever.cli --project-root ../.. --validate-index
+      - name: Run active work item resolution regression
+        run: python -m unittest tests.test_active_work_item -v
       - name: Run retrieval regression
         run: python -m unittest discover -s tests -v
