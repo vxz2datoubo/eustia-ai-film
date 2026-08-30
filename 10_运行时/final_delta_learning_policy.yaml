@@ -1,4 +1,4 @@
-policy_id: EUSTIA_FINAL_DELTA_LEARNING_EVIDENCE_V1
+policy_id: EUSTIA_FINAL_DELTA_LEARNING_EVIDENCE_V2_SOURCE_BOUND
 status: candidate
 scope: repair_outcome_final_delta_candidate_learning_evidence
 
@@ -8,6 +8,21 @@ canonical_authority:
   expected_observed_runtime: tools/learning_retriever/learning_retriever/expected_observed.py
   targeted_repair_runtime: tools/learning_retriever/learning_retriever/targeted_repair.py
   learning_application_gate: 10_运行时/learning_application_gate.yaml
+
+source_binding:
+  public_inputs:
+    - before_eval_input
+    - after_eval_input
+    - change_record
+    - learning_context
+  before_eval_execution: canonical_expected_observed_reexecution
+  after_eval_execution: canonical_expected_observed_reexecution
+  repair_plan_execution: canonical_targeted_repair_reexecution_from_before_source
+  serialized_before_eval_result_accepted: false
+  serialized_after_eval_result_accepted: false
+  serialized_repair_plan_accepted: false
+  caller_internal_consistency_is_not_source_authenticity: true
+  upstream_error_provenance_must_be_preserved: true
 
 principles:
   observation_is_not_causality: true
@@ -23,6 +38,9 @@ principles:
   missing_alternative_explanations_remain_unknown: true
   missing_counterfactuals_remain_unknown: true
   candidate_lesson_must_not_be_invented_by_runtime: true
+  canonical_upstream_source_reexecution_required: true
+  serialized_upstream_artifact_cannot_define_truth: true
+  joint_tampering_of_result_and_handoff_must_not_suppress_repair: true
 
 comparison_status:
   COMPARABLE:
