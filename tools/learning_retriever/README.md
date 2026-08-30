@@ -180,3 +180,23 @@ PYTHONPATH=tools/learning_retriever python -m learning_retriever.cli --project-r
 A structured JSON task may also contain `director_task_description`; the compiler unions compiled features with any explicit structured features instead of replacing them.
 
 A director task that reaches prompt compilation without a complete retrieval receipt, misses a mandatory hard-route case, or fails natural-language feature compilation must fail closed before output.
+
+## Repair Outcome / Final-Delta learning evidence
+
+`learning_retriever.final_delta` closes the evidence bridge after Targeted Repair without turning a successful repair into an automatic rule. It consumes an already evaluated before state, an already evaluated after state, the exact Targeted Repair plan, an explicit change record, and optional human-supplied learning context.
+
+The compiler mechanically reports field transitions such as `RESOLVED`, `PRESERVED`, `REGRESSED`, `PERSISTED`, `EVIDENCE_GAINED_PASS` and `EVIDENCE_LOST`. It also checks whether the before/after pair is actually comparable. A work-item, model, model-version, expectation-field, or expected-value mismatch prevents repair-effect attribution instead of silently pooling evidence.
+
+A `CLEAN` controlled pair with one verified target variable may become `CONTROLLED_SINGLE_VARIABLE_CANDIDATE`, which means only **eligible for causal analysis**. It never means causality is proven. `causal_claim_authorized`, maturity promotion, learning writeback, canonical mutation, prompt mutation, generation and camera-authority mutation all remain false.
+
+Missing alternative explanations or counterfactuals are emitted as `UNKNOWN_NOT_SUPPLIED`; the runtime does not invent them. Candidate learning evidence stays at `candidate`, requires targeted eval, and cannot write a regression case or promote itself.
+
+Run the compiler on a prepared evidence package:
+
+```bash
+PYTHONPATH=tools/learning_retriever python -m learning_retriever.final_delta_cli \
+  --project-root . \
+  --package final_delta.yaml
+```
+
+Targeted regressions live in `11_验收/final_delta_learning_regression_cases.yaml`.
