@@ -1,9 +1,11 @@
-"""Deterministic Targeted Repair routing for Expected-vs-Observed results.
+"""Deterministic Targeted Repair routing from Expected-vs-Observed source input.
 
 This module does not direct a shot, rewrite prompts, trigger generation, mutate
-upstream camera authority, or promote learning maturity. It verifies the
-evaluator handoff, preserves passing dimensions, and routes failed/unknown
-dimensions to existing canonical authority surfaces.
+upstream camera authority, or promote learning maturity. Public planning never
+accepts a serialized evaluator result as authority. It re-executes the canonical
+Expected-vs-Observed evaluator from its source payload, then verifies the
+in-memory evaluator handoff, preserves passing dimensions, and routes
+failed/unknown dimensions to existing canonical authority surfaces.
 """
 
 from __future__ import annotations
@@ -12,6 +14,8 @@ from pathlib import Path
 from typing import Any, Mapping
 
 import yaml
+
+from .expected_observed import ExpectedObservedEvalError, evaluate_expected_vs_observed
 
 
 class TargetedRepairPlanError(ValueError):
@@ -46,6 +50,7 @@ _REQUIRED_HANDOFF_KEYS = {
 
 STRUCTURAL_GATE_CODES = {
     "REPAIR_INVALID_SHAPE",
+    "REPAIR_UPSTREAM_EVAL_REJECTED",
     "REPAIR_UNKNOWN_FAILURE_CATEGORY",
     "REPAIR_POLICY_INCOMPLETE",
     "REPAIR_HANDOFF_MISMATCH",
@@ -185,9 +190,9 @@ def _validate_control_projection(
     """Validate upstream control truth without allowing a serialized trust upgrade.
 
     Current canonical Expected-vs-Observed has no mechanically trusted control
-    verifier.  Therefore a serialized projection may carry a caller declaration
-    and evidence references, but it cannot legitimately arrive here as CLEAN or
-    with ``non_target_controls_verified=true``.  A future canonical verifier must
+    verifier. Therefore the evaluator may preserve a caller declaration and
+    evidence references, but it cannot legitimately emit CLEAN or
+    ``non_target_controls_verified=true``. A future canonical verifier must
     introduce a separately reviewed machine trust binding before this gate can be
     expanded.
     """
@@ -246,13 +251,10 @@ def _validate_control_projection(
                 "REPAIR_CONTROL_PROJECTION_MISMATCH", "control coverage contains non-canonical requirements"
             )
 
-    # No current canonical verifier can produce either of these states. Reject
-    # them before checking evidence completeness so callers cannot launder trust
-    # by editing a previously valid UNVERIFIED projection.
     if controls_verified or control_status == "CLEAN":
         raise TargetedRepairPlanError(
             "REPAIR_CONTROL_PROJECTION_MISMATCH",
-            "CLEAN/verified controls are not mintable by the current serialized evaluator contract",
+            "CLEAN/verified controls are not mintable by the current canonical evaluator contract",
         )
 
     if control_status == "CONFOUNDED":
@@ -276,12 +278,26 @@ def _validate_control_projection(
             )
 
 
-def plan_targeted_repair(raw_eval_result: Mapping[str, Any], *, project_root: str | Path) -> dict[str, Any]:
-    """Validate evaluator output and emit a non-mutating repair-routing plan."""
+def plan_targeted_repair(raw_eval_input: Mapping[str, Any], *, project_root: str | Path) -> dict[str, Any]:
+    """Re-execute canonical Expected-vs-Observed and emit a non-mutating repair plan.
 
-    if not isinstance(raw_eval_result, Mapping):
-        raise TargetedRepairPlanError("REPAIR_INVALID_SHAPE", "evaluation result root must be a mapping")
-    raw = dict(raw_eval_result)
+    ``raw_eval_input`` is the source evaluator payload, not a serialized evaluator
+    output. This is the planner's source-authentic choke point: caller-provided
+    result/handoff/status projections are never accepted as upstream truth.
+    """
+
+    if not isinstance(raw_eval_input, Mapping):
+        raise TargetedRepairPlanError("REPAIR_INVALID_SHAPE", "evaluation source input root must be a mapping")
+
+    try:
+        evaluated = evaluate_expected_vs_observed(raw_eval_input, project_root=project_root)
+    except ExpectedObservedEvalError as exc:
+        raise TargetedRepairPlanError(
+            "REPAIR_UPSTREAM_EVAL_REJECTED",
+            f"canonical Expected-vs-Observed rejected source input: {exc.code}: {exc.message}",
+        ) from exc
+
+    raw = dict(evaluated)
     policy, failure_categories, canonical_control_requirements = _load_policy(project_root)
 
     required_root = {
@@ -296,7 +312,7 @@ def plan_targeted_repair(raw_eval_result: Mapping[str, Any], *, project_root: st
     missing_root = required_root - set(raw)
     if missing_root:
         raise TargetedRepairPlanError(
-            "REPAIR_INVALID_SHAPE", f"evaluation result missing fields: {sorted(missing_root)}"
+            "REPAIR_INVALID_SHAPE", f"canonical evaluator result missing fields: {sorted(missing_root)}"
         )
 
     status = str(raw.get("status") or "").strip().upper()
@@ -340,12 +356,12 @@ def plan_targeted_repair(raw_eval_result: Mapping[str, Any], *, project_root: st
     if supplied_handoff_items != derived_handoff_items:
         raise TargetedRepairPlanError(
             "REPAIR_HANDOFF_MISMATCH",
-            "targeted_repair_handoff does not exactly match FAIL/UNKNOWN source results",
+            "canonical evaluator handoff does not exactly match FAIL/UNKNOWN source results",
         )
     expected_requires = bool(derived_handoff_items)
     if handoff.get("requires_director_or_targeted_repair_step") is not expected_requires:
         raise TargetedRepairPlanError(
-            "REPAIR_HANDOFF_MISMATCH", "repair-required flag does not match source results"
+            "REPAIR_HANDOFF_MISMATCH", "repair-required flag does not match canonical evaluator results"
         )
 
     routes = dict(policy["failure_category_routes"])
@@ -392,6 +408,11 @@ def plan_targeted_repair(raw_eval_result: Mapping[str, Any], *, project_root: st
         "plan_id": f"TARGETED_REPAIR::{raw.get('eval_id')}",
         "source_eval_id": raw.get("eval_id"),
         "source_eval_status": status,
+        "source_binding": {
+            "mode": "canonical_expected_observed_reexecution",
+            "evaluator_runtime": "expected_observed.evaluate_expected_vs_observed",
+            "serialized_eval_result_accepted": False,
+        },
         "repair_required": bool(repair_items),
         "repair_items": repair_items,
         "preserved_pass_fields": preserved_pass_fields,
