@@ -22,6 +22,10 @@ policy:
   golden_case_low_motion_high_information_must_preserve_duration_evidence: true
   old_file_search_rank_can_define_authority: false
   director_task_must_read_project_index_first: true
+  active_work_item_resolution_required_for_continuation_directing: true
+  unresolved_continuation_must_fail_closed_before_feature_compiler: true
+  active_work_item_snapshot_cannot_override_story_map_asset_authority: true
+  active_work_item_runtime_trusts_canonical_continuity_not_caller_callbacks: true
   director_feature_compiler_required_for_natural_language_directing: true
   director_learning_application_gate_required: true
   director_learning_smart_recall_required: true
@@ -68,6 +72,7 @@ canonical:
   sound_evidence: 09_资料证据/声音导演与SUNO证据索引.md
   suno_user_prompt_evidence: 09_资料证据/SUNO用户提示词资料摄取记录.md
   learning_application_and_conflict_evidence: 09_资料证据/学习应用与冲突裁决证据索引.md
+  active_work_item_resolution_evidence: 09_资料证据/活动工作项解析与修订状态证据索引.md
   scene_asset_identity_schema: 10_运行时/scene_asset_identity_schema.yaml
   scene_media_resolver_manifest: 10_运行时/scene_media_resolver_manifest.yaml
   asset_retrieval_policy: 10_运行时/asset_retrieval_policy.yaml
@@ -77,6 +82,7 @@ canonical:
   proactive_execution_opportunity_router: 10_运行时/proactive_execution_opportunity_router.yaml
   high_dynamic_motion_prompt_compiler: 10_运行时/high_dynamic_motion_prompt_compiler.yaml
   minimax_h3_prompt_adapter: 10_运行时/minimax_h3_prompt_adapter.yaml
+  active_work_item_resolution_gate: 10_运行时/active_work_item_resolution_gate.yaml
   director_feature_compiler: 10_运行时/director_feature_compiler.yaml
   learning_application_gate: 10_运行时/learning_application_gate.yaml
   learning_recall_index: 10_运行时/learning_recall_index.yaml
@@ -89,6 +95,7 @@ canonical:
   regression_cases: 11_验收/director_regression_cases.yaml
   cinematic_visual_grammar_regression_cases: 11_验收/cinematic_visual_grammar_regression_cases.yaml
   cinematic_intent_contract_regression_cases: 11_验收/cinematic_intent_contract_regression_cases.yaml
+  active_work_item_resolution_regression_cases: 11_验收/active_work_item_resolution_regression_cases.yaml
   expected_observed_eval_regression_cases: 11_验收/expected_observed_eval_regression_cases.yaml
   targeted_repair_policy: 10_运行时/targeted_repair_policy.yaml
   targeted_repair_regression_cases: 11_验收/targeted_repair_regression_cases.yaml
@@ -127,6 +134,7 @@ effective_sources:
   09_资料证据/声音导演与SUNO证据索引.md: github_verified
   09_资料证据/SUNO用户提示词资料摄取记录.md: github_verified
   09_资料证据/学习应用与冲突裁决证据索引.md: github_verified
+  09_资料证据/活动工作项解析与修订状态证据索引.md: github_verified
   10_运行时/scene_asset_identity_schema.yaml: github_verified
   10_运行时/scene_media_resolver_manifest.yaml: github_verified
   10_运行时/asset_retrieval_policy.yaml: github_verified
@@ -136,6 +144,7 @@ effective_sources:
   10_运行时/proactive_execution_opportunity_router.yaml: github_verified
   10_运行时/high_dynamic_motion_prompt_compiler.yaml: github_verified
   10_运行时/minimax_h3_prompt_adapter.yaml: github_verified
+  10_运行时/active_work_item_resolution_gate.yaml: github_verified
   10_运行时/director_feature_compiler.yaml: github_verified
   10_运行时/learning_application_gate.yaml: github_verified
   10_运行时/learning_recall_index.yaml: github_verified
@@ -149,6 +158,7 @@ effective_sources:
   11_验收/director_regression_cases.yaml: github_verified
   11_验收/cinematic_visual_grammar_regression_cases.yaml: github_verified
   11_验收/cinematic_intent_contract_regression_cases.yaml: github_verified
+  11_验收/active_work_item_resolution_regression_cases.yaml: github_verified
   11_验收/expected_observed_eval_regression_cases.yaml: github_verified
   11_验收/targeted_repair_regression_cases.yaml: github_verified
   11_验收/asset_retrieval_regression_cases.yaml: github_verified
