@@ -353,6 +353,33 @@ def _resolve_canonical_main_commit(project_root: str | Path) -> str:
     return next(iter(unique))
 
 
+def _verify_current_ref_is_canonical_main(project_root: str | Path) -> None:
+    """Require canonical branch identity, not merely SHA equality with main.
+
+    A candidate branch can point at the exact same commit as main. That does not
+    make the candidate ref canonical. Detached HEAD is likewise non-authoritative
+    for production continuity freshness. Runtime therefore requires the checked
+    out symbolic ref itself to be ``refs/heads/main`` before snapshot trust can
+    be granted.
+    """
+    code, stdout, _ = _git_capture(
+        project_root,
+        "symbolic-ref",
+        "--quiet",
+        "HEAD",
+        allow_failure=True,
+    )
+    current_ref = stdout.strip() if code == 0 else ""
+    if current_ref != "refs/heads/main":
+        raise ActiveWorkItemResolutionError(
+            "WORK_ITEM_SNAPSHOT_UNVERIFIED",
+            details={
+                "reason": "current_head_is_not_canonical_main",
+                "current_ref": current_ref or None,
+            },
+        )
+
+
 def _committed_text(
     project_root: str | Path,
     commit: str,
@@ -372,12 +399,12 @@ def _verify_canonical_snapshot(
     """Bind freshness to canonical main plus a two-phase materialization receipt.
 
     Snapshot status/commit fields are never sufficient by themselves. Runtime
-    freshness requires the checkout HEAD to equal the unique canonical main ref,
-    committed PROJECT_INDEX/continuity to match the worktree, and the declared
-    materialization commit to be a real ancestor whose substantive snapshot
-    identity matches the current finalized snapshot. This supports the checkpoint
-    compiler's two-phase materialize-then-finalize protocol without self-referential
-    commit identifiers.
+    freshness requires the checkout symbolic ref to be canonical main, checkout
+    HEAD to equal the unique canonical main ref, committed PROJECT_INDEX/
+    continuity to match the worktree, and the declared materialization commit to
+    be a real ancestor whose substantive snapshot identity matches the current
+    finalized snapshot. This supports the checkpoint compiler's two-phase
+    materialize-then-finalize protocol without self-referential commit identifiers.
     """
     root = Path(project_root)
     _validate_project_authority_binding(root)
@@ -404,6 +431,7 @@ def _verify_canonical_snapshot(
             details={"reason": "materialization_commit_not_full_sha"},
         )
 
+    _verify_current_ref_is_canonical_main(root)
     canonical_commit = _resolve_canonical_main_commit(root)
     _, head_stdout, _ = _git_capture(root, "rev-parse", "HEAD")
     head = head_stdout.strip()
