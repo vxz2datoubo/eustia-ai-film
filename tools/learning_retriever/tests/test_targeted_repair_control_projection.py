@@ -65,55 +65,63 @@ def evaluated(*, controlled_claim: bool = True) -> dict:
 
 
 class TargetedRepairControlProjectionTests(unittest.TestCase):
-    def test_complete_caller_control_declaration_remains_unverified_and_is_accepted_as_unverified(self):
-        result = evaluated(controlled_claim=True)
+    def test_complete_caller_control_declaration_remains_unverified_after_reexecution(self):
+        source = payload(controlled_claim=True)
+        result = evaluate_expected_vs_observed(source, project_root=REPO_ROOT)
         self.assertEqual(result["control_status"], "UNVERIFIED_CONTROL")
         self.assertFalse(result["controlled_eval"]["non_target_controls_verified"])
         self.assertTrue(result["controlled_eval"]["caller_claimed_non_target_controls_verified"])
         self.assertEqual(result["controlled_eval"]["control_verification_state"], "DECLARED_BY_CALLER")
-        plan = plan_targeted_repair(result, project_root=REPO_ROOT)
+
+        plan = plan_targeted_repair(source, project_root=REPO_ROOT)
         self.assertEqual(plan["control_status"], "UNVERIFIED_CONTROL")
         self.assertEqual(plan["controlled_eval"]["canonical_control_requirements"], CANONICAL_CONTROLS)
         self.assertTrue(plan["controlled_eval"]["control_provenance"]["complete_against_canonical"])
+        self.assertFalse(plan["controlled_eval"]["non_target_controls_verified"])
         self.assertFalse(plan["causal_claim_authorized"])
 
-    def test_caller_cannot_flip_uncontrolled_result_to_clean(self):
+    def test_caller_clean_self_attestation_cannot_reach_planner_as_clean(self):
+        plan = plan_targeted_repair(payload(controlled_claim=True), project_root=REPO_ROOT)
+        self.assertEqual(plan["control_status"], "UNVERIFIED_CONTROL")
+        self.assertFalse(plan["controlled_eval"]["non_target_controls_verified"])
+        self.assertEqual(
+            plan["controlled_eval"]["control_verification_state"],
+            "DECLARED_BY_CALLER",
+        )
+
+    def test_serialized_clean_projection_is_rejected_as_non_source_input(self):
         forged = evaluated(controlled_claim=False)
         forged["control_status"] = "CLEAN"
         with self.assertRaises(TargetedRepairPlanError) as ctx:
             plan_targeted_repair(forged, project_root=REPO_ROOT)
-        self.assertEqual(ctx.exception.code, "REPAIR_CONTROL_PROJECTION_MISMATCH")
+        self.assertEqual(ctx.exception.code, "REPAIR_UPSTREAM_EVAL_REJECTED")
 
-    def test_caller_cannot_flip_unverified_complete_declaration_to_clean(self):
+    def test_serialized_verified_projection_is_rejected_as_non_source_input(self):
         forged = deepcopy(evaluated(controlled_claim=True))
         forged["control_status"] = "CLEAN"
         forged["controlled_eval"]["non_target_controls_verified"] = True
         with self.assertRaises(TargetedRepairPlanError) as ctx:
             plan_targeted_repair(forged, project_root=REPO_ROOT)
-        self.assertEqual(ctx.exception.code, "REPAIR_CONTROL_PROJECTION_MISMATCH")
+        self.assertEqual(ctx.exception.code, "REPAIR_UPSTREAM_EVAL_REJECTED")
 
-    def test_caller_cannot_replace_canonical_requirement_projection(self):
+    def test_serialized_canonical_requirement_rewrite_is_rejected_as_non_source_input(self):
         forged = deepcopy(evaluated(controlled_claim=True))
         forged["controlled_eval"]["canonical_control_requirements"] = ["caller_defined_control"]
         with self.assertRaises(TargetedRepairPlanError) as ctx:
             plan_targeted_repair(forged, project_root=REPO_ROOT)
-        self.assertEqual(ctx.exception.code, "REPAIR_CONTROL_PROJECTION_MISMATCH")
+        self.assertEqual(ctx.exception.code, "REPAIR_UPSTREAM_EVAL_REJECTED")
 
-    def test_caller_cannot_claim_actual_verification_on_unverified_projection(self):
-        forged = deepcopy(evaluated(controlled_claim=True))
-        forged["controlled_eval"]["non_target_controls_verified"] = True
-        forged["control_status"] = "CLEAN"
-        with self.assertRaises(TargetedRepairPlanError) as ctx:
-            plan_targeted_repair(forged, project_root=REPO_ROOT)
-        self.assertEqual(ctx.exception.code, "REPAIR_CONTROL_PROJECTION_MISMATCH")
-
-    def test_confounded_status_requires_explicit_confounds(self):
-        forged = deepcopy(evaluated(controlled_claim=True))
-        forged["control_status"] = "CONFOUNDED"
-        forged["controlled_eval"]["confounds"] = []
-        with self.assertRaises(TargetedRepairPlanError) as ctx:
-            plan_targeted_repair(forged, project_root=REPO_ROOT)
-        self.assertEqual(ctx.exception.code, "REPAIR_CONTROL_PROJECTION_MISMATCH")
+    def test_source_confounds_survive_canonical_reexecution(self):
+        source = payload(controlled_claim=False)
+        source["controlled_eval"] = {
+            "target_variable": "reference_signal_decoupling",
+            "confounds": ["camera_position_changed"],
+            "non_target_controls_verified": False,
+        }
+        plan = plan_targeted_repair(source, project_root=REPO_ROOT)
+        self.assertEqual(plan["control_status"], "CONFOUNDED")
+        self.assertEqual(plan["controlled_eval"]["confounds"], ["camera_position_changed"])
+        self.assertFalse(plan["causal_claim_authorized"])
 
 
 if __name__ == "__main__":
