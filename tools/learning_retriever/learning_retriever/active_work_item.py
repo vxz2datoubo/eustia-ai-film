@@ -286,6 +286,13 @@ def _snapshot_projection(state: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _snapshot_identity_projection(state: dict[str, Any]) -> dict[str, Any]:
+    projection = _snapshot_projection(state)
+    projection.pop("checkpoint_writeback_status", None)
+    projection.pop("writeback_verified_commit", None)
+    return projection
+
+
 def _git_capture(
     project_root: str | Path,
     *args: str,
@@ -362,14 +369,15 @@ def _committed_text(
 def _verify_canonical_snapshot(
     project_root: str | Path, state: dict[str, Any]
 ) -> tuple[str, str | None]:
-    """Bind freshness to the canonical main checkout and committed readback.
+    """Bind freshness to canonical main plus a two-phase materialization receipt.
 
-    Snapshot fields such as `checkpoint_writeback_status` and
-    `writeback_verified_commit` are retained for backward-compatible audit data,
-    but they are not trust inputs. Runtime freshness is granted only when the
-    checkout HEAD is exactly the repository's canonical main ref and both
-    PROJECT_INDEX plus continuity are byte-equivalent to the committed main
-    objects being consumed.
+    Snapshot status/commit fields are never sufficient by themselves. Runtime
+    freshness requires the checkout HEAD to equal the unique canonical main ref,
+    committed PROJECT_INDEX/continuity to match the worktree, and the declared
+    materialization commit to be a real ancestor whose substantive snapshot
+    identity matches the current finalized snapshot. This supports the checkpoint
+    compiler's two-phase materialize-then-finalize protocol without self-referential
+    commit identifiers.
     """
     root = Path(project_root)
     _validate_project_authority_binding(root)
@@ -379,6 +387,21 @@ def _verify_canonical_snapshot(
         raise ActiveWorkItemResolutionError(
             "WORK_ITEM_SNAPSHOT_UNVERIFIED",
             details={"reason": "latest_applied_checkpoint_ref_missing"},
+        )
+    if projection["checkpoint_writeback_status"] != "verified":
+        raise ActiveWorkItemResolutionError(
+            "WORK_ITEM_SNAPSHOT_UNVERIFIED",
+            details={"reason": "checkpoint_writeback_not_finalized"},
+        )
+
+    declared_commit = projection["writeback_verified_commit"]
+    if not (
+        len(declared_commit) == 40
+        and all(char in "0123456789abcdef" for char in declared_commit.casefold())
+    ):
+        raise ActiveWorkItemResolutionError(
+            "WORK_ITEM_SNAPSHOT_UNVERIFIED",
+            details={"reason": "materialization_commit_not_full_sha"},
         )
 
     canonical_commit = _resolve_canonical_main_commit(root)
@@ -429,17 +452,58 @@ def _verify_canonical_snapshot(
             details={"reason": "active_snapshot_projection_differs_from_canonical_main"},
         )
 
+    exists_code, _, _ = _git_capture(
+        root,
+        "cat-file",
+        "-e",
+        f"{declared_commit}^{{commit}}",
+        allow_failure=True,
+    )
+    if exists_code != 0:
+        raise ActiveWorkItemResolutionError(
+            "WORK_ITEM_SNAPSHOT_UNVERIFIED",
+            details={"reason": "materialization_commit_missing"},
+        )
+    ancestor_code, _, _ = _git_capture(
+        root,
+        "merge-base",
+        "--is-ancestor",
+        declared_commit,
+        canonical_commit,
+        allow_failure=True,
+    )
+    if ancestor_code != 0:
+        raise ActiveWorkItemResolutionError(
+            "WORK_ITEM_SNAPSHOT_UNVERIFIED",
+            details={"reason": "materialization_commit_not_canonical_ancestor"},
+        )
+
+    materialized_continuity = _committed_text(root, declared_commit, CONTINUITY_PATH)
+    materialized_state = _extract_state_payload(materialized_continuity)
+    if _snapshot_identity_projection(materialized_state) != _snapshot_identity_projection(state):
+        raise ActiveWorkItemResolutionError(
+            "WORK_ITEM_SNAPSHOT_UNVERIFIED",
+            details={"reason": "materialization_snapshot_identity_mismatch"},
+        )
+
     _, tree_stdout, _ = _git_capture(root, "rev-parse", f"{canonical_commit}^{{tree}}")
     _, blob_stdout, _ = _git_capture(
         root,
         "rev-parse",
         f"{canonical_commit}:{CONTINUITY_PATH.as_posix()}",
     )
+    _, materialized_blob_stdout, _ = _git_capture(
+        root,
+        "rev-parse",
+        f"{declared_commit}:{CONTINUITY_PATH.as_posix()}",
+    )
     evidence = {
         "projection": projection,
         "canonical_commit": canonical_commit,
         "canonical_tree": tree_stdout.strip(),
         "continuity_blob": blob_stdout.strip(),
+        "materialization_commit": declared_commit,
+        "materialization_continuity_blob": materialized_blob_stdout.strip(),
     }
     encoded = json.dumps(
         evidence, ensure_ascii=False, sort_keys=True, separators=(",", ":")
