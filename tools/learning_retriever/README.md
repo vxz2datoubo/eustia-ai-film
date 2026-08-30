@@ -130,21 +130,23 @@ Exit code is `0` for complete PASS, `2` for FAIL/structural rejection, and `3` f
 
 ## Targeted Repair planner
 
-`learning_retriever.targeted_repair` consumes the verified Expected-vs-Observed result and implements the existing SOAC `TargetedRepair` stage as **routing only**. It protects PASS dimensions, sends UNKNOWN dimensions to evidence acquisition, and routes FAIL dimensions to the existing director/camera/transition/reference/blocking/performance/sound authority surface. It does not decide the creative fix.
+`learning_retriever.targeted_repair` implements the existing SOAC `TargetedRepair` stage as **routing only**. Its public input is the original Expected-vs-Observed evaluator payload, not a serialized evaluator result. The planner re-executes the canonical `evaluate_expected_vs_observed()` runtime first and consumes that in-memory result, then protects PASS dimensions, sends UNKNOWN dimensions to evidence acquisition, and routes FAIL dimensions to the existing director/camera/transition/reference/blocking/performance/sound authority surface. It does not decide the creative fix.
 
-The planner cross-checks `targeted_repair_handoff.items` against the source evaluation results so a caller cannot silently add, remove or substitute repair items. Every canonical reverse-compiler failure category must map to exactly one declared repair surface or the policy fails closed. Control status and observation provenance are carried forward; `CLEAN` means eligible for later causal analysis, not automatic causal truth.
+This source-binding rule is deliberate. Internal agreement between `results`, `status` and `targeted_repair_handoff` is useful as defense-in-depth, but it is **not** proof that a serialized result is genuine. A caller-supplied evaluator output is therefore rejected as planner input even when all of its fields are internally consistent. This prevents coordinated edits such as changing a camera FAIL and its handoff to `dialogue`, or changing FAIL/status/handoff together into a false PASS that suppresses repair.
+
+Every canonical reverse-compiler failure category must map to exactly one declared repair surface or the policy fails closed. Control status and observation provenance are carried forward from the freshly re-executed evaluator; a caller declaration cannot mint trusted CLEAN control authority.
 
 Camera failures route to `UPSTREAM_CAMERA_CONTRACT_REVIEW`, but the planner cannot mint, reconstruct, or mutate camera authority. The upstream CinematicIntent canonical-readback fail-closed boundary remains intact.
 
-Run it on an evaluator result:
+Run it from the original evaluator input:
 
 ```bash
 PYTHONPATH=tools/learning_retriever python -m learning_retriever.targeted_repair_cli \
   --project-root . \
-  --eval-result expected_observed_result.yaml
+  --eval-input expected_observed_input.yaml
 ```
 
-The output is an ephemeral repair plan. Prompt mutation, generation, camera-authority mutation, canonical writes, learning writeback and maturity promotion remain unauthorized. Targeted regressions live in `11_验收/targeted_repair_regression_cases.yaml`.
+`--eval-result` is intentionally not a supported authority path. The output is an ephemeral repair plan containing a `source_binding` receipt that records `canonical_expected_observed_reexecution`. Prompt mutation, generation, camera-authority mutation, canonical writes, learning writeback and maturity promotion remain unauthorized. Targeted regressions live in `11_验收/targeted_repair_regression_cases.yaml`.
 
 ## CLI
 
