@@ -433,6 +433,10 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
             residual = value.strip()
             if not residual:
                 return True
+            if residual.endswith("地"):
+                stem = residual[:-1]
+                if 2 <= len(stem) <= 8 and all("\u4e00" <= char <= "\u9fff" for char in stem):
+                    return True
             changed = True
             while changed and residual:
                 changed = False
@@ -441,12 +445,7 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
                         residual = residual[len(modifier):].strip()
                         changed = True
                         break
-            if not residual:
-                return True
-            if residual.endswith("地"):
-                stem = residual[:-1]
-                return 2 <= len(stem) <= 8 and all("\u4e00" <= char <= "\u9fff" for char in stem)
-            return False
+            return not residual
 
         def classify_leader(value: str) -> str | None:
             normalized = strip_leading_glue(value)
