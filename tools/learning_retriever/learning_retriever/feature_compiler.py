@@ -121,18 +121,16 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
 
         Bare `朝/向` are accepted only when the material before the marker is
         clause-start/continuation glue or ends in a known actor subject. Explicit
-        multi-character markers may bind a small target noun phrase containing a
-        known target head plus a bounded determiner, classifier or short proper
-        name. This keeps lexical nouns such as `王朝圣女/前朝圣女/本朝圣女`
-        from becoming target-oriented blocking while supporting production forms
-        such as `朝着圣女伊莲跪下` and `向那扇大门跪拜`.
+        multi-character markers may bind a bounded target noun phrase containing
+        a known target head plus determiner/classifier or short proper name. A
+        following bounded `…地` manner adjunct is parsed separately from that NP,
+        so unseen manner wording does not need an adverb dictionary. The outer
+        bare-marker subject boundary still prevents lexical nouns such as
+        `王朝圣女/前朝圣女/本朝圣女` from becoming directional syntax.
         """
         separators = ("，", "。", "；", "！", "？", ",", ";", "!", "?")
         markers = ("面朝", "朝着", "对着", "向着", "朝", "向")
-        trailing_adverbs = (
-            "缓缓地", "慢慢地", "纷纷地", "共同地", "一起地", "一同地",
-            "缓缓", "慢慢", "纷纷", "共同", "一起", "一同", "都",
-        )
+        trailing_simple_adverbs = ("缓缓", "慢慢", "纷纷", "共同", "一起", "一同", "都")
         leading_glue = tuple(
             sorted(
                 set(
@@ -161,9 +159,12 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
             "的", "地", "得", "祈祷", "跪", "拜", "追", "逃", "看", "望", "朝", "向",
             "缓缓", "慢慢", "纷纷", "共同", "一起", "一同", "现身", "出现", "降临", "到来",
         )
+        manner_structural_forbidden = (
+            "跪", "拜", "追", "逃", "看", "望", "朝", "向", "门", "窗", "口", "台", "出口",
+        )
 
-        def target_phrase_matches(candidate: str) -> bool:
-            normalized = candidate.strip()
+        def strip_target_determiners(value: str) -> str:
+            normalized = value.strip()
             changed = True
             while changed and normalized:
                 changed = False
@@ -172,7 +173,10 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
                         normalized = normalized[len(determiner):].strip()
                         changed = True
                         break
+            return normalized
 
+        def target_np_matches(candidate: str) -> bool:
+            normalized = strip_target_determiners(candidate)
             if any(normalized == obj for obj in object_candidates):
                 return True
 
@@ -187,6 +191,36 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
                 if any(token in suffix for token in disallowed_name_suffix_tokens):
                     continue
                 return True
+            return False
+
+        def bounded_de_manner_adjunct(value: str) -> bool:
+            normalized = value.strip()
+            if not normalized.endswith("地"):
+                return False
+            stem = normalized[:-1]
+            if not 2 <= len(stem) <= 6:
+                return False
+            if not all("\u4e00" <= char <= "\u9fff" for char in stem):
+                return False
+            if any(token in stem for token in manner_structural_forbidden):
+                return False
+            if any(obj in stem for obj in object_candidates):
+                return False
+            return True
+
+        def target_phrase_matches(candidate: str) -> bool:
+            normalized = candidate.strip()
+            if target_np_matches(normalized):
+                return True
+
+            # Open-vocabulary manner is recognized by syntax, not a synonym list:
+            # [bounded target NP] + [2..6 CJK chars + 地]. The target half must
+            # independently satisfy the conservative NP grammar above.
+            for split_at in range(1, len(normalized)):
+                target_part = normalized[:split_at].strip()
+                manner_part = normalized[split_at:].strip()
+                if target_np_matches(target_part) and bounded_de_manner_adjunct(manner_part):
+                    return True
             return False
 
         for action in actions:
@@ -208,7 +242,7 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
                     changed = True
                     while changed and candidate:
                         changed = False
-                        for adverb in trailing_adverbs:
+                        for adverb in trailing_simple_adverbs:
                             if candidate.endswith(adverb):
                                 candidate = candidate[:-len(adverb)].strip()
                                 changed = True
