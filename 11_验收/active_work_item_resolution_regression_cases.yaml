@@ -1,0 +1,170 @@
+schema_version: "1.1"
+regression_suite_id: EUSTIA_ACTIVE_WORK_ITEM_RESOLUTION_REGRESSIONS
+status: active
+runtime_contract: 10_运行时/active_work_item_resolution_gate.yaml
+
+cases:
+  - case_id: AWIR-WRONG-30S-001
+    class: continuation_active_pointer_beats_stale_similar_text
+    input:
+      user_text: 重新导演上次那30秒
+      active_work_item_id: KAIM-SCARF-CLOTHESLINE-TRAVERSE
+      active_source_issue: 19
+      freshness_provider: trusted_runtime_capability
+      latest_applied_checkpoint_ref: "5454103847"
+      latest_source_checkpoint_ref: "5454103847"
+      stale_competitor:
+        work_item_id: KAIM-HIGH-SEARCH-30S
+        surface_overlap: [凯姆, 30秒, 搜索, 屋顶]
+    expected:
+      resolution_required: true
+      resolved_work_item_id: KAIM-SCARF-CLOTHESLINE-TRAVERSE
+      continuation_resolution_source: active_work_item_pointer
+      freshness_verified: true
+      gate_status: RESOLVED_VERIFIED
+      must_not_select: KAIM-HIGH-SEARCH-30S
+
+  - case_id: AWIR-EXPLICIT-OLD-001
+    class: user_explicit_nonactive_override
+    input:
+      user_text: 重新导演之前爬楼那30秒
+      active_work_item_id: KAIM-SCARF-CLOTHESLINE-TRAVERSE
+      explicit_target_provider: trusted_runtime_capability
+      verified_target_work_item_id: KAIM-HIGH-SEARCH-30S
+    expected:
+      resolved_work_item_id: KAIM-HIGH-SEARCH-30S
+      continuation_resolution_source: user_explicit_trusted_target_resolution
+      gate_status: RESOLVED_VERIFIED
+      active_pointer_mutated: false
+      serialized_claim_may_mint_target_identity: false
+
+  - case_id: AWIR-ALIAS-COLLISION-001
+    class: semantic_similarity_cannot_define_identity
+    input:
+      user_text: 继续凯姆那个30秒
+      active_work_item_id: KAIM-SCARF-CLOTHESLINE-TRAVERSE
+      freshness_provider: trusted_runtime_capability
+      candidates:
+        - KAIM-SCARF-CLOTHESLINE-TRAVERSE
+        - KAIM-HIGH-SEARCH-30S
+      latest_source_checkpoint_ref: "5454103847"
+      latest_applied_checkpoint_ref: "5454103847"
+    expected:
+      resolved_work_item_id: KAIM-SCARF-CLOTHESLINE-TRAVERSE
+      resolution_reason: exact_active_pointer_not_similarity
+
+  - case_id: AWIR-CHECKPOINT-LAG-001
+    class: source_issue_newer_than_snapshot
+    input:
+      user_text: 继续上一版
+      active_work_item_id: KAIM-SCARF-CLOTHESLINE-TRAVERSE
+      freshness_provider: trusted_runtime_capability
+      latest_applied_checkpoint_ref: "5427171891"
+      latest_source_checkpoint_ref: "5454103847"
+    expected_error: WORK_ITEM_CHECKPOINT_RECONCILE_REQUIRED
+    director_feature_compiler_invoked: false
+
+  - case_id: AWIR-SOURCE-INACCESSIBLE-001
+    class: freshness_fail_closed
+    input:
+      user_text: 继续那30秒
+      active_work_item_id: KAIM-SCARF-CLOTHESLINE-TRAVERSE
+      source_issue: 19
+      freshness_provider: trusted_runtime_capability
+      source_issue_accessible: false
+    expected_error: WORK_ITEM_FRESHNESS_UNVERIFIED
+    director_feature_compiler_invoked: false
+
+  - case_id: AWIR-FRESHNESS-PROVIDER-REQUIRED-001
+    class: serialized_freshness_claim_cannot_mint_canonical_freshness
+    input:
+      user_text: 继续那30秒
+      active_work_item_id: KAIM-SCARF-CLOTHESLINE-TRAVERSE
+      source_issue: 19
+      freshness_provider: null
+      serialized_claim:
+        source_issue_accessible: true
+        latest_source_checkpoint_ref: "5454103847"
+    expected_error: WORK_ITEM_FRESHNESS_PROVIDER_REQUIRED
+    director_feature_compiler_invoked: false
+    serialized_claim_accepted: false
+
+  - case_id: AWIR-POINTER-MISSING-001
+    class: missing_pointer_fail_closed
+    input:
+      user_text: 继续下一镜
+      active_work_item: null
+    expected_error: ACTIVE_WORK_ITEM_STATE_MISSING
+    director_feature_compiler_invoked: false
+
+  - case_id: AWIR-NONCONTINUATION-001
+    class: normal_new_directing_fast_path
+    input:
+      user_text: 设计圣女第一次公开登场时群众由喧闹转为安静的镜头
+      active_work_item_id: KAIM-SCARF-CLOTHESLINE-TRAVERSE
+    expected:
+      resolution_required: false
+      gate_status: NOT_REQUIRED
+      director_feature_compiler_allowed: true
+      continuation_task_reconstruction_performed: false
+
+  - case_id: AWIR-OUTPUT-MISMATCH-001
+    class: pre_output_scope_guard
+    input:
+      resolved_work_item_id: KAIM-SCARF-CLOTHESLINE-TRAVERSE
+      loaded_work_item_id: KAIM-SCARF-CLOTHESLINE-TRAVERSE
+      output_work_item_id: KAIM-HIGH-SEARCH-30S
+    expected_error: WORK_ITEM_OUTPUT_SCOPE_MISMATCH
+    output_suppressed: true
+
+  - case_id: AWIR-OMISSION-NOT-REVOKE-001
+    class: constraint_ledger_semantics
+    baseline:
+      - scarf_is_load_bearing_mechanism
+      - right_to_left_screen_trajectory
+      - wall_impact_two_foot_buffer
+    revision:
+      changed:
+        - disappearance_edit_language
+      revoked: []
+    expected_effective_state_contains:
+      - scarf_is_load_bearing_mechanism
+      - right_to_left_screen_trajectory
+      - wall_impact_two_foot_buffer
+      - disappearance_edit_language
+
+  - case_id: AWIR-EXPLICIT-REVOKE-001
+    class: constraint_ledger_revoke
+    baseline:
+      - over_specified_setup_micro_choreography
+      - scarf_is_load_bearing_mechanism
+    revision:
+      revoked:
+        - over_specified_setup_micro_choreography
+      preserved:
+        - scarf_is_load_bearing_mechanism
+    expected_effective_state_contains:
+      - scarf_is_load_bearing_mechanism
+    expected_effective_state_excludes:
+      - over_specified_setup_micro_choreography
+
+  - case_id: AWIR-CURRENT-IMAGE-NOT-AUTHORITY-001
+    class: media_reference_boundary
+    input:
+      user_text: 继续这个镜头
+      active_work_item_id: KAIM-SCARF-CLOTHESLINE-TRAVERSE
+      current_turn_image_matches_active_work_item: true
+    expected:
+      image_may_help_referent_resolution: true
+      image_may_override_story_map_asset_authority: false
+
+  - case_id: AWIR-CLOSE-SWITCH-001
+    class: revision_series_close_before_switch
+    input:
+      user_text: 这一版就这样，继续下一镜
+      current_work_item_id: KAIM-SCARF-CLOTHESLINE-TRAVERSE
+      checkpoint_required: true
+    expected:
+      previous_series_checkpointed_before_switch: true
+      trajectory_final_delta_required: true
+      omission_is_not_revocation: true

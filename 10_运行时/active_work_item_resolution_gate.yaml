@@ -1,0 +1,352 @@
+gate_id: EUSTIA_ACTIVE_WORK_ITEM_RESOLUTION_GATE
+version: 1.0.1
+status: candidate
+name: ACTIVE-WORK-ITEM-RESOLUTION-001
+zh_name: 活动工作项解析与修订状态门
+scope: continuation_reference_resolution_revision_checkpoint_compaction_and_pre_directing_identity_binding
+
+purpose:
+  - 在任何导演、提示词、分镜、资产或连续性执行前，先机械确认“当前到底在处理哪个 work item”
+  - 防止旧连续性、旧30秒、旧聊天、相似关键词或搜索排名劫持当前制作任务
+  - 将多轮 revision 的事件轨迹压成一个可快速读取的 Current Effective State snapshot，同时保留完整证据轨迹
+  - 让正常继续制作只需很少读取，不要求用户重复解释项目上下文
+
+authority_boundary:
+  source_authority_registry: PROJECT_INDEX.yaml
+  current_production_authority: 07_连续性与生产状态/连续性与当前生产状态.md
+  screenplay_authority: 03_剧本与改编/当前改编剧本.md
+  director_method_authority: 01_AI电影系统/AI电影系统.md
+  revision_learning_authority: 08_系统学习/反馈反推与系统反哺引擎.md
+  source_issue_role: revision_trace_and_production_evidence_only
+  this_file_is_runtime_contract_not_second_story_or_continuity_authority: true
+  user_current_explicit_instruction_has_highest_fact_priority: true
+
+runtime_position:
+  flow:
+    - PROJECT_INDEX
+    - ACTIVE_WORK_ITEM_RESOLUTION_GATE
+    - ACTIVE_WORK_ITEM_FRESHNESS_RECONCILE
+    - TARGETED_CANONICAL_READS
+    - DIRECTOR_FEATURE_COMPILER
+    - HARD_ROUTE
+    - LEARNING_SMART_RECALL
+    - DIRECTING
+    - PRE_OUTPUT_WORK_ITEM_GATE
+  forbidden_flow:
+    - continuation_request_directly_to_director_feature_compiler
+    - search_rank_or_modified_time_selects_work_item
+    - semantic_similarity_alone_selects_between_multiple_work_items
+
+continuation_signals:
+  strong:
+    - 上次
+    - 刚才
+    - 那30秒
+    - 那段
+    - 那个镜头
+    - 之前那个
+    - 继续
+    - 接着
+    - 下一镜
+    - 继续下面剧情
+    - 重新导演那
+    - 重新做那个
+  rule: 命中任一 continuation signal 时，work-item resolution 必须在 Director Feature Compiler 之前完成。
+
+active_work_item_snapshot_contract:
+  storage: 07_连续性与生产状态/连续性与当前生产状态.md#ACTIVE_WORK_ITEM_STATE
+  fields:
+    required:
+      - work_item_id
+      - status
+      - source_issue
+      - baseline_checkpoint_ref
+      - latest_applied_checkpoint_ref
+      - story_scope_ref
+      - current_effective_state_summary
+      - locked_constraints
+      - preserved_constraints
+      - revoked_constraints
+      - experimental_constraints
+      - unresolved_failures
+      - checkpoint_writeback_status
+    recommended:
+      - bound_media_or_reference_refs
+      - current_best_ref
+      - writeback_verified_commit
+      - previous_work_item_id
+      - next_expected_action
+  snapshot_role: materialized_current_state_for_fast_reads
+  event_trace_role: issue_comments_and_learning_evidence_remain_append_only_revision_trace
+  snapshot_must_not_replace_event_trace: true
+
+revision_event_envelope:
+  design_basis:
+    - W3C_PROV_revision_and_derivation
+    - CloudEvents_id_source_subject_type_pattern
+    - OCEL_event_to_object_qualified_relationship
+  required_fields:
+    - revision_id
+    - work_item_id
+    - event_type
+    - source_ref
+    - parent_revision
+    - changed
+    - preserved
+    - revoked
+    - experimental
+  event_types:
+    - ADD
+    - MODIFY
+    - REVOKE
+    - EXPERIMENT
+    - LOCK
+    - CHECKPOINT
+    - CLOSE
+  identity_rule: revision_id + source_ref must uniquely identify one revision event within a work item.
+  object_relation_rule: one revision may reference multiple objects such as work_item, shot, asset, character, scene or model evidence; relations must carry a role qualifier instead of flattening all objects into one case string.
+
+constraint_ledger:
+  formula: Effective State = Baseline + Accepted_or_Locked_Deltas - Explicitly_Revoked_Deltas
+  omission_is_not_revocation: true
+  latest_wins_forbidden: true
+  conflicting_locked_constraints:
+    action: fail_closed_and_surface_conflict
+    silent_override: forbidden
+
+resolution_precedence:
+  ordered:
+    - user_current_explicit_work_item
+    - exact_active_work_item_pointer
+    - exact_source_issue_and_checkpoint_binding
+    - structured_recent_work_item_binding_if_supplied
+    - minimal_discriminating_question
+    - fail_closed
+  forbidden_deciders:
+    - modified_time
+    - search_rank
+    - lexical_similarity_only
+    - memory_only
+    - chat_history_only
+
+trusted_runtime_provider_boundary:
+  freshness_provider_role: perform_real_source_issue_checkpoint_read_and_return_runtime_receipt
+  explicit_target_provider_role: resolve_user_explicit_nonactive_target_from_targeted_canonical_or_source_evidence
+  serialized_json_cli_context_cannot_mint_freshness: true
+  serialized_json_cli_context_cannot_mint_nonactive_target_identity: true
+  caller_boolean_claim_is_not_verification: true
+  missing_required_provider_for_source_issue_action: WORK_ITEM_FRESHNESS_PROVIDER_REQUIRED
+  design_rule: trust is carried by an in-process orchestration capability that performs the read, not by caller-supplied metadata claiming the read happened.
+
+freshness_gate:
+  source_issue_absent:
+    action: active_snapshot_may_be_used_if_checkpoint_writeback_status_is_verified
+  source_issue_present:
+    required:
+      - trusted_freshness_provider_available
+      - source_issue_accessible
+      - latest_source_checkpoint_ref_known
+      - latest_source_checkpoint_ref_equals_latest_applied_checkpoint_ref
+    mismatch_action: WORK_ITEM_CHECKPOINT_RECONCILE_REQUIRED
+  inaccessible_action: WORK_ITEM_FRESHNESS_UNVERIFIED
+  note: freshness is explicit checkpoint relation, never file modified time or caller-supplied serialized truth.
+
+explicit_override_rule:
+  description: 用户明确说“之前爬楼那30秒”之类非当前 work item 时，当前用户指令优先。
+  behavior:
+    - do_not_force_active_pointer
+    - require_trusted_explicit_target_resolution_when_target_is_nonactive
+    - resolve_the_explicit_target_from_structured_candidate_binding_or_targeted_canonical_read
+    - record_continuation_resolution_source_as_user_explicit_trusted_target_resolution
+    - do_not_mutate_active_pointer_until_the_user_actually_switches_current_production_work_item
+
+ambiguity_gate:
+  when:
+    - two_or_more_material_candidates_remain
+    - pointer_missing_or_inaccessible
+    - explicit_user_phrase_conflicts_with_active_pointer_and_no_structured_binding_exists
+  behavior: ask_one_minimal_discriminating_question
+  forbidden: silently_guess
+
+pre_output_gate:
+  must_match:
+    - resolved_work_item_id
+    - loaded_work_item_id
+    - output_work_item_id
+  mismatch_code: WORK_ITEM_OUTPUT_SCOPE_MISMATCH
+  behavior: suppress_director_or_prompt_output_until_reconciled
+
+checkpoint_transaction:
+  trigger:
+    - user_accepts_current_version
+    - roughly_3_to_5_material_revisions
+    - key_constraints_stabilize
+    - switch_to_next_shot_or_scene
+    - revision_series_close
+  flow:
+    - FETCH_current_continuity
+    - reconcile_revision_events
+    - compute_constraint_ledger
+    - update_ACTIVE_WORK_ITEM_STATE
+    - COMMIT_serially
+    - FETCH_VERIFY
+    - write_CANONICAL_CHECKPOINT_receipt_to_source_issue
+  report_success_only_after_readback: true
+
+state_machine:
+  design_basis: W3C_SCXML_state_transition_discipline
+  states:
+    - UNRESOLVED
+    - RESOLVED_UNVERIFIED
+    - RECONCILE_REQUIRED
+    - RESOLVED_VERIFIED
+    - ACTIVE_REVISION
+    - CHECKPOINTED
+    - CLOSED
+  allowed_transitions:
+    UNRESOLVED: [RESOLVED_UNVERIFIED]
+    RESOLVED_UNVERIFIED: [RECONCILE_REQUIRED, RESOLVED_VERIFIED]
+    RECONCILE_REQUIRED: [RESOLVED_VERIFIED]
+    RESOLVED_VERIFIED: [ACTIVE_REVISION, CHECKPOINTED]
+    ACTIVE_REVISION: [CHECKPOINTED, CLOSED]
+    CHECKPOINTED: [ACTIVE_REVISION, CLOSED]
+    CLOSED: []
+  invalid_transition: fail_closed
+
+knowledge_map:
+  K0_user_explicit_known:
+    - 当前正在做的镜头/30秒/场景
+    - 用户本轮明确切换到哪个旧 work item
+    - 用户明确 LOCK / REVOKE / 接受的约束
+    - 用户明确确认的参考图职责
+  K1_user_implicit_known:
+    - “继续/那30秒/下一镜”通常要求继承当前有效 Constraint Ledger
+    - 省略旧要求不等于撤销
+    - 用户不希望每轮手工管理 checkpoint 或数据库
+    - 相同角色和时长并不能证明是同一个 work item
+  K2_adjacent_professional_knowledge:
+    - event_sourcing_and_snapshot_materialization
+    - optimistic_concurrency_and_idempotent_checkpoint_writeback
+    - state_machine_transition_validation
+    - provenance_revision_relations
+    - object_centric_event_to_object_relationships
+    - dialogue_coreference_and_ellipsis_resolution
+    - workflow_trace_and_group_identifiers
+  K3_unknown_unknowns:
+    - hidden_parallel_work_items_with_overlapping_aliases
+    - checkpoint_writeback_partial_failure
+    - source_issue_deleted_or_rewritten
+    - one_revision_touching_multiple_shots_assets_and_models
+    - cross_window_handoff_with_missing_active_pointer
+    - stale_snapshot_after_successful_issue_update_but_failed_canonical_write
+    - active_work_item_split_or_merge
+    - model_generated_semantic_alias_collision
+  K3_policy: register_as_unknown_or regression candidate before making a new stable rule.
+
+external_research_connections:
+  W3C_PROV:
+    mechanism: revision events should express derivation/revision and source provenance rather than only latest text.
+    use_here: source_ref, parent_revision, canonical checkpoint receipt, evidence lineage.
+    maturity: candidate_design_input
+  Azure_Event_Sourcing_CQRS:
+    mechanism: append-only event history plus materialized snapshot; snapshots optimize reads but do not replace event history; optimistic concurrency prevents stale writes.
+    use_here: Issue revision trace + continuity active_work_item snapshot + fetch/edit/commit/fetch-verify.
+    maturity: candidate_design_input
+  CloudEvents:
+    mechanism: event id/source/type/subject separation enables dedupe and generic routing.
+    use_here: revision event envelope and idempotent checkpoint receipts.
+    maturity: candidate_design_input
+  OCEL_2:
+    mechanism: events may relate to multiple typed objects with qualified relations; a single naive case notion can lose or duplicate relations.
+    use_here: one revision can touch shot, work_item, character, asset, model evidence without forcing one text alias to represent identity.
+    maturity: candidate_design_input
+  Dialogue_Coreference:
+    mechanism: ellipsis and co-reference are normal in multi-turn task dialogue; resolution should reconstruct the omitted/referred target from dialogue/task context.
+    use_here: continuation signals must resolve referent before task compilation.
+    maturity: candidate_design_input
+  OpenAI_Agents_SDK:
+    mechanism: sessions preserve multi-run memory; local RunContext carries non-LLM runtime state; tracing groups workflow spans with trace/group IDs; handoffs can filter forwarded context.
+    use_here: future agent implementation should keep active_work_item_id in structured local context and trace metadata instead of relying only on prompt history.
+    maturity: future_integration_candidate
+
+runtime_receipt:
+  required_fields:
+    - resolution_required
+    - resolved_work_item_id
+    - continuation_resolution_source
+    - checkpoint_ref
+    - freshness_verified
+    - conflicts
+    - gate_status
+  optional_fields:
+    - source_issue
+    - latest_source_checkpoint_ref
+    - question_required
+    - question
+    - candidate_ids
+
+fail_codes:
+  - ACTIVE_WORK_ITEM_STATE_MISSING
+  - ACTIVE_WORK_ITEM_STATE_INVALID
+  - WORK_ITEM_FRESHNESS_PROVIDER_REQUIRED
+  - WORK_ITEM_FRESHNESS_UNVERIFIED
+  - WORK_ITEM_CHECKPOINT_RECONCILE_REQUIRED
+  - CONTINUATION_REFERENT_AMBIGUOUS
+  - EXPLICIT_NONACTIVE_REFERENT_REQUIRES_RESOLUTION
+  - WORK_ITEM_INPUT_SCOPE_MISMATCH
+  - WORK_ITEM_OUTPUT_SCOPE_MISMATCH
+  - INVALID_WORK_ITEM_STATE_TRANSITION
+
+efficiency_budget:
+  normal_continuation_fast_path:
+    - PROJECT_INDEX
+    - continuity_ACTIVE_WORK_ITEM_STATE_only
+    - exact_source_issue_checkpoint_probe_if_source_issue_exists
+    - targeted_story_character_scene_map_asset_reads_after_resolution
+  avoid:
+    - full_repository_search
+    - full_screenplay_scan_before_identity_resolution
+    - loading_all_revision_comments_when_checkpoint_is_current
+    - semantic_retrieval_before_work_item_identity_is_bound
+
+cross_department_handoff:
+  director:
+    receives: resolved_work_item_id + effective_state + story_scope_ref
+    may_not: change_work_item_identity
+  continuity:
+    owns: active_work_item_snapshot
+    receives: checkpoint_compaction
+  learning:
+    owns: revision_evidence_final_delta_maturity
+    may_not: redefine_current_work_item
+  asset:
+    receives: bound_media_or_reference_refs
+    may_not: treat_candidate_reference_as_formal_asset
+  scene_map:
+    receives: spatial_refs_after_work_item_resolution
+    remains_topology_authority: true
+  sound:
+    receives: same_resolved_work_item_id_and_shot_scope
+  model_adapter:
+    receives: effective_constraints_only_after_resolution
+  eval:
+    must_bind: output_work_item_id_to_resolved_work_item_id
+
+current_incident_regression:
+  incident_id: AWRG-20260829-WRONG-30S
+  active_work_item: KAIM-SCARF-CLOTHESLINE-TRAVERSE
+  stale_competitor: KAIM-HIGH-SEARCH-30S
+  user_phrase: 重新导演上次那30秒
+  required_resolution: KAIM-SCARF-CLOTHESLINE-TRAVERSE
+  previous_failure: stale_continuity_selected_older_30s
+  severity: P0
+
+maturity:
+  current: candidate
+  promotion_gate:
+    - wrong_work_item_regression_passes
+    - explicit_nonactive_override_regression_passes
+    - checkpoint_writeback_round_trip_verified
+    - no_second_authority_introduced
+    - measurable_read_amplification_not_increased
+    - at_least_one_cross_window_real_production_continuation_success
