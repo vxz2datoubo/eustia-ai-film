@@ -38,6 +38,8 @@ policy:
   cinematic_intent_camera_authority_requires_canonical_readback: true
   cinematic_intent_camera_sensitive_compile_fails_closed_without_canonical_binding: true
   cinematic_intent_callers_cannot_supply_or_mint_camera_authority: true
+  expected_observed_eval_runtime_is_execution_only: true
+  expected_observed_eval_cannot_claim_automatic_media_grading: true
 
 canonical:
   project_entry: 项目入口.md
@@ -85,6 +87,7 @@ canonical:
   regression_cases: 11_验收/director_regression_cases.yaml
   cinematic_visual_grammar_regression_cases: 11_验收/cinematic_visual_grammar_regression_cases.yaml
   cinematic_intent_contract_regression_cases: 11_验收/cinematic_intent_contract_regression_cases.yaml
+  expected_observed_eval_regression_cases: 11_验收/expected_observed_eval_regression_cases.yaml
   asset_retrieval_regression_cases: 11_验收/asset_retrieval_regression_cases.yaml
   learning_application_gate_regression_cases: 11_验收/learning_application_gate_regression_cases.yaml
   golden_prompt_cases: 11_验收/golden_prompt_cases.yaml
@@ -141,6 +144,7 @@ effective_sources:
   11_验收/director_regression_cases.yaml: github_verified
   11_验收/cinematic_visual_grammar_regression_cases.yaml: github_verified
   11_验收/cinematic_intent_contract_regression_cases.yaml: github_verified
+  11_验收/expected_observed_eval_regression_cases.yaml: github_verified
   11_验收/asset_retrieval_regression_cases.yaml: github_verified
   11_验收/learning_application_gate_regression_cases.yaml: github_verified
   11_验收/golden_prompt_cases.yaml: github_verified
