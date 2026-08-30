@@ -22,6 +22,10 @@ from .final_delta import (
     FinalDeltaEvidenceError,
     compile_final_delta_learning_evidence,
 )
+from .learning_pipeline import (
+    LearningEvidencePipelineError,
+    run_learning_evidence_pipeline,
+)
 from .post_final_delta import (
     PostFinalDeltaValidationError,
     assess_post_final_delta_validation,
@@ -43,6 +47,7 @@ __all__ = [
     "ExpectedObservedEvalError",
     "FeatureCompilationError",
     "FinalDeltaEvidenceError",
+    "LearningEvidencePipelineError",
     "LearningRetriever",
     "ObservationProvenance",
     "PostFinalDeltaValidationError",
@@ -58,6 +63,7 @@ __all__ = [
     "evaluate_expected_vs_observed",
     "plan_targeted_repair",
     "resolve_hard_routes",
+    "run_learning_evidence_pipeline",
     "validate_cinematic_intent_contract",
     "validate_index",
     "validate_semantic_dependencies",
