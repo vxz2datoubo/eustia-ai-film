@@ -1,0 +1,157 @@
+schema_version: "1.0"
+component: LEARNING_SMART_RECALL_V1_1_TRANSFER_CONTRACT
+role: eval_extension_only
+base_matrix: 11_验收/learning_smart_recall_production_validation_matrix.yaml
+authority_boundary:
+  this_file_is_not_learning_authority: true
+  this_file_is_not_route_authority: true
+  canonical_runtime_only: true
+  may_not_change_weights_maturity_scope_conflict_or_case_authority: true
+
+variation_policy:
+  wording_axis_required_per_positive_case: true
+  min_non_wording_axes_per_family: 2
+  require_cross_scene_positive_per_family: true
+  require_metamorphic_positive_per_family: true
+  metamorphic_description_must_differ_from_parent: true
+  allowed_non_wording_axes:
+    - character
+    - scene
+    - action_surface
+    - target
+
+families:
+  MOTIVATION_BEFORE_TONE:
+    positive_case_axes:
+      PVM-MOTIVE-EP1-001: [wording, scene, target]
+      PVM-MOTIVE-XSCENE-002: [wording, scene, target]
+  EXPOSITION_STALL:
+    positive_case_axes:
+      PVM-EXPOSITION-EP1-001: [wording, character, scene, action_surface]
+      PVM-EXPOSITION-XSCENE-002: [wording, character, scene, action_surface]
+  VN_TO_FILM_DIALOGUE:
+    positive_case_axes:
+      PVM-DIALOGUE-EP1-001: [wording, character, scene, action_surface]
+      PVM-DIALOGUE-XSCENE-002: [wording, character, scene, action_surface]
+  TARGET_ORIENTED_SPATIAL_BINDING:
+    positive_case_axes:
+      PVM-TARGET-EP1-001: [wording, character, scene, action_surface, target]
+      PVM-TARGET-PURSUIT-002: [wording, character, scene, action_surface, target]
+      PVM-TARGET-ESCAPE-003: [wording, character, scene, action_surface, target]
+  EVENT_ORDER_CONTACT_CAUSALITY:
+    positive_case_axes:
+      PVM-CONTACT-EP1-001: [wording, character, scene, action_surface]
+      PVM-CONTACT-XSCENE-002: [wording, character, scene, action_surface]
+  CONTINUITY_WORLD_STATE:
+    positive_case_axes:
+      PVM-WORLDSTATE-EP1-001: [wording, scene, action_surface, target]
+      PVM-WORLDSTATE-XSCENE-002: [wording, scene, action_surface, target]
+
+metamorphic_cases:
+  - id: PVM-MOTIVE-META-004
+    metamorphic_of: PVM-MOTIVE-EP1-001
+    family: MOTIVATION_BEFORE_TONE
+    kind: positive
+    production_context: metamorphic
+    description: "救济中的灾民对教会态度如果显得不合理，应先按他们对救济的现实依赖和希望来判断群众反应。"
+    expected:
+      feature_present:
+        dramatic_function: [crowd_reaction]
+        relation_type: [crowd_to_institution]
+        failure_mechanism: [motive_tone_mismatch]
+      hard_routes_present: [MOTIVATION_BEFORE_TONE]
+      mandatory_cases_present: [MOTIVE-FIRST-CROWD-001]
+      selected_cases_present: [MOTIVE-FIRST-CROWD-001]
+      mandatory_recall_satisfied: true
+      receipt_complete: true
+
+  - id: PVM-EXPOSITION-META-004
+    metamorphic_of: PVM-EXPOSITION-EP1-001
+    family: EXPOSITION_STALL
+    kind: positive
+    production_context: metamorphic
+    description: "凯姆攀爬时，爱丽丝以画外音讲羽化病与猎羽规则，这段世界观说明不能让动作推进停下来。"
+    expected:
+      feature_present:
+        dramatic_function: [worldbuilding_exposition]
+        failure_mechanism: [exposition_stall]
+      hard_routes_present: [EXPOSITION_STALL]
+      mandatory_cases_present: [EXPOSITION-MEDIA-DISTANCE-001]
+      selected_cases_present: [EXPOSITION-MEDIA-DISTANCE-001]
+      mandatory_recall_satisfied: true
+      receipt_complete: true
+
+  - id: PVM-DIALOGUE-META-004
+    metamorphic_of: PVM-DIALOGUE-EP1-001
+    family: VN_TO_FILM_DIALOGUE
+    kind: positive
+    production_context: metamorphic
+    description: "蒂娅这句galgame式长对白太书面，改成真人能自然说出口的口语，但原意保持不变。"
+    expected:
+      feature_present:
+        dramatic_function: [dialogue_adaptation]
+        failure_mechanism: [written_sentence_shape_leak]
+      hard_routes_present: [VN_TO_FILM_DIALOGUE]
+      mandatory_cases_present: [VN-TO-FILM-DIALOGUE-001]
+      selected_cases_present: [VN-TO-FILM-DIALOGUE-001]
+      mandatory_recall_satisfied: true
+      receipt_complete: true
+
+  - id: PVM-TARGET-META-007
+    metamorphic_of: PVM-TARGET-EP1-001
+    family: TARGET_ORIENTED_SPATIAL_BINDING
+    kind: positive
+    production_context: metamorphic
+    description: "钟楼平台上圣女伊莲现身，群众先看向圣女，随后朝她跪下。"
+    expected:
+      feature_present:
+        relation_type: [gaze_to_target, kneeling_to_target]
+        spatial_action_features: [gaze_direction, kneeling_to_target, body_orientation, locatable_target]
+      hard_routes_present: [TARGET_ORIENTED_SPATIAL_BINDING, MOTIVATION_BEFORE_TONE]
+      mandatory_cases_present: [CROWD-GAZE-BODY-CAMERA-BINDING-001, MOTIVE-FIRST-CROWD-001]
+      selected_cases_present: [CROWD-GAZE-BODY-CAMERA-BINDING-001, MOTIVE-FIRST-CROWD-001]
+      mandatory_recall_satisfied: true
+      receipt_complete: true
+
+  - id: PVM-CONTACT-META-004
+    metamorphic_of: PVM-CONTACT-EP1-001
+    family: EVENT_ORDER_CONTACT_CAUSALITY
+    kind: positive
+    production_context: metamorphic
+    description: "凯姆攀爬外墙，先踩住窗台，随后抓住房檐，接触关系和动作先后必须明确。"
+    base_task:
+      model:
+        family: seedance
+        version: "2.5"
+        aliases: ["C-DANCE 2.5"]
+      scene_context: [building_exterior, window_micro_sequence, high_dynamic_motion]
+      character_context: [kaim_climbing]
+      surface_similarity: [凯姆, 窗, 攀爬, 踩窗]
+    expected:
+      feature_present:
+        dramatic_function: [contact_causality, event_order]
+        spatial_action_features: [support_point, sequential_contact]
+        failure_mechanism: [contact_binding_fail, event_order_fail]
+      selected_cases_present: [CD25-KAIM-WINDOW-AB-20260815]
+      receipt_complete: true
+
+  - id: PVM-WORLDSTATE-META-004
+    metamorphic_of: PVM-WORLDSTATE-EP1-001
+    family: CONTINUITY_WORLD_STATE
+    kind: positive
+    production_context: metamorphic
+    description: "诺瓦斯历史闪回切回钟楼广场后，背景世界状态必须继续继承，不能出现前后矛盾。"
+    base_task:
+      model:
+        family: seedance
+        version: "2.5"
+        aliases: ["C-DANCE 2.5"]
+      scene_context: [novus, historical_saints, worldbuilding_sequence]
+      character_context: [nun_continuity]
+    expected:
+      feature_present:
+        relation_type: [continuity_inheritance]
+        spatial_action_features: [continuity_inheritance]
+        failure_mechanism: [canonical_world_state_violation]
+      selected_cases_present: [NOVUS-30S-REAL-OUTPUT-001]
+      receipt_complete: true

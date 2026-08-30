@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 
 from .feature_compiler import FeatureCompilationError, validate_semantic_dependencies
+from .production_validation import run_production_validation_matrix
 from .retriever import LearningRetriever, RetrievalGateError, validate_index
 from .runtime import DirectorLearningRuntime
 
@@ -19,6 +20,12 @@ def main() -> int:
     parser.add_argument("--expand", action="store_true", help="expand only selected Top-K canonical cases")
     parser.add_argument("--validate-index", action="store_true")
     parser.add_argument("--validate-feature-compiler", action="store_true")
+    parser.add_argument(
+        "--production-validation-matrix",
+        action="store_true",
+        help="run the Learning Smart Recall production validation matrix through the canonical runtime",
+    )
+    parser.add_argument("--matrix-path", help="optional production validation matrix path")
     args = parser.parse_args()
 
     root = Path(args.project_root)
@@ -30,6 +37,10 @@ def main() -> int:
         errors = validate_semantic_dependencies(root)
         print(json.dumps({"status": "PASS" if not errors else "FAIL", "errors": errors}, ensure_ascii=False, indent=2))
         return 0 if not errors else 2
+    if args.production_validation_matrix:
+        report = run_production_validation_matrix(root, matrix_path=args.matrix_path)
+        print(json.dumps(report, ensure_ascii=False, indent=2))
+        return 0 if report["aggregate"]["verdict"] == "PASS" else 2
 
     if args.task and args.description:
         parser.error("use either --task or --description, not both")

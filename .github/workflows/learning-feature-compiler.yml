@@ -18,7 +18,8 @@ on:
       - '11_验收/director_feature_compiler_regression_cases.yaml'
       - '11_验收/cinematic_visual_grammar_regression_cases.yaml'
       - '11_验收/cinematic_intent_contract_regression_cases.yaml'
-      - '11_验收/expected_observed_eval_regression_cases.yaml'
+      - '11_验收/learning_smart_recall_production_validation_matrix.yaml'
+      - '11_验收/learning_smart_recall_transfer_contract.yaml'
       - '.github/workflows/learning-feature-compiler.yml'
 
 jobs:
@@ -45,15 +46,15 @@ jobs:
       - name: Validate SOAC semantic dependencies
         run: |
           PYTHONPATH=tools/learning_retriever python -m learning_retriever.cli --project-root . --validate-feature-compiler
+      - name: Run production validation matrix
+        run: |
+          PYTHONPATH=tools/learning_retriever python -m learning_retriever.cli --project-root . --production-validation-matrix
       - name: Run targeted feature compiler regressions
         run: |
-          PYTHONPATH=tools/learning_retriever python -m pytest tools/learning_retriever/tests/test_feature_compiler.py
+          PYTHONPATH=tools/learning_retriever python -m pytest tools/learning_retriever/tests/test_feature_compiler.py tools/learning_retriever/tests/test_production_validation.py
       - name: Run targeted CinematicIntent contract regressions
         run: |
           PYTHONPATH=tools/learning_retriever python -m pytest tools/learning_retriever/tests/test_cinematic_intent_contract.py
-      - name: Run targeted Expected-vs-Observed eval regressions
-        run: |
-          PYTHONPATH=tools/learning_retriever python -m pytest tools/learning_retriever/tests/test_expected_observed_eval.py
       - name: Run full learning retriever tests
         run: |
           PYTHONPATH=tools/learning_retriever python -m pytest tools/learning_retriever/tests
