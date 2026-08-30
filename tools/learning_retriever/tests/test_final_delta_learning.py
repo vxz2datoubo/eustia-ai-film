@@ -94,6 +94,12 @@ def _compile(before: dict, after: dict, change: dict, learning_context: dict | N
 
 
 def _controlled_visual_density_payload(*, eval_id: str, density_pass: bool, composition_pass: bool) -> dict:
+    """Build a complete caller-declared control package.
+
+    The name is historical test terminology.  Under the current evaluator this
+    payload remains UNVERIFIED_CONTROL because no canonical trusted control
+    verifier exists; complete caller declarations must not mint CLEAN.
+    """
     density_expected = {"detail_budget": "selective"}
     composition_expected = {"primary_mechanism": "lateral_pressure"}
     return {
@@ -215,7 +221,7 @@ class FinalDeltaLearningTests(unittest.TestCase):
         self.assertTrue(result["regression_candidate_handoff"]["eligible"])
         self.assertFalse(result["regression_candidate_handoff"]["write_authorized"])
 
-    def test_clean_single_variable_repair_is_only_causal_analysis_candidate(self):
+    def test_complete_control_declaration_is_not_causal_analysis_candidate_without_trusted_verifier(self):
         before = _evaluate(
             _controlled_visual_density_payload(
                 eval_id="FD-CLEAN-BEFORE", density_pass=False, composition_pass=True
@@ -226,6 +232,8 @@ class FinalDeltaLearningTests(unittest.TestCase):
                 eval_id="FD-CLEAN-AFTER", density_pass=True, composition_pass=True
             )
         )
+        self.assertEqual(before["control_status"], "UNVERIFIED_CONTROL")
+        self.assertEqual(after["control_status"], "UNVERIFIED_CONTROL")
         result = _compile(
             before,
             after,
@@ -238,23 +246,21 @@ class FinalDeltaLearningTests(unittest.TestCase):
             _learning_context(
                 candidate_lesson="Decoupling reference signal roles may reduce density overload.",
                 alternative_explanations=["seed variance remains possible"],
-                counterfactuals=["re-run without decoupling while controls remain locked"],
-                applicable_context=["C-DANCE 2.5 controlled reference-role tests"],
-                failure_conditions=["non-target controls drift"],
+                counterfactuals=["re-run without decoupling after a trusted verifier exists"],
+                applicable_context=["C-DANCE 2.5 declared-control reference-role tests"],
+                failure_conditions=["non-target controls drift or remain unverified"],
                 model_or_tool_dependency="C-DANCE 2.5",
             ),
         )
         transitions = {item["field"]: item["transition"] for item in result["field_transitions"]}
         self.assertEqual(transitions["visual_density"], "RESOLVED")
         self.assertEqual(transitions["composition"], "PRESERVED")
-        self.assertEqual(
-            result["causal_evidence"]["status"], "CONTROLLED_SINGLE_VARIABLE_CANDIDATE"
-        )
-        self.assertTrue(result["causal_evidence"]["eligible_for_causal_analysis"])
+        self.assertEqual(result["causal_evidence"]["status"], "CONTROL_NOT_VERIFIED")
+        self.assertFalse(result["causal_evidence"]["eligible_for_causal_analysis"])
         self.assertFalse(result["causal_evidence"]["causal_claim_authorized"])
         self.assertFalse(result["candidate_learning_evidence"]["generalization_authorized"])
 
-    def test_pass_regression_blocks_clean_repair_evidence(self):
+    def test_pass_regression_blocks_repair_evidence_and_control_remains_unverified(self):
         before = _evaluate(
             _controlled_visual_density_payload(
                 eval_id="FD-REGRESSION-BEFORE", density_pass=False, composition_pass=True
@@ -278,9 +284,8 @@ class FinalDeltaLearningTests(unittest.TestCase):
         transitions = {item["field"]: item["transition"] for item in result["field_transitions"]}
         self.assertEqual(transitions["visual_density"], "RESOLVED")
         self.assertEqual(transitions["composition"], "REGRESSED")
-        self.assertEqual(
-            result["causal_evidence"]["status"], "TARGET_IMPROVED_WITH_REGRESSION"
-        )
+        self.assertEqual(result["causal_evidence"]["status"], "CONTROL_NOT_VERIFIED")
+        self.assertFalse(result["causal_evidence"]["eligible_for_causal_analysis"])
         self.assertFalse(result["regression_candidate_handoff"]["eligible"])
 
     def test_model_version_mismatch_is_not_comparable(self):
