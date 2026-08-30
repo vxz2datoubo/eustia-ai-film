@@ -1,4 +1,4 @@
-schema_version: "1.2"
+schema_version: "1.3"
 regression_suite_id: EUSTIA_ACTIVE_WORK_ITEM_RESOLUTION_REGRESSIONS
 status: active
 runtime_contract: 10_运行时/active_work_item_resolution_gate.yaml
@@ -11,8 +11,8 @@ cases:
       canonical_active_work_item_id: KAIM-SCARF-CLOTHESLINE-TRAVERSE
       source_issue_trace: 19
       latest_applied_checkpoint_ref: "5454103847"
-      checkpoint_writeback_status: verified
-      writeback_verified_commit_required: true
+      canonical_git_main_checkout: true
+      two_phase_materialization_receipt_verified: true
       stale_competitor:
         work_item_id: KAIM-HIGH-SEARCH-30S
         surface_overlap: [凯姆, 30秒, 搜索, 屋顶]
@@ -37,10 +37,10 @@ cases:
       public_api_contains_freshness_provider: false
       public_api_contains_explicit_target_provider: false
       callback_claim_accepted: false
-      runtime_authority: canonical_continuity_snapshot
+      runtime_authority: canonical_git_main_plus_committed_continuity
 
   - case_id: AWIR-SNAPSHOT-UNVERIFIED-001
-    class: unverified_canonical_snapshot_fails_closed
+    class: pending_materialization_fails_closed
     input:
       user_text: 继续那30秒
       checkpoint_writeback_status: pending
@@ -48,12 +48,60 @@ cases:
     director_feature_compiler_invoked: false
 
   - case_id: AWIR-WRITEBACK-COMMIT-MISSING-001
-    class: verified_label_without_writeback_reference_fails_closed
+    class: verified_label_without_materialization_reference_fails_closed
     input:
       user_text: 继续那30秒
       checkpoint_writeback_status: verified
       writeback_verified_commit: ""
     expected_error: WORK_ITEM_SNAPSHOT_UNVERIFIED
+    director_feature_compiler_invoked: false
+
+  - case_id: AWIR-NONANCESTOR-COMMIT-001
+    class: existing_superseded_nonancestor_commit_cannot_mint_freshness
+    input:
+      user_text: 继续那30秒
+      checkpoint_writeback_status: verified
+      writeback_verified_commit: existing_commit_on_diverged_superseded_branch
+      current_checkout: canonical_main
+    expected_error: WORK_ITEM_SNAPSHOT_UNVERIFIED
+    expected_reason: materialization_commit_not_canonical_ancestor
+    director_feature_compiler_invoked: false
+
+  - case_id: AWIR-CANDIDATE-CHECKOUT-001
+    class: candidate_branch_cannot_mint_canonical_freshness
+    input:
+      user_text: 继续那30秒
+      current_checkout: candidate_branch
+      snapshot_fields_look_verified: true
+    expected_error: WORK_ITEM_SNAPSHOT_UNVERIFIED
+    expected_reason: current_head_is_not_canonical_main
+    director_feature_compiler_invoked: false
+
+  - case_id: AWIR-WORKTREE-TAMPER-001
+    class: uncommitted_continuity_or_registry_edit_fails_closed
+    variants:
+      - continuity_worktree_differs_from_committed_main
+      - project_index_worktree_differs_from_committed_main
+    expected_error: WORK_ITEM_SNAPSHOT_UNVERIFIED
+    director_feature_compiler_invoked: false
+
+  - case_id: AWIR-NO-GIT-MAIN-001
+    class: plain_directory_cannot_mint_repository_authority
+    input:
+      user_text: 继续那30秒
+      files_present: [PROJECT_INDEX.yaml, 07_连续性与生产状态/连续性与当前生产状态.md]
+      canonical_git_main_ref_present: false
+    expected_error: WORK_ITEM_SNAPSHOT_UNVERIFIED
+    director_feature_compiler_invoked: false
+
+  - case_id: AWIR-MATERIALIZATION-IDENTITY-MISMATCH-001
+    class: ancestor_commit_with_different_substantive_snapshot_fails_closed
+    input:
+      user_text: 继续那30秒
+      materialization_commit_is_ancestor: true
+      materialization_snapshot_identity_matches_current: false
+    expected_error: WORK_ITEM_SNAPSHOT_UNVERIFIED
+    expected_reason: materialization_snapshot_identity_mismatch
     director_feature_compiler_invoked: false
 
   - case_id: AWIR-PROJECT-INDEX-BINDING-001
@@ -69,7 +117,7 @@ cases:
     class: source_issue_is_not_runtime_authority
     input:
       user_text: 继续那30秒
-      canonical_snapshot_verified: true
+      canonical_git_provenance_verified: true
       source_issue_trace: 999999
     expected:
       source_issue_live_probe_required: false
@@ -115,9 +163,7 @@ cases:
     input:
       user_text: 继续凯姆那个30秒
       active_work_item_id: KAIM-SCARF-CLOTHESLINE-TRAVERSE
-      candidates:
-        - KAIM-SCARF-CLOTHESLINE-TRAVERSE
-        - KAIM-HIGH-SEARCH-30S
+      candidates: [KAIM-SCARF-CLOTHESLINE-TRAVERSE, KAIM-HIGH-SEARCH-30S]
     expected:
       resolved_work_item_id: KAIM-SCARF-CLOTHESLINE-TRAVERSE
       resolution_reason: exact_active_pointer_not_similarity
@@ -151,10 +197,7 @@ cases:
 
   - case_id: AWIR-OMISSION-NOT-REVOKE-001
     class: constraint_ledger_semantics
-    baseline:
-      - scarf_is_load_bearing_mechanism
-      - right_to_left_screen_trajectory
-      - wall_impact_two_foot_buffer
+    baseline: [scarf_is_load_bearing_mechanism, right_to_left_screen_trajectory, wall_impact_two_foot_buffer]
     revision:
       changed: [disappearance_edit_language]
       revoked: []
@@ -166,9 +209,7 @@ cases:
 
   - case_id: AWIR-EXPLICIT-REVOKE-001
     class: constraint_ledger_revoke
-    baseline:
-      - over_specified_setup_micro_choreography
-      - scarf_is_load_bearing_mechanism
+    baseline: [over_specified_setup_micro_choreography, scarf_is_load_bearing_mechanism]
     revision:
       revoked: [over_specified_setup_micro_choreography]
       preserved: [scarf_is_load_bearing_mechanism]
