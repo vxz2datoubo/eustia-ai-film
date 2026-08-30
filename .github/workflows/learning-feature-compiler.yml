@@ -53,7 +53,16 @@ jobs:
           PYTHONPATH=tools/learning_retriever python -m learning_retriever.cli --project-root . --validate-feature-compiler
       - name: Run Active Work Item v2 regressions
         run: |
-          PYTHONPATH=tools/learning_retriever python -m pytest tools/learning_retriever/tests/test_active_work_item.py tools/learning_retriever/tests/test_active_work_item_continuity_guard.py
+          set -o pipefail
+          PYTHONPATH=tools/learning_retriever python -m pytest -vv tools/learning_retriever/tests/test_active_work_item.py tools/learning_retriever/tests/test_active_work_item_continuity_guard.py 2>&1 | tee active-work-item-pytest.log
+      - name: Upload Active Work Item failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: active-work-item-pytest-${{ github.event.pull_request.head.sha }}
+          path: active-work-item-pytest.log
+          if-no-files-found: error
+          retention-days: 7
       - name: Run targeted feature compiler regressions
         run: |
           PYTHONPATH=tools/learning_retriever python -m pytest tools/learning_retriever/tests/test_feature_compiler.py
