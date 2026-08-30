@@ -40,6 +40,8 @@ policy:
   cinematic_intent_callers_cannot_supply_or_mint_camera_authority: true
   expected_observed_eval_runtime_is_execution_only: true
   expected_observed_eval_cannot_claim_automatic_media_grading: true
+  targeted_repair_runtime_is_execution_only: true
+  targeted_repair_cannot_mutate_prompt_or_canonical_authority: true
 
 canonical:
   project_entry: 项目入口.md
@@ -88,6 +90,8 @@ canonical:
   cinematic_visual_grammar_regression_cases: 11_验收/cinematic_visual_grammar_regression_cases.yaml
   cinematic_intent_contract_regression_cases: 11_验收/cinematic_intent_contract_regression_cases.yaml
   expected_observed_eval_regression_cases: 11_验收/expected_observed_eval_regression_cases.yaml
+  targeted_repair_policy: 10_运行时/targeted_repair_policy.yaml
+  targeted_repair_regression_cases: 11_验收/targeted_repair_regression_cases.yaml
   asset_retrieval_regression_cases: 11_验收/asset_retrieval_regression_cases.yaml
   learning_application_gate_regression_cases: 11_验收/learning_application_gate_regression_cases.yaml
   golden_prompt_cases: 11_验收/golden_prompt_cases.yaml
@@ -135,6 +139,7 @@ effective_sources:
   10_运行时/director_feature_compiler.yaml: github_verified
   10_运行时/learning_application_gate.yaml: github_verified
   10_运行时/learning_recall_index.yaml: github_verified
+  10_运行时/targeted_repair_policy.yaml: github_verified
   10_运行时/source_authority.yaml: github_verified
   10_运行时/read_sets.yaml: github_verified
   10_运行时/write_routes.yaml: github_verified
@@ -145,6 +150,7 @@ effective_sources:
   11_验收/cinematic_visual_grammar_regression_cases.yaml: github_verified
   11_验收/cinematic_intent_contract_regression_cases.yaml: github_verified
   11_验收/expected_observed_eval_regression_cases.yaml: github_verified
+  11_验收/targeted_repair_regression_cases.yaml: github_verified
   11_验收/asset_retrieval_regression_cases.yaml: github_verified
   11_验收/learning_application_gate_regression_cases.yaml: github_verified
   11_验收/golden_prompt_cases.yaml: github_verified
