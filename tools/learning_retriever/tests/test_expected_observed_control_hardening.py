@@ -65,8 +65,10 @@ class ExpectedObservedControlHardeningTests(unittest.TestCase):
         result = evaluate_expected_vs_observed(payload, project_root=REPO_ROOT)
         self.assertEqual(result["control_status"], "UNVERIFIED_CONTROL")
         self.assertFalse(result["controlled_eval"]["non_target_controls_verified"])
+        self.assertFalse(result["controlled_eval"]["caller_claimed_non_target_controls_verified"])
+        self.assertEqual(result["controlled_eval"]["control_verification_state"], "NOT_VERIFIED")
 
-    def test_clean_requires_complete_canonical_control_coverage_and_evidence(self):
+    def test_complete_caller_control_declaration_cannot_mint_clean(self):
         payload = base_payload()
         payload["controlled_eval"] = {
             "target_variable": "reference_signal_decoupling",
@@ -75,10 +77,13 @@ class ExpectedObservedControlHardeningTests(unittest.TestCase):
             "control_provenance": complete_control_provenance(),
         }
         result = evaluate_expected_vs_observed(payload, project_root=REPO_ROOT)
-        self.assertEqual(result["control_status"], "CLEAN")
-        self.assertTrue(result["controlled_eval"]["non_target_controls_verified"])
+        self.assertEqual(result["control_status"], "UNVERIFIED_CONTROL")
+        self.assertFalse(result["controlled_eval"]["non_target_controls_verified"])
+        self.assertTrue(result["controlled_eval"]["caller_claimed_non_target_controls_verified"])
+        self.assertEqual(result["controlled_eval"]["control_verification_state"], "DECLARED_BY_CALLER")
         provenance = result["controlled_eval"]["control_provenance"]
         self.assertTrue(provenance["complete_against_canonical"])
+        self.assertEqual(provenance["verification_state"], "DECLARED_BY_CALLER")
         self.assertEqual(
             set(provenance["canonical_requirements_covered"]),
             set(CANONICAL_CONTROL_REQUIREMENTS),
@@ -87,6 +92,27 @@ class ExpectedObservedControlHardeningTests(unittest.TestCase):
             result["controlled_eval"]["canonical_control_requirements"],
             CANONICAL_CONTROL_REQUIREMENTS,
         )
+
+    def test_reviewer_adversarial_complete_self_attestation_is_not_clean(self):
+        payload = base_payload()
+        payload["controlled_eval"] = {
+            "target_variable": "lens_choice",
+            "confounds": [],
+            "non_target_controls_verified": True,
+            "control_provenance": {
+                "source": "caller-says-so",
+                "verified_equal": list(CANONICAL_CONTROL_REQUIREMENTS),
+                "not_applicable": [],
+                "not_applicable_reasons": {},
+                "evidence_refs": ["fake-evidence-ref"],
+            },
+        }
+        result = evaluate_expected_vs_observed(payload, project_root=REPO_ROOT)
+        self.assertNotEqual(result["control_status"], "CLEAN")
+        self.assertEqual(result["control_status"], "UNVERIFIED_CONTROL")
+        self.assertFalse(result["controlled_eval"]["non_target_controls_verified"])
+        self.assertTrue(result["controlled_eval"]["caller_claimed_non_target_controls_verified"])
+        self.assertEqual(result["controlled_eval"]["control_verification_state"], "DECLARED_BY_CALLER")
 
     def test_boolean_plus_thin_provenance_cannot_mint_clean(self):
         payload = base_payload()
@@ -143,7 +169,7 @@ class ExpectedObservedControlHardeningTests(unittest.TestCase):
             evaluate_expected_vs_observed(payload, project_root=REPO_ROOT)
         self.assertEqual(ctx.exception.code, "EVAL_CONTROL_PROVENANCE_INVALID")
 
-    def test_not_applicable_requires_canonical_requirement_reason_and_target_variable(self):
+    def test_not_applicable_reason_can_complete_declaration_but_not_mint_clean(self):
         payload = base_payload()
         requirement = CANONICAL_CONTROL_REQUIREMENTS[-1]
         provenance = complete_control_provenance()
@@ -159,8 +185,13 @@ class ExpectedObservedControlHardeningTests(unittest.TestCase):
             "control_provenance": provenance,
         }
         result = evaluate_expected_vs_observed(payload, project_root=REPO_ROOT)
-        self.assertEqual(result["control_status"], "CLEAN")
+        self.assertEqual(result["control_status"], "UNVERIFIED_CONTROL")
+        self.assertFalse(result["controlled_eval"]["non_target_controls_verified"])
         self.assertTrue(result["controlled_eval"]["control_provenance"]["complete_against_canonical"])
+        self.assertEqual(
+            result["controlled_eval"]["control_provenance"]["verification_state"],
+            "DECLARED_BY_CALLER",
+        )
 
         payload["controlled_eval"]["control_provenance"]["not_applicable_reasons"] = {}
         with self.assertRaises(ExpectedObservedEvalError) as ctx:
@@ -182,6 +213,7 @@ class ExpectedObservedControlHardeningTests(unittest.TestCase):
         result = evaluate_expected_vs_observed(payload, project_root=REPO_ROOT)
         self.assertEqual(result["control_status"], "CONFOUNDED")
         self.assertEqual(result["controlled_eval"]["confounds"], ["camera_position_changed"])
+        self.assertFalse(result["controlled_eval"]["non_target_controls_verified"])
 
 
 if __name__ == "__main__":
