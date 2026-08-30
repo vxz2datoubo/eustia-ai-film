@@ -449,19 +449,19 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
             if not normalized:
                 return "ELLIPTICAL"
             for camera in bounded_cameras:
-                if normalized == camera or (
+                if normalized.endswith(camera) or (
                     normalized.startswith(camera)
                     and bounded_modifier_tail(normalized[len(camera):])
                 ):
                     return "CAMERA"
             for body_anchor in body_anchors:
-                if normalized == body_anchor or (
+                if normalized.endswith(body_anchor) or (
                     normalized.startswith(body_anchor)
                     and bounded_modifier_tail(normalized[len(body_anchor):])
                 ):
                     return "BODY"
             for subject in bounded_subjects:
-                if normalized == subject or (
+                if normalized.endswith(subject) or (
                     normalized.startswith(subject)
                     and bounded_modifier_tail(normalized[len(subject):])
                 ):
