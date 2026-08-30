@@ -1,0 +1,113 @@
+policy_id: EUSTIA_TARGETED_REPAIR_ROUTING_V2
+status: candidate
+scope: expected_vs_observed_source_input_to_targeted_repair_routing
+
+canonical_authority:
+  director_method: 01_AI电影系统/AI电影系统.md
+  failure_vocabulary: 10_运行时/screen_observable_audible_ir_schema.yaml#reverse_compiler.failure_categories
+  input_runtime: tools/learning_retriever/learning_retriever/expected_observed.py
+  feedback_learning: 08_系统学习/反馈反推与系统反哺引擎.md
+
+input_contract:
+  source_payload_required: true
+  canonical_expected_observed_reexecution_required: true
+  serialized_evaluator_result_accepted_as_authority: false
+  planner_may_not_trust_joint_result_handoff_consistency_as_source_proof: true
+  public_runtime_flow:
+    - expected_observed_source_payload
+    - canonical_expected_observed_reexecution
+    - in_memory_evaluator_result
+    - targeted_repair_validation_and_routing
+  standalone_cli_input: original_expected_observed_eval_input
+
+principles:
+  repair_failed_dimensions_only: true
+  preserve_passing_dimensions: true
+  unknown_routes_to_evidence_not_creative_mutation: true
+  prompt_auto_rewrite_forbidden: true
+  generation_trigger_forbidden: true
+  camera_authority_mutation_forbidden: true
+  canonical_story_character_scene_map_asset_continuity_mutation_forbidden: true
+  learning_writeback_forbidden: true
+  maturity_promotion_forbidden: true
+  causal_claim_forbidden: true
+  routing_is_operational_not_director_method: true
+
+repair_surfaces:
+  IDENTITY_OR_ASSET_BINDING_REVIEW:
+    authority_role: canonical_identity_asset_binding
+    may_mutate_prompt: false
+  UPSTREAM_BLOCKING_OR_WORLD_REVIEW:
+    authority_role: canonical_world_blocking_continuity_state
+    may_mutate_prompt: false
+  UPSTREAM_CAMERA_CONTRACT_REVIEW:
+    authority_role: canonical_upstream_camera_readback_required
+    may_mutate_prompt: false
+  CINEMATIC_INTENT_REVIEW:
+    authority_role: ai_film_system_cinematic_intent_method
+    may_mutate_prompt: false
+  TRANSITION_EDIT_REVIEW:
+    authority_role: ai_film_system_edit_transition_method
+    may_mutate_prompt: false
+  REFERENCE_RESPONSIBILITY_REVIEW:
+    authority_role: ai_film_system_reference_channel_method
+    may_mutate_prompt: false
+  PERFORMANCE_OR_CROWD_REVIEW:
+    authority_role: ai_film_system_performance_blocking_method
+    may_mutate_prompt: false
+  SOUND_OR_AV_REVIEW:
+    authority_role: sound_director_and_av_contract
+    may_mutate_prompt: false
+  MODEL_ADAPTER_OR_GENERATION_REVIEW:
+    authority_role: version_bound_model_adapter_or_generation_settings
+    may_mutate_prompt: false
+  EVIDENCE_ACQUISITION:
+    authority_role: reverse_observation_evidence_completion
+    may_mutate_prompt: false
+
+failure_category_routes:
+  identity: IDENTITY_OR_ASSET_BINDING_REVIEW
+  semantic_entity_drift: IDENTITY_OR_ASSET_BINDING_REVIEW
+  space: UPSTREAM_BLOCKING_OR_WORLD_REVIEW
+  world_state: UPSTREAM_BLOCKING_OR_WORLD_REVIEW
+  continuity_state: UPSTREAM_BLOCKING_OR_WORLD_REVIEW
+  visibility: UPSTREAM_BLOCKING_OR_WORLD_REVIEW
+  action_binding: UPSTREAM_BLOCKING_OR_WORLD_REVIEW
+  contact: UPSTREAM_BLOCKING_OR_WORLD_REVIEW
+  body_mechanics: UPSTREAM_BLOCKING_OR_WORLD_REVIEW
+  event_order: UPSTREAM_BLOCKING_OR_WORLD_REVIEW
+  performance: PERFORMANCE_OR_CROWD_REVIEW
+  crowd_behavior: PERFORMANCE_OR_CROWD_REVIEW
+  camera: UPSTREAM_CAMERA_CONTRACT_REVIEW
+  aesthetic_composition: CINEMATIC_INTENT_REVIEW
+  attention_flow: CINEMATIC_INTENT_REVIEW
+  attention_handoff: TRANSITION_EDIT_REVIEW
+  color_grounding: CINEMATIC_INTENT_REVIEW
+  visual_density: CINEMATIC_INTENT_REVIEW
+  capture_motivation: CINEMATIC_INTENT_REVIEW
+  reference_contamination: REFERENCE_RESPONSIBILITY_REVIEW
+  sequence_redundancy: TRANSITION_EDIT_REVIEW
+  lighting: CINEMATIC_INTENT_REVIEW
+  dialogue: SOUND_OR_AV_REVIEW
+  audio_source: SOUND_OR_AV_REVIEW
+  AV_sync: SOUND_OR_AV_REVIEW
+  transition: TRANSITION_EDIT_REVIEW
+  final_state: UPSTREAM_BLOCKING_OR_WORLD_REVIEW
+
+unknown_outcome_route: EVIDENCE_ACQUISITION
+
+control_evidence_status:
+  CLEAN: CONTROLLED_EVIDENCE_ELIGIBLE_FOR_CAUSAL_ANALYSIS
+  CONFOUNDED: HYPOTHESIS_ONLY_CONFOUNDED
+  UNVERIFIED_CONTROL: CONTROL_NOT_VERIFIED
+  UNCONTROLLED: OBSERVATIONAL_ONLY
+
+output_contract:
+  repair_plan_is_ephemeral_execution_artifact: true
+  canonical_write_target: null
+  source_binding_receipt_required: true
+  prompt_mutation_authorized: false
+  generation_authorized: false
+  camera_authority_mutation_authorized: false
+  learning_promotion_authorized: false
+  learning_writeback_authorized: false
