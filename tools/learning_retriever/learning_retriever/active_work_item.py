@@ -230,7 +230,7 @@ def _validate_project_authority_binding(project_root: str | Path) -> None:
     except FileNotFoundError as exc:
         raise ActiveWorkItemResolutionError(
             "WORK_ITEM_CANONICAL_AUTHORITY_UNAVAILABLE",
-            details={"missing": str(PROJECT_INDEX_PATH)},
+            details={"missing": PROJECT_INDEX_PATH.as_posix()},
         ) from exc
     if index.get("project_id") != "EUSTIA_AI_FILM":
         raise ActiveWorkItemResolutionError(
@@ -238,7 +238,7 @@ def _validate_project_authority_binding(project_root: str | Path) -> None:
             details={"reason": "project_id_mismatch"},
         )
     canonical = index.get("canonical") or {}
-    if canonical.get("continuity") != str(CONTINUITY_PATH):
+    if canonical.get("continuity") != CONTINUITY_PATH.as_posix():
         raise ActiveWorkItemResolutionError(
             "WORK_ITEM_CANONICAL_AUTHORITY_UNAVAILABLE",
             details={"reason": "continuity_not_registered_in_project_index"},
@@ -508,8 +508,8 @@ def build_work_item_context_packet(
             target.get("bound_media_or_reference_refs") or []
         ),
         "authority_refs": {
-            "project_registry": str(PROJECT_INDEX_PATH),
-            "continuity": str(CONTINUITY_PATH),
+            "project_registry": PROJECT_INDEX_PATH.as_posix(),
+            "continuity": CONTINUITY_PATH.as_posix(),
             "director_method": "01_AI电影系统/AI电影系统.md",
             "screenplay": "03_剧本与改编/当前改编剧本.md",
         },
