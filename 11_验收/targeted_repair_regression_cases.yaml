@@ -1,10 +1,12 @@
-suite_id: TARGETED_REPAIR_PLANNER_REGRESSION_V1
+suite_id: TARGETED_REPAIR_PLANNER_REGRESSION_V2
 status: candidate
 runtime: tools/learning_retriever/learning_retriever/targeted_repair.py
 policy_authority: 10_运行时/targeted_repair_policy.yaml
 source_eval_suite: 11_验收/expected_observed_eval_regression_cases.yaml
 
 policy:
+  source_binding_mode: canonical_expected_observed_reexecution
+  serialized_eval_result_is_authority: false
   repair_failed_dimensions_only: true
   pass_dimensions_preserved: true
   unknown_routes_to_evidence_only: true
@@ -43,22 +45,40 @@ cases:
     expected_causal_evidence_status: HYPOTHESIS_ONLY_CONFOUNDED
 
 structural_gate_cases:
-  - id: TRP-TAMPERED-HANDOFF-001
+  - id: TRP-SERIALIZED-RESULT-REJECTED-001
     source_eval_case: EOE-EXPLICIT-FAIL-001
-    mutation: remove_first_handoff_item
-    expected_error_code: REPAIR_HANDOFF_MISMATCH
+    attack: pass_genuine_serialized_evaluator_output_to_planner
+    expected_error_code: REPAIR_UPSTREAM_EVAL_REJECTED
 
-  - id: TRP-FORGED-PROMPT-AUTH-001
+  - id: TRP-JOINT-CATEGORY-SUBSTITUTION-001
     source_eval_case: EOE-EXPLICIT-FAIL-001
-    mutation: set_prompt_mutation_authorized_true
-    expected_error_code: REPAIR_AUTHORITY_VIOLATION
+    attack:
+      original_failure_category: camera
+      forged_failure_category: dialogue
+      jointly_edit:
+        - results[0].failure_category
+        - targeted_repair_handoff.items[0].failure_category
+      internally_consistent_after_edit: true
+    expected_error_code: REPAIR_UPSTREAM_EVAL_REJECTED
+    must_not_route_to: SOUND_OR_AV_REVIEW
 
-  - id: TRP-UNKNOWN-FAILURE-CATEGORY-001
+  - id: TRP-JOINT-FAIL-PASS-SUPPRESSION-001
     source_eval_case: EOE-EXPLICIT-FAIL-001
-    mutation: replace_failure_category_with_unknown
-    expected_error_code: REPAIR_UNKNOWN_FAILURE_CATEGORY
+    attack:
+      jointly_edit:
+        - results[0].outcome=PASS
+        - results[0].failure_category=null
+        - status=PASS
+        - targeted_repair_handoff.items=[]
+        - targeted_repair_handoff.requires_director_or_targeted_repair_step=false
+      internally_consistent_after_edit: true
+    expected_error_code: REPAIR_UPSTREAM_EVAL_REJECTED
+    repair_must_not_be_silently_suppressed: true
 
 gates:
+  source_payload_reexecuted_by_canonical_expected_observed: true
+  serialized_evaluator_output_rejected_as_planner_input: true
+  joint_result_handoff_tampering_cannot_define_repair_truth: true
   canonical_failure_category_coverage_exact: true
   each_failure_category_routes_to_exactly_one_surface: true
   pass_never_enters_repair_items: true
