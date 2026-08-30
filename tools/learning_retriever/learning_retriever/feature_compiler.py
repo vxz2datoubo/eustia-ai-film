@@ -391,6 +391,130 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
                 return True
         return False
 
+    def bounded_facing_evidence(
+        actions: tuple[str, ...],
+        objects: tuple[str, ...],
+        *,
+        subject_terms: tuple[str, ...],
+        camera_terms: tuple[str, ...],
+        max_prefix_chars: int = 20,
+        max_target_chars: int = 16,
+    ) -> tuple[bool, bool, bool]:
+        """Parse facing predicates with clause/subject boundaries.
+
+        Raw substring matching is unsafe in Chinese because lexical tokens can
+        join across word boundaries, e.g. `王朝` + `向圣女` contains the bytes
+        `朝向圣女` without expressing body orientation.  This parser accepts a
+        facing predicate only when its current-clause leader is empty/elliptical,
+        a known actor (optionally followed by a bounded manner modifier), or a
+        camera agent.  The target head must occur immediately after the predicate
+        modulo a bounded determiner.  It does not blacklist dynasty vocabulary.
+        """
+        separators = ("，", "。", "；", "！", "？", ",", ";", "!", "?")
+        leading_glue = (
+            "随后", "随即", "然后", "接着", "继而", "于是", "立刻", "马上", "再", "又", "便",
+        )
+        simple_modifiers = (
+            "突然", "缓缓", "慢慢", "迅速", "立刻", "马上", "纷纷", "共同", "一起", "一同", "全都", "都",
+        )
+        target_determiners = (
+            "那位", "这位", "一位", "那名", "这名", "一名", "那个", "这个", "一个",
+            "那扇", "这扇", "一扇", "那座", "这座", "一座",
+        )
+        subject_forms = set(subject_terms) | {"她", "他", "他们", "她们"}
+        subject_forms.update(f"{subject}们" for subject in subject_terms if not subject.endswith("们"))
+        bounded_subjects = tuple(sorted(subject_forms, key=len, reverse=True))
+        bounded_cameras = tuple(sorted(set(camera_terms), key=len, reverse=True))
+        object_candidates = tuple(sorted(set(objects), key=len, reverse=True))
+
+        def strip_leading_glue(value: str) -> str:
+            normalized = value.strip()
+            changed = True
+            while changed and normalized:
+                changed = False
+                for glue in leading_glue:
+                    if normalized.startswith(glue):
+                        normalized = normalized[len(glue):].strip()
+                        changed = True
+                        break
+            return normalized
+
+        def bounded_modifier_tail(value: str) -> bool:
+            residual = value.strip()
+            if not residual:
+                return True
+            changed = True
+            while changed and residual:
+                changed = False
+                for modifier in simple_modifiers:
+                    if residual.startswith(modifier):
+                        residual = residual[len(modifier):].strip()
+                        changed = True
+                        break
+            if not residual:
+                return True
+            if residual.endswith("地"):
+                stem = residual[:-1]
+                return 2 <= len(stem) <= 8 and all("\u4e00" <= char <= "\u9fff" for char in stem)
+            return False
+
+        def classify_leader(value: str) -> str | None:
+            normalized = strip_leading_glue(value)
+            if not normalized:
+                return "ELLIPTICAL"
+            for camera in bounded_cameras:
+                if normalized == camera or (
+                    normalized.startswith(camera)
+                    and bounded_modifier_tail(normalized[len(camera):])
+                ):
+                    return "CAMERA"
+            for subject in bounded_subjects:
+                if normalized == subject or (
+                    normalized.startswith(subject)
+                    and bounded_modifier_tail(normalized[len(subject):])
+                ):
+                    return "ACTOR"
+            return None
+
+        def target_follows(hit: int, action: str) -> bool:
+            tail = text[hit + len(action): hit + len(action) + max_target_chars]
+            for separator in separators:
+                tail = tail.split(separator, 1)[0]
+            tail = tail.strip()
+            changed = True
+            while changed and tail:
+                changed = False
+                for determiner in target_determiners:
+                    if tail.startswith(determiner):
+                        tail = tail[len(determiner):].strip()
+                        changed = True
+                        break
+            return any(tail.startswith(obj) for obj in object_candidates)
+
+        syntactic_facing = False
+        target_evidence = False
+        camera_agent = False
+        for action in actions:
+            search_from = 0
+            while True:
+                hit = text.find(action, search_from)
+                if hit < 0:
+                    break
+                prefix = text[max(0, hit - max_prefix_chars):hit]
+                for separator in separators:
+                    prefix = prefix.rsplit(separator, 1)[-1]
+                leader_class = classify_leader(prefix)
+                if leader_class is None:
+                    search_from = hit + len(action)
+                    continue
+                syntactic_facing = True
+                if leader_class == "CAMERA":
+                    camera_agent = True
+                elif target_follows(hit, action):
+                    target_evidence = True
+                search_from = hit + len(action)
+        return syntactic_facing, target_evidence, camera_agent
+
     gaze_terms = ("看向", "望向", "盯着", "注视", "视线朝", "目光朝", "观察")
     perception_terms = ("看到", "看见", "见到")
     facing_terms = ("面向", "朝向", "转向", "身体朝", "正对")
@@ -418,7 +542,12 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
 
     has_gaze = _contains_any(text, gaze_terms)
     has_perception = _contains_any(text, perception_terms)
-    has_facing = _contains_any(text, facing_terms)
+    has_facing, facing_target_evidence, facing_camera_agent = bounded_facing_evidence(
+        facing_terms,
+        target_object_terms,
+        subject_terms=actor_terms,
+        camera_terms=camera_actor_terms,
+    )
     has_kneel = _contains_any(text, kneel_terms)
     has_pursuit = _contains_any(text, pursuit_terms)
     has_escape = _contains_any(text, escape_terms)
@@ -426,7 +555,6 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
 
     gaze_camera_agent = camera_is_action_agent(gaze_terms, camera_actor_terms)
     perception_camera_agent = camera_is_action_agent(perception_terms, camera_actor_terms)
-    facing_camera_agent = camera_is_action_agent(facing_terms, camera_actor_terms)
     direct_gaze_target_evidence = has_gaze and not gaze_camera_agent and action_has_object(gaze_terms, target_object_terms)
     perception_target_match = (
         first_action_object_match(perception_terms, target_object_terms)
@@ -435,7 +563,6 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
     )
     perception_target_evidence = perception_target_match is not None
     gaze_target_evidence = direct_gaze_target_evidence or perception_target_evidence
-    facing_target_evidence = has_facing and not facing_camera_agent and action_has_object(facing_terms, target_object_terms)
 
     ritual_target_carry = False
     if perception_target_match:
