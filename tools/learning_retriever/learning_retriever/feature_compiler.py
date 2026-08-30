@@ -213,9 +213,6 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
             if target_np_matches(normalized):
                 return True
 
-            # Open-vocabulary manner is recognized by syntax, not a synonym list:
-            # [bounded target NP] + [2..6 CJK chars + 地]. The target half must
-            # independently satisfy the conservative NP grammar above.
             for split_at in range(1, len(normalized)):
                 target_part = normalized[:split_at].strip()
                 manner_part = normalized[split_at:].strip()
@@ -269,7 +266,6 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
     def first_action_object_match(
         actions: tuple[str, ...], objects: tuple[str, ...], *, max_chars: int = 32
     ) -> dict[str, Any] | None:
-        """Return the earliest bounded action->object match with absolute positions."""
         object_candidates = sorted(set(objects), key=len, reverse=True)
         matches: list[dict[str, Any]] = []
         for action in actions:
@@ -331,15 +327,6 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
         continuation_adverbs: tuple[str, ...],
         target_followup_terms: tuple[str, ...],
     ) -> bool:
-        """Verify the complete inter-event chain before carrying the prior target.
-
-        Every punctuation-delimited segment between perception target and ritual
-        action is checked. A segment may contain only bounded temporal/adverbial
-        glue, an explicit repetition of the source actor, or (in the first
-        segment only) a bounded predicate that still belongs to the already
-        identified perception target. Any other lexical material represents an
-        unproven event-agent transition and fails closed.
-        """
         if not source_actor:
             return False
 
@@ -404,11 +391,8 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
 
         Raw substring matching is unsafe in Chinese because lexical tokens can
         join across word boundaries, e.g. `王朝` + `向圣女` contains the bytes
-        `朝向圣女` without expressing body orientation.  This parser accepts a
-        facing predicate only when its current-clause leader is empty/elliptical,
-        a known actor (optionally followed by a bounded manner modifier), or a
-        camera agent.  The target head must occur immediately after the predicate
-        modulo a bounded determiner.  It does not blacklist dynasty vocabulary.
+        `朝向圣女` without expressing body orientation. A valid predicate must
+        have an ellipsis, actor, explicit body-anchor, or camera leader.
         """
         separators = ("，", "。", "；", "！", "？", ",", ";", "!", "?")
         leading_glue = (
@@ -416,6 +400,7 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
         )
         simple_modifiers = (
             "突然", "缓缓", "慢慢", "迅速", "立刻", "马上", "纷纷", "共同", "一起", "一同", "全都", "都",
+            "持续", "始终", "一直",
         )
         target_determiners = (
             "那位", "这位", "一位", "那名", "这名", "一名", "那个", "这个", "一个",
@@ -425,6 +410,7 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
         subject_forms.update(f"{subject}们" for subject in subject_terms if not subject.endswith("们"))
         bounded_subjects = tuple(sorted(subject_forms, key=len, reverse=True))
         bounded_cameras = tuple(sorted(set(camera_terms), key=len, reverse=True))
+        body_anchors = ("身体", "躯干", "上身")
         object_candidates = tuple(sorted(set(objects), key=len, reverse=True))
 
         def strip_leading_glue(value: str) -> str:
@@ -468,6 +454,12 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
                     and bounded_modifier_tail(normalized[len(camera):])
                 ):
                     return "CAMERA"
+            for body_anchor in body_anchors:
+                if normalized == body_anchor or (
+                    normalized.startswith(body_anchor)
+                    and bounded_modifier_tail(normalized[len(body_anchor):])
+                ):
+                    return "BODY"
             for subject in bounded_subjects:
                 if normalized == subject or (
                     normalized.startswith(subject)
@@ -998,12 +990,6 @@ def compile_retrieval_task(
     route_data: dict[str, Any] | None = None,
     strict: bool = True,
 ) -> dict[str, Any]:
-    """Compile natural language, then resolve hard routes from route authority.
-
-    Natural-language retrieval fails closed when director_route_index data is not
-    supplied. This prevents callers from silently skipping the canonical hard
-    route stage.
-    """
     features = compile_director_features(description, strict=strict)
     task = dict(base_task or {})
     task["task_id"] = str(task.get("task_id") or task_id)
@@ -1028,7 +1014,6 @@ def compile_retrieval_task(
 
 
 def validate_semantic_dependencies(project_root: str | Path) -> list[str]:
-    """Validate that compiler assumptions still bind to the canonical SOAC IR."""
     root = Path(project_root)
     path = root / SOAC_SCHEMA_PATH
     if not path.exists():
