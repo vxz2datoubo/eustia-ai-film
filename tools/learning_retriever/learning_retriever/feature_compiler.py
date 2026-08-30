@@ -360,7 +360,7 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
                 matched = False
                 for token in allowed:
                     if stripped.startswith(token):
-                        residual = stripped[len(token):]
+                        residual = stripped[len(token):].strip()
                         matched = True
                         break
                 if not matched:
@@ -513,7 +513,12 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
 
     gaze_terms = ("看向", "望向", "盯着", "注视", "视线朝", "目光朝", "观察")
     perception_terms = ("看到", "看见", "见到")
-    facing_terms = ("面向", "朝向", "转向", "身体朝", "正对")
+    orientation_transition_terms = ("转身", "转过身", "回身")
+    facing_terms = tuple(
+        f"{transition}{predicate}"
+        for transition in orientation_transition_terms
+        for predicate in ("朝向", "面向")
+    ) + ("面向", "朝向", "转向", "身体朝", "正对")
     ritual_kneel_terms = ("跪拜", "拜下", "拜倒", "伏地跪拜", "跪下")
     kneel_terms = ("下跪", "跪向", "跪着朝") + ritual_kneel_terms
     pursuit_terms = ("追逐", "追击", "追赶", "追捕", "追杀")
