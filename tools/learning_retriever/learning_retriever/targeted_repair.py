@@ -182,7 +182,15 @@ def _validate_control_projection(
     *,
     canonical_requirements: list[str],
 ) -> None:
-    """Validate the normalized upstream control projection without redefining SOAC controls."""
+    """Validate upstream control truth without allowing a serialized trust upgrade.
+
+    Current canonical Expected-vs-Observed has no mechanically trusted control
+    verifier.  Therefore a serialized projection may carry a caller declaration
+    and evidence references, but it cannot legitimately arrive here as CLEAN or
+    with ``non_target_controls_verified=true``.  A future canonical verifier must
+    introduce a separately reviewed machine trust binding before this gate can be
+    expanded.
+    """
 
     target_variable = str(controlled_eval.get("target_variable") or "").strip()
     confounds = controlled_eval.get("confounds") or []
@@ -195,6 +203,25 @@ def _validate_control_projection(
         raise TargetedRepairPlanError(
             "REPAIR_CONTROL_PROJECTION_MISMATCH", "non_target_controls_verified is not boolean"
         )
+    caller_claim = controlled_eval.get("caller_claimed_non_target_controls_verified", False)
+    if not isinstance(caller_claim, bool):
+        raise TargetedRepairPlanError(
+            "REPAIR_CONTROL_PROJECTION_MISMATCH", "caller control-verification claim is not boolean"
+        )
+    verification_state = str(controlled_eval.get("control_verification_state") or "").strip().upper()
+    if verification_state not in {"NOT_VERIFIED", "DECLARED_BY_CALLER"}:
+        raise TargetedRepairPlanError(
+            "REPAIR_CONTROL_PROJECTION_MISMATCH",
+            "current canonical evaluator exposes no trusted control-verification state",
+        )
+    if verification_state == "DECLARED_BY_CALLER" and not caller_claim:
+        raise TargetedRepairPlanError(
+            "REPAIR_CONTROL_PROJECTION_MISMATCH", "declared-by-caller state requires the caller claim to be preserved"
+        )
+    if verification_state == "NOT_VERIFIED" and caller_claim:
+        raise TargetedRepairPlanError(
+            "REPAIR_CONTROL_PROJECTION_MISMATCH", "caller claim and verification state disagree"
+        )
 
     projected_requirements = controlled_eval.get("canonical_control_requirements")
     if not isinstance(projected_requirements, list) or projected_requirements != canonical_requirements:
@@ -205,43 +232,45 @@ def _validate_control_projection(
 
     provenance_raw = controlled_eval.get("control_provenance")
     provenance = dict(provenance_raw) if isinstance(provenance_raw, Mapping) else None
-    if controls_verified:
-        if provenance is None:
+    if provenance is not None:
+        provenance_state = str(provenance.get("verification_state") or "").strip().upper()
+        if provenance_state and provenance_state != "DECLARED_BY_CALLER":
             raise TargetedRepairPlanError(
-                "REPAIR_CONTROL_PROJECTION_MISMATCH", "verified controls have no normalized provenance"
-            )
-        if provenance.get("complete_against_canonical") is not True:
-            raise TargetedRepairPlanError(
-                "REPAIR_CONTROL_PROJECTION_MISMATCH", "verified controls are not complete against SOAC authority"
+                "REPAIR_CONTROL_PROJECTION_MISMATCH", "control provenance claims an unsupported trusted state"
             )
         covered = provenance.get("canonical_requirements_covered")
-        if not isinstance(covered, list) or set(covered) != set(canonical_requirements):
+        if covered is not None and (
+            not isinstance(covered, list) or not set(covered).issubset(set(canonical_requirements))
+        ):
             raise TargetedRepairPlanError(
-                "REPAIR_CONTROL_PROJECTION_MISMATCH", "verified control coverage does not match SOAC authority"
-            )
-        evidence_refs = provenance.get("evidence_refs") or []
-        if not isinstance(evidence_refs, list) or not evidence_refs or not all(isinstance(item, str) and item.strip() for item in evidence_refs):
-            raise TargetedRepairPlanError(
-                "REPAIR_CONTROL_PROJECTION_MISMATCH", "verified controls lack evidence refs"
+                "REPAIR_CONTROL_PROJECTION_MISMATCH", "control coverage contains non-canonical requirements"
             )
 
-    if control_status == "CLEAN":
-        if not target_variable or confounds or controls_verified is not True:
-            raise TargetedRepairPlanError(
-                "REPAIR_CONTROL_PROJECTION_MISMATCH", "CLEAN status is inconsistent with normalized control evidence"
-            )
-    elif control_status == "CONFOUNDED":
+    # No current canonical verifier can produce either of these states. Reject
+    # them before checking evidence completeness so callers cannot launder trust
+    # by editing a previously valid UNVERIFIED projection.
+    if controls_verified or control_status == "CLEAN":
+        raise TargetedRepairPlanError(
+            "REPAIR_CONTROL_PROJECTION_MISMATCH",
+            "CLEAN/verified controls are not mintable by the current serialized evaluator contract",
+        )
+
+    if control_status == "CONFOUNDED":
         if not confounds:
             raise TargetedRepairPlanError(
                 "REPAIR_CONTROL_PROJECTION_MISMATCH", "CONFOUNDED status requires explicit confounds"
             )
     elif control_status == "UNVERIFIED_CONTROL":
-        if not target_variable or controls_verified:
+        if not target_variable:
             raise TargetedRepairPlanError(
-                "REPAIR_CONTROL_PROJECTION_MISMATCH", "UNVERIFIED_CONTROL projection is inconsistent"
+                "REPAIR_CONTROL_PROJECTION_MISMATCH", "UNVERIFIED_CONTROL requires a target variable"
+            )
+        if confounds:
+            raise TargetedRepairPlanError(
+                "REPAIR_CONTROL_PROJECTION_MISMATCH", "UNVERIFIED_CONTROL cannot hide explicit confounds"
             )
     elif control_status == "UNCONTROLLED":
-        if target_variable or confounds or controls_verified:
+        if target_variable or confounds:
             raise TargetedRepairPlanError(
                 "REPAIR_CONTROL_PROJECTION_MISMATCH", "UNCONTROLLED projection is inconsistent"
             )
