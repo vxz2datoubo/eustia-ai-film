@@ -26,6 +26,13 @@ class FacingBoundaryTests(unittest.TestCase):
         self.assertNotIn("locatable_target", result.spatial_action_features)
         self.assertNotIn("body_orientation_target_fail", result.failure_mechanism)
 
+    def assert_target_facing(self, text: str) -> None:
+        result = compile_director_features(text)
+        self.assertIn("facing_to_target", result.relation_type)
+        self.assertIn("target_oriented_action", result.dramatic_function)
+        self.assertIn("body_orientation", result.spatial_action_features)
+        self.assertIn("locatable_target", result.spatial_action_features)
+
     def test_dynasty_plus_xiang_does_not_form_cross_token_chaoxiang(self):
         self.assert_no_target_facing("这个王朝向圣女征税。")
 
@@ -36,11 +43,20 @@ class FacingBoundaryTests(unittest.TestCase):
         self.assert_no_target_facing("本朝向教会征税。")
 
     def test_real_actor_facing_target_remains_positive(self):
-        result = compile_director_features("群众朝向圣女转身。")
-        self.assertIn("facing_to_target", result.relation_type)
-        self.assertIn("target_oriented_action", result.dramatic_function)
-        self.assertIn("body_orientation", result.spatial_action_features)
-        self.assertIn("locatable_target", result.spatial_action_features)
+        self.assert_target_facing("群众朝向圣女转身。")
+
+    def test_turn_then_face_actor_paraphrase_is_positive(self):
+        self.assert_target_facing("群众转身朝向圣女。")
+
+    def test_scene_prefixed_turn_then_face_pursuit_is_positive(self):
+        self.assert_target_facing("城堡大厅里卫兵转身面向门口逃犯追击。")
+
+    def test_manner_plus_turn_then_face_is_positive(self):
+        self.assert_target_facing("群众缓缓地转身面向圣女。")
+
+    def test_turn_over_and_turn_back_variants_are_bounded_positive(self):
+        self.assert_target_facing("卫兵转过身朝向逃犯。")
+        self.assert_target_facing("卫兵回身面向逃犯。")
 
     def test_open_vocabulary_manner_before_facing_remains_positive(self):
         result = compile_director_features("群众十分虔诚地朝向圣女。")
