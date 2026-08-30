@@ -45,6 +45,14 @@ class FacingBoundaryTests(unittest.TestCase):
     def test_real_actor_facing_target_remains_positive(self):
         self.assert_target_facing("群众朝向圣女转身。")
 
+    def test_unseen_human_role_subjects_transfer_without_actor_whitelist(self):
+        self.assert_target_facing("贵族面向圣女。")
+        self.assert_target_facing("骑士朝向敌人。")
+        self.assert_target_facing("医生面向伤员。")
+
+    def test_unseen_subject_with_scene_prefix_and_manner_transfers(self):
+        self.assert_target_facing("礼拜堂中央年轻祭司十分郑重地面向圣女。")
+
     def test_turn_then_face_actor_paraphrase_is_positive(self):
         self.assert_target_facing("群众转身朝向圣女。")
 
@@ -75,12 +83,18 @@ class FacingBoundaryTests(unittest.TestCase):
         self.assertIn("target_oriented_action", result.dramatic_function)
 
     def test_camera_facing_target_does_not_mint_character_target_relation(self):
-        result = compile_or_none("摄影机朝向圣女。")
-        if result is None:
-            return
-        self.assertNotIn("facing_to_target", result.relation_type)
-        self.assertNotIn("target_oriented_action", result.dramatic_function)
-        self.assertNotIn("body_orientation", result.spatial_action_features)
+        for text in ("摄影机朝向圣女。", "镜头缓缓面向圣女。", "机位朝向圣女。"):
+            with self.subTest(text=text):
+                result = compile_or_none(text)
+                if result is None:
+                    continue
+                self.assertNotIn("facing_to_target", result.relation_type)
+                self.assertNotIn("target_oriented_action", result.dramatic_function)
+                self.assertNotIn("body_orientation", result.spatial_action_features)
+
+    def test_scene_or_architecture_subject_does_not_mint_character_body_orientation(self):
+        self.assert_no_target_facing("城堡正面朝向大门。")
+        self.assert_no_target_facing("街道转向出口。")
 
     def test_preposed_kneel_open_manner_regression_stays_positive(self):
         result = compile_director_features("群众朝着圣女恭敬地跪下。")
