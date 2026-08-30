@@ -23,6 +23,12 @@ FD_SUITE = yaml.safe_load(
 POLICY = yaml.safe_load(
     (REPO_ROOT / "10_运行时/final_delta_learning_policy.yaml").read_text(encoding="utf-8")
 )
+SOAC_SCHEMA = yaml.safe_load(
+    (REPO_ROOT / "10_运行时/screen_observable_audible_ir_schema.yaml").read_text(encoding="utf-8")
+)
+CANONICAL_CONTROL_REQUIREMENTS = list(
+    SOAC_SCHEMA["validation"]["controlled_eval_requirements"]
+)
 
 
 def _case_payload(case_id: str) -> dict:
@@ -134,7 +140,14 @@ def _controlled_visual_density_payload(*, eval_id: str, density_pass: bool, comp
             "confounds": [],
             "non_target_controls_verified": True,
             "control_provenance": {
-                "locked": ["story_goal", "model", "duration", "camera_contract"]
+                "source": "generation_manifest_pair",
+                "verified_equal": list(CANONICAL_CONTROL_REQUIREMENTS),
+                "not_applicable": [],
+                "not_applicable_reasons": {},
+                "evidence_refs": [
+                    f"{eval_id}::generation_A_manifest",
+                    f"{eval_id}::generation_B_manifest",
+                ],
             },
         },
         "context": {
