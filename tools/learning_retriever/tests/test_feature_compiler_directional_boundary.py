@@ -25,6 +25,13 @@ POSITIVE_DIRECTION_FORMS = (
     "信徒们朝圣女跪拜。",
 )
 
+MODIFIED_TARGET_DIRECTION_FORMS = (
+    "群众朝着圣女伊莲跪下。",
+    "群众朝着那位圣女跪下。",
+    "群众向那扇大门跪拜。",
+    "群众朝着圣女缓缓地跪下。",
+)
+
 
 def test_dynasty_lexemes_with_kneeling_verbs_do_not_create_target_spatial_semantics():
     runtime = DirectorLearningRuntime(REPO_ROOT)
@@ -52,6 +59,17 @@ def test_bounded_bare_direction_syntax_still_maps_kneeling_to_target():
         assert "locatable_target" in compiled.spatial_action_features, description
         result = runtime.retrieve(description, task_id=f"DIRECTION-POS-{index}", top_k=5)
         assert "TARGET_ORIENTED_SPATIAL_BINDING" in result["canonical_runtime_receipt"]["hard_routes"], description
+
+
+def test_bounded_modified_target_noun_phrases_map_kneeling_to_target():
+    runtime = DirectorLearningRuntime(REPO_ROOT)
+    for index, description in enumerate(MODIFIED_TARGET_DIRECTION_FORMS):
+        compiled = compile_director_features(description)
+        assert "kneeling_to_target" in compiled.relation_type, description
+        assert "locatable_target" in compiled.spatial_action_features, description
+        result = runtime.retrieve(description, task_id=f"DIRECTION-MODIFIED-POS-{index}", top_k=5)
+        assert "TARGET_ORIENTED_SPATIAL_BINDING" in result["canonical_runtime_receipt"]["hard_routes"], description
+        assert "TARGET_ORIENTED_SPATIAL_BINDING" in result["retrieval_receipt"]["hard_routes"], description
 
 
 def test_existing_body_orientation_positive_remains_unchanged():
