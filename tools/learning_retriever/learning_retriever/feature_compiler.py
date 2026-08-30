@@ -110,6 +110,162 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
                 return True
         return False
 
+    def directional_object_precedes_action(
+        actions: tuple[str, ...],
+        objects: tuple[str, ...],
+        *,
+        subject_terms: tuple[str, ...],
+        max_chars: int = 16,
+    ) -> bool:
+        """Recognize bounded Chinese preposed direction such as `群众朝她跪下`.
+
+        Bare `朝/向` are accepted only when the material before the marker is
+        clause-start/continuation glue or ends in a known actor subject. Explicit
+        multi-character markers may bind a bounded target noun phrase containing
+        a known target head plus determiner/classifier or short proper name. A
+        following bounded `…地` manner adjunct is parsed separately from that NP,
+        so unseen manner wording does not need an adverb dictionary. The outer
+        bare-marker subject boundary still prevents lexical nouns such as
+        `王朝圣女/前朝圣女/本朝圣女` from becoming directional syntax.
+        """
+        separators = ("，", "。", "；", "！", "？", ",", ";", "!", "?")
+        markers = ("面朝", "朝着", "对着", "向着", "朝", "向")
+        trailing_simple_adverbs = ("缓缓", "慢慢", "纷纷", "共同", "一起", "一同", "都")
+        leading_glue = tuple(
+            sorted(
+                set(
+                    (
+                        "随后", "随即", "然后", "接着", "继而", "再", "又", "便", "于是", "立刻", "马上",
+                        "纷纷", "共同", "一起", "一同", "全都", "都", "转身", "转过身", "回身",
+                    )
+                ),
+                key=len,
+                reverse=True,
+            )
+        )
+        subject_forms = set(subject_terms) | {"她", "他", "他们", "她们"}
+        subject_forms.update(f"{subject}们" for subject in subject_terms if not subject.endswith("们"))
+        bounded_subjects = tuple(sorted(subject_forms, key=len, reverse=True))
+        object_candidates = tuple(sorted(set(objects), key=len, reverse=True))
+        target_determiners = (
+            "那位", "这位", "一位", "那名", "这名", "一名", "那个", "这个", "一个",
+            "那扇", "这扇", "一扇", "那座", "这座", "一座",
+        )
+        named_role_targets = {
+            "圣女", "敌人", "对手", "逃犯", "追兵", "同伴", "陌生人",
+            "孩子", "伤员", "平民", "队友",
+        }
+        disallowed_name_suffix_tokens = (
+            "的", "地", "得", "祈祷", "跪", "拜", "追", "逃", "看", "望", "朝", "向",
+            "缓缓", "慢慢", "纷纷", "共同", "一起", "一同", "现身", "出现", "降临", "到来",
+        )
+        manner_structural_forbidden = (
+            "跪", "拜", "追", "逃", "看", "望", "朝", "向", "门", "窗", "口", "台", "出口",
+        )
+
+        def strip_target_determiners(value: str) -> str:
+            normalized = value.strip()
+            changed = True
+            while changed and normalized:
+                changed = False
+                for determiner in target_determiners:
+                    if normalized.startswith(determiner):
+                        normalized = normalized[len(determiner):].strip()
+                        changed = True
+                        break
+            return normalized
+
+        def target_np_matches(candidate: str) -> bool:
+            normalized = strip_target_determiners(candidate)
+            if any(normalized == obj for obj in object_candidates):
+                return True
+
+            for obj in object_candidates:
+                if obj not in named_role_targets or not normalized.startswith(obj):
+                    continue
+                suffix = normalized[len(obj):]
+                if not 1 <= len(suffix) <= 4:
+                    continue
+                if not all("\u4e00" <= char <= "\u9fff" for char in suffix):
+                    continue
+                if any(token in suffix for token in disallowed_name_suffix_tokens):
+                    continue
+                return True
+            return False
+
+        def bounded_de_manner_adjunct(value: str) -> bool:
+            normalized = value.strip()
+            if not normalized.endswith("地"):
+                return False
+            stem = normalized[:-1]
+            if not 2 <= len(stem) <= 6:
+                return False
+            if not all("\u4e00" <= char <= "\u9fff" for char in stem):
+                return False
+            if any(token in stem for token in manner_structural_forbidden):
+                return False
+            if any(obj in stem for obj in object_candidates):
+                return False
+            return True
+
+        def target_phrase_matches(candidate: str) -> bool:
+            normalized = candidate.strip()
+            if target_np_matches(normalized):
+                return True
+
+            # Open-vocabulary manner is recognized by syntax, not a synonym list:
+            # [bounded target NP] + [2..6 CJK chars + 地]. The target half must
+            # independently satisfy the conservative NP grammar above.
+            for split_at in range(1, len(normalized)):
+                target_part = normalized[:split_at].strip()
+                manner_part = normalized[split_at:].strip()
+                if target_np_matches(target_part) and bounded_de_manner_adjunct(manner_part):
+                    return True
+            return False
+
+        for action in actions:
+            search_from = 0
+            while True:
+                hit = text.find(action, search_from)
+                if hit < 0:
+                    break
+                prefix = text[max(0, hit - max_chars):hit]
+                for separator in separators:
+                    prefix = prefix.rsplit(separator, 1)[-1]
+                prefix = prefix.strip()
+
+                for marker in markers:
+                    marker_pos = prefix.rfind(marker)
+                    if marker_pos < 0:
+                        continue
+                    candidate = prefix[marker_pos + len(marker):].strip()
+                    changed = True
+                    while changed and candidate:
+                        changed = False
+                        for adverb in trailing_simple_adverbs:
+                            if candidate.endswith(adverb):
+                                candidate = candidate[:-len(adverb)].strip()
+                                changed = True
+                                break
+                    if not target_phrase_matches(candidate):
+                        continue
+
+                    if marker in {"朝", "向"}:
+                        leader = prefix[:marker_pos].strip()
+                        changed = True
+                        while changed and leader:
+                            changed = False
+                            for glue in leading_glue:
+                                if leader.endswith(glue):
+                                    leader = leader[:-len(glue)].strip()
+                                    changed = True
+                                    break
+                        if leader and not any(leader.endswith(subject) for subject in bounded_subjects):
+                            continue
+                    return True
+                search_from = hit + len(action)
+        return False
+
     def first_action_object_match(
         actions: tuple[str, ...], objects: tuple[str, ...], *, max_chars: int = 32
     ) -> dict[str, Any] | None:
@@ -238,7 +394,7 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
     gaze_terms = ("看向", "望向", "盯着", "注视", "视线朝", "目光朝", "观察")
     perception_terms = ("看到", "看见", "见到")
     facing_terms = ("面向", "朝向", "转向", "身体朝", "正对")
-    ritual_kneel_terms = ("跪拜", "拜下", "拜倒", "伏地跪拜")
+    ritual_kneel_terms = ("跪拜", "拜下", "拜倒", "伏地跪拜", "跪下")
     kneel_terms = ("下跪", "跪向", "跪着朝") + ritual_kneel_terms
     pursuit_terms = ("追逐", "追击", "追赶", "追捕", "追杀")
     escape_terms = ("逃离", "逃跑", "逃开", "撤离", "远离", "躲避", "摆脱")
@@ -317,8 +473,16 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
                 )
 
     direct_kneel_target_evidence = has_kneel and action_has_object(kneel_terms, target_object_terms)
+    preposed_kneel_target_evidence = has_kneel and directional_object_precedes_action(
+        ritual_kneel_terms,
+        target_object_terms,
+        subject_terms=actor_terms,
+    )
     kneel_target_evidence = has_kneel and (
-        direct_kneel_target_evidence or facing_target_evidence or ritual_target_carry
+        direct_kneel_target_evidence
+        or preposed_kneel_target_evidence
+        or facing_target_evidence
+        or ritual_target_carry
     )
     pursuit_target_evidence = has_pursuit and action_has_object(pursuit_terms, target_object_terms)
     escape_source_evidence = has_escape and action_has_object(escape_source_terms, target_object_terms)
@@ -337,7 +501,7 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
     )
     crowd_relation_cues = (
         "看向", "望向", "注视", "观察", "看到", "看见", "见到", "等待救济", "等待施粥", "聆听", "欢呼", "沉默",
-        "嘲笑", "反应", "态度", "跪向", "下跪", "跪拜", "拜下", "拜倒", "转向", "聚焦",
+        "嘲笑", "反应", "态度", "跪向", "下跪", "跪拜", "拜下", "拜倒", "跪下", "转向", "聚焦",
     )
     crowd_has_relation = (
         _contains_any(text, crowd_terms)
@@ -372,7 +536,10 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
             add(relation, "speaker_to_history")
         else:
             add(relation, "speaker_to_listener")
-        if _contains_any(text, ("拖慢", "停滞", "冗长", "啰嗦", "卡住", "节奏慢", "信息段")):
+        if _contains_any(
+            text,
+            ("拖慢", "停滞", "冗长", "啰嗦", "卡住", "节奏慢", "信息段", "停下来", "推进停", "不能推进", "推进不动"),
+        ):
             add(failure, "exposition_stall")
         trace(
             "exposition",
@@ -664,7 +831,10 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
             "VisibleIR.environmental_response",
         )
 
-    if _contains_any(text, ("先后顺序", "事件顺序", "先再", "先…再", "顺序不对", "动作顺序")):
+    if _contains_any(
+        text,
+        ("先后顺序", "事件顺序", "先再", "先…再", "顺序不对", "动作顺序", "动作先后"),
+    ):
         add(dramatic, "event_order")
         add(failure, "event_order_fail")
         trace("event_order", "EventGraphIR.temporal_relation", "EventGraphIR.precondition", "EventGraphIR.result")
