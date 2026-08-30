@@ -120,14 +120,19 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
         """Recognize bounded Chinese preposed direction such as `群众朝她跪下`.
 
         Bare `朝/向` are accepted only when the material before the marker is
-        clause-start/continuation glue or ends in a known actor subject. This is
-        a grammar boundary rather than a dynasty-word blacklist: lexical nouns
-        such as `王朝圣女/前朝圣女/本朝圣女` cannot become target-oriented
-        blocking merely because a kneeling verb appears later in the clause.
+        clause-start/continuation glue or ends in a known actor subject. Explicit
+        multi-character markers may bind a small target noun phrase containing a
+        known target head plus a bounded determiner, classifier or short proper
+        name. This keeps lexical nouns such as `王朝圣女/前朝圣女/本朝圣女`
+        from becoming target-oriented blocking while supporting production forms
+        such as `朝着圣女伊莲跪下` and `向那扇大门跪拜`.
         """
         separators = ("，", "。", "；", "！", "？", ",", ";", "!", "?")
         markers = ("面朝", "朝着", "对着", "向着", "朝", "向")
-        trailing_adverbs = ("缓缓", "慢慢", "纷纷", "共同", "一起", "一同", "都")
+        trailing_adverbs = (
+            "缓缓地", "慢慢地", "纷纷地", "共同地", "一起地", "一同地",
+            "缓缓", "慢慢", "纷纷", "共同", "一起", "一同", "都",
+        )
         leading_glue = tuple(
             sorted(
                 set(
@@ -144,6 +149,45 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
         subject_forms.update(f"{subject}们" for subject in subject_terms if not subject.endswith("们"))
         bounded_subjects = tuple(sorted(subject_forms, key=len, reverse=True))
         object_candidates = tuple(sorted(set(objects), key=len, reverse=True))
+        target_determiners = (
+            "那位", "这位", "一位", "那名", "这名", "一名", "那个", "这个", "一个",
+            "那扇", "这扇", "一扇", "那座", "这座", "一座",
+        )
+        named_role_targets = {
+            "圣女", "敌人", "对手", "逃犯", "追兵", "同伴", "陌生人",
+            "孩子", "伤员", "平民", "队友",
+        }
+        disallowed_name_suffix_tokens = (
+            "的", "地", "得", "祈祷", "跪", "拜", "追", "逃", "看", "望", "朝", "向",
+            "缓缓", "慢慢", "纷纷", "共同", "一起", "一同", "现身", "出现", "降临", "到来",
+        )
+
+        def target_phrase_matches(candidate: str) -> bool:
+            normalized = candidate.strip()
+            changed = True
+            while changed and normalized:
+                changed = False
+                for determiner in target_determiners:
+                    if normalized.startswith(determiner):
+                        normalized = normalized[len(determiner):].strip()
+                        changed = True
+                        break
+
+            if any(normalized == obj for obj in object_candidates):
+                return True
+
+            for obj in object_candidates:
+                if obj not in named_role_targets or not normalized.startswith(obj):
+                    continue
+                suffix = normalized[len(obj):]
+                if not 1 <= len(suffix) <= 4:
+                    continue
+                if not all("\u4e00" <= char <= "\u9fff" for char in suffix):
+                    continue
+                if any(token in suffix for token in disallowed_name_suffix_tokens):
+                    continue
+                return True
+            return False
 
         for action in actions:
             search_from = 0
@@ -169,7 +213,7 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
                                 candidate = candidate[:-len(adverb)].strip()
                                 changed = True
                                 break
-                    if not any(candidate == obj for obj in object_candidates):
+                    if not target_phrase_matches(candidate):
                         continue
 
                     if marker in {"朝", "向"}:
