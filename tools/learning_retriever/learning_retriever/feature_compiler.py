@@ -382,21 +382,18 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
         actions: tuple[str, ...],
         objects: tuple[str, ...],
         *,
-        subject_terms: tuple[str, ...],
         camera_terms: tuple[str, ...],
         max_prefix_chars: int = 20,
         max_target_chars: int = 16,
     ) -> tuple[bool, bool, bool]:
-        """Parse facing predicates with clause/subject boundaries.
+        """Parse facing predicates with open-vocabulary bounded subject syntax.
 
-        Raw substring matching is unsafe in Chinese because lexical tokens can
-        join across word boundaries, e.g. `王朝` + `向圣女` contains the bytes
-        `朝向圣女` without expressing body orientation. A valid predicate must
-        have an ellipsis, actor, explicit body-anchor, or camera leader. Location
-        or scene prose may precede a bounded subject, so a leader that ends with a
-        known actor/body/camera anchor is also valid; the facing target still must
-        begin immediately after the predicate, which keeps dynasty cross-token
-        forms such as `这个王朝向圣女征税` outside the grammar.
+        Positive actor recognition is structural, not a fixed role/name whitelist:
+        a bounded CJK clause leader may function as the subject unless stronger
+        camera/body/non-actor evidence applies. Known camera and architecture
+        surfaces are negative guards, not positive actor authority. Ambiguous
+        lexical `王朝/前朝/本朝 + 向` cross-token forms fail closed rather than
+        being promoted into a body-orientation predicate.
         """
         separators = ("，", "。", "；", "！", "？", ",", ";", "!", "?")
         leading_glue = (
@@ -410,12 +407,19 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
             "那位", "这位", "一位", "那名", "这名", "一名", "那个", "这个", "一个",
             "那扇", "这扇", "一扇", "那座", "这座", "一座",
         )
-        subject_forms = set(subject_terms) | {"她", "他", "他们", "她们"}
-        subject_forms.update(f"{subject}们" for subject in subject_terms if not subject.endswith("们"))
-        bounded_subjects = tuple(sorted(subject_forms, key=len, reverse=True))
         bounded_cameras = tuple(sorted(set(camera_terms), key=len, reverse=True))
         body_anchors = ("身体", "躯干", "上身")
         object_candidates = tuple(sorted(set(objects), key=len, reverse=True))
+        non_actor_heads = (
+            "城堡", "建筑", "街道", "道路", "房间", "大厅", "墙", "大门", "门", "窗口", "窗户",
+            "舞台", "出口", "画面", "背景", "场景", "天空", "地面",
+        )
+        non_actor_facets = (
+            "正面", "背面", "侧面", "入口", "出口", "外墙", "内墙", "顶部", "底部",
+        )
+        dynasty_cross_token_leaders = (
+            "前", "本", "王", "这个王", "那个王", "一个王",
+        )
 
         def strip_leading_glue(value: str) -> str:
             normalized = value.strip()
@@ -447,7 +451,23 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
                         break
             return not residual
 
-        def classify_leader(value: str) -> str | None:
+        def generic_actor_leader(value: str) -> bool:
+            normalized = value.strip()
+            if not normalized or len(normalized) > max_prefix_chars:
+                return False
+            if not all(("\u4e00" <= char <= "\u9fff") or char.isspace() for char in normalized):
+                return False
+            if normalized in non_actor_heads:
+                return False
+            if any(
+                normalized == head + facet
+                for head in non_actor_heads
+                for facet in non_actor_facets
+            ):
+                return False
+            return True
+
+        def classify_leader(value: str, action: str) -> str | None:
             normalized = strip_leading_glue(value)
             if not normalized:
                 return "ELLIPTICAL"
@@ -463,12 +483,10 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
                     and bounded_modifier_tail(normalized[len(body_anchor):])
                 ):
                     return "BODY"
-            for subject in bounded_subjects:
-                if normalized.endswith(subject) or (
-                    normalized.startswith(subject)
-                    and bounded_modifier_tail(normalized[len(subject):])
-                ):
-                    return "ACTOR"
+            if action == "朝向" and normalized in dynasty_cross_token_leaders:
+                return None
+            if generic_actor_leader(normalized):
+                return "ACTOR"
             return None
 
         def target_follows(hit: int, action: str) -> bool:
@@ -498,7 +516,7 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
                 prefix = text[max(0, hit - max_prefix_chars):hit]
                 for separator in separators:
                     prefix = prefix.rsplit(separator, 1)[-1]
-                leader_class = classify_leader(prefix)
+                leader_class = classify_leader(prefix, action)
                 if leader_class is None:
                     search_from = hit + len(action)
                     continue
@@ -545,7 +563,6 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
     has_facing, facing_target_evidence, facing_camera_agent = bounded_facing_evidence(
         facing_terms,
         target_object_terms,
-        subject_terms=actor_terms,
         camera_terms=camera_actor_terms,
     )
     has_kneel = _contains_any(text, kneel_terms)
