@@ -1,10 +1,11 @@
 """Canonical natural-language directing entrypoint for Learning Smart Recall.
 
 Continuation-style requests first pass the Active Work Item Resolution Gate.
-After identity/freshness binding, the runtime reconstructs a compact complete
-task description from the resolved WorkItemContext, then continues as Director
-Feature Compiler -> director_route_index hard route -> existing LearningRetriever
-semantic recall. Retrieval authority is unchanged.
+The gate trusts only the repository-controlled canonical continuity snapshot;
+callers cannot inject freshness or historical-target verification callbacks.
+After work-item identity binding, the runtime reconstructs compact retrieval
+context and continues through Director Feature Compiler -> Hard Route ->
+existing LearningRetriever semantic recall.
 """
 
 from __future__ import annotations
@@ -14,8 +15,6 @@ from typing import Any
 
 from .active_work_item import (
     ActiveWorkItemResolutionError,
-    ExplicitTargetProvider,
-    FreshnessProvider,
     build_work_item_context_packet,
     resolve_work_item,
 )
@@ -27,19 +26,22 @@ def _reconstruct_feature_input(
     user_description: str,
     packet: dict[str, Any] | None,
 ) -> tuple[str, bool]:
-    """Create a pragmatically complete feature-compiler input for ellipsis.
-
-    This is not a prompt sent to a video model. It is compact retrieval context
-    so phrases like “重新导演上次那30秒” compile features from the resolved work
-    item rather than from an empty anaphora shell.
-    """
+    """Create a pragmatically complete retrieval input for continuation ellipsis."""
     if not packet:
         return user_description, False
 
     summary = str(packet.get("effective_state_summary") or "").strip()
     constraints = packet.get("constraints") or {}
-    unresolved = [str(v).strip() for v in constraints.get("unresolved") or [] if str(v).strip()]
-    locked = [str(v).strip() for v in constraints.get("locked") or [] if str(v).strip()]
+    unresolved = [
+        str(v).strip()
+        for v in constraints.get("unresolved") or []
+        if str(v).strip()
+    ]
+    locked = [
+        str(v).strip()
+        for v in constraints.get("locked") or []
+        if str(v).strip()
+    ]
 
     parts = [
         user_description.strip(),
@@ -50,32 +52,16 @@ def _reconstruct_feature_input(
     if unresolved:
         parts.append("unresolved_failures=" + ", ".join(unresolved))
     if locked:
-        # Locks are bounded to retrieval identity/mechanism cues. The full
-        # Constraint Ledger remains in the packet and canonical continuity.
         parts.append("locked_mechanisms=" + ", ".join(locked[:12]))
     return "\n".join(parts), True
 
 
 class DirectorLearningRuntime:
-    """Bind directing requests to work-item identity and existing recall runtime.
+    """Bind directing requests to canonical work-item identity and existing recall."""
 
-    Providers are in-process orchestration capabilities. A freshness provider
-    performs the real source-Issue checkpoint read. An explicit-target provider
-    resolves a user-requested historical/non-active item from targeted canonical
-    metadata. Serialized CLI/JSON inputs cannot synthesize either capability.
-    """
-
-    def __init__(
-        self,
-        project_root: str | Path,
-        *,
-        freshness_provider: FreshnessProvider | None = None,
-        explicit_target_provider: ExplicitTargetProvider | None = None,
-    ) -> None:
+    def __init__(self, project_root: str | Path) -> None:
         self.project_root = Path(project_root)
         self.retriever = LearningRetriever(self.project_root)
-        self.freshness_provider = freshness_provider
-        self.explicit_target_provider = explicit_target_provider
 
     def retrieve(
         self,
@@ -89,8 +75,6 @@ class DirectorLearningRuntime:
         resolution = resolve_work_item(
             description,
             project_root=self.project_root,
-            freshness_provider=self.freshness_provider,
-            explicit_target_provider=self.explicit_target_provider,
         )
 
         merged_base = dict(base_task or {})
@@ -120,12 +104,16 @@ class DirectorLearningRuntime:
             route_data=self.retriever.routes,
             strict=True,
         )
-        result = self.retriever.retrieve(task, top_k=top_k, expand=expand, fail_closed=True)
+        result = self.retriever.retrieve(
+            task, top_k=top_k, expand=expand, fail_closed=True
+        )
 
         runtime_flow = ["active_work_item_resolution"]
         if reconstructed:
             runtime_flow.append("continuation_task_reconstruction")
-        runtime_flow.extend(["director_feature_compiler", "hard_route", "semantic_recall"])
+        runtime_flow.extend(
+            ["director_feature_compiler", "hard_route", "semantic_recall"]
+        )
 
         result["canonical_runtime_receipt"] = {
             "entrypoint": "DirectorLearningRuntime.retrieve",
@@ -135,11 +123,21 @@ class DirectorLearningRuntime:
             "work_item_context_packet": work_item_packet,
             "continuation_task_reconstructed": reconstructed,
             "serialized_work_item_authority_accepted": False,
+            "caller_verification_callback_supported": False,
             "compiler_invoked": True,
-            "work_item_resolution_authority": "10_运行时/active_work_item_resolution_gate.yaml",
+            "work_item_resolution_authority": (
+                "07_连续性与生产状态/连续性与当前生产状态.md#ACTIVE_WORK_ITEM_STATE"
+            ),
+            "work_item_resolution_contract": (
+                "10_运行时/active_work_item_resolution_gate.yaml"
+            ),
             "route_authority": "10_运行时/director_route_index.yaml",
-            "retriever_authority": "tools/learning_retriever/learning_retriever/retriever.py",
+            "retriever_authority": (
+                "tools/learning_retriever/learning_retriever/retriever.py"
+            ),
             "hard_routes": list(task.get("hard_routes") or []),
-            "feature_compiler_receipt": dict(task.get("feature_compiler_receipt") or {}),
+            "feature_compiler_receipt": dict(
+                task.get("feature_compiler_receipt") or {}
+            ),
         }
         return result
