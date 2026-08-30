@@ -31,6 +31,7 @@ routes:
   cinematic_visual_grammar_research_evidence: 09_资料证据/Cinematic Visual Grammar外部研究与融合证据.md
   cinematic_visual_grammar_regression_case: 11_验收/cinematic_visual_grammar_regression_cases.yaml
   cinematic_intent_contract_regression_case: 11_验收/cinematic_intent_contract_regression_cases.yaml
+  expected_observed_eval_regression_case: 11_验收/expected_observed_eval_regression_cases.yaml
   golden_prompt_research_evidence: 09_资料证据/优秀提示词案例学习证据索引.md
   golden_case_director_pull_evidence: 09_资料证据/导演级拉片与低运动表演证据索引.md
   sound_research_evidence: 09_资料证据/声音导演与SUNO证据索引.md
