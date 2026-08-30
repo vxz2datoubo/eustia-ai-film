@@ -48,21 +48,28 @@ class CheckpointCompilerAuthorityBindingTests(unittest.TestCase):
         self.assertTrue(any(item.startswith("active_work_item_checkpoint_compiler") for item in always))
         self.assertTrue(any(item.startswith("连续性与当前生产状态#ACTIVE_WORK_ITEM_STATE") for item in always))
         self.assertTrue(any(item.startswith("write_routes#revision_checkpoint_current_state") for item in always))
+        self.assertFalse(any("active_work_item_current_state" in item for item in always))
 
     def test_normal_directing_read_set_is_not_inflated_by_checkpoint_compiler(self) -> None:
         directing_always = self.read_sets["read_sets"]["directing"]["always"]
         self.assertFalse(any("checkpoint_compiler" in item for item in directing_always))
         self.assertTrue(self.read_sets["rules"]["checkpoint_compiler_not_in_directing_always_read_set"])
 
-    def test_existing_write_routes_remain_single_continuity_target(self) -> None:
+    def test_existing_write_route_remains_single_continuity_target(self) -> None:
         routes = self.write_routes["routes"]
         self.assertEqual(
             routes["revision_checkpoint_current_state"],
             "07_连续性与生产状态/连续性与当前生产状态.md",
         )
+        self.assertNotIn("active_work_item_current_state", routes)
+        continuity_targets = [
+            value
+            for key, value in routes.items()
+            if key in {"revision_checkpoint_current_state", "active_work_item_current_state"}
+        ]
         self.assertEqual(
-            routes["active_work_item_current_state"],
-            "07_连续性与生产状态/连续性与当前生产状态.md#ACTIVE_WORK_ITEM_STATE",
+            continuity_targets,
+            ["07_连续性与生产状态/连续性与当前生产状态.md"],
         )
         self.assertEqual(
             self.write_routes["write_protocol"],
