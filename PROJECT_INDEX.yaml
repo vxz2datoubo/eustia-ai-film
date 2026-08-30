@@ -34,6 +34,10 @@ policy:
   minimax_h3_official_format_authority_over_local_h3_syntax: true
   cinematic_visual_grammar_external_source_is_evidence_only: true
   cinematic_visual_grammar_cannot_become_second_director_authority: true
+  cinematic_intent_contract_runtime_is_execution_only: true
+  cinematic_intent_camera_authority_requires_canonical_readback: true
+  cinematic_intent_camera_sensitive_compile_fails_closed_without_canonical_binding: true
+  cinematic_intent_callers_cannot_supply_or_mint_camera_authority: true
 
 canonical:
   project_entry: 项目入口.md
@@ -80,6 +84,7 @@ canonical:
   pending_canonical_writes: 10_运行时/pending_canonical_writes.yaml
   regression_cases: 11_验收/director_regression_cases.yaml
   cinematic_visual_grammar_regression_cases: 11_验收/cinematic_visual_grammar_regression_cases.yaml
+  cinematic_intent_contract_regression_cases: 11_验收/cinematic_intent_contract_regression_cases.yaml
   asset_retrieval_regression_cases: 11_验收/asset_retrieval_regression_cases.yaml
   learning_application_gate_regression_cases: 11_验收/learning_application_gate_regression_cases.yaml
   golden_prompt_cases: 11_验收/golden_prompt_cases.yaml
@@ -135,6 +140,7 @@ effective_sources:
   10_运行时/director_route_index.yaml: github_verified
   11_验收/director_regression_cases.yaml: github_verified
   11_验收/cinematic_visual_grammar_regression_cases.yaml: github_verified
+  11_验收/cinematic_intent_contract_regression_cases.yaml: github_verified
   11_验收/asset_retrieval_regression_cases.yaml: github_verified
   11_验收/learning_application_gate_regression_cases.yaml: github_verified
   11_验收/golden_prompt_cases.yaml: github_verified
