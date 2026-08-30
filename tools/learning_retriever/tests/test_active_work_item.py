@@ -1,83 +1,231 @@
+from copy import deepcopy
+import inspect
 from pathlib import Path
 import tempfile
 import unittest
 
 import yaml
 
+from learning_retriever import DirectorLearningRuntime
 from learning_retriever.active_work_item import (
     ActiveWorkItemResolutionError,
     apply_constraint_ledger,
+    build_work_item_context_packet,
     is_continuation_request,
     load_active_work_item_state,
     resolve_work_item,
     validate_output_work_item,
     validate_state_transition,
+    validate_work_item_context_packet,
 )
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-REGRESSION_PATH = REPO_ROOT / "11_验收/active_work_item_resolution_regression_cases.yaml"
+REGRESSION_PATH = (
+    REPO_ROOT / "11_验收/active_work_item_resolution_regression_cases.yaml"
+)
 REGRESSIONS = yaml.safe_load(REGRESSION_PATH.read_text(encoding="utf-8"))
 
 
+def _write_temp_authority(
+    root: Path,
+    *,
+    state_overrides: dict | None = None,
+    include_state: bool = True,
+    include_history: bool = True,
+) -> None:
+    root.mkdir(parents=True, exist_ok=True)
+    index = {
+        "project_id": "EUSTIA_AI_FILM",
+        "canonical": {
+            "continuity": "07_连续性与生产状态/连续性与当前生产状态.md"
+        },
+    }
+    (root / "PROJECT_INDEX.yaml").write_text(
+        yaml.safe_dump(index, allow_unicode=True, sort_keys=False),
+        encoding="utf-8",
+    )
+    continuity = root / "07_连续性与生产状态/连续性与当前生产状态.md"
+    continuity.parent.mkdir(parents=True, exist_ok=True)
+    if not include_state:
+        continuity.write_text("# no active state\n", encoding="utf-8")
+        return
+
+    state = deepcopy(load_active_work_item_state(REPO_ROOT))
+    state.update(state_overrides or {})
+    payload = yaml.safe_dump(
+        {"active_work_item": state},
+        allow_unicode=True,
+        sort_keys=False,
+    )
+    parts = [
+        "# 连续性与当前生产状态",
+        "<!-- ACTIVE_WORK_ITEM_STATE_BEGIN -->",
+        "```yaml",
+        payload.rstrip(),
+        "```",
+        "<!-- ACTIVE_WORK_ITEM_STATE_END -->",
+    ]
+    if include_history:
+        parts.extend(
+            [
+                "",
+                "# 2. 上一工作项基线｜KAIM-HIGH-SEARCH-30S（非当前 continuation 默认）",
+                "",
+                "凯姆已经在攀爬楼房，爱丽丝为画外音；经过开窗妇女与菲奥奈巡查，最终登顶搜索男孩。",
+                "该历史工作项不能覆盖当前 active work item。",
+                "",
+                "# 3. 其他内容",
+            ]
+        )
+    continuity.write_text("\n".join(parts) + "\n", encoding="utf-8")
+
+
 class ActiveWorkItemResolutionTests(unittest.TestCase):
-    @staticmethod
-    def freshness_provider(
-        checkpoint: str = "5454103847",
-        *,
-        accessible: bool = True,
-        include_checkpoint: bool = True,
-    ):
-        def provider(state):
-            receipt = {
-                "source_issue": state.get("source_issue"),
-                "source_issue_accessible": accessible,
-            }
-            if include_checkpoint:
-                receipt["latest_source_checkpoint_ref"] = checkpoint
-            return receipt
-
-        return provider
-
-    @staticmethod
-    def explicit_old_target_provider(description, state):
-        if "之前" not in description and "爬楼" not in description:
-            return None
-        return {
-            "verified": True,
-            "work_item_id": "KAIM-HIGH-SEARCH-30S",
-            "checkpoint_ref": "HIGH-SEARCH-CHECKPOINT",
-            "source_issue": None,
-            "story_scope_ref": "03_剧本与改编/当前改编剧本.md#凯姆高位搜索",
-            "summary": "凯姆攀爬外立面、经过开窗妇女与菲奥奈巡查，最终登顶搜索男孩。",
-            "locked_constraints": ["kaim_vertical_climb"],
-            "preserved_constraints": ["boy_not_found_yet"],
-            "revoked_constraints": [],
-            "experimental_constraints": [],
-            "unresolved_failures": [],
-        }
-
     def test_current_continuity_exposes_machine_readable_active_state(self):
         state = load_active_work_item_state(REPO_ROOT)
-        self.assertEqual(state["work_item_id"], "KAIM-SCARF-CLOTHESLINE-TRAVERSE")
+        self.assertEqual(
+            state["work_item_id"], "KAIM-SCARF-CLOTHESLINE-TRAVERSE"
+        )
         self.assertEqual(int(state["source_issue"]), 19)
-        self.assertEqual(str(state["latest_applied_checkpoint_ref"]), "5454103847")
+        self.assertEqual(
+            str(state["latest_applied_checkpoint_ref"]), "5454103847"
+        )
+        self.assertEqual(state["checkpoint_writeback_status"], "verified")
+        self.assertTrue(str(state["writeback_verified_commit"]).strip())
         self.assertIn("scarf_clothesline_geometry", state["locked_constraints"])
-        self.assertIn("over_specified_setup_micro_choreography", state["revoked_constraints"])
+        self.assertIn(
+            "over_specified_setup_micro_choreography",
+            state["revoked_constraints"],
+        )
 
-    def test_wrong_30s_regression_resolves_active_pointer(self):
+    def test_wrong_30s_regression_resolves_verified_canonical_pointer_without_provider(self):
         result = resolve_work_item(
             "重新导演上次那30秒",
             project_root=REPO_ROOT,
-            freshness_provider=self.freshness_provider(),
         )
         self.assertTrue(result.resolution_required)
-        self.assertEqual(result.resolved_work_item_id, "KAIM-SCARF-CLOTHESLINE-TRAVERSE")
-        self.assertEqual(result.continuation_resolution_source, "active_work_item_pointer")
+        self.assertEqual(
+            result.resolved_work_item_id,
+            "KAIM-SCARF-CLOTHESLINE-TRAVERSE",
+        )
+        self.assertEqual(
+            result.continuation_resolution_source,
+            "active_work_item_pointer",
+        )
         self.assertTrue(result.freshness_verified)
         self.assertEqual(result.gate_status, "RESOLVED_VERIFIED")
+        self.assertEqual(
+            result.verification_basis,
+            "canonical_continuity_verified_snapshot",
+        )
+        self.assertTrue(result.snapshot_fingerprint)
 
-    def test_explicit_old_work_item_override_requires_verified_target_provider(self):
+    def test_callback_authority_surface_is_removed_from_public_api(self):
+        resolve_params = inspect.signature(resolve_work_item).parameters
+        runtime_params = inspect.signature(DirectorLearningRuntime).parameters
+        self.assertNotIn("freshness_provider", resolve_params)
+        self.assertNotIn("explicit_target_provider", resolve_params)
+        self.assertNotIn("freshness_provider", runtime_params)
+        self.assertNotIn("explicit_target_provider", runtime_params)
+
+        with self.assertRaises(TypeError):
+            resolve_work_item(
+                "继续那30秒",
+                project_root=REPO_ROOT,
+                freshness_provider=lambda state: {  # type: ignore[call-arg]
+                    "source_issue_accessible": True,
+                    "latest_source_checkpoint_ref": "5454103847",
+                },
+            )
+
+    def test_snapshot_must_have_verified_writeback_status(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_temp_authority(
+                root,
+                state_overrides={"checkpoint_writeback_status": "pending"},
+            )
+            with self.assertRaisesRegex(
+                ActiveWorkItemResolutionError,
+                "WORK_ITEM_SNAPSHOT_UNVERIFIED",
+            ):
+                resolve_work_item("继续那30秒", project_root=root)
+
+    def test_snapshot_must_have_verified_commit_reference(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_temp_authority(
+                root,
+                state_overrides={"writeback_verified_commit": ""},
+            )
+            with self.assertRaisesRegex(
+                ActiveWorkItemResolutionError,
+                "WORK_ITEM_SNAPSHOT_UNVERIFIED",
+            ):
+                resolve_work_item("继续那30秒", project_root=root)
+
+    def test_project_index_must_register_continuity_authority(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_temp_authority(root)
+            (root / "PROJECT_INDEX.yaml").write_text(
+                yaml.safe_dump(
+                    {
+                        "project_id": "EUSTIA_AI_FILM",
+                        "canonical": {"continuity": "wrong/path.md"},
+                    },
+                    allow_unicode=True,
+                ),
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(
+                ActiveWorkItemResolutionError,
+                "WORK_ITEM_CANONICAL_AUTHORITY_UNAVAILABLE",
+            ):
+                resolve_work_item("继续那30秒", project_root=root)
+
+    def test_source_issue_is_trace_not_runtime_freshness_capability(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_temp_authority(
+                root,
+                state_overrides={"source_issue": 999999},
+            )
+            result = resolve_work_item("继续那30秒", project_root=root)
+            self.assertTrue(result.freshness_verified)
+            self.assertEqual(result.source_issue, 999999)
+            self.assertIsNone(result.latest_source_checkpoint_ref)
+            self.assertEqual(
+                result.verification_basis,
+                "canonical_continuity_verified_snapshot",
+            )
+
+    def test_exact_previous_relation_resolves_only_from_canonical_history(self):
+        result = resolve_work_item(
+            "重新导演之前那个30秒",
+            project_root=REPO_ROOT,
+        )
+        self.assertEqual(result.resolved_work_item_id, "KAIM-HIGH-SEARCH-30S")
+        self.assertEqual(
+            result.continuation_resolution_source,
+            "user_explicit_canonical_previous_work_item",
+        )
+        self.assertTrue(result.freshness_verified)
+        self.assertEqual(
+            result.verification_basis,
+            "canonical_continuity_historical_binding",
+        )
+        packet = build_work_item_context_packet(REPO_ROOT, result)
+        self.assertIn("凯姆", packet["effective_state_summary"])
+        self.assertTrue(
+            validate_work_item_context_packet(
+                packet,
+                expected_work_item_id="KAIM-HIGH-SEARCH-30S",
+            )
+        )
+
+    def test_ambiguous_old_referent_fails_closed_instead_of_guessing(self):
         with self.assertRaisesRegex(
             ActiveWorkItemResolutionError,
             "EXPLICIT_NONACTIVE_REFERENT_REQUIRES_RESOLUTION",
@@ -85,65 +233,19 @@ class ActiveWorkItemResolutionTests(unittest.TestCase):
             resolve_work_item(
                 "重新导演之前爬楼那30秒",
                 project_root=REPO_ROOT,
-                freshness_provider=self.freshness_provider(),
             )
 
-        result = resolve_work_item(
-            "重新导演之前爬楼那30秒",
-            project_root=REPO_ROOT,
-            freshness_provider=self.freshness_provider(),
-            explicit_target_provider=self.explicit_old_target_provider,
-        )
-        self.assertEqual(result.resolved_work_item_id, "KAIM-HIGH-SEARCH-30S")
-        self.assertEqual(
-            result.continuation_resolution_source,
-            "user_explicit_trusted_target_resolution",
-        )
-        self.assertTrue(result.freshness_verified)
+    def test_previous_target_requires_canonical_historical_section(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write_temp_authority(root, include_history=False)
+            with self.assertRaisesRegex(
+                ActiveWorkItemResolutionError,
+                "EXPLICIT_NONACTIVE_REFERENT_REQUIRES_RESOLUTION",
+            ):
+                resolve_work_item("重新导演之前那个30秒", project_root=root)
 
-    def test_checkpoint_lag_fails_before_compilation(self):
-        with self.assertRaisesRegex(
-            ActiveWorkItemResolutionError,
-            "WORK_ITEM_CHECKPOINT_RECONCILE_REQUIRED",
-        ):
-            resolve_work_item(
-                "继续上一版",
-                project_root=REPO_ROOT,
-                freshness_provider=self.freshness_provider("NEWER-CHECKPOINT"),
-            )
-
-    def test_source_issue_must_be_freshly_verified(self):
-        with self.assertRaisesRegex(
-            ActiveWorkItemResolutionError,
-            "WORK_ITEM_FRESHNESS_UNVERIFIED",
-        ):
-            resolve_work_item(
-                "继续那30秒",
-                project_root=REPO_ROOT,
-                freshness_provider=self.freshness_provider(accessible=False),
-            )
-
-        with self.assertRaisesRegex(
-            ActiveWorkItemResolutionError,
-            "WORK_ITEM_FRESHNESS_UNVERIFIED",
-        ):
-            resolve_work_item(
-                "继续那30秒",
-                project_root=REPO_ROOT,
-                freshness_provider=self.freshness_provider(include_checkpoint=False),
-            )
-
-    def test_source_issue_requires_provider_capability_not_serialized_claim(self):
-        with self.assertRaisesRegex(
-            ActiveWorkItemResolutionError,
-            "WORK_ITEM_FRESHNESS_PROVIDER_REQUIRED",
-        ):
-            resolve_work_item(
-                "继续那30秒",
-                project_root=REPO_ROOT,
-            )
-
-    def test_noncontinuation_request_does_not_add_read_amplification(self):
+    def test_noncontinuation_request_does_not_require_active_snapshot(self):
         result = resolve_work_item(
             "设计圣女第一次公开登场时群众由喧闹转为安静的镜头",
             project_root=REPO_ROOT,
@@ -154,24 +256,17 @@ class ActiveWorkItemResolutionTests(unittest.TestCase):
     def test_missing_pointer_fails_closed(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            path = root / "07_连续性与生产状态/连续性与当前生产状态.md"
-            path.parent.mkdir(parents=True)
-            path.write_text("# no active state\n", encoding="utf-8")
+            _write_temp_authority(root, include_state=False)
             with self.assertRaisesRegex(
                 ActiveWorkItemResolutionError,
                 "ACTIVE_WORK_ITEM_STATE_MISSING",
             ):
-                resolve_work_item(
-                    "继续下一镜",
-                    project_root=root,
-                    freshness_provider=self.freshness_provider(),
-                )
+                resolve_work_item("继续下一镜", project_root=root)
 
     def test_output_guard_rejects_wrong_work_item(self):
         resolution = resolve_work_item(
             "继续那30秒",
             project_root=REPO_ROOT,
-            freshness_provider=self.freshness_provider(),
         )
         with self.assertRaisesRegex(
             ActiveWorkItemResolutionError,
@@ -206,7 +301,10 @@ class ActiveWorkItemResolutionTests(unittest.TestCase):
 
     def test_explicit_revoke_removes_only_named_constraint(self):
         effective = apply_constraint_ledger(
-            ["over_specified_setup_micro_choreography", "scarf_is_load_bearing_mechanism"],
+            [
+                "over_specified_setup_micro_choreography",
+                "scarf_is_load_bearing_mechanism",
+            ],
             preserved=["scarf_is_load_bearing_mechanism"],
             revoked=["over_specified_setup_micro_choreography"],
         )
@@ -214,18 +312,22 @@ class ActiveWorkItemResolutionTests(unittest.TestCase):
         self.assertIn("scarf_is_load_bearing_mechanism", effective)
 
     def test_state_machine_rejects_invalid_transition(self):
-        self.assertTrue(validate_state_transition("ACTIVE_REVISION", "CHECKPOINTED"))
+        self.assertTrue(
+            validate_state_transition("ACTIVE_REVISION", "CHECKPOINTED")
+        )
         with self.assertRaisesRegex(
             ActiveWorkItemResolutionError,
             "INVALID_WORK_ITEM_STATE_TRANSITION",
         ):
             validate_state_transition("CLOSED", "ACTIVE_REVISION")
 
-    def test_declared_regressions_cover_p0_and_fail_closed_paths(self):
+    def test_declared_regressions_cover_p0_and_trust_boundary(self):
         ids = {case["case_id"] for case in REGRESSIONS["cases"]}
         self.assertIn("AWIR-WRONG-30S-001", ids)
         self.assertIn("AWIR-EXPLICIT-OLD-001", ids)
-        self.assertIn("AWIR-CHECKPOINT-LAG-001", ids)
+        self.assertIn("AWIR-EXPLICIT-AMBIGUOUS-001", ids)
+        self.assertIn("AWIR-SNAPSHOT-UNVERIFIED-001", ids)
+        self.assertIn("AWIR-CALLBACK-FORBIDDEN-001", ids)
         self.assertIn("AWIR-POINTER-MISSING-001", ids)
         self.assertIn("AWIR-OUTPUT-MISMATCH-001", ids)
 
@@ -253,7 +355,7 @@ class ActiveWorkItemResolutionTests(unittest.TestCase):
             with self.subTest(text=text):
                 self.assertFalse(is_continuation_request(text))
 
-    def test_in_scene_continue_action_never_requires_source_issue_freshness(self):
+    def test_in_scene_continue_action_never_requires_work_item_resolution(self):
         result = resolve_work_item(
             "卫兵盯着门口逃犯继续追击",
             project_root=REPO_ROOT,
