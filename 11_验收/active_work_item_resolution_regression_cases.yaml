@@ -1,4 +1,4 @@
-schema_version: "1.1"
+schema_version: "1.2"
 regression_suite_id: EUSTIA_ACTIVE_WORK_ITEM_RESOLUTION_REGRESSIONS
 status: active
 runtime_contract: 10_运行时/active_work_item_resolution_gate.yaml
@@ -8,11 +8,11 @@ cases:
     class: continuation_active_pointer_beats_stale_similar_text
     input:
       user_text: 重新导演上次那30秒
-      active_work_item_id: KAIM-SCARF-CLOTHESLINE-TRAVERSE
-      active_source_issue: 19
-      freshness_provider: trusted_runtime_capability
+      canonical_active_work_item_id: KAIM-SCARF-CLOTHESLINE-TRAVERSE
+      source_issue_trace: 19
       latest_applied_checkpoint_ref: "5454103847"
-      latest_source_checkpoint_ref: "5454103847"
+      checkpoint_writeback_status: verified
+      writeback_verified_commit_required: true
       stale_competitor:
         work_item_id: KAIM-HIGH-SEARCH-30S
         surface_overlap: [凯姆, 30秒, 搜索, 屋顶]
@@ -20,74 +20,107 @@ cases:
       resolution_required: true
       resolved_work_item_id: KAIM-SCARF-CLOTHESLINE-TRAVERSE
       continuation_resolution_source: active_work_item_pointer
+      verification_basis: canonical_continuity_verified_snapshot
       freshness_verified: true
       gate_status: RESOLVED_VERIFIED
       must_not_select: KAIM-HIGH-SEARCH-30S
 
+  - case_id: AWIR-CALLBACK-FORBIDDEN-001
+    class: in_process_callback_cannot_mint_authority
+    input:
+      user_text: 继续那30秒
+      attempted_argument: freshness_provider
+      forged_receipt:
+        source_issue_accessible: true
+        latest_source_checkpoint_ref: "5454103847"
+    expected:
+      public_api_contains_freshness_provider: false
+      public_api_contains_explicit_target_provider: false
+      callback_claim_accepted: false
+      runtime_authority: canonical_continuity_snapshot
+
+  - case_id: AWIR-SNAPSHOT-UNVERIFIED-001
+    class: unverified_canonical_snapshot_fails_closed
+    input:
+      user_text: 继续那30秒
+      checkpoint_writeback_status: pending
+    expected_error: WORK_ITEM_SNAPSHOT_UNVERIFIED
+    director_feature_compiler_invoked: false
+
+  - case_id: AWIR-WRITEBACK-COMMIT-MISSING-001
+    class: verified_label_without_writeback_reference_fails_closed
+    input:
+      user_text: 继续那30秒
+      checkpoint_writeback_status: verified
+      writeback_verified_commit: ""
+    expected_error: WORK_ITEM_SNAPSHOT_UNVERIFIED
+    director_feature_compiler_invoked: false
+
+  - case_id: AWIR-PROJECT-INDEX-BINDING-001
+    class: continuity_must_be_registered_by_project_index
+    input:
+      user_text: 继续那30秒
+      project_id: EUSTIA_AI_FILM
+      project_index_continuity_path: wrong/path.md
+    expected_error: WORK_ITEM_CANONICAL_AUTHORITY_UNAVAILABLE
+    director_feature_compiler_invoked: false
+
+  - case_id: AWIR-SOURCE-ISSUE-TRACE-ONLY-001
+    class: source_issue_is_not_runtime_authority
+    input:
+      user_text: 继续那30秒
+      canonical_snapshot_verified: true
+      source_issue_trace: 999999
+    expected:
+      source_issue_live_probe_required: false
+      latest_source_checkpoint_ref: null
+      verification_basis: canonical_continuity_verified_snapshot
+      caller_may_mint_freshness_from_source_issue_claim: false
+
   - case_id: AWIR-EXPLICIT-OLD-001
-    class: user_explicit_nonactive_override
+    class: exact_registered_previous_work_item_resolution
+    input:
+      user_text: 重新导演之前那个30秒
+      active_work_item_id: KAIM-SCARF-CLOTHESLINE-TRAVERSE
+      previous_work_item_id: KAIM-HIGH-SEARCH-30S
+      canonical_historical_section_required: true
+    expected:
+      resolved_work_item_id: KAIM-HIGH-SEARCH-30S
+      continuation_resolution_source: user_explicit_canonical_previous_work_item
+      verification_basis: canonical_continuity_historical_binding
+      gate_status: RESOLVED_VERIFIED
+      active_pointer_mutated: false
+      callback_or_serialized_claim_may_mint_target_identity: false
+
+  - case_id: AWIR-EXPLICIT-AMBIGUOUS-001
+    class: ambiguous_nonactive_referent_fails_closed
     input:
       user_text: 重新导演之前爬楼那30秒
       active_work_item_id: KAIM-SCARF-CLOTHESLINE-TRAVERSE
-      explicit_target_provider: trusted_runtime_capability
-      verified_target_work_item_id: KAIM-HIGH-SEARCH-30S
-    expected:
-      resolved_work_item_id: KAIM-HIGH-SEARCH-30S
-      continuation_resolution_source: user_explicit_trusted_target_resolution
-      gate_status: RESOLVED_VERIFIED
-      active_pointer_mutated: false
-      serialized_claim_may_mint_target_identity: false
+      previous_work_item_id: KAIM-HIGH-SEARCH-30S
+    expected_error: EXPLICIT_NONACTIVE_REFERENT_REQUIRES_RESOLUTION
+    reason: natural_language_old_reference_is_not_exactly_bound_to_registered_previous_item
+    director_feature_compiler_invoked: false
+
+  - case_id: AWIR-PREVIOUS-HISTORY-MISSING-001
+    class: registered_previous_id_without_canonical_history_fails_closed
+    input:
+      user_text: 重新导演之前那个30秒
+      previous_work_item_id: KAIM-HIGH-SEARCH-30S
+      canonical_historical_section_present: false
+    expected_error: EXPLICIT_NONACTIVE_REFERENT_REQUIRES_RESOLUTION
 
   - case_id: AWIR-ALIAS-COLLISION-001
     class: semantic_similarity_cannot_define_identity
     input:
       user_text: 继续凯姆那个30秒
       active_work_item_id: KAIM-SCARF-CLOTHESLINE-TRAVERSE
-      freshness_provider: trusted_runtime_capability
       candidates:
         - KAIM-SCARF-CLOTHESLINE-TRAVERSE
         - KAIM-HIGH-SEARCH-30S
-      latest_source_checkpoint_ref: "5454103847"
-      latest_applied_checkpoint_ref: "5454103847"
     expected:
       resolved_work_item_id: KAIM-SCARF-CLOTHESLINE-TRAVERSE
       resolution_reason: exact_active_pointer_not_similarity
-
-  - case_id: AWIR-CHECKPOINT-LAG-001
-    class: source_issue_newer_than_snapshot
-    input:
-      user_text: 继续上一版
-      active_work_item_id: KAIM-SCARF-CLOTHESLINE-TRAVERSE
-      freshness_provider: trusted_runtime_capability
-      latest_applied_checkpoint_ref: "5427171891"
-      latest_source_checkpoint_ref: "5454103847"
-    expected_error: WORK_ITEM_CHECKPOINT_RECONCILE_REQUIRED
-    director_feature_compiler_invoked: false
-
-  - case_id: AWIR-SOURCE-INACCESSIBLE-001
-    class: freshness_fail_closed
-    input:
-      user_text: 继续那30秒
-      active_work_item_id: KAIM-SCARF-CLOTHESLINE-TRAVERSE
-      source_issue: 19
-      freshness_provider: trusted_runtime_capability
-      source_issue_accessible: false
-    expected_error: WORK_ITEM_FRESHNESS_UNVERIFIED
-    director_feature_compiler_invoked: false
-
-  - case_id: AWIR-FRESHNESS-PROVIDER-REQUIRED-001
-    class: serialized_freshness_claim_cannot_mint_canonical_freshness
-    input:
-      user_text: 继续那30秒
-      active_work_item_id: KAIM-SCARF-CLOTHESLINE-TRAVERSE
-      source_issue: 19
-      freshness_provider: null
-      serialized_claim:
-        source_issue_accessible: true
-        latest_source_checkpoint_ref: "5454103847"
-    expected_error: WORK_ITEM_FRESHNESS_PROVIDER_REQUIRED
-    director_feature_compiler_invoked: false
-    serialized_claim_accepted: false
 
   - case_id: AWIR-POINTER-MISSING-001
     class: missing_pointer_fail_closed
@@ -101,7 +134,6 @@ cases:
     class: normal_new_directing_fast_path
     input:
       user_text: 设计圣女第一次公开登场时群众由喧闹转为安静的镜头
-      active_work_item_id: KAIM-SCARF-CLOTHESLINE-TRAVERSE
     expected:
       resolution_required: false
       gate_status: NOT_REQUIRED
@@ -124,8 +156,7 @@ cases:
       - right_to_left_screen_trajectory
       - wall_impact_two_foot_buffer
     revision:
-      changed:
-        - disappearance_edit_language
+      changed: [disappearance_edit_language]
       revoked: []
     expected_effective_state_contains:
       - scarf_is_load_bearing_mechanism
@@ -139,20 +170,15 @@ cases:
       - over_specified_setup_micro_choreography
       - scarf_is_load_bearing_mechanism
     revision:
-      revoked:
-        - over_specified_setup_micro_choreography
-      preserved:
-        - scarf_is_load_bearing_mechanism
-    expected_effective_state_contains:
-      - scarf_is_load_bearing_mechanism
-    expected_effective_state_excludes:
-      - over_specified_setup_micro_choreography
+      revoked: [over_specified_setup_micro_choreography]
+      preserved: [scarf_is_load_bearing_mechanism]
+    expected_effective_state_contains: [scarf_is_load_bearing_mechanism]
+    expected_effective_state_excludes: [over_specified_setup_micro_choreography]
 
   - case_id: AWIR-CURRENT-IMAGE-NOT-AUTHORITY-001
     class: media_reference_boundary
     input:
       user_text: 继续这个镜头
-      active_work_item_id: KAIM-SCARF-CLOTHESLINE-TRAVERSE
       current_turn_image_matches_active_work_item: true
     expected:
       image_may_help_referent_resolution: true
