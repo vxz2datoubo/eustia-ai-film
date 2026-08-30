@@ -1,0 +1,79 @@
+suite_id: LEARNING_EVIDENCE_PIPELINE_REGRESSION_V1
+status: candidate_stacked
+runtime_contract: 10_运行时/learning_evidence_pipeline_orchestrator.yaml
+runtime: tools/learning_retriever/learning_retriever/learning_pipeline.py
+source_issue: 35
+
+policy:
+  compose_existing_runtime_only: true
+  fixed_stage_order_required: true
+  source_stage_error_preservation_required: true
+  later_stage_execution_after_failure_forbidden: true
+  before_repair_target_required: true
+  before_after_eval_id_must_differ: true
+  prior_final_delta_must_be_revalidated: true
+  prompt_mutation_forbidden: true
+  generation_forbidden: true
+  camera_authority_forbidden: true
+  canonical_write_forbidden: true
+  learning_write_forbidden: true
+  regression_write_forbidden: true
+  maturity_promotion_forbidden: true
+  automatic_causal_claim_forbidden: true
+
+cases:
+  - id: LEP-KAIM-DISAPPEARANCE-E2E-001
+    work_item: issue-19-kaim-scarf-clothesline
+    before_expected_observed_status: FAIL
+    expected_repair_surface: TRANSITION_EDIT_REVIEW
+    after_expected_observed_status: PASS
+    expected_final_delta_transition: RESOLVED
+    expected_causal_evidence_status: OBSERVATIONAL_ONLY
+    expected_post_final_delta_conflict: false
+    expected_regression_proposal_count: 1
+    expected_maturity_route: NO_PROMOTION_REQUESTED
+
+  - id: LEP-NO-REPAIR-TARGET-001
+    before_expected_observed_status: PASS
+    expected_error_code: LEARNING_PIPELINE_NO_REPAIR_TARGET
+    expected_failure_stage: TARGETED_REPAIR_PRECONDITION
+    forbidden_completed_stage: AFTER_EXPECTED_OBSERVED
+
+  - id: LEP-EVAL-ID-COLLISION-001
+    before_after_eval_id_same: true
+    expected_error_code: LEARNING_PIPELINE_EVAL_ID_COLLISION
+    expected_failure_stage: AFTER_EXPECTED_OBSERVED_PRECONDITION
+    forbidden_completed_stage: FINAL_DELTA
+
+  - id: LEP-BEFORE-PROVENANCE-FAIL-001
+    mutation: remove_before_observation_provenance
+    expected_wrapper_code: LEARNING_PIPELINE_STAGE_FAILED
+    expected_underlying_code: EVAL_MISSING_PROVENANCE
+    expected_failure_stage: BEFORE_EXPECTED_OBSERVED
+
+  - id: LEP-PRIOR-FD-REVALIDATE-001
+    prior_final_delta_payload: structurally_fake_caller_object
+    expected_wrapper_code: LEARNING_PIPELINE_STAGE_FAILED
+    expected_underlying_code: POST_FD_INVALID_FINAL_DELTA
+    expected_failure_stage: POST_FINAL_DELTA
+
+  - id: LEP-UNKNOWN-MATURITY-001
+    requested_maturity: magic_verified
+    expected_wrapper_code: LEARNING_PIPELINE_STAGE_FAILED
+    expected_underlying_code: POST_FD_UNKNOWN_MATURITY
+    expected_failure_stage: POST_FINAL_DELTA
+
+  - id: LEP-UNKNOWN-ROOT-FIELD-001
+    mutation: add_write_learning_now_true
+    expected_error_code: LEARNING_PIPELINE_UNKNOWN_FIELD
+    expected_failure_stage: ORCHESTRATOR_INPUT
+
+gates:
+  exact_underlying_runtime_errors_are_not_hidden: true
+  all_success_authority_flags_false: true
+  orchestration_does_not_rewrite_stage_results: true
+  prior_evidence_not_trusted_without_revalidation: true
+  no_second_learning_authority: true
+  no_write_route_created: true
+  no_maturity_route_created: true
+  canonical_registration_deferred_until_upstream_canonical: true
