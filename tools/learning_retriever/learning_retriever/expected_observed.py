@@ -167,10 +167,17 @@ def _validate_control_provenance(
     target_variable: str,
     require_complete: bool,
 ) -> dict[str, Any] | None:
+    """Validate a caller declaration without converting it into trusted proof.
+
+    This slice has no canonical control verifier.  Consequently all provenance
+    accepted here is explicitly a caller declaration: canonical names and
+    evidence-reference shape can be checked, but verification authority cannot
+    be manufactured from those strings.
+    """
     if raw is None:
         if require_complete:
             raise ExpectedObservedEvalError(
-                "EVAL_MISSING_PROVENANCE", "verified non-target controls require control_provenance"
+                "EVAL_MISSING_PROVENANCE", "claimed verified non-target controls require control_provenance"
             )
         return None
 
@@ -227,18 +234,18 @@ def _validate_control_provenance(
         if not target_variable:
             raise ExpectedObservedEvalError(
                 "EVAL_CONTROL_PROVENANCE_INVALID",
-                "non_target_controls_verified=true requires target_variable",
+                "non_target_controls_verified=true claim requires target_variable",
             )
         if not evidence_refs:
             raise ExpectedObservedEvalError(
                 "EVAL_MISSING_PROVENANCE",
-                "verified non-target controls require control_provenance.evidence_refs",
+                "claimed verified non-target controls require control_provenance.evidence_refs",
             )
         missing = canonical - declared
         if missing:
             raise ExpectedObservedEvalError(
                 "EVAL_CONTROL_REQUIREMENTS_INCOMPLETE",
-                f"CLEAN control claim does not cover canonical SOAC requirements: {sorted(missing)}",
+                f"claimed CLEAN control set does not cover canonical SOAC requirements: {sorted(missing)}",
             )
 
     return {
@@ -249,6 +256,7 @@ def _validate_control_provenance(
         "evidence_refs": evidence_refs,
         "canonical_requirements_covered": sorted(declared),
         "complete_against_canonical": declared == canonical,
+        "verification_state": "DECLARED_BY_CALLER",
     }
 
 
@@ -401,7 +409,13 @@ def _derive_outcome(observation: Mapping[str, Any], expected_value: Any) -> tupl
 def evaluate_expected_vs_observed(
     raw: Mapping[str, Any], *, project_root: str | Path
 ) -> dict[str, Any]:
-    """Validate supplied reverse observations and compare them to declared expectations."""
+    """Validate supplied reverse observations and compare them to declared expectations.
+
+    ``non_target_controls_verified`` is treated only as a caller claim.  This
+    runtime has no canonical control verifier, so serialized payload data can
+    never mint CLEAN.  Until a later canonical verifier is integrated, a
+    target-variable evaluation without explicit confounds is UNVERIFIED_CONTROL.
+    """
 
     if not isinstance(raw, Mapping):
         raise ExpectedObservedEvalError("EVAL_INVALID_SHAPE", "evaluation root must be a mapping")
@@ -445,8 +459,8 @@ def evaluate_expected_vs_observed(
             "EVAL_INVALID_SHAPE", "controlled_eval.confounds must be a list of strings"
         )
     target_variable = str(controlled.get("target_variable") or "").strip()
-    controls_verified = controlled.get("non_target_controls_verified", False)
-    if not isinstance(controls_verified, bool):
+    controls_verified_claim = controlled.get("non_target_controls_verified", False)
+    if not isinstance(controls_verified_claim, bool):
         raise ExpectedObservedEvalError(
             "EVAL_INVALID_SHAPE",
             "controlled_eval.non_target_controls_verified must be boolean",
@@ -455,12 +469,19 @@ def evaluate_expected_vs_observed(
         controlled.get("control_provenance"),
         canonical_requirements=canonical_control_requirements,
         target_variable=target_variable,
-        require_complete=controls_verified,
+        require_complete=controls_verified_claim,
+    )
+
+    # P1 trust boundary: payload metadata can describe a claimed controlled
+    # comparison, but this slice has no mechanically trusted canonical verifier.
+    # Therefore actual verification remains false and CLEAN is unreachable from
+    # serialized caller data alone.
+    controls_verified = False
+    control_verification_state = (
+        "DECLARED_BY_CALLER" if controls_verified_claim else "NOT_VERIFIED"
     )
     if confounds:
         control_status = "CONFOUNDED"
-    elif target_variable and controls_verified:
-        control_status = "CLEAN"
     elif target_variable:
         control_status = "UNVERIFIED_CONTROL"
     else:
@@ -565,6 +586,8 @@ def evaluate_expected_vs_observed(
             "target_variable": target_variable or None,
             "confounds": confounds,
             "non_target_controls_verified": controls_verified,
+            "caller_claimed_non_target_controls_verified": controls_verified_claim,
+            "control_verification_state": control_verification_state,
             "control_provenance": control_provenance,
             "canonical_control_requirements": canonical_control_requirements,
         },
