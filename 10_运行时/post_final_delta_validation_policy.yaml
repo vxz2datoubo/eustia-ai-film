@@ -1,0 +1,83 @@
+policy_id: EUSTIA_POST_FINAL_DELTA_VALIDATION_V1
+status: candidate
+scope: final_delta_evidence_cohort_regression_proposal_maturity_assessment
+
+canonical_authority:
+  feedback_learning: 08_系统学习/反馈反推与系统反哺引擎.md
+  maturity_model: 10_运行时/maturity_model.yaml
+  learning_application_gate: 10_运行时/learning_application_gate.yaml
+  final_delta_policy: 10_运行时/final_delta_learning_policy.yaml
+  final_delta_runtime: tools/learning_retriever/learning_retriever/final_delta.py
+
+principles:
+  explicit_hypothesis_id_required: true
+  semantic_auto_clustering_forbidden: true
+  exact_candidate_lesson_payload_partitioning: true
+  model_version_evidence_partitioning_required: true
+  latest_wins_conflict_resolution_forbidden: true
+  contradictions_must_remain_visible: true
+  regression_proposal_is_not_regression_write: true
+  maturity_assessment_is_not_maturity_promotion: true
+  scene_verified_requires_trusted_user_or_canonical_confirmation_binding: true
+  project_verified_requires_governed_high_impact_gate: true
+  general_stable_requires_governed_high_impact_gate: true
+  prompt_mutation_forbidden: true
+  generation_trigger_forbidden: true
+  camera_authority_mutation_forbidden: true
+  canonical_writeback_forbidden: true
+  learning_writeback_forbidden: true
+  maturity_promotion_forbidden: true
+  automatic_causal_claim_forbidden: true
+
+evidence_classification:
+  SUPPORTING:
+    requires:
+      - comparable_final_delta
+      - at_least_one_resolved_repair_field
+      - no_regressed_pass_field
+      - no_persistent_failure_field
+  CONTRADICTORY:
+    any_of:
+      - regressed_pass_field
+      - persistent_failure_field
+  INCONCLUSIVE:
+    any_of:
+      - final_delta_not_comparable
+      - no_resolved_or_contradictory_signal
+      - unresolved_evidence_only
+
+cohort_partition_keys:
+  - model
+  - model_version
+  - exact_candidate_lesson_payload
+
+regression_proposal_contract:
+  source_requires_regression_candidate_eligible: true
+  source_requires_supporting_classification: true
+  status: candidate
+  canonical_write_target: null
+  write_authorized: false
+  promotion_authorized: false
+  human_or_governed_review_required: true
+
+maturity_routes:
+  candidate: REGISTRATION_ONLY_NO_PROMOTION
+  scene_verified: TRUSTED_USER_OR_CANONICAL_CONFIRMATION_BINDING_REQUIRED
+  project_verified: HIGH_IMPACT_GOVERNED_PROMOTION_GATE_REQUIRED
+  general_stable: HIGH_IMPACT_GOVERNED_PROMOTION_GATE_REQUIRED
+  conflicted: SPECIAL_STATE_GOVERNED_DECISION_REQUIRED
+  needs_revalidation: SPECIAL_STATE_GOVERNED_DECISION_REQUIRED
+  deprecated: SPECIAL_STATE_GOVERNED_DECISION_REQUIRED
+
+output_contract:
+  evidence_cohorts_are_ephemeral: true
+  regression_proposals_are_ephemeral: true
+  maturity_assessment_is_advisory_evidence_only: true
+  prompt_mutation_authorized: false
+  generation_authorized: false
+  camera_authority_mutation_authorized: false
+  canonical_mutation_authorized: false
+  learning_writeback_authorized: false
+  regression_write_authorized: false
+  maturity_promotion_authorized: false
+  causal_claim_authorized: false

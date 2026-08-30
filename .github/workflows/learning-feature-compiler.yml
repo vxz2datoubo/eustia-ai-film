@@ -17,12 +17,14 @@ on:
       - '10_运行时/learning_recall_index.yaml'
       - '10_运行时/targeted_repair_policy.yaml'
       - '10_运行时/final_delta_learning_policy.yaml'
+      - '10_运行时/post_final_delta_validation_policy.yaml'
       - '11_验收/director_feature_compiler_regression_cases.yaml'
       - '11_验收/cinematic_visual_grammar_regression_cases.yaml'
       - '11_验收/cinematic_intent_contract_regression_cases.yaml'
       - '11_验收/expected_observed_eval_regression_cases.yaml'
       - '11_验收/targeted_repair_regression_cases.yaml'
       - '11_验收/final_delta_learning_regression_cases.yaml'
+      - '11_验收/post_final_delta_validation_regression_cases.yaml'
       - '.github/workflows/learning-feature-compiler.yml'
 
 jobs:
@@ -65,6 +67,10 @@ jobs:
         run: |
           PYTHONPATH=tools/learning_retriever python -m pytest tools/learning_retriever/tests/test_final_delta_learning.py
           PYTHONPATH=tools/learning_retriever python -m pytest tools/learning_retriever/tests/test_final_delta_bindings.py
+      - name: Run targeted post-Final-Delta validation regressions
+        run: |
+          PYTHONPATH=tools/learning_retriever python -m pytest tools/learning_retriever/tests/test_post_final_delta_validation.py
+          PYTHONPATH=tools/learning_retriever python -m pytest tools/learning_retriever/tests/test_post_final_delta_bindings.py
       - name: Run full learning retriever tests
         run: |
           PYTHONPATH=tools/learning_retriever python -m pytest tools/learning_retriever/tests
