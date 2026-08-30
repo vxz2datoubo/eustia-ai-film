@@ -200,3 +200,23 @@ PYTHONPATH=tools/learning_retriever python -m learning_retriever.final_delta_cli
 ```
 
 Targeted regressions live in `11_验收/final_delta_learning_regression_cases.yaml`.
+
+## Post-Final-Delta evidence validation
+
+`learning_retriever.post_final_delta` operates after Final-Delta. It does not discover or semantically cluster hypotheses. The caller supplies an explicit `hypothesis_id`; evidence is then partitioned by exact model, model version, and exact candidate-lesson payload before any summary is produced.
+
+Each Final-Delta record is classified as `SUPPORTING`, `CONTRADICTORY`, or `INCONCLUSIVE`. A support/contradiction pair inside the same exact cohort remains an explicit conflict; there is no latest-wins resolution. Different model versions stay in separate cohorts.
+
+Eligible supporting Final-Delta records may produce an ephemeral regression proposal, but the proposal has no canonical target and `write_authorized: false`. It is evidence for a later governed regression decision, not an automatic test insertion.
+
+Maturity assessment is also non-authoritative. `scene_verified` requires a trusted user/canonical confirmation binding that this runtime cannot mint from caller-supplied fields. `project_verified` and `general_stable` always route through the governed high-impact promotion gate. All promotion/write/mutation flags remain false.
+
+Run an assessment:
+
+```bash
+PYTHONPATH=tools/learning_retriever python -m learning_retriever.post_final_delta_cli \
+  --project-root . \
+  --assessment post_final_delta.yaml
+```
+
+Targeted regressions live in `11_验收/post_final_delta_validation_regression_cases.yaml`.
