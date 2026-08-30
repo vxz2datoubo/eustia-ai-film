@@ -1,12 +1,24 @@
-policy_id: EUSTIA_TARGETED_REPAIR_ROUTING_V1
+policy_id: EUSTIA_TARGETED_REPAIR_ROUTING_V2
 status: candidate
-scope: expected_vs_observed_to_targeted_repair_routing
+scope: expected_vs_observed_source_input_to_targeted_repair_routing
 
 canonical_authority:
   director_method: 01_AI电影系统/AI电影系统.md
   failure_vocabulary: 10_运行时/screen_observable_audible_ir_schema.yaml#reverse_compiler.failure_categories
   input_runtime: tools/learning_retriever/learning_retriever/expected_observed.py
   feedback_learning: 08_系统学习/反馈反推与系统反哺引擎.md
+
+input_contract:
+  source_payload_required: true
+  canonical_expected_observed_reexecution_required: true
+  serialized_evaluator_result_accepted_as_authority: false
+  planner_may_not_trust_joint_result_handoff_consistency_as_source_proof: true
+  public_runtime_flow:
+    - expected_observed_source_payload
+    - canonical_expected_observed_reexecution
+    - in_memory_evaluator_result
+    - targeted_repair_validation_and_routing
+  standalone_cli_input: original_expected_observed_eval_input
 
 principles:
   repair_failed_dimensions_only: true
@@ -93,6 +105,7 @@ control_evidence_status:
 output_contract:
   repair_plan_is_ephemeral_execution_artifact: true
   canonical_write_target: null
+  source_binding_receipt_required: true
   prompt_mutation_authorized: false
   generation_authorized: false
   camera_authority_mutation_authorized: false
