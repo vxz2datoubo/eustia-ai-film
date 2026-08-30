@@ -392,7 +392,11 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
         Raw substring matching is unsafe in Chinese because lexical tokens can
         join across word boundaries, e.g. `王朝` + `向圣女` contains the bytes
         `朝向圣女` without expressing body orientation. A valid predicate must
-        have an ellipsis, actor, explicit body-anchor, or camera leader.
+        have an ellipsis, actor, explicit body-anchor, or camera leader. Location
+        or scene prose may precede a bounded subject, so a leader that ends with a
+        known actor/body/camera anchor is also valid; the facing target still must
+        begin immediately after the predicate, which keeps dynasty cross-token
+        forms such as `这个王朝向圣女征税` outside the grammar.
         """
         separators = ("，", "。", "；", "！", "？", ",", ";", "!", "?")
         leading_glue = (
