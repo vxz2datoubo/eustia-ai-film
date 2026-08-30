@@ -1,9 +1,11 @@
-"""Evidence-preserving Repair Outcome and Final-Delta compiler.
+"""Source-bound Repair Outcome / Final-Delta evidence compiler.
 
-This module is intentionally non-generative and non-authoritative. It compares
-already evaluated before/after outputs, validates the Targeted Repair handoff,
-and emits candidate learning evidence without claiming causality, mutating
-prompts/canonical state, or promoting maturity.
+Final-Delta is an execution layer, not a new learning authority. Public callers
+provide the original before/after Expected-vs-Observed source payloads plus an
+explicit change record and optional learning context. The runtime re-executes
+canonical Expected-vs-Observed for both observations and canonical Targeted
+Repair for the before source. Serialized evaluator results or repair plans are
+never accepted as upstream truth.
 """
 
 from __future__ import annotations
@@ -12,6 +14,9 @@ from pathlib import Path
 from typing import Any, Mapping
 
 import yaml
+
+from .expected_observed import ExpectedObservedEvalError, evaluate_expected_vs_observed
+from .targeted_repair import TargetedRepairPlanError, plan_targeted_repair
 
 
 class FinalDeltaEvidenceError(ValueError):
@@ -42,9 +47,8 @@ _ALLOWED_CONFIRMATION = {
     "UNKNOWN",
 }
 _ALLOWED_PACKAGE_KEYS = {
-    "before_eval",
-    "after_eval",
-    "repair_plan",
+    "before_eval_input",
+    "after_eval_input",
     "change_record",
     "learning_context",
 }
@@ -77,8 +81,12 @@ _ALLOWED_LEARNING_CONTEXT_KEYS = {
 STRUCTURAL_GATE_CODES = {
     "FINAL_DELTA_INVALID_SHAPE",
     "FINAL_DELTA_UNKNOWN_FIELD",
+    "FINAL_DELTA_BEFORE_EVAL_REJECTED",
+    "FINAL_DELTA_AFTER_EVAL_REJECTED",
+    "FINAL_DELTA_REPAIR_REEXECUTION_REJECTED",
     "FINAL_DELTA_SOURCE_EVAL_MISMATCH",
     "FINAL_DELTA_REPAIR_PLAN_MISMATCH",
+    "FINAL_DELTA_EVAL_ID_COLLISION",
     "FINAL_DELTA_AUTHORITY_VIOLATION",
     "FINAL_DELTA_CHANGE_RECORD_REQUIRED",
     "FINAL_DELTA_POLICY_INCOMPLETE",
@@ -108,11 +116,14 @@ def _mapping(value: Any, *, field: str) -> dict[str, Any]:
 def _string_list(value: Any, *, field: str, required_nonempty: bool = False) -> list[str]:
     if value is None:
         items: list[str] = []
-    elif isinstance(value, list) and all(isinstance(item, str) and item.strip() for item in value):
+    elif isinstance(value, list) and all(
+        isinstance(item, str) and item.strip() for item in value
+    ):
         items = [item.strip() for item in value]
     else:
         raise FinalDeltaEvidenceError(
-            "FINAL_DELTA_INVALID_SHAPE", f"{field} must be a list of non-empty strings"
+            "FINAL_DELTA_INVALID_SHAPE",
+            f"{field} must be a list of non-empty strings",
         )
     if required_nonempty and not items:
         raise FinalDeltaEvidenceError(
@@ -125,23 +136,23 @@ def _string_list(value: Any, *, field: str, required_nonempty: bool = False) -> 
     return items
 
 
-def _load_policy(project_root: str | Path) -> tuple[dict[str, Any], dict[str, Any]]:
+def _load_policy(project_root: str | Path) -> dict[str, Any]:
     root = Path(project_root)
-    policy_path = root / "10_运行时/final_delta_learning_policy.yaml"
-    maturity_path = root / "10_运行时/maturity_model.yaml"
-    policy = yaml.safe_load(policy_path.read_text(encoding="utf-8"))
-    maturity = yaml.safe_load(maturity_path.read_text(encoding="utf-8"))
+    policy = yaml.safe_load(
+        (root / "10_运行时/final_delta_learning_policy.yaml").read_text(encoding="utf-8")
+    )
+    maturity = yaml.safe_load(
+        (root / "10_运行时/maturity_model.yaml").read_text(encoding="utf-8")
+    )
     if not isinstance(policy, Mapping) or not isinstance(maturity, Mapping):
         raise FinalDeltaEvidenceError(
             "FINAL_DELTA_POLICY_INCOMPLETE", "policy or maturity model is not a mapping"
         )
-    states = set((maturity.get("states") or {}).keys())
-    if "candidate" not in states:
+    if "candidate" not in set((maturity.get("states") or {}).keys()):
         raise FinalDeltaEvidenceError(
             "FINAL_DELTA_POLICY_INCOMPLETE", "maturity model has no candidate state"
         )
-    principles = policy.get("principles") or {}
-    required_true = {
+    required = {
         "observation_is_not_causality",
         "single_success_cannot_universalize",
         "explicit_change_record_required",
@@ -150,11 +161,42 @@ def _load_policy(project_root: str | Path) -> tuple[dict[str, Any], dict[str, An
         "automatic_canonical_writeback_forbidden",
         "automatic_prompt_mutation_forbidden",
     }
-    if not all(principles.get(key) is True for key in required_true):
+    principles = policy.get("principles") or {}
+    if not all(principles.get(key) is True for key in required):
         raise FinalDeltaEvidenceError(
             "FINAL_DELTA_POLICY_INCOMPLETE", "required safety principles are missing"
         )
-    return dict(policy), dict(maturity)
+    return dict(policy)
+
+
+def _reexecute_eval(
+    raw_input: Any, *, label: str, project_root: str | Path
+) -> dict[str, Any]:
+    source = _mapping(raw_input, field=f"{label}_eval_input")
+    try:
+        return evaluate_expected_vs_observed(source, project_root=project_root)
+    except ExpectedObservedEvalError as exc:
+        code = (
+            "FINAL_DELTA_BEFORE_EVAL_REJECTED"
+            if label == "before"
+            else "FINAL_DELTA_AFTER_EVAL_REJECTED"
+        )
+        raise FinalDeltaEvidenceError(
+            code,
+            f"canonical Expected-vs-Observed rejected {label} source: {exc.code}: {exc.message}",
+        ) from exc
+
+
+def _reexecute_repair(
+    before_input: Mapping[str, Any], *, project_root: str | Path
+) -> dict[str, Any]:
+    try:
+        return plan_targeted_repair(before_input, project_root=project_root)
+    except TargetedRepairPlanError as exc:
+        raise FinalDeltaEvidenceError(
+            "FINAL_DELTA_REPAIR_REEXECUTION_REJECTED",
+            f"canonical Targeted Repair rejected before source: {exc.code}: {exc.message}",
+        ) from exc
 
 
 def _validate_eval_result(raw: Any, *, label: str) -> dict[str, Any]:
@@ -209,9 +251,10 @@ def _validate_eval_result(raw: Any, *, label: str) -> dict[str, Any]:
                 "FINAL_DELTA_INVALID_SHAPE",
                 f"{label} result {field!r} has no expected_value",
             )
-        result["field"] = field
-        result["outcome"] = outcome
-        results.append(result)
+        normalized = dict(result)
+        normalized["field"] = field
+        normalized["outcome"] = outcome
+        results.append(normalized)
         seen.add(field)
 
     control_status = str(value.get("control_status") or "").strip().upper()
@@ -237,54 +280,67 @@ def _validate_eval_result(raw: Any, *, label: str) -> dict[str, Any]:
             "FINAL_DELTA_AUTHORITY_VIOLATION",
             f"{label} learning handoff attempts a maturity effect",
         )
-    if handoff.get("promotion_authorized") is not False or handoff.get("writeback_authorized") is not False:
+    if (
+        handoff.get("promotion_authorized") is not False
+        or handoff.get("writeback_authorized") is not False
+    ):
         raise FinalDeltaEvidenceError(
             "FINAL_DELTA_AUTHORITY_VIOLATION",
             f"{label} learning handoff must not authorize promotion/writeback",
         )
-    handoff_control = str(handoff.get("control_status") or "").strip().upper()
-    if handoff_control != control_status:
+    if str(handoff.get("control_status") or "").strip().upper() != control_status:
         raise FinalDeltaEvidenceError(
             "FINAL_DELTA_SOURCE_EVAL_MISMATCH",
             f"{label} learning handoff control status does not match eval result",
         )
-
-    normalized = dict(value)
-    normalized["status"] = status
-    normalized["eval_id"] = eval_id
-    normalized["results"] = results
-    normalized["control_status"] = control_status
-    normalized["controlled_eval"] = controlled_eval
-    normalized["observation_provenance"] = provenance
-    normalized["learning_evidence_handoff"] = handoff
-    return normalized
+    normalized_value = dict(value)
+    normalized_value.update(
+        {
+            "status": status,
+            "eval_id": eval_id,
+            "results": results,
+            "control_status": control_status,
+            "controlled_eval": controlled_eval,
+            "observation_provenance": provenance,
+            "learning_evidence_handoff": handoff,
+        }
+    )
+    return normalized_value
 
 
 def _validate_repair_plan(raw: Any, *, before: Mapping[str, Any]) -> dict[str, Any]:
-    plan = _mapping(raw, field="repair_plan")
+    plan = _mapping(raw, field="canonical_repair_plan")
     if str(plan.get("source_eval_id") or "") != before["eval_id"]:
         raise FinalDeltaEvidenceError(
             "FINAL_DELTA_REPAIR_PLAN_MISMATCH",
-            "repair_plan.source_eval_id must match before_eval.eval_id",
+            "canonical repair source_eval_id must match before eval_id",
+        )
+    binding = _mapping(plan.get("source_binding"), field="canonical_repair_plan.source_binding")
+    if (
+        binding.get("mode") != "canonical_expected_observed_reexecution"
+        or binding.get("serialized_eval_result_accepted") is not False
+    ):
+        raise FinalDeltaEvidenceError(
+            "FINAL_DELTA_REPAIR_PLAN_MISMATCH",
+            "Targeted Repair source binding is not canonical re-execution",
         )
     for key in _AUTHORITY_FALSE_KEYS:
         if plan.get(key) is not False:
             raise FinalDeltaEvidenceError(
-                "FINAL_DELTA_AUTHORITY_VIOLATION",
-                f"repair plan must keep {key}=false",
+                "FINAL_DELTA_AUTHORITY_VIOLATION", f"repair plan must keep {key}=false"
             )
-    raw_items = plan.get("repair_items")
-    if not isinstance(raw_items, list):
+    items = plan.get("repair_items")
+    if not isinstance(items, list):
         raise FinalDeltaEvidenceError(
-            "FINAL_DELTA_INVALID_SHAPE", "repair_plan.repair_items must be a list"
+            "FINAL_DELTA_INVALID_SHAPE", "canonical repair_items must be a list"
         )
     actual_fields: list[str] = []
-    for index, raw_item in enumerate(raw_items):
-        item = _mapping(raw_item, field=f"repair_plan.repair_items[{index}]")
+    for index, raw_item in enumerate(items):
+        item = _mapping(raw_item, field=f"canonical_repair_plan.repair_items[{index}]")
         field = str(item.get("field") or "").strip()
         if not field:
             raise FinalDeltaEvidenceError(
-                "FINAL_DELTA_INVALID_SHAPE", "repair plan contains an empty field"
+                "FINAL_DELTA_INVALID_SHAPE", "canonical repair item has empty field"
             )
         if item.get("creative_mutation_authorized") is not False:
             raise FinalDeltaEvidenceError(
@@ -292,18 +348,15 @@ def _validate_repair_plan(raw: Any, *, before: Mapping[str, Any]) -> dict[str, A
                 f"repair item {field!r} authorizes creative mutation",
             )
         actual_fields.append(field)
-    if len(actual_fields) != len(set(actual_fields)):
-        raise FinalDeltaEvidenceError(
-            "FINAL_DELTA_INVALID_SHAPE", "repair plan contains duplicate repair fields"
-        )
-
     expected_fields = sorted(
-        item["field"] for item in before["results"] if item["outcome"] in {"FAIL", "UNKNOWN"}
+        item["field"]
+        for item in before["results"]
+        if item["outcome"] in {"FAIL", "UNKNOWN"}
     )
     if sorted(actual_fields) != expected_fields:
         raise FinalDeltaEvidenceError(
             "FINAL_DELTA_REPAIR_PLAN_MISMATCH",
-            f"repair fields must exactly match before FAIL/UNKNOWN fields; expected={expected_fields}, actual={sorted(actual_fields)}",
+            f"repair fields differ from canonical before FAIL/UNKNOWN fields: expected={expected_fields}, actual={sorted(actual_fields)}",
         )
     expected_pass = sorted(
         item["field"] for item in before["results"] if item["outcome"] == "PASS"
@@ -311,17 +364,15 @@ def _validate_repair_plan(raw: Any, *, before: Mapping[str, Any]) -> dict[str, A
     if sorted(plan.get("preserved_pass_fields") or []) != expected_pass:
         raise FinalDeltaEvidenceError(
             "FINAL_DELTA_REPAIR_PLAN_MISMATCH",
-            "repair plan preserved_pass_fields do not match before PASS fields",
+            "preserved_pass_fields do not match canonical before PASS fields",
         )
     if bool(plan.get("repair_required")) is not bool(expected_fields):
         raise FinalDeltaEvidenceError(
-            "FINAL_DELTA_REPAIR_PLAN_MISMATCH",
-            "repair_required does not match before FAIL/UNKNOWN fields",
+            "FINAL_DELTA_REPAIR_PLAN_MISMATCH", "repair_required does not match canonical before result"
         )
     if str(plan.get("control_status") or "").strip().upper() != before["control_status"]:
         raise FinalDeltaEvidenceError(
-            "FINAL_DELTA_REPAIR_PLAN_MISMATCH",
-            "repair plan control status does not match before evaluation",
+            "FINAL_DELTA_REPAIR_PLAN_MISMATCH", "repair control status differs from canonical before eval"
         )
     return plan
 
@@ -349,9 +400,7 @@ def _validate_change_record(raw: Any) -> dict[str, Any]:
         change.get("experimental_variables"), field="change_record.experimental_variables"
     )
     evidence_refs = _string_list(
-        change.get("evidence_refs"),
-        field="change_record.evidence_refs",
-        required_nonempty=True,
+        change.get("evidence_refs"), field="change_record.evidence_refs", required_nonempty=True
     )
     scope = str(change.get("scope") or "").strip().upper()
     if scope not in _ALLOWED_SCOPE:
@@ -361,10 +410,13 @@ def _validate_change_record(raw: Any) -> dict[str, Any]:
     confirmation = str(change.get("user_confirmation_state") or "UNKNOWN").strip().upper()
     if confirmation not in _ALLOWED_CONFIRMATION:
         raise FinalDeltaEvidenceError(
-            "FINAL_DELTA_INVALID_SHAPE",
-            f"invalid user_confirmation_state: {confirmation!r}",
+            "FINAL_DELTA_INVALID_SHAPE", f"invalid user_confirmation_state: {confirmation!r}"
         )
-    overlap = (set(changed) & set(preserved)) | (set(changed) & set(revoked)) | (set(preserved) & set(revoked))
+    overlap = (
+        (set(changed) & set(preserved))
+        | (set(changed) & set(revoked))
+        | (set(preserved) & set(revoked))
+    )
     if overlap:
         raise FinalDeltaEvidenceError(
             "FINAL_DELTA_INVALID_SHAPE",
@@ -391,8 +443,7 @@ def _validate_learning_context(raw: Any) -> dict[str, Any]:
     unknown = set(context) - _ALLOWED_LEARNING_CONTEXT_KEYS
     if unknown:
         raise FinalDeltaEvidenceError(
-            "FINAL_DELTA_UNKNOWN_FIELD",
-            f"unknown learning_context fields: {sorted(unknown)}",
+            "FINAL_DELTA_UNKNOWN_FIELD", f"unknown learning_context fields: {sorted(unknown)}"
         )
     list_fields = {
         "value_priority",
@@ -435,37 +486,28 @@ def _context_identity(eval_result: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
-def _comparability(
-    before: Mapping[str, Any], after: Mapping[str, Any]
-) -> tuple[str, list[str]]:
+def _comparability(before: Mapping[str, Any], after: Mapping[str, Any]) -> tuple[str, list[str]]:
     reasons: list[str] = []
     gaps: list[str] = []
     before_identity = _context_identity(before)
     after_identity = _context_identity(after)
-
     for key in ("work_item_id", "model", "model_version"):
-        old = before_identity.get(key)
-        new = after_identity.get(key)
+        old, new = before_identity.get(key), after_identity.get(key)
         if old and new and old != new:
             reasons.append(f"{key.upper()}_MISMATCH")
         elif not old or not new:
             gaps.append(f"{key.upper()}_MISSING")
-
-    before_map = _result_map(before)
-    after_map = _result_map(after)
+    before_map, after_map = _result_map(before), _result_map(after)
     if set(before_map) != set(after_map):
         reasons.append("EXPECTATION_FIELD_SET_MISMATCH")
     else:
-        changed_expectations = sorted(
+        changed = sorted(
             field
             for field in before_map
             if before_map[field].get("expected_value") != after_map[field].get("expected_value")
         )
-        if changed_expectations:
-            reasons.append(
-                "EXPECTED_VALUE_CHANGED:" + ",".join(changed_expectations)
-            )
-
+        if changed:
+            reasons.append("EXPECTED_VALUE_CHANGED:" + ",".join(changed))
     if reasons:
         return "NOT_COMPARABLE", reasons + gaps
     if gaps:
@@ -474,7 +516,7 @@ def _comparability(
 
 
 def _transition(before_outcome: str, after_outcome: str) -> str:
-    table = {
+    return {
         ("PASS", "PASS"): "PRESERVED",
         ("PASS", "FAIL"): "REGRESSED",
         ("PASS", "UNKNOWN"): "EVIDENCE_LOST",
@@ -485,13 +527,17 @@ def _transition(before_outcome: str, after_outcome: str) -> str:
         ("UNKNOWN", "FAIL"): "EVIDENCE_GAINED_FAIL",
         ("UNKNOWN", "UNKNOWN"): "UNKNOWN",
         ("NOT_APPLICABLE", "NOT_APPLICABLE"): "NOT_APPLICABLE",
-    }
-    return table.get((before_outcome, after_outcome), "SCOPE_CHANGED")
+    }.get((before_outcome, after_outcome), "SCOPE_CHANGED")
 
 
 def _causal_evidence_status(
-    *, before: Mapping[str, Any], after: Mapping[str, Any], change: Mapping[str, Any], comparison_status: str,
-    target_transitions: list[dict[str, Any]], regressed_fields: list[str],
+    *,
+    before: Mapping[str, Any],
+    after: Mapping[str, Any],
+    change: Mapping[str, Any],
+    comparison_status: str,
+    target_transitions: list[dict[str, Any]],
+    regressed_fields: list[str],
 ) -> tuple[str, bool]:
     if comparison_status == "NOT_COMPARABLE":
         return "NOT_ELIGIBLE_NOT_COMPARABLE", False
@@ -502,7 +548,6 @@ def _causal_evidence_status(
         return "CONTROL_NOT_VERIFIED", False
     if "UNCONTROLLED" in statuses:
         return "OBSERVATIONAL_ONLY", False
-
     before_target = str(before["controlled_eval"].get("target_variable") or "").strip()
     after_target = str(after["controlled_eval"].get("target_variable") or "").strip()
     resolved = any(item["transition"] == "RESOLVED" for item in target_transitions)
@@ -520,8 +565,7 @@ def _causal_evidence_status(
 def compile_final_delta_learning_evidence(
     raw: Mapping[str, Any], *, project_root: str | Path
 ) -> dict[str, Any]:
-    """Compile before/after repair evidence into a non-promoting Final-Delta artifact."""
-
+    """Re-execute upstream sources and compile non-promoting Final-Delta evidence."""
     if not isinstance(raw, Mapping):
         raise FinalDeltaEvidenceError(
             "FINAL_DELTA_INVALID_SHAPE", "Final-Delta package root must be a mapping"
@@ -532,22 +576,39 @@ def compile_final_delta_learning_evidence(
         raise FinalDeltaEvidenceError(
             "FINAL_DELTA_UNKNOWN_FIELD", f"unknown Final-Delta package fields: {sorted(unknown)}"
         )
-    policy, _ = _load_policy(project_root)
-    before = _validate_eval_result(package.get("before_eval"), label="before_eval")
-    after = _validate_eval_result(package.get("after_eval"), label="after_eval")
-    repair_plan = _validate_repair_plan(package.get("repair_plan"), before=before)
+    missing = {"before_eval_input", "after_eval_input", "change_record"} - set(package)
+    if missing:
+        raise FinalDeltaEvidenceError(
+            "FINAL_DELTA_INVALID_SHAPE", f"missing Final-Delta source fields: {sorted(missing)}"
+        )
+
+    policy = _load_policy(project_root)
+    before_input = _mapping(package["before_eval_input"], field="before_eval_input")
+    after_input = _mapping(package["after_eval_input"], field="after_eval_input")
+    before = _validate_eval_result(
+        _reexecute_eval(before_input, label="before", project_root=project_root),
+        label="before_eval",
+    )
+    after = _validate_eval_result(
+        _reexecute_eval(after_input, label="after", project_root=project_root),
+        label="after_eval",
+    )
+    if before["eval_id"] == after["eval_id"]:
+        raise FinalDeltaEvidenceError(
+            "FINAL_DELTA_EVAL_ID_COLLISION", "before and after eval_id must be distinct"
+        )
+    repair_plan = _validate_repair_plan(
+        _reexecute_repair(before_input, project_root=project_root), before=before
+    )
     change = _validate_change_record(package.get("change_record"))
     learning_context = _validate_learning_context(package.get("learning_context"))
 
     comparison_status, comparison_reasons = _comparability(before, after)
-    before_map = _result_map(before)
-    after_map = _result_map(after)
-
+    before_map, after_map = _result_map(before), _result_map(after)
     transitions: list[dict[str, Any]] = []
     if comparison_status != "NOT_COMPARABLE":
         for field in sorted(before_map):
-            old = before_map[field]
-            new = after_map[field]
+            old, new = before_map[field], after_map[field]
             transitions.append(
                 {
                     "field": field,
@@ -573,13 +634,16 @@ def compile_final_delta_learning_evidence(
         item["field"] for item in target_transitions if item["transition"] == "RESOLVED"
     )
     persistent_failure_fields = sorted(
-        item["field"] for item in target_transitions if item["transition"] in {"PERSISTED", "EVIDENCE_GAINED_FAIL"}
+        item["field"]
+        for item in target_transitions
+        if item["transition"] in {"PERSISTED", "EVIDENCE_GAINED_FAIL"}
     )
     unresolved_evidence_fields = sorted(
-        item["field"] for item in target_transitions if item["transition"] in {"UNKNOWN", "EVIDENCE_LOST"}
+        item["field"]
+        for item in target_transitions
+        if item["transition"] in {"UNKNOWN", "EVIDENCE_LOST"}
     )
-
-    causal_evidence_status, causal_analysis_eligible = _causal_evidence_status(
+    causal_status, causal_eligible = _causal_evidence_status(
         before=before,
         after=after,
         change=change,
@@ -587,23 +651,37 @@ def compile_final_delta_learning_evidence(
         target_transitions=target_transitions,
         regressed_fields=regressed_fields,
     )
-
     alternatives = learning_context["alternative_explanations"] or ["UNKNOWN_NOT_SUPPLIED"]
     counterfactuals = learning_context["counterfactuals"] or ["UNKNOWN_NOT_SUPPLIED"]
-    candidate_lesson = learning_context.get("candidate_lesson")
     regression_candidate_eligible = bool(
         comparison_status != "NOT_COMPARABLE"
         and resolved_fields
         and not regressed_fields
         and after["status"] in {"PASS", "INCOMPLETE"}
     )
-
     identity = _context_identity(after)
+    final_delta_id = f"FINAL_DELTA::{change['change_id']}"
+
     return {
-        "final_delta_id": f"FINAL_DELTA::{change['change_id']}",
+        "final_delta_id": final_delta_id,
         "source_before_eval_id": before["eval_id"],
         "source_after_eval_id": after["eval_id"],
         "source_repair_plan_id": repair_plan.get("plan_id"),
+        "source_binding": {
+            "before_eval": {
+                "mode": "canonical_expected_observed_reexecution",
+                "serialized_eval_result_accepted": False,
+            },
+            "after_eval": {
+                "mode": "canonical_expected_observed_reexecution",
+                "serialized_eval_result_accepted": False,
+            },
+            "repair_plan": {
+                "mode": "canonical_targeted_repair_reexecution",
+                "serialized_repair_plan_accepted": False,
+                "upstream_binding": repair_plan.get("source_binding"),
+            },
+        },
         "comparison_status": comparison_status,
         "comparison_reasons": comparison_reasons,
         "work_item_id": identity.get("work_item_id") or _context_identity(before).get("work_item_id"),
@@ -621,8 +699,8 @@ def compile_final_delta_learning_evidence(
             "after_observation_provenance": after["observation_provenance"],
         },
         "causal_evidence": {
-            "status": causal_evidence_status,
-            "eligible_for_causal_analysis": causal_analysis_eligible,
+            "status": causal_status,
+            "eligible_for_causal_analysis": causal_eligible,
             "causal_claim_authorized": False,
             "before_control_status": before["control_status"],
             "after_control_status": after["control_status"],
@@ -637,7 +715,7 @@ def compile_final_delta_learning_evidence(
             "maturity_effect": "none",
             "scope": change["scope"],
             "user_confirmation_state": change["user_confirmation_state"],
-            "candidate_lesson": candidate_lesson,
+            "candidate_lesson": learning_context.get("candidate_lesson"),
             "inferred_intent": learning_context.get("inferred_intent"),
             "real_goal": learning_context.get("real_goal"),
             "value_priority": learning_context["value_priority"],
@@ -655,7 +733,7 @@ def compile_final_delta_learning_evidence(
             "model_or_tool_dependency": learning_context.get("model_or_tool_dependency"),
             "alternative_explanations": alternatives,
             "counterfactuals": counterfactuals,
-            "causal_evidence_status": causal_evidence_status,
+            "causal_evidence_status": causal_status,
             "generalization_authorized": False,
             "promotion_authorized": False,
             "writeback_authorized": False,
@@ -665,7 +743,7 @@ def compile_final_delta_learning_evidence(
             "eligible": regression_candidate_eligible,
             "write_authorized": False,
             "promotion_authorized": False,
-            "source_final_delta_id": f"FINAL_DELTA::{change['change_id']}",
+            "source_final_delta_id": final_delta_id,
             "reason": (
                 "resolved_target_without_pass_regression"
                 if regression_candidate_eligible
