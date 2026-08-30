@@ -17,6 +17,7 @@ on:
       - '10_运行时/learning_recall_index.yaml'
       - '11_验收/director_feature_compiler_regression_cases.yaml'
       - '11_验收/cinematic_visual_grammar_regression_cases.yaml'
+      - '11_验收/cinematic_intent_contract_regression_cases.yaml'
       - '11_验收/learning_smart_recall_production_validation_matrix.yaml'
       - '11_验收/learning_smart_recall_transfer_contract.yaml'
       - '.github/workflows/learning-feature-compiler.yml'
@@ -51,6 +52,9 @@ jobs:
       - name: Run targeted feature compiler regressions
         run: |
           PYTHONPATH=tools/learning_retriever python -m pytest tools/learning_retriever/tests/test_feature_compiler.py tools/learning_retriever/tests/test_production_validation.py
+      - name: Run targeted CinematicIntent contract regressions
+        run: |
+          PYTHONPATH=tools/learning_retriever python -m pytest tools/learning_retriever/tests/test_cinematic_intent_contract.py
       - name: Run full learning retriever tests
         run: |
           PYTHONPATH=tools/learning_retriever python -m pytest tools/learning_retriever/tests
