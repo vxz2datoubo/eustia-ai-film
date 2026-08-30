@@ -1,0 +1,204 @@
+schema_version: "2.1"
+component_id: ACTIVE-WORK-ITEM-RESOLUTION-001
+status: candidate_pending_independent_review
+
+purpose:
+  - resolve continuation/anaphora to an exact production work item before Director Feature Compiler
+  - prevent stale similar historical text from silently becoming the current directing target
+  - keep work-item identity, checkpoint verification and explicit historical selection fail-closed
+
+authority:
+  project_registry: PROJECT_INDEX.yaml
+  current_production_authority: 07_连续性与生产状态/连续性与当前生产状态.md#ACTIVE_WORK_ITEM_STATE
+  director_method: 01_AI电影系统/AI电影系统.md
+  screenplay: 03_剧本与改编/当前改编剧本.md
+  source_issue_role: revision_and_evidence_trace_only
+  contract_role: runtime_validation_only
+
+fixed_flow:
+  - project_index
+  - active_work_item_resolution_when_continuation_is_detected
+  - director_feature_compiler
+  - hard_route_from_director_route_index
+  - semantic_recall_from_learning_recall_index
+  - scope_maturity_model_conflict_gate
+
+continuation_detection:
+  principle: discourse_continuation_not_scene_action
+  examples_positive: [继续上一版, 重新导演上次那30秒, 刚才那个镜头, 接着做下一镜]
+  examples_negative: [卫兵继续追击, 凯姆继续向左滑行, 格兰继续攀爬]
+  unresolved_continuation_must_not_enter_feature_compiler: true
+
+canonical_snapshot_trust_boundary:
+  threat_model:
+    serialized_request_can_mint_work_item_identity: false
+    serialized_request_can_mint_checkpoint_verification: false
+    caller_python_callback_can_mint_work_item_identity: false
+    caller_python_callback_can_mint_checkpoint_verification: false
+    semantic_similarity_can_define_current_identity: false
+    nonempty_or_sha_shaped_commit_string_can_mint_freshness: false
+    candidate_branch_can_mint_canonical_freshness: false
+    uncommitted_worktree_edit_can_mint_canonical_freshness: false
+  runtime_source:
+    path: 07_连续性与生产状态/连续性与当前生产状态.md
+    machine_block: ACTIVE_WORK_ITEM_STATE
+    registry_must_match_PROJECT_INDEX: true
+  required_current_snapshot_checks:
+    - work_item_id_nonempty
+    - required_state_fields_present
+    - constraint_lists_structurally_valid
+    - latest_applied_checkpoint_ref_present
+    - checkpoint_writeback_status_equals_verified
+    - writeback_verified_commit_is_full_sha
+    - canonical_main_ref_resolves_uniquely
+    - current_HEAD_equals_canonical_main
+    - committed_PROJECT_INDEX_equals_worktree_PROJECT_INDEX
+    - committed_continuity_equals_worktree_continuity
+    - current_snapshot_projection_equals_committed_main_snapshot
+    - materialization_commit_exists
+    - materialization_commit_is_ancestor_of_canonical_main
+    - materialization_snapshot_identity_equals_current_snapshot_identity_excluding_finalization_audit_fields
+  verification_basis: canonical_continuity_verified_snapshot
+  two_phase_provenance:
+    phase_1: materialize_substantive_snapshot
+    phase_2: finalize_snapshot_with_phase_1_commit_reference
+    self_referential_commit_sha_required: false
+    finalization_audit_fields_excluded_from_identity_comparison:
+      - checkpoint_writeback_status
+      - writeback_verified_commit
+    writeback_verified_commit_role: required_audit_receipt_consistency_constraint_not_standalone_authority
+  snapshot_fingerprint:
+    required_in_runtime_receipt: true
+    binds:
+      - substantive_and_audit_snapshot_projection
+      - canonical_main_commit
+      - canonical_main_tree
+      - canonical_continuity_blob
+      - materialization_commit
+      - materialization_continuity_blob
+    role: deterministic_trace_not_second_authority
+  source_issue:
+    runtime_live_probe_required: false
+    authority_role: evidence_trace_only
+    may_override_canonical_continuity: false
+    latest_issue_content_must_be_reconciled_during_checkpoint_transaction: true
+  host_boundary:
+    canonical_main_git_checkout_is_required: true
+    plain_directory_or_candidate_checkout_is_not_authority: true
+    arbitrary_serialized_project_root_metadata_is_not_an_authority_claim: true
+
+checkpoint_write_transaction:
+  write_route: 10_运行时/write_routes.yaml#revision_checkpoint_current_state
+  required_sequence:
+    - fetch_current_continuity
+    - fetch_and_reconcile_source_revision_evidence_when_applicable
+    - apply_constraint_ledger
+    - compile_pending_materialization
+    - commit_materialization_serially
+    - fetch_verify_materialization
+    - compile_finalization_with_materialization_commit
+    - commit_finalization_serially
+    - fetch_verify_finalization
+    - only_canonical_main_readback_may_grant_runtime_freshness
+  runtime_must_not_substitute_live_issue_probe_for_verified_writeback: true
+
+explicit_nonactive_resolution:
+  active_pointer_mutation_forbidden: true
+  caller_callback_resolution_forbidden: true
+  serialized_target_verified_flag_forbidden: true
+  semantic_similarity_only_resolution_forbidden: true
+  registered_previous_work_item:
+    source: ACTIVE_WORK_ITEM_STATE.previous_work_item_id
+    exact_identity_or_exact_previous_relation_required: true
+    canonical_historical_section_required: true
+    resolution_source: user_explicit_canonical_previous_work_item
+  ambiguous_old_reference:
+    action: fail_closed
+    error: EXPLICIT_NONACTIVE_REFERENT_REQUIRES_RESOLUTION
+  older_than_registered_previous:
+    action: fail_closed_until_canonical_identity_is_resolved
+
+work_item_context:
+  packet_type: WorkItemContext
+  schema_version: "1.1"
+  role: coordination_projection_only
+  must_preserve:
+    - work_item_id
+    - resolution_source
+    - checkpoint_ref
+    - verification_basis
+    - snapshot_fingerprint
+    - story_scope_ref_when_known
+    - effective_state_summary
+    - locked_constraints
+    - preserved_constraints
+    - revoked_constraints
+    - experimental_constraints
+    - unresolved_failures
+    - bound_media_or_reference_refs
+  cannot_override: [screenplay, canonical_map, formal_asset_default, character_identity, director_method]
+
+constraint_ledger:
+  equation: Effective_State = Baseline + Accepted_or_Locked_Deltas - Explicitly_Revoked_Deltas
+  omission_is_revocation: false
+  omission_must_preserve_existing_accepted_constraints: true
+
+pre_output_gate:
+  when_resolution_required: true
+  required_equal_identity: [resolved_work_item_id, loaded_work_item_id, output_work_item_id]
+  mismatch_error: WORK_ITEM_OUTPUT_SCOPE_MISMATCH
+  mismatch_action: suppress_output
+
+public_api:
+  resolve_work_item:
+    allowed_inputs: [description, project_root]
+    forbidden_inputs:
+      - freshness_provider
+      - explicit_target_provider
+      - serialized_source_issue_accessible
+      - serialized_latest_source_checkpoint_ref
+      - serialized_target_verified
+      - serialized_canonical_commit
+      - serialized_snapshot_verified
+  DirectorLearningRuntime:
+    constructor_inputs: [project_root]
+    forbidden_constructor_inputs: [freshness_provider, explicit_target_provider]
+
+fail_closed_errors:
+  ACTIVE_WORK_ITEM_STATE_MISSING: {stage: active_work_item_resolution}
+  ACTIVE_WORK_ITEM_STATE_INVALID: {stage: active_work_item_resolution}
+  WORK_ITEM_CANONICAL_AUTHORITY_UNAVAILABLE: {stage: canonical_snapshot_verification}
+  WORK_ITEM_SNAPSHOT_UNVERIFIED: {stage: canonical_snapshot_verification}
+  EXPLICIT_NONACTIVE_REFERENT_REQUIRES_RESOLUTION: {stage: historical_target_resolution}
+  WORK_ITEM_INPUT_SCOPE_MISMATCH: {stage: pre_feature_compiler}
+  WORK_ITEM_CONTEXT_PACKET_TARGET_NOT_FOUND: {stage: work_item_context}
+  WORK_ITEM_OUTPUT_SCOPE_MISMATCH: {stage: pre_output}
+
+regression_requirements:
+  - wrong_30s_incident_resolves_current_active_pointer
+  - provider_arguments_absent_from_public_api
+  - forged_callback_is_rejected
+  - pending_materialization_fails_closed
+  - missing_materialization_commit_reference_fails_closed
+  - existing_nonancestor_materialization_commit_fails_closed
+  - candidate_branch_checkout_fails_closed
+  - uncommitted_continuity_tamper_fails_closed
+  - uncommitted_project_index_tamper_fails_closed
+  - plain_directory_without_git_main_fails_closed
+  - project_index_continuity_binding_is_required
+  - source_issue_is_trace_not_runtime_freshness_authority
+  - exact_previous_relation_resolves_only_from_canonical_history
+  - ambiguous_historical_phrase_fails_closed
+  - missing_historical_section_fails_closed
+  - in_scene_continue_action_does_not_trigger_resolution
+  - omission_is_not_revocation
+  - output_scope_mismatch_suppresses_output
+
+non_goals:
+  - no screenplay mutation
+  - no map mutation
+  - no formal asset replacement
+  - no automatic learning maturity promotion
+  - no second continuity database
+  - no semantic search deciding work_item identity
+  - no network writer in runtime

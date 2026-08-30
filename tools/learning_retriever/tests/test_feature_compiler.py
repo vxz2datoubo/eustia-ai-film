@@ -213,9 +213,11 @@ class DirectorFeatureCompilerRegressionTests(unittest.TestCase):
         self.assertTrue(project["policy"]["director_feature_compiler_required_for_natural_language_directing"])
 
         always = read_sets["read_sets"]["directing"]["always"]
+        active_pos = next(i for i, item in enumerate(always) if item.startswith("active_work_item_resolution_gate"))
         compiler_pos = next(i for i, item in enumerate(always) if item.startswith("director_feature_compiler"))
         route_pos = next(i for i, item in enumerate(always) if item.startswith("director_route_index"))
         recall_pos = next(i for i, item in enumerate(always) if item.startswith("learning_recall_index"))
+        self.assertLess(active_pos, compiler_pos)
         self.assertLess(compiler_pos, route_pos)
         self.assertLess(route_pos, recall_pos)
         self.assertTrue(read_sets["rules"]["directing_must_invoke_director_feature_compiler_before_route_and_recall"])
@@ -231,7 +233,9 @@ class DirectorFeatureCompilerRegressionTests(unittest.TestCase):
         result = DirectorLearningRuntime(REPO_ROOT).retrieve("角色下跪并面向门口圣女", task_id="REG-CANONICAL-RUNTIME")
         runtime_receipt = result["canonical_runtime_receipt"]
         self.assertTrue(runtime_receipt["compiler_invoked"])
-        self.assertEqual(runtime_receipt["flow"], ["director_feature_compiler", "hard_route", "semantic_recall"])
+        self.assertEqual(runtime_receipt["flow"], ["active_work_item_resolution", "director_feature_compiler", "hard_route", "semantic_recall"])
+        self.assertTrue(runtime_receipt["active_work_item_gate_invoked"])
+        self.assertFalse(runtime_receipt["active_work_item_resolution"]["resolution_required"])
         self.assertEqual(runtime_receipt["feature_compiler_receipt"]["status"], "PASS")
 
     def test_semantic_dependencies_bind_existing_soac_eventgraph_blocking_visibleir(self):
