@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any, Iterable, Mapping
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote
-from urllib.request import HTTPSHandler, ProxyHandler, Request, build_opener
+from urllib.request import HTTPRedirectHandler, HTTPSHandler, ProxyHandler, Request, build_opener
 
 import yaml
 
@@ -211,6 +211,13 @@ def _tls_context() -> ssl.SSLContext:
     return context
 
 
+class _RejectRedirect(HTTPRedirectHandler):
+    """Fail closed instead of following authority-bearing GitHub API redirects."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):  # type: ignore[no-untyped-def]
+        raise HTTPError(req.full_url, code, "canonical GitHub API redirect forbidden", headers, fp)
+
+
 def _github_api_json(endpoint: str) -> Any:
     prefix = f"/repos/{CANONICAL_REPOSITORY}/"
     if not isinstance(endpoint, str) or not endpoint.startswith(prefix) or "://" in endpoint:
@@ -219,9 +226,16 @@ def _github_api_json(endpoint: str) -> Any:
     token = (os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN") or "").strip()
     if token:
         headers["Authorization"] = f"Bearer {token}"
-    opener = build_opener(ProxyHandler({}), HTTPSHandler(context=_tls_context()))
+    expected_url = GITHUB_API_ROOT + endpoint
+    opener = build_opener(ProxyHandler({}), HTTPSHandler(context=_tls_context()), _RejectRedirect())
     try:
-        with opener.open(Request(GITHUB_API_ROOT + endpoint, headers=headers, method="GET"), timeout=15) as response:
+        with opener.open(Request(expected_url, headers=headers, method="GET"), timeout=15) as response:
+            final_url = response.geturl()
+            if final_url != expected_url:
+                raise ActiveWorkItemResolutionError(
+                    "WORK_ITEM_CANONICAL_AUTHORITY_UNAVAILABLE",
+                    details={"reason": "canonical_api_response_url_mismatch", "endpoint": endpoint},
+                )
             return json.loads(response.read().decode("utf-8"))
     except (HTTPError, URLError, TimeoutError, UnicodeError, json.JSONDecodeError) as exc:
         raise ActiveWorkItemResolutionError("WORK_ITEM_CANONICAL_AUTHORITY_UNAVAILABLE", details={"reason": "fixed_github_readback_failed", "endpoint": endpoint, "error": type(exc).__name__}) from exc
