@@ -137,7 +137,7 @@ packet:
       - character_objectives
       - subtext
       - blocking_summary
-      - camera_fr framing_intent
+      - camera_framing_intent
       - lighting_color_intent
       - sound_intent
       - editing_attention_intent
