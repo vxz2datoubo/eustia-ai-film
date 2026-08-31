@@ -1,0 +1,124 @@
+policy_id: EUSTIA_LEARNING_EVIDENCE_PIPELINE_ORCHESTRATOR_V2
+status: candidate_stacked
+scope: source_bound_before_eval_targeted_repair_after_eval_final_delta_post_final_delta_orchestration
+
+purpose:
+  - 将现有证据驱动学习阶段按固定顺序机械串联，减少人工拼接与阶段遗漏
+  - 每个信任承载阶段都从原始 source payload 重执行，不信任 caller 序列化中间结果
+  - 为真实生成后的修复学习闭环提供执行入口，而不是建立第二学习系统
+
+authority_boundary:
+  this_file_is_orchestration_contract_only: true
+  this_file_is_not_director_authority: true
+  this_file_is_not_eval_authority: true
+  this_file_is_not_repair_authority: true
+  this_file_is_not_learning_authority: true
+  this_file_is_not_maturity_authority: true
+  this_file_is_not_write_authority: true
+  expected_observed_authority: 10_运行时/screen_observable_audible_ir_schema.yaml
+  targeted_repair_authority: 10_运行时/targeted_repair_policy.yaml
+  final_delta_authority: 10_运行时/final_delta_learning_policy.yaml
+  post_final_delta_authority: 10_运行时/post_final_delta_validation_policy.yaml
+  maturity_authority: 10_运行时/maturity_model.yaml
+  feedback_learning_authority: 08_系统学习/反馈反推与系统反哺引擎.md
+
+stack_dependency:
+  required_upstream_pr: 55
+  required_final_delta_pr: 54
+  canonical_registration_deferred_until_upstream_canonical: true
+  branch_local_candidate_must_not_override_project_index: true
+
+fixed_stage_order:
+  - BEFORE_EXPECTED_OBSERVED
+  - TARGETED_REPAIR
+  - AFTER_EXPECTED_OBSERVED
+  - FINAL_DELTA
+  - POST_FINAL_DELTA
+
+stage_implementations:
+  BEFORE_EXPECTED_OBSERVED: tools/learning_retriever/learning_retriever/expected_observed.py#evaluate_expected_vs_observed
+  TARGETED_REPAIR: tools/learning_retriever/learning_retriever/targeted_repair.py#plan_targeted_repair
+  AFTER_EXPECTED_OBSERVED: tools/learning_retriever/learning_retriever/expected_observed.py#evaluate_expected_vs_observed
+  FINAL_DELTA: tools/learning_retriever/learning_retriever/final_delta.py#compile_final_delta_learning_evidence
+  POST_FINAL_DELTA: tools/learning_retriever/learning_retriever/post_final_delta_source_bound.py#assess_source_bound_post_final_delta
+
+source_binding:
+  expected_observed_uses_raw_source: true
+  targeted_repair_uses_raw_before_source: true
+  final_delta_uses_raw_before_after_sources: true
+  post_final_delta_uses_final_delta_source_packages: true
+  serialized_eval_results_accepted: false
+  serialized_repair_plans_accepted: false
+  serialized_prior_final_deltas_accepted: false
+  prior_final_delta_inputs_must_be_reexecuted: true
+
+preconditions:
+  before_eval_must_have_real_repair_target:
+    required: true
+    failure_code: LEARNING_PIPELINE_NO_REPAIR_TARGET
+  before_after_eval_identity:
+    distinct_eval_id_required: true
+    failure_code: LEARNING_PIPELINE_EVAL_ID_COLLISION
+
+failure_semantics:
+  stop_on_first_failed_stage: true
+  later_stages_must_not_execute: true
+  wrapper_code: LEARNING_PIPELINE_STAGE_FAILED
+  underlying_error_code_must_be_preserved: true
+
+output_contract:
+  stage_receipts_required: true
+  full_stage_artifacts_preserved: true
+  source_binding_receipt_required: true
+  candidate_learning_evidence_exposed: true
+  regression_proposals_exposed: true
+  maturity_assessment_exposed: true
+  prompt_mutation_authorized: false
+  generation_authorized: false
+  camera_authority_mutation_authorized: false
+  canonical_mutation_authorized: false
+  learning_writeback_authorized: false
+  regression_write_authorized: false
+  maturity_promotion_authorized: false
+  causal_claim_authorized: false
+
+forbidden:
+  - duplicate_expected_observed_logic
+  - duplicate_targeted_repair_routing
+  - duplicate_final_delta_logic
+  - duplicate_post_final_delta_logic
+  - caller_serialized_eval_truth
+  - caller_serialized_repair_truth
+  - caller_serialized_final_delta_truth
+  - semantic_auto_clustering
+  - caller_minted_CLEAN
+  - caller_minted_maturity_confirmation
+  - prompt_rewrite
+  - generation_trigger
+  - camera_authority_minting
+  - canonical_write
+  - learning_write
+  - regression_write
+  - maturity_promotion
+  - automatic_causal_claim
+
+production_anchor:
+  work_item: issue-19-kaim-scarf-clothesline
+  regression: disappearance_attention_handoff_repair
+  expected_path:
+    before: FAIL
+    repair_surface: TRANSITION_EDIT_REVIEW
+    after: PASS
+    final_delta_transition: RESOLVED
+    causal_evidence_status: OBSERVATIONAL_ONLY
+    post_final_delta_conflict: false
+    maturity_promotion_authorized: false
+
+promotion_and_writeback:
+  this_runtime_can_promote: false
+  this_runtime_can_write: false
+  future_canonical_registration_requires:
+    - upstream_PR54_and_PR55_canonicalized
+    - exact_head_CI_green
+    - independent_review_accept
+    - current_main_content_reconcile
