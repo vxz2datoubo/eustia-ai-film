@@ -1,0 +1,364 @@
+schema_version: "0.1.0"
+schema_id: EUSTIA_PRODUCTION_HANDOFF_PACKET
+status: candidate_unvalidated
+source_issue: 59
+scope: minimum_sufficient_cross_department_and_tool_handoff
+
+purpose:
+  - preserve_creative_intent_invariants_reference_roles_expected_results_and_unknowns_across_department_tool_or_model_boundaries
+  - reduce_manual_reinterpretation_between_directing_previs_generation_edit_eval_and_repair
+  - make_task_context_inputs_outputs_and_next_owner_explicit
+  - provide_machine_readable_acceptance_dimensions_without_creating_a_second_eval_authority
+
+industry_inspiration:
+  MovieLabs_OMC:
+    concepts: [Context, Task, Participant, Asset, Relationship]
+    adoption_level: conceptual_mapping_only
+  OpenTimelineIO:
+    concepts: [timeline_time_range_transition_marker_metadata]
+    adoption_level: optional_when_editorial_interop_becomes_material
+  ASC_FDL:
+    concepts: [intended_framing_downstream_preservation]
+    adoption_level: compatible_receipt_concept_only
+  C2PA:
+    concepts: [provenance_actions_ingredients_bindings]
+    adoption_level: provenance_concept_only
+
+non_goals:
+  - story_authority
+  - map_authority
+  - formal_asset_authority
+  - learning_maturity_authority
+  - targeted_repair_authority
+  - automatic_prompt_generation_authority
+  - automatic_tool_execution_authority
+  - full_industry_standard_serialization
+
+packet:
+  required_fields:
+    - packet_id
+    - task
+    - context
+    - participant
+    - authority_receipt
+    - creative_contract
+    - inputs
+    - expected_outputs
+    - acceptance_contract
+    - unresolved_unknowns
+    - next_handoff
+
+  packet_id:
+    type: string
+    rule: unique_within_project_scope
+
+  task:
+    required:
+      - task_id
+      - task_class
+      - state
+    task_class_enum:
+      - ANALYZE
+      - DIRECT
+      - ADAPT_SCRIPT
+      - DESIGN_PERFORMANCE
+      - DESIGN_BLOCKING
+      - DESIGN_CAMERA
+      - DESIGN_LIGHT_COLOR
+      - DESIGN_SOUND
+      - PREVIS
+      - PREPARE_REFERENCE
+      - COMPILE_MODEL_EXECUTION
+      - GENERATE
+      - EDIT
+      - REVERSE_OBSERVE
+      - EVALUATE
+      - TARGETED_REPAIR
+      - LEARNING_CAPTURE
+      - RESEARCH
+      - PUBLISH_OR_DELIVER
+    state_enum: [PLANNED, READY, ACTIVE, BLOCKED, COMPLETED, SUPERSEDED, CANCELLED]
+    optional: [parent_task_id, priority, cost_class, latency_class, resource_notes]
+
+  context:
+    required:
+      - project_id
+      - work_item_id_when_required
+      - context_level
+    context_level_enum: [PROJECT, SEQUENCE, SCENE, SHOT, ASSET, EVAL_CASE, RESEARCH_CASE]
+    optional:
+      - sequence_id
+      - scene_id
+      - shot_id
+      - story_scope_ref
+      - timeline_range
+      - current_state_summary
+      - previous_state_ref
+    rules:
+      - work_item_identity_must_match_trusted_upstream_resolution_when_resolution_is_required
+      - context_is_scope_not_fact_authority
+      - future_shot_details_must_not_leak_into_current_shot_visible_or_audible_contract
+
+  participant:
+    required: [owner_role]
+    optional: [supporting_roles, human_owner, tool_or_service, model, model_version]
+    rule: participant_role_does_not_grant_authority
+
+  authority_receipt:
+    required:
+      - project_index_ref
+      - canonical_refs_used
+      - user_explicit_constraints
+      - inferred_user_constraints
+      - external_candidate_refs
+    user_explicit_constraints:
+      epistemic_zone: K1_EXPLICIT_USER
+    inferred_user_constraints:
+      epistemic_zone: K2_TACIT_OR_IMPLICIT
+      required_per_item: [statement, confidence, evidence]
+      rule: cannot_be_rendered_as_user_confirmed_fact
+    external_candidate_refs:
+      epistemic_zone: K3_ADJACENT_EXPERT
+      required_per_item: [source_ref, supported_claim, project_translation, scope, boundary, maturity]
+    rules:
+      - K3_cannot_override_project_canonical_or_K1_current_user_intent
+      - K4_unknowns_belong_in_unresolved_unknowns_not_external_candidate_refs
+
+  creative_contract:
+    required:
+      - dramatic_function_when_material
+      - audience_knowledge_before_when_material
+      - audience_knowledge_after_when_material
+      - hard_invariants
+      - guided_constraints
+      - free_space
+      - final_state_when_material
+    optional:
+      - character_objectives
+      - subtext
+      - blocking_summary
+      - camera_fr framing_intent
+      - lighting_color_intent
+      - sound_intent
+      - editing_attention_intent
+      - autonomy_budget
+    rules:
+      - hard_invariants_only_for_canonical_identity_topology_key_reveal_live_lock_or_required_final_state
+      - aesthetic_preferences_default_to_guided_unless_material_to_locked_director_contract
+      - free_space_must_remain_nonempty_when_model_autonomy_is_safe
+      - packet_must_not_dump_full_internal_director_analysis
+
+  inputs:
+    required: [consumed_assets, reference_responsibilities]
+    consumed_assets:
+      item_fields: [asset_ref, role, version_or_locator_when_available, authority_status]
+      role_enum:
+        - SCREENPLAY
+        - CHARACTER
+        - SCENE
+        - MAP
+        - FORMAL_ASSET
+        - REFERENCE_IMAGE
+        - REFERENCE_VIDEO
+        - REFERENCE_AUDIO
+        - WHITE_MODEL_OR_CLAY
+        - DEPTH_OR_GEOMETRY
+        - MOTION_REFERENCE
+        - TIMELINE
+        - PRIOR_GENERATED_OUTPUT
+        - EVIDENCE_BUNDLE
+    reference_responsibilities:
+      namespaces:
+        - identity
+        - geometry
+        - pose
+        - action
+        - trajectory
+        - camera
+        - framing
+        - timing
+        - style
+        - material
+        - lighting
+        - color
+        - sound
+        - performance
+      per_namespace:
+        required: [owner]
+        optional: [strength, notes, non_authoritative_signals_to_suppress]
+      owner_enum: [TEXT, REFERENCE_IMAGE, REFERENCE_VIDEO, REFERENCE_AUDIO, WHITE_MODEL, CANONICAL_ASSET, MODEL_FREE, NOT_APPLICABLE]
+      rules:
+        - conflicting_strong_owners_require_resolution
+        - reference_owned_pixels_should_not_be_redundantly_overdescribed_without_reason
+        - model_free_is_not_allowed_for_hard_identity_topology_or_key_reveal
+
+  expected_outputs:
+    required:
+      - output_type
+      - observable_or_audible_expectations
+    optional:
+      - expected_asset_identity
+      - expected_timeline_range
+      - expected_final_state
+      - framing_intent_receipt
+      - provenance_actions
+    output_type_enum:
+      - DIRECTOR_PLAN
+      - SHOT_PACKET
+      - PREVIS
+      - REFERENCE_ASSET
+      - MODEL_PROMPT
+      - GENERATED_IMAGE
+      - GENERATED_VIDEO
+      - GENERATED_AUDIO
+      - EDIT_DECISION
+      - REVERSE_OBSERVATION
+      - EVAL_RESULT
+      - REPAIR_PLAN
+      - LEARNING_EVIDENCE
+      - RESEARCH_EVIDENCE
+    observable_or_audible_expectations:
+      item_fields: [expectation_id, dimension, description, materiality, evidence_required]
+      materiality_enum: [HARD, MATERIAL, DIAGNOSTIC]
+
+  acceptance_contract:
+    required:
+      - material_dimensions
+      - measurement_plan
+      - pass_logic
+    material_dimensions:
+      allowed_registry: production_intelligence_capability_graph.yaml#evaluation_dimension_registry
+      rule: include_only_dimensions_that_matter_to_current_task
+    measurement_plan:
+      required: [inspection_mode]
+      inspection_mode_enum:
+        - MANUAL_DIRECT_REVIEW
+        - TEMPORAL_SAMPLE_REVIEW
+        - DENSE_WINDOW_REVIEW
+        - FRAME_BY_FRAME_REVIEW
+        - AUDIO_REVIEW
+        - HUMAN_AB
+        - AUTOMATED_METRIC_ASSISTED
+        - MULTI_REVIEWER
+      optional: [time_ranges, sample_rate, metric_refs, reviewer_count, repeated_measurement_plan]
+      rules:
+        - sparse_sample_cannot_claim_full_frame_review
+        - automated_metric_is_evidence_not_aesthetic_authority
+        - reference_based_task_should_prefer_reference_based_consistency_checks_when_possible
+    pass_logic:
+      rule: no_single_global_quality_score_may_hide_material_dimension_failure
+      hard_failure_behavior: FAIL_OR_TARGETED_REPAIR
+
+  unresolved_unknowns:
+    item_fields:
+      - unknown_id_or_local_id
+      - question
+      - epistemic_zone
+      - materiality
+      - safe_default
+      - next_information_action
+    rules:
+      - epistemic_zone_must_be_K4_FRONTIER_OR_OPAQUE_for_true_unknown
+      - material_high_impact_unknown_cannot_be_silently_dropped_downstream
+      - unknown_may_be_resolved_by_research_experiment_tool_or_human_decision
+
+  experiment_contract:
+    required_when: material_uncertainty_changes_execution_or_learning_claim
+    fields:
+      - hypothesis
+      - strategy
+      - factors
+      - controlled_variables
+      - response_dimensions
+      - confounds
+      - proxy_vs_final_role
+      - stop_condition
+    strategy_enum:
+      - COMPARATIVE_AB
+      - SCREENING
+      - BOUNDED_FACTORIAL
+      - SEQUENTIAL_PROBE
+      - PARAMETER_SEARCH
+      - MEASUREMENT_SYSTEM_CHECK
+      - EXTERNAL_RESEARCH
+      - HUMAN_DECISION
+    rules:
+      - multi_factor_change_requires_factor_ledger
+      - proxy_pass_cannot_equal_final_model_pass
+      - result_with_material_confounds_cannot_prove_causality
+      - repeated_reviewer_disagreement_may_require_measurement_system_check
+
+  next_handoff:
+    required: [next_owner, next_task_class]
+    optional: [next_packet_ref, blocking_conditions, approval_required, tool_or_service]
+    rules:
+      - next_owner_must_receive_all_live_hard_invariants
+      - next_owner_must_receive_material_unknowns
+      - failed_dimension_must_route_to_existing_targeted_repair_before_unrelated_redesign
+      - high_impact_story_map_formal_asset_or_maturity_changes_use_existing_human_gate
+
+framing_intent_receipt:
+  status: candidate_concept
+  inspired_by: ASC_FDL
+  activate_when:
+    - framing_is_locked_AB_control
+    - framing_is_key_reveal_or_composition_contract
+    - downstream_crop_edit_or_generation_can_destroy_intended_frame
+  fields:
+    - source_camera_or_reference
+    - aspect_ratio
+    - intended_frame_description
+    - camera_anchor_when_available
+    - camera_orientation
+    - safe_crop_or_reframe_boundary_when_known
+    - forbidden_reveal_or_exclusion
+    - version
+  boundary: not_a_full_ASC_FDL_implementation
+
+provenance_receipt:
+  status: candidate_concept
+  inspired_by: C2PA
+  fields:
+    - source_ingredients
+    - actions
+    - tool_or_model
+    - version
+    - timestamps_when_available
+    - content_hashes_when_available
+    - user_selection_or_approval_event
+  boundary: provenance_does_not_equal_truth_or_aesthetic_quality
+
+static_checks:
+  ERROR:
+    - MISSING_PACKET_ID
+    - MISSING_TASK_CONTEXT_OR_OWNER
+    - WORK_ITEM_IDENTITY_MISMATCH
+    - K2_INFERENCE_AS_USER_FACT
+    - K3_EXTERNAL_RULE_OVERRIDES_CANONICAL
+    - K4_UNKNOWN_DROPPED_WHEN_MATERIAL
+    - STRONG_REFERENCE_RESPONSIBILITY_CONFLICT
+    - HARD_INVARIANT_OWNER_UNRESOLVED
+    - GLOBAL_SCORE_HIDES_MATERIAL_FAILURE
+    - HIGH_IMPACT_GATE_BYPASS
+  WARNING:
+    - NON_MATERIAL_DEPARTMENT_INCLUDED
+    - PACKET_ANALYSIS_DUMP
+    - REFERENCE_SIGNAL_REDUNDANCY
+    - MISSING_MEASUREMENT_PLAN
+    - MULTIFACTOR_EXPERIMENT_WITHOUT_LEDGER
+    - PROXY_FINAL_CONFUSION
+    - FRAMING_INTENT_AT_RISK_DOWNSTREAM
+    - PROVENANCE_GAP
+  INFO:
+    - OPTIONAL_OTIO_INTEROP_AVAILABLE
+    - OPTIONAL_FDL_COMPATIBLE_RECEIPT_AVAILABLE
+    - OPTIONAL_PROVENANCE_RECEIPT_AVAILABLE
+
+maturity:
+  current: candidate_unvalidated
+  promotion_requires:
+    - independent_review
+    - real_cross_department_or_model_handoff_pilot
+    - evidence_of_constraint_and_identity_preservation
+    - evidence_that_packet_is_not_unnecessarily_verbose
+    - no_authority_duplication
