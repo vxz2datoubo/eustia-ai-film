@@ -20,40 +20,23 @@ class CheckpointCompilerAuthorityBindingTests(unittest.TestCase):
             (REPO_ROOT / "11_验收/active_work_item_checkpoint_compiler_regression_cases.yaml").read_text(encoding="utf-8")
         )
 
-    def test_project_index_is_the_registration_authority(self) -> None:
-        self.assertEqual(
-            self.project["canonical"]["active_work_item_checkpoint_compiler"],
+    def test_candidate_is_not_activated_in_project_index_before_independent_review(self) -> None:
+        canonical = self.project["canonical"]
+        effective = self.project["effective_sources"]
+        policy = self.project["policy"]
+        self.assertNotIn("active_work_item_checkpoint_compiler", canonical)
+        self.assertNotIn("active_work_item_checkpoint_compiler_regression_cases", canonical)
+        self.assertNotIn(
             "10_运行时/active_work_item_checkpoint_compiler.yaml",
+            effective,
         )
-        self.assertEqual(
-            self.project["canonical"]["active_work_item_checkpoint_compiler_regression_cases"],
-            "11_验收/active_work_item_checkpoint_compiler_regression_cases.yaml",
-        )
-        self.assertEqual(
-            self.project["effective_sources"]["10_运行时/active_work_item_checkpoint_compiler.yaml"],
-            "github_verified",
-        )
-        self.assertTrue(self.project["policy"]["active_work_item_checkpoint_compiler_is_proposal_only"])
-        self.assertTrue(
-            self.project["policy"]["active_work_item_checkpoint_persistence_requires_external_governed_write"]
-        )
+        self.assertNotIn("active_work_item_checkpoint_compiler_is_proposal_only", policy)
+        self.assertEqual(self.contract["status"], "candidate")
 
-    def test_checkpoint_compiler_has_dedicated_bounded_read_set(self) -> None:
-        checkpoint = self.read_sets["read_sets"]["revision_checkpoint_compilation"]
-        self.assertEqual(
-            checkpoint["activation"],
-            "checkpoint_or_revision_series_close_or_work_item_switch_only",
-        )
-        always = checkpoint["always"]
-        self.assertTrue(any(item.startswith("active_work_item_checkpoint_compiler") for item in always))
-        self.assertTrue(any(item.startswith("连续性与当前生产状态#ACTIVE_WORK_ITEM_STATE") for item in always))
-        self.assertTrue(any(item.startswith("write_routes#revision_checkpoint_current_state") for item in always))
-        self.assertFalse(any("active_work_item_current_state" in item for item in always))
-
-    def test_normal_directing_read_set_is_not_inflated_by_checkpoint_compiler(self) -> None:
+    def test_candidate_does_not_inflate_normal_directing_reads(self) -> None:
         directing_always = self.read_sets["read_sets"]["directing"]["always"]
         self.assertFalse(any("checkpoint_compiler" in item for item in directing_always))
-        self.assertTrue(self.read_sets["rules"]["checkpoint_compiler_not_in_directing_always_read_set"])
+        self.assertNotIn("revision_checkpoint_compilation", self.read_sets["read_sets"])
 
     def test_existing_write_route_remains_single_continuity_target(self) -> None:
         routes = self.write_routes["routes"]
@@ -81,6 +64,21 @@ class CheckpointCompilerAuthorityBindingTests(unittest.TestCase):
                 "verify_new_content_and_status",
                 "report_committed_only_after_verification",
             ],
+        )
+
+    def test_contract_points_to_existing_unique_authorities_without_claiming_registration(self) -> None:
+        dependency = self.contract["dependency"]
+        self.assertEqual(
+            dependency["runtime_gate"],
+            "10_运行时/active_work_item_resolution_gate.yaml",
+        )
+        self.assertEqual(
+            dependency["continuity_authority"],
+            "07_连续性与生产状态/连续性与当前生产状态.md#ACTIVE_WORK_ITEM_STATE",
+        )
+        self.assertEqual(
+            dependency["write_route"],
+            "10_运行时/write_routes.yaml#revision_checkpoint_current_state",
         )
 
     def test_contract_cannot_mint_persistence_authority(self) -> None:
@@ -122,6 +120,11 @@ class CheckpointCompilerAuthorityBindingTests(unittest.TestCase):
             self.assertEqual(acceptance[field], path)
             self.assertTrue((REPO_ROOT / path).is_file(), path)
         self.assertTrue(acceptance["exact_head_ci_required"])
+
+    def test_activation_is_a_separate_post_acceptance_slice(self) -> None:
+        self.assertEqual(self.contract["maturity"]["current"], "candidate")
+        self.assertIn("independent_review", self.contract["maturity"]["promotion_gate"])
+        self.assertNotIn("revision_checkpoint_compilation", self.read_sets["read_sets"])
 
 
 if __name__ == "__main__":
