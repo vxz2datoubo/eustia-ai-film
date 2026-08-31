@@ -1,0 +1,139 @@
+policy_id: EUSTIA_ACTIVE_WORK_ITEM_RESOLUTION_GATE_V3_FIXED_GITHUB_READBACK
+status: candidate
+scope: continuation_identity_resolution_revision_freshness_and_context_projection
+
+canonical_authority:
+  registry: PROJECT_INDEX.yaml
+  continuity: 07_连续性与生产状态/连续性与当前生产状态.md
+  director_method: 01_AI电影系统/AI电影系统.md
+  screenplay: 03_剧本与改编/当前改编剧本.md
+
+canonical_github_readback_trust_boundary:
+  fixed_repository: vxz2datoubo/eustia-ai-film
+  fixed_branch: main
+  fixed_api_origin: https://api.github.com
+  repository_branch_and_api_origin_are_not_caller_configurable: true
+  local_checkout_is_never_canonical_authority: true
+  local_git_graph_cannot_mint_freshness: true
+  caller_created_repo_named_main_cannot_mint_freshness: true
+  git_subprocess_authority_forbidden: true
+  caller_supplied_git_binary_forbidden: true
+  inherited_git_path_or_remote_config_is_not_authority: true
+  ambient_http_proxy_is_ignored_for_authority_readback: true
+  https_hostname_and_certificate_verification_required: true
+  redirects_for_authority_readback_forbidden: true
+  successful_response_final_url_must_match_requested_fixed_api_endpoint: true
+  auth_token_may_authorize_read_only_access_but_cannot_select_authority: true
+  required_current_snapshot_checks:
+    - fixed_GitHub_main_SHA_readback_succeeds
+    - PROJECT_INDEX_read_at_exact_main_SHA
+    - continuity_read_at_exact_main_SHA
+    - PROJECT_INDEX_registers_exact_continuity_path
+    - local_projection_equals_fixed_GitHub_main_before_local_use
+    - checkpoint_writeback_status_is_verified
+    - writeback_verified_commit_is_full_SHA
+    - materialization_commit_exists_in_fixed_repository
+    - materialization_commit_is_ancestor_of_exact_GitHub_main
+    - materialization_snapshot_identity_matches_current_snapshot_excluding_finalization_audit_fields
+    - source_issue_live_revision_scan_succeeds
+    - canonical_applied_checkpoint_comment_exists
+    - canonical_applied_checkpoint_still_classifies_as_structured_revision
+    - no_newer_structured_revision_checkpoint_exists
+  verification_basis: canonical_github_readback_verified_snapshot
+
+source_issue_freshness:
+  runtime_live_probe_required: true
+  source_issue_role: revision_and_evidence_trace_only
+  source_issue_may_override_screenplay_map_asset_or_character_authority: false
+  source_issue_may_mint_active_work_item_identity_without_continuity_pointer: false
+  latest_applied_checkpoint_ref_role: last_structured_revision_checkpoint_materialized_into_continuity
+  applied_checkpoint_identity_rule:
+    comment_must_currently_exist_on_fixed_source_issue: true
+    comment_must_currently_match_structured_revision_classifier: true
+    missing_deleted_or_edited_to_evidence_only_fails_closed: true
+    fabricated_or_numerically_ahead_applied_id_fails_closed: true
+    error_code: WORK_ITEM_SOURCE_APPLIED_CHECKPOINT_INVALID
+  structured_revision_comment_types:
+    - Director checkpoint
+    - Revision checkpoint
+    - Micro Capture
+    - Trajectory Final-Delta
+    - equivalent_structured_schema_marker
+  evidence_only_comments_do_not_advance_revision_checkpoint: true
+  example_evidence_only_comment: Evidence clarification
+  pre_compiler_revalidation:
+    required_when_resolution_has_applied_checkpoint: true
+    timing: immediately_before_first_Director_Feature_Compiler_use
+    purpose: close_remote_source_revision_TOCTOU_after_initial_resolution
+    compare_against:
+      - canonical_applied_checkpoint_ref
+      - initial_latest_source_checkpoint_ref
+      - current_live_structured_revision_head
+    newer_or_changed_head_behavior:
+      gate_status: RECONCILE_REQUIRED
+      director_feature_compiler_invoked: false
+      allowed_error_codes:
+        - WORK_ITEM_SOURCE_REVISION_AHEAD_OF_CANONICAL
+        - WORK_ITEM_SOURCE_REVISION_CHANGED_AFTER_RESOLUTION
+  newer_structured_checkpoint_behavior:
+    gate_status: RECONCILE_REQUIRED
+    error_code: WORK_ITEM_SOURCE_REVISION_AHEAD_OF_CANONICAL
+    director_feature_compiler_invoked: false
+  inaccessible_source_issue_behavior:
+    fail_closed: true
+    error_code: WORK_ITEM_SOURCE_ISSUE_UNAVAILABLE
+
+continuation_resolution:
+  non_continuation_fast_path_allowed: true
+  continuation_must_resolve_before_feature_compiler: true
+  active_pointer_beats_text_similarity: true
+  explicit_registered_previous_work_item_may_be_selected_only_from_trusted_remote_continuity_history: true
+  ambiguous_nonactive_reference_fails_closed: true
+  image_or_media_similarity_cannot_define_work_item_identity: true
+
+context_projection:
+  WorkItemContext_is_coordination_projection_only: true
+  context_packet_must_be_built_from_trusted_resolution_metadata: true
+  local_state_reread_after_resolution_forbidden: true
+  protects_against_post_resolution_local_TOCTOU: true
+  remote_source_revision_must_be_revalidated_at_compiler_boundary: true
+  omission_is_not_revocation: true
+
+public_api_boundary:
+  freshness_provider_argument_supported: false
+  explicit_target_provider_argument_supported: false
+  repository_override_supported: false
+  api_origin_override_supported: false
+  canonical_branch_override_supported: false
+  serialized_freshness_receipt_supported: false
+  caller_may_not_skip_pre_compiler_source_revalidation: true
+
+state_machine:
+  UNRESOLVED: [RESOLVED_UNVERIFIED]
+  RESOLVED_UNVERIFIED: [RECONCILE_REQUIRED, RESOLVED_VERIFIED]
+  RECONCILE_REQUIRED: [RESOLVED_VERIFIED]
+  RESOLVED_VERIFIED: [ACTIVE_REVISION, CHECKPOINTED]
+  ACTIVE_REVISION: [CHECKPOINTED, CLOSED]
+  CHECKPOINTED: [ACTIVE_REVISION, CLOSED]
+  CLOSED: []
+
+failure_boundary:
+  fail_before_feature_compiler_on:
+    - WORK_ITEM_CANONICAL_AUTHORITY_UNAVAILABLE
+    - WORK_ITEM_SNAPSHOT_UNVERIFIED
+    - WORK_ITEM_SOURCE_ISSUE_UNAVAILABLE
+    - WORK_ITEM_SOURCE_APPLIED_CHECKPOINT_INVALID
+    - WORK_ITEM_SOURCE_REVISION_AHEAD_OF_CANONICAL
+    - WORK_ITEM_SOURCE_REVISION_CHANGED_AFTER_RESOLUTION
+    - EXPLICIT_NONACTIVE_REFERENT_REQUIRES_RESOLUTION
+    - ACTIVE_WORK_ITEM_STATE_MISSING
+  local_or_caller_fallback_after_remote_failure_forbidden: true
+  stale_memory_or_chat_fallback_forbidden: true
+
+output_authority:
+  prompt_mutation_authorized: false
+  generation_authorized: false
+  camera_authority_mutation_authorized: false
+  canonical_mutation_authorized: false
+  learning_writeback_authorized: false
+  maturity_promotion_authorized: false

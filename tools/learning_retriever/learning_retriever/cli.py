@@ -4,6 +4,7 @@ import argparse
 import json
 from pathlib import Path
 
+from .active_work_item import ActiveWorkItemResolutionError
 from .feature_compiler import FeatureCompilationError, validate_semantic_dependencies
 from .retriever import LearningRetriever, RetrievalGateError, validate_index
 from .runtime import DirectorLearningRuntime
@@ -38,6 +39,9 @@ def main() -> int:
 
     try:
         if args.description:
+            # CLI intentionally has no serialized freshness override. Continuation
+            # requests with a source Issue fail closed until a host runtime supplies
+            # an in-process freshness provider backed by a real source read.
             result = DirectorLearningRuntime(root).retrieve(
                 args.description,
                 task_id=args.task_id,
@@ -62,6 +66,9 @@ def main() -> int:
                     expand=args.expand,
                     fail_closed=True,
                 )
+    except ActiveWorkItemResolutionError as exc:
+        print(json.dumps({"status": "FAIL", "stage": "active_work_item_resolution", "error": exc.code, "details": exc.details}, ensure_ascii=False, indent=2))
+        return 2
     except FeatureCompilationError as exc:
         print(json.dumps({"status": "FAIL", "stage": "feature_compiler", "error": str(exc)}, ensure_ascii=False, indent=2))
         return 2

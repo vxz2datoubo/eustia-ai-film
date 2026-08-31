@@ -24,11 +24,14 @@ authority:
 runtime_binding:
   canonical_entrypoint: tools/learning_retriever/learning_retriever/runtime.py#DirectorLearningRuntime.retrieve
   route_resolver: tools/learning_retriever/learning_retriever/route_resolver.py#resolve_hard_routes
+  precondition_gate: 10_运行时/active_work_item_resolution_gate.yaml
   natural_language_flow:
+    - active_work_item_resolution_when_continuation_or_referent_binding_is_required
     - director_feature_compiler
     - hard_route_from_director_route_index
     - semantic_recall_from_learning_recall_index
   natural_language_bypass_forbidden: true
+  unresolved_continuation_must_not_enter_compiler: true
   route_definition_duplication_in_compiler: forbidden
   structured_feature_only_retrieval_compatibility: preserved
 

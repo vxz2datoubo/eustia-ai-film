@@ -1,0 +1,170 @@
+schema_version: "2.0"
+regression_suite_id: EUSTIA_ACTIVE_WORK_ITEM_RESOLUTION_REGRESSIONS
+status: candidate
+runtime_contract: 10_运行时/active_work_item_resolution_gate.yaml
+
+policy:
+  fixed_github_canonical_readback_required: true
+  local_git_cannot_mint_freshness: true
+  source_issue_live_revision_scan_required: true
+  evidence_only_comment_does_not_advance_checkpoint: true
+  newer_structured_checkpoint_requires_reconcile: true
+  context_packet_from_trusted_resolution_only: true
+  omission_is_not_revocation: true
+
+cases:
+  - case_id: AWIR-WRONG-30S-001
+    class: continuation_active_pointer_beats_stale_similar_text
+    input:
+      user_text: 重新导演上次那30秒
+      canonical_active_work_item_id: KAIM-SCARF-CLOTHESLINE-TRAVERSE
+      stale_competitor: KAIM-HIGH-SEARCH-30S
+    expected:
+      resolved_work_item_id: KAIM-SCARF-CLOTHESLINE-TRAVERSE
+      verification_basis: canonical_github_readback_verified_snapshot
+      freshness_verified: true
+
+  - case_id: AWIR-FIXED-GITHUB-TRUST-001
+    class: caller_cannot_select_repository_branch_or_api_origin
+    expected:
+      repository: vxz2datoubo/eustia-ai-film
+      branch: main
+      api_origin: https://api.github.com
+      caller_configurable: false
+
+  - case_id: AWIR-LOCAL-GIT-MINT-FORBIDDEN-001
+    class: caller_created_local_repo_named_main_cannot_mint_freshness
+    input:
+      local_git_init_main: true
+      local_files_claim_verified: true
+      fixed_github_main_differs: true
+    expected_error: WORK_ITEM_SNAPSHOT_UNVERIFIED
+    expected_reason: continuity_local_differs_from_fixed_github_main
+
+  - case_id: AWIR-GIT-PATH-INJECTION-FORBIDDEN-001
+    class: git_executable_and_inherited_path_are_not_authority
+    expected:
+      git_subprocess_used_for_authority: false
+      caller_git_binary_argument_supported: false
+      ambient_proxy_used_for_authority_readback: false
+
+  - case_id: AWIR-SOURCE-ISSUE-LIVE-FRESH-001
+    class: live_source_issue_scan_matches_materialized_checkpoint
+    input:
+      source_issue: 19
+      latest_applied_checkpoint_ref: "5454103847"
+      latest_structured_checkpoint_ref: "5454103847"
+    expected:
+      freshness_verified: true
+      latest_source_checkpoint_ref: "5454103847"
+
+  - case_id: AWIR-SOURCE-ISSUE-AHEAD-001
+    class: newer_structured_revision_checkpoint_blocks_directing
+    input:
+      latest_applied_checkpoint_ref: "5454103847"
+      newer_comment:
+        id: "5455000000"
+        type: Revision checkpoint
+    expected_error: WORK_ITEM_SOURCE_REVISION_AHEAD_OF_CANONICAL
+    expected_gate_status: RECONCILE_REQUIRED
+    director_feature_compiler_invoked: false
+
+  - case_id: AWIR-EVIDENCE-ONLY-NEWER-001
+    class: newer_evidence_clarification_is_not_revision_checkpoint
+    input:
+      latest_applied_checkpoint_ref: "5454103847"
+      newer_comment:
+        id: "5454437860"
+        type: Evidence clarification
+    expected:
+      freshness_verified: true
+      latest_source_checkpoint_ref: "5454103847"
+
+  - case_id: AWIR-SOURCE-ISSUE-UNAVAILABLE-001
+    class: source_issue_live_probe_failure_is_fail_closed
+    expected_error: WORK_ITEM_SOURCE_ISSUE_UNAVAILABLE
+    director_feature_compiler_invoked: false
+
+  - case_id: AWIR-MATERIALIZATION-NONANCESTOR-001
+    class: remote_materialization_must_be_ancestor_of_exact_github_main
+    expected_error: WORK_ITEM_SNAPSHOT_UNVERIFIED
+    expected_reason: materialization_commit_not_canonical_ancestor
+
+  - case_id: AWIR-MATERIALIZATION-IDENTITY-MISMATCH-001
+    class: remote_materialization_snapshot_identity_must_match
+    expected_error: WORK_ITEM_SNAPSHOT_UNVERIFIED
+    expected_reason: materialization_snapshot_identity_mismatch
+
+  - case_id: AWIR-PROJECT-INDEX-LOCAL-MISMATCH-001
+    class: local_registry_projection_must_match_exact_remote_main
+    expected_error: WORK_ITEM_SNAPSHOT_UNVERIFIED
+    expected_reason: project_index_local_differs_from_fixed_github_main
+
+  - case_id: AWIR-CONTEXT-TOCTOU-001
+    class: local_mutation_after_resolution_cannot_change_context_packet
+    expected:
+      packet_source: trusted_resolution_target_metadata
+      local_reread_after_resolution: false
+
+  - case_id: AWIR-EXPLICIT-OLD-001
+    class: exact_registered_previous_work_item_resolution
+    input:
+      user_text: 重新导演之前那个30秒
+      previous_work_item_id: KAIM-HIGH-SEARCH-30S
+    expected:
+      resolved_work_item_id: KAIM-HIGH-SEARCH-30S
+      verification_basis: canonical_github_readback_historical_binding
+
+  - case_id: AWIR-EXPLICIT-AMBIGUOUS-001
+    class: ambiguous_nonactive_referent_fails_closed
+    input:
+      user_text: 重新导演之前爬楼那30秒
+    expected_error: EXPLICIT_NONACTIVE_REFERENT_REQUIRES_RESOLUTION
+
+  - case_id: AWIR-CALLBACK-FORBIDDEN-001
+    class: in_process_callback_cannot_mint_authority
+    expected:
+      freshness_provider_supported: false
+      explicit_target_provider_supported: false
+      serialized_freshness_receipt_supported: false
+
+  - case_id: AWIR-POINTER-MISSING-001
+    class: missing_remote_pointer_fails_closed
+    expected_error: ACTIVE_WORK_ITEM_STATE_MISSING
+
+  - case_id: AWIR-NONCONTINUATION-001
+    class: normal_new_directing_fast_path
+    input:
+      user_text: 设计圣女第一次公开登场时群众由喧闹转为安静的镜头
+    expected:
+      resolution_required: false
+      gate_status: NOT_REQUIRED
+
+  - case_id: AWIR-OUTPUT-MISMATCH-001
+    class: pre_output_scope_guard
+    expected_error: WORK_ITEM_OUTPUT_SCOPE_MISMATCH
+
+  - case_id: AWIR-OMISSION-NOT-REVOKE-001
+    class: constraint_ledger_semantics
+    expected:
+      omitted_accepted_constraints_preserved: true
+
+  - case_id: AWIR-CURRENT-IMAGE-NOT-AUTHORITY-001
+    class: media_reference_boundary
+    expected:
+      image_may_override_story_map_asset_authority: false
+
+  - case_id: AWIR-CLOSE-SWITCH-001
+    class: revision_series_close_before_switch
+    expected:
+      checkpoint_before_switch: true
+      trajectory_final_delta_required: true
+
+gates:
+  fixed_remote_identity_cannot_be_caller_minted: true
+  local_git_and_git_path_are_not_authority: true
+  source_issue_is_live_checked_but_not_promoted_to_story_authority: true
+  stale_revision_blocks_feature_compiler: true
+  context_projection_is_toctou_hardened: true
+  output_work_item_must_match_resolved_and_loaded_identity: true
+  no_story_map_asset_or_maturity_authority_added: true
