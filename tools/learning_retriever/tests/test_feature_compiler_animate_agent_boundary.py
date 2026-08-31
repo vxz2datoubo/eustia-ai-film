@@ -60,8 +60,14 @@ class AnimateAgentCompilerBoundaryTests(unittest.TestCase):
                 self.assert_no_character_facing(text)
 
     def test_structural_subject_cannot_be_laundered_by_body_turn_wording(self):
-        self.assert_no_character_facing("钟楼转身面向圣女。")
-        self.assert_no_character_facing("雕像回身面向圣女。")
+        for text in (
+            "钟楼转身面向圣女。",
+            "雕像回身面向圣女。",
+            "祭坛转身面向圣女。",
+            "石碑回身面向圣女。",
+        ):
+            with self.subTest(text=text):
+                self.assert_no_character_facing(text)
 
     def test_noncharacter_sentence_cannot_mint_target_spatial_hard_route(self):
         task = compile_retrieval_task("钟楼面向圣女。", route_data=ROUTE_DATA, strict=False)
