@@ -69,7 +69,12 @@ class DirectorFeatures:
         return any(getattr(self, key) for key in FEATURE_KEYS)
 
 
-def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeatures:
+def compile_director_features(
+    task: str,
+    *,
+    strict: bool = True,
+    known_actor_terms: tuple[str, ...] = (),
+) -> DirectorFeatures:
     """Compile director language into retrieval-only mechanism features.
 
     Mechanism features require relational evidence. Surface nouns or verbs alone
@@ -529,9 +534,18 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
     escape_source_terms = ("逃离", "逃开", "远离", "躲避", "摆脱")
     occlusion_terms = ("遮挡", "挡住", "挡在", "遮住")
     camera_actor_terms = ("摄影机", "摄像机", "镜头", "机位", "camera")
-    actor_terms = (
-        "群众", "人群", "百姓", "信徒", "灾民", "居民", "民众", "围观者", "人物", "角色", "男孩", "女孩",
-        "男人", "女人", "卫兵", "凯姆", "蒂娅", "圣女",
+    actor_terms = tuple(
+        dict.fromkeys(
+            (
+                "群众", "人群", "百姓", "信徒", "灾民", "居民", "民众", "围观者", "人物", "角色", "男孩", "女孩",
+                "男人", "女人", "卫兵", "凯姆", "蒂娅", "圣女",
+            )
+            + tuple(
+                str(term).strip()
+                for term in known_actor_terms
+                if str(term).strip()
+            )
+        )
     )
     target_object_terms = (
         "目标", "圣女", "教会", "敌人", "对手", "逃犯", "追兵", "同伴", "陌生人", "凯姆", "蒂娅",
@@ -1000,8 +1014,13 @@ def compile_retrieval_task(
     base_task: dict[str, Any] | None = None,
     route_data: dict[str, Any] | None = None,
     strict: bool = True,
+    known_actor_terms: tuple[str, ...] = (),
 ) -> dict[str, Any]:
-    features = compile_director_features(description, strict=strict)
+    features = compile_director_features(
+        description,
+        strict=strict,
+        known_actor_terms=known_actor_terms,
+    )
     task = dict(base_task or {})
     task["task_id"] = str(task.get("task_id") or task_id)
     for key, compiled in features.as_dict().items():
@@ -1015,6 +1034,7 @@ def compile_retrieval_task(
         "status": "PASS" if features.recognized else "FAIL",
         "input_fingerprint": hashlib.sha256(description.encode("utf-8")).hexdigest()[:16],
         "compiled_feature_keys": [key for key in FEATURE_KEYS if getattr(features, key)],
+        "known_actor_terms_count": len({str(term).strip() for term in known_actor_terms if str(term).strip()}),
         "matched_rules": list(features.matched_rules),
         "semantic_trace": list(features.semantic_trace),
         "route_resolution": "director_route_index",
