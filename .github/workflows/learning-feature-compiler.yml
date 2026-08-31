@@ -22,6 +22,8 @@ on:
       - '10_运行时/production_intelligence_capability_graph.yaml'
       - '10_运行时/production_intelligence_epistemic_cycle_policy.yaml'
       - '10_运行时/production_handoff_packet_schema.yaml'
+      - '10_运行时/production_intelligence_signal_envelope_schema.yaml'
+      - '10_运行时/production_intelligence_research_intake_policy.yaml'
       - '11_验收/director_feature_compiler_regression_cases.yaml'
       - '11_验收/cinematic_visual_grammar_regression_cases.yaml'
       - '11_验收/cinematic_intent_contract_regression_cases.yaml'
@@ -70,7 +72,7 @@ jobs:
       - name: Run full learning retriever tests
         run: |
           PYTHONPATH=tools/learning_retriever python -m pytest tools/learning_retriever/tests
-      - name: Validate Production Intelligence Capability Atlas bundle
+      - name: Validate Production Intelligence Capability Atlas contracts
         run: |
           PYTHONPATH=tools/production_intelligence python -m production_intelligence.runtime --project-root .
       - name: Run Production Intelligence Capability Atlas regressions
