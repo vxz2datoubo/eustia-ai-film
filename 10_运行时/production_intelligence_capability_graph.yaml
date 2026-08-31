@@ -1,0 +1,565 @@
+schema_version: "0.1.0"
+graph_id: EUSTIA_PRODUCTION_INTELLIGENCE_CAPABILITY_GRAPH
+status: candidate_unvalidated
+source_issue: 59
+scope: capability_mapping_epistemic_routing_cross_department_dependencies_eval_dimension_and_experiment_strategy
+
+purpose:
+  - map_production_problem_to_required_capabilities_without_copying_domain_rules
+  - make_authority_department_inputs_outputs_handoffs_and_eval_dimensions_machine_readable
+  - distinguish_explicit_user_tacit_inference_adjacent_expert_knowledge_and_frontier_unknowns
+  - expand_only_material_cross_domain_dependencies
+  - choose_bounded_experiment_strategy_when_uncertainty_is_material
+  - preserve_existing_director_learning_eval_repair_and_canonical_authorities
+
+non_goals:
+  - second_director_method
+  - second_learning_authority
+  - second_asset_or_media_resolver
+  - second_targeted_repair_router
+  - automatic_aesthetic_scoring
+  - full_MovieLabs_OMC_implementation
+  - full_OpenUSD_OTIO_OpenAssetIO_implementation
+  - automatic_expensive_generation
+  - automatic_high_impact_canonical_change
+
+authority_boundary:
+  project_registry: PROJECT_INDEX.yaml
+  director_method: 01_AI电影系统/AI电影系统.md
+  sound_method: 01_AI电影系统/声音导演系统.md
+  story: 03_剧本与改编/当前改编剧本.md
+  character: 04_角色与表演/角色与表演设定库.md
+  scene: 05_场景与空间/场景与空间设定库.md
+  topology: 05_场景与空间/00_项目地图文件.md
+  formal_assets: 06_视觉资产/视觉资产登记库.md
+  continuity: 07_连续性与生产状态/连续性与当前生产状态.md
+  learning: 10_运行时/learning_application_gate.yaml
+  execution_ir: 10_运行时/screen_observable_audible_ir_schema.yaml
+  expected_observed_eval: existing_expected_observed_runtime
+  repair: 10_运行时/targeted_repair_policy.yaml
+  maturity: 10_运行时/maturity_model.yaml
+  proactive_next_step: 10_运行时/proactive_execution_opportunity_router.yaml
+  evidence: 09_资料证据/AI电影生产智能能力图谱与协同证据.md
+  rules:
+    - graph_routes_and_explains_but_does_not_mint_domain_truth
+    - graph_cannot_change_story_character_scene_map_asset_or_continuity
+    - graph_cannot_promote_learning_maturity
+    - external_research_is_candidate_evidence_only
+    - handoff_packet_is_not_canonical_fact_authority
+    - department_participation_does_not_grant_authority
+    - sparse_dependency_expansion_required
+
+# These zones describe the relationship between the user/system and a knowledge item.
+# They are NOT truth-authority levels.
+epistemic_zones:
+  K1_EXPLICIT_USER:
+    meaning: user_explicitly_stated_goal_preference_requirement_judgment_or_constraint
+    default_behavior:
+      - preserve_exact_intent_when_material
+      - bind_to_current_scope_or_canonical_route_according_to_user_intent
+      - do_not_replace_with_external_best_practice
+    confidence: user_explicit
+    may_become_canonical: only_through_existing_write_route_when_user_intends_persistence
+
+  K2_TACIT_OR_IMPLICIT:
+    meaning: repeated_behavior_feedback_or_workflow_implies_a_preference_goal_or_heuristic_not_fully_stated
+    default_behavior:
+      - record_as_inference_not_user_quote
+      - keep_confidence_and_evidence
+      - use_as_guided_candidate_when_low_risk_and_context_match_is_high
+      - ask_or_AB_test_when_material_and_ambiguous
+    cannot_be_silently_promoted_to_explicit_user_fact: true
+
+  K3_ADJACENT_EXPERT:
+    meaning: professional_industry_academic_or_tool_knowledge_the_user_did_not_supply_but_can_be_explained_and_applied
+    default_behavior:
+      - retrieve_high_quality_source
+      - state_problem_mechanism_scope_boundary
+      - translate_to_project_candidate
+      - expose_user_relevant_explanation_when_it_changes_decision
+      - test_before_maturity_promotion
+    cannot_override_project_canonical: true
+
+  K4_FRONTIER_OR_OPAQUE:
+    meaning: evidence_insufficient_capability_unknown_high_complexity_or_model_behavior_not_safely_predictable
+    default_behavior:
+      - mark_UNKNOWN_or_research_question
+      - choose_low_cost_high_information_probe_when_possible
+      - escalate_to_specialist_tool_or_external_research_when_material
+      - do_not_write_as_acquired_skill
+    high_impact_fail_closed: true
+
+participant_roles:
+  USER_CREATIVE_AUTHORITY:
+    type: human
+    owns: [explicit_current_intent, final_high_impact_creative_choice]
+  DIRECTOR:
+    type: creative_department
+    owns: [dramatic_function, audience_cognition, director_intent, cross_department_creative_coherence]
+  SCRIPT_ADAPTATION:
+    type: creative_department
+    owns: [scene_information_dialogue_adaptation_story_structure_within_confirmed_scope]
+  PERFORMANCE:
+    type: creative_department
+    owns: [playable_action_subtext_behavioral_evidence]
+  BLOCKING_SPATIAL:
+    type: creative_department
+    owns: [positions_orientations_paths_contacts_scene_action_geometry]
+  CINEMATOGRAPHY_FRAMING:
+    type: creative_department
+    owns: [camera_position_orientation_lens_framing_movement_exposure_intent]
+  LIGHTING_COLOR:
+    type: creative_department
+    owns: [motivated_light_color_sources_exposure_continuity_color_intent]
+  PRODUCTION_DESIGN_SCENE:
+    type: creative_department
+    owns: [scene_local_material_prop_visual_affordance]
+  EDITORIAL:
+    type: creative_department
+    owns: [cut_structure_timing_transition_attention_handoff_timeline]
+  SOUND:
+    type: creative_department
+    owns: [dialogue_sound_foley_ambience_music_mix_intent]
+  ASSET_REFERENCE:
+    type: production_department
+    owns: [asset_identity_reference_role_version_locator_provenance_with_existing_authorities]
+  PREVIS_GEOMETRY:
+    type: production_department
+    owns: [white_model_geometry_trajectory_camera_previsualization_only]
+  MODEL_ADAPTER:
+    type: technical_department
+    owns: [capability_bound_prompt_or_reference_compilation_for_selected_model]
+  GENERATION_SERVICE:
+    type: ai_service
+    owns: [execution_only]
+  REVERSE_OBSERVATION_EVAL:
+    type: evaluation_department
+    owns: [observed_output_evidence_dimension_results]
+  TARGETED_REPAIR:
+    type: repair_department
+    owns: [existing_failed_dimension_routing_only]
+  LEARNING_MATURITY:
+    type: learning_department
+    owns: [existing_learning_capture_conflict_maturity_regression]
+  PRODUCTION_MANAGEMENT:
+    type: production_department
+    owns: [cost_latency_schedule_task_state_resource_tradeoff]
+
+relationship_types:
+  - DEPENDS_ON
+  - CONSUMES
+  - PRODUCES
+  - INFORMS
+  - HANDOFF_TO
+  - CONSTRAINS
+  - VALIDATES
+  - REPAIRS
+  - SUPPORTS
+  - REFINES
+  - BOUNDS
+  - SUPERSEDES
+  - REVALIDATES
+
+representation_layers:
+  - CanonicalFacts
+  - WorkItemContext
+  - WorldStateIR
+  - Beat_EventGraphIR
+  - BlockingIR
+  - CinematicIntentIR
+  - ShotPlanIR
+  - VisibleIR
+  - PerformanceIR
+  - AudibleIR
+  - TransitionContract
+  - ConstraintAutonomyContract
+  - ReferenceResponsibility
+  - ProductionHandoffPacket
+  - ModelAdapterExecution
+  - ReverseObservation
+  - ExpectedVsObserved
+  - TargetedRepairHandoff
+  - LearningEvidence
+
+routing_pipeline:
+  - resolve_current_work_item_when_required
+  - classify_problem_signatures
+  - classify_epistemic_zones
+  - resolve_authority_refs
+  - select_primary_capability
+  - expand_only_material_dependencies
+  - compile_cross_department_handoff_requirements
+  - select_representation_layers
+  - select_material_eval_dimensions
+  - select_experiment_strategy_if_uncertain
+  - execute_through_existing_domain_and_model_authorities
+  - reverse_observe
+  - existing_expected_vs_observed_eval
+  - existing_targeted_repair_if_needed
+  - existing_learning_and_maturity_route
+
+materiality_gate:
+  include_department_when_any:
+    - its_decision_can_change_current_pixels_sound_timing_or_required_handoff
+    - it_owns_a_hard_invariant_or_dependency
+    - its_failure_can_explain_current_problem
+    - downstream_tool_requires_its_representation
+    - eval_dimension_requires_its_expected_state
+  exclude_when:
+    - only_thematically_related
+    - no_current_execution_consequence
+    - duplicate_of_existing_owner
+    - future_shot_or_future_department_not_yet_material
+
+confidence_dimensions:
+  - user_intent_confidence
+  - problem_classification_confidence
+  - authority_resolution_confidence
+  - external_evidence_confidence
+  - causal_hypothesis_confidence
+  - transfer_confidence
+  - model_version_confidence
+  - measurement_confidence
+
+cost_risk_reversibility:
+  cost_levels: [LOW, MEDIUM, HIGH]
+  risk_levels: [LOW, MEDIUM, HIGH]
+  reversibility: [EASY, MODERATE, HARD_OR_CANONICAL]
+  rules:
+    - high_cost_high_uncertainty_prefers_probe_or_research_before_execution
+    - hard_or_canonical_change_uses_existing_human_gate
+    - low_risk_deterministic_handoff_may_be_proactive
+
+experiment_strategy_router:
+  NONE:
+    trigger: uncertainty_is_not_material_or_existing_evidence_is_sufficient
+  COMPARATIVE_AB:
+    trigger: one_primary_factor_or_one_a_priori_hypothesis
+    requirements:
+      - preserve_non_test_variables_as_far_as_practical
+      - predeclare_material_response_dimensions
+  SCREENING:
+    trigger: multiple_plausible_factors_and_main_effect_discovery_is_primary_goal
+    requirements:
+      - do_not_change_many_factors_without_factor_ledger
+      - use_small_bounded_design_not_prompt_pileup
+  BOUNDED_FACTORIAL:
+    trigger: interaction_between_small_number_of_factors_is_plausible_and_material
+    requirements:
+      - factor_count_must_remain_small
+      - interpret_interaction_not_only_main_effect
+  SEQUENTIAL_PROBE:
+    trigger: expensive_final_model_or_unknown_mechanism_can_be_de_risked_by_cheaper_information_stage
+    requirements:
+      - proxy_can_only_validate_dimensions_with_transfer_evidence
+      - final_model_still_validates_model_specific_and_final_quality_dimensions
+  PARAMETER_SEARCH:
+    trigger: continuous_control_parameter_and_response_is_observable
+    requirements:
+      - bounded_range
+      - stop_when_gain_is_small_or_quality_tradeoff_worsens
+  MEASUREMENT_SYSTEM_CHECK:
+    trigger: reviewer_metric_sampling_or_repeat_observation_disagreement_can_change_decision
+    requirements:
+      - distinguish_repeatability_reproducibility_stability
+      - do_not_blame_generator_before_measurement_uncertainty_is_bounded
+  EXTERNAL_RESEARCH:
+    trigger: official_capability_standard_or_specialist_knowledge_is_missing_and_material
+  HUMAN_DECISION:
+    trigger: unresolved_high_impact_creative_or_canonical_choice
+
+# Dimension registry is a vocabulary. Existing Expected-vs-Observed remains evaluator authority.
+evaluation_dimension_registry:
+  STORY_FUNCTION:
+    owner: DIRECTOR
+    examples: [dramatic_function, audience_knowledge_delta, reveal_function]
+  INSTRUCTION_ADHERENCE:
+    owner: REVERSE_OBSERVATION_EVAL
+  IDENTITY_ENTITY_SEMANTICS:
+    owner: ASSET_REFERENCE
+    examples: [character_identity, entity_class, wardrobe_or_prop_identity_when_locked]
+  COMPOSITION_FRAMING_CAMERA:
+    owner: CINEMATOGRAPHY_FRAMING
+    examples: [framing, camera_side, camera_height, lens_intent, camera_motion]
+  SPATIAL_RELATION_TRAJECTORY:
+    owner: BLOCKING_SPATIAL
+  ACTION_MOTION_BINDING:
+    owner: BLOCKING_SPATIAL
+  SUPPORT_CONTACT_TOPOLOGY:
+    owner: BLOCKING_SPATIAL
+  EVENT_ORDER_CAUSALITY:
+    owner: DIRECTOR
+  PHYSICAL_PLAUSIBILITY:
+    owner: PREVIS_GEOMETRY
+  TEMPORAL_STABILITY:
+    owner: REVERSE_OBSERVATION_EVAL
+  PERFORMANCE_READABILITY:
+    owner: PERFORMANCE
+  LIGHT_MATERIAL_COLOR:
+    owner: LIGHTING_COLOR
+  REFERENCE_RESPONSIBILITY:
+    owner: ASSET_REFERENCE
+  AUDIO_SEMANTICS_QUALITY:
+    owner: SOUND
+  AUDIO_VIDEO_SYNC:
+    owner: SOUND
+    examples: [lip_speech, physical_sound_timing, event_sound_sync]
+  EDIT_ATTENTION_HANDOFF:
+    owner: EDITORIAL
+  CROSS_SHOT_CONTINUITY:
+    owner: DIRECTOR
+  WORLD_STATE_CONTINUITY:
+    owner: BLOCKING_SPATIAL
+  SHOT_SCOPE_REVEAL_LEAK:
+    owner: DIRECTOR
+  AESTHETIC_DIRECTOR_FIT:
+    owner: DIRECTOR
+    rule: never_collapsed_with_technical_dimensions_into_one_score
+
+capability_nodes:
+  - capability_id: CAP-STORY-DIRECTOR-INTENT
+    problem_signatures: [scene_purpose_unclear, technique_without_story_reason, audience_knowledge_unclear, reveal_problem]
+    epistemic_zones: [K1_EXPLICIT_USER, K2_TACIT_OR_IMPLICIT, K3_ADJACENT_EXPERT]
+    department_owner: DIRECTOR
+    supporting_participants: [SCRIPT_ADAPTATION]
+    authority_refs: [01_AI电影系统/AI电影系统.md, 03_剧本与改编/当前改编剧本.md]
+    representation_layers: [Beat_EventGraphIR, CinematicIntentIR, ShotPlanIR]
+    evaluation_dimensions: [STORY_FUNCTION, SHOT_SCOPE_REVEAL_LEAK]
+    default_experiment: NONE
+    handoff_to: [CAP-PERFORMANCE, CAP-BLOCKING-SPATIAL, CAP-EDITORIAL-ATTENTION]
+    writeback_route: general_directing_method
+    maturity: existing_authority_bridge
+
+  - capability_id: CAP-PERFORMANCE
+    problem_signatures: [emotion_is_generic, character_waits_for_plot, same_gesture_for_all, subtext_not_playable]
+    epistemic_zones: [K1_EXPLICIT_USER, K2_TACIT_OR_IMPLICIT, K3_ADJACENT_EXPERT]
+    department_owner: PERFORMANCE
+    authority_refs: [01_AI电影系统/AI电影系统.md, 04_角色与表演/角色与表演设定库.md]
+    representation_layers: [PerformanceIR, VisibleIR]
+    evaluation_dimensions: [PERFORMANCE_READABILITY, STORY_FUNCTION]
+    handoff_to: [CAP-BLOCKING-SPATIAL, CAP-CAMERA-FRAMING, CAP-SOUND]
+    writeback_route: character_behavior_dialogue_relationship
+    maturity: existing_authority_bridge
+
+  - capability_id: CAP-BLOCKING-SPATIAL
+    problem_signatures: [position_orientation_path_contact_wrong, action_geometry_unclear, target_binding_wrong, crowd_blocking]
+    epistemic_zones: [K1_EXPLICIT_USER, K3_ADJACENT_EXPERT, K4_FRONTIER_OR_OPAQUE]
+    department_owner: BLOCKING_SPATIAL
+    supporting_participants: [PREVIS_GEOMETRY]
+    authority_refs: [01_AI电影系统/AI电影系统.md, 05_场景与空间/00_项目地图文件.md]
+    representation_layers: [BlockingIR, VisibleIR, ConstraintAutonomyContract]
+    evaluation_dimensions: [SPATIAL_RELATION_TRAJECTORY, ACTION_MOTION_BINDING, SUPPORT_CONTACT_TOPOLOGY, WORLD_STATE_CONTINUITY]
+    default_experiment: COMPARATIVE_AB
+    handoff_to: [CAP-CAMERA-FRAMING, CAP-PREVIS-GEOMETRY, CAP-MODEL-REFERENCE]
+    maturity: existing_authority_bridge
+
+  - capability_id: CAP-CAMERA-FRAMING
+    problem_signatures: [wrong_camera_side, composition_without_reason, camera_drift, framing_lost_between_departments]
+    epistemic_zones: [K1_EXPLICIT_USER, K3_ADJACENT_EXPERT]
+    department_owner: CINEMATOGRAPHY_FRAMING
+    authority_refs: [01_AI电影系统/AI电影系统.md]
+    evidence_refs: [09_资料证据/AI电影生产智能能力图谱与协同证据.md#E-PICG-ASC-FDL-001]
+    representation_layers: [CinematicIntentIR, ShotPlanIR, VisibleIR, ProductionHandoffPacket]
+    evaluation_dimensions: [COMPOSITION_FRAMING_CAMERA, STORY_FUNCTION]
+    handoff_to: [CAP-LIGHT-COLOR, CAP-EDITORIAL-ATTENTION, CAP-MODEL-REFERENCE]
+    maturity: candidate_bridge
+
+  - capability_id: CAP-LIGHT-COLOR
+    problem_signatures: [unmotivated_light, flat_or_overexposed, color_filter_instead_of_sources, color_continuity]
+    epistemic_zones: [K1_EXPLICIT_USER, K3_ADJACENT_EXPERT]
+    department_owner: LIGHTING_COLOR
+    supporting_participants: [PRODUCTION_DESIGN_SCENE, CINEMATOGRAPHY_FRAMING]
+    authority_refs: [01_AI电影系统/AI电影系统.md, 05_场景与空间/场景与空间设定库.md]
+    representation_layers: [CinematicIntentIR, VisibleIR]
+    evaluation_dimensions: [LIGHT_MATERIAL_COLOR, COMPOSITION_FRAMING_CAMERA]
+    handoff_to: [CAP-MODEL-REFERENCE]
+    maturity: existing_authority_bridge
+
+  - capability_id: CAP-EDITORIAL-ATTENTION
+    problem_signatures: [cut_feels_wrong, continuity_break, reaction_handoff, disappearance_cut, exposition_rhythm]
+    epistemic_zones: [K1_EXPLICIT_USER, K3_ADJACENT_EXPERT]
+    department_owner: EDITORIAL
+    authority_refs: [01_AI电影系统/AI电影系统.md]
+    evidence_refs:
+      - 09_资料证据/AI电影生产智能能力图谱与协同证据.md#E-PICG-EVENT-SEG-001
+      - 09_资料证据/AI电影生产智能能力图谱与协同证据.md#E-PICG-ATOCC-001
+    representation_layers: [ShotPlanIR, TransitionContract, ProductionHandoffPacket]
+    evaluation_dimensions: [EDIT_ATTENTION_HANDOFF, CROSS_SHOT_CONTINUITY, EVENT_ORDER_CAUSALITY]
+    handoff_to: [CAP-SOUND, CAP-REVERSE-EVAL]
+    maturity: candidate_bridge
+
+  - capability_id: CAP-SOUND
+    problem_signatures: [dialogue_competition, foley_missing, ambience_wrong, av_sync, music_function]
+    epistemic_zones: [K1_EXPLICIT_USER, K3_ADJACENT_EXPERT, K4_FRONTIER_OR_OPAQUE]
+    department_owner: SOUND
+    authority_refs: [01_AI电影系统/声音导演系统.md]
+    representation_layers: [AudibleIR, TransitionContract]
+    evaluation_dimensions: [AUDIO_SEMANTICS_QUALITY, AUDIO_VIDEO_SYNC, STORY_FUNCTION]
+    handoff_to: [CAP-REVERSE-EVAL]
+    maturity: existing_authority_bridge
+
+  - capability_id: CAP-ASSET-REFERENCE-PROVENANCE
+    problem_signatures: [wrong_asset, reference_conflict, appearance_leak, formal_pixel_unavailable, provenance_gap]
+    epistemic_zones: [K1_EXPLICIT_USER, K3_ADJACENT_EXPERT, K4_FRONTIER_OR_OPAQUE]
+    department_owner: ASSET_REFERENCE
+    authority_refs:
+      - 06_视觉资产/视觉资产登记库.md
+      - 10_运行时/scene_asset_identity_schema.yaml
+      - 10_运行时/scene_media_resolver_manifest.yaml
+      - 10_运行时/asset_retrieval_policy.yaml
+    representation_layers: [ReferenceResponsibility, ProductionHandoffPacket]
+    evaluation_dimensions: [IDENTITY_ENTITY_SEMANTICS, REFERENCE_RESPONSIBILITY]
+    handoff_to: [CAP-MODEL-REFERENCE, CAP-REVERSE-EVAL]
+    maturity: existing_authority_bridge
+
+  - capability_id: CAP-PREVIS-GEOMETRY
+    problem_signatures: [complex_camera_path, high_dynamic_contact, multi_subject_blocking, geometry_underconstrained, physics_risk]
+    epistemic_zones: [K3_ADJACENT_EXPERT, K4_FRONTIER_OR_OPAQUE]
+    department_owner: PREVIS_GEOMETRY
+    authority_refs: [01_AI电影系统/AI电影系统.md]
+    evidence_refs:
+      - 09_资料证据/AI电影生产智能能力图谱与协同证据.md#E-PICG-SEEDANCE25-001
+      - 09_资料证据/AI电影生产智能能力图谱与协同证据.md#E-PICG-PHYSICAL-001
+    representation_layers: [BlockingIR, ReferenceResponsibility, ProductionHandoffPacket]
+    evaluation_dimensions: [SPATIAL_RELATION_TRAJECTORY, SUPPORT_CONTACT_TOPOLOGY, PHYSICAL_PLAUSIBILITY, COMPOSITION_FRAMING_CAMERA]
+    default_experiment: SEQUENTIAL_PROBE
+    handoff_to: [CAP-MODEL-REFERENCE]
+    maturity: candidate_bridge
+
+  - capability_id: CAP-MODEL-REFERENCE
+    problem_signatures: [model_reference_mode, multimodal_reference, white_model, motion_reference, model_specific_failure]
+    epistemic_zones: [K3_ADJACENT_EXPERT, K4_FRONTIER_OR_OPAQUE]
+    department_owner: MODEL_ADAPTER
+    supporting_participants: [ASSET_REFERENCE, PREVIS_GEOMETRY]
+    authority_refs: [01_AI电影系统/AI电影系统.md, 08_系统学习/C-DANCE2.5真实生成反馈库.md]
+    evidence_refs: [09_资料证据/AI电影生产智能能力图谱与协同证据.md#E-PICG-SEEDANCE25-001]
+    representation_layers: [ReferenceResponsibility, ModelAdapterExecution]
+    evaluation_dimensions: [INSTRUCTION_ADHERENCE, REFERENCE_RESPONSIBILITY, TEMPORAL_STABILITY]
+    revalidation_triggers: [model_version_change, api_or_mode_change, contradictory_real_generation]
+    handoff_to: [CAP-REVERSE-EVAL]
+    maturity: model_version_bound_candidate_bridge
+
+  - capability_id: CAP-PHYSICS-CONTACT
+    problem_signatures: [gravity_inertia_collision_support_contact_load_transfer_topology_failure]
+    epistemic_zones: [K3_ADJACENT_EXPERT, K4_FRONTIER_OR_OPAQUE]
+    department_owner: PREVIS_GEOMETRY
+    supporting_participants: [BLOCKING_SPATIAL, MODEL_ADAPTER]
+    authority_refs: [01_AI电影系统/AI电影系统.md]
+    evidence_refs: [09_资料证据/AI电影生产智能能力图谱与协同证据.md#E-PICG-PHYSICAL-001]
+    representation_layers: [BlockingIR, VisibleIR, ReferenceResponsibility]
+    evaluation_dimensions: [SUPPORT_CONTACT_TOPOLOGY, PHYSICAL_PLAUSIBILITY, TEMPORAL_STABILITY]
+    default_experiment: SEQUENTIAL_PROBE
+    escalation_order: [clean_geometry_reference, bounded_start_end_or_trajectory_reference, targeted_model_probe, simulation_or_specialist_research_if_material]
+    handoff_to: [CAP-REVERSE-EVAL]
+    maturity: candidate
+
+  - capability_id: CAP-REVERSE-EVAL
+    problem_signatures: [generated_output_available, compare_expected_observed, user_feedback_requires_evidence]
+    epistemic_zones: [K1_EXPLICIT_USER, K3_ADJACENT_EXPERT, K4_FRONTIER_OR_OPAQUE]
+    department_owner: REVERSE_OBSERVATION_EVAL
+    authority_refs: [10_运行时/screen_observable_audible_ir_schema.yaml, 10_运行时/learning_application_gate.yaml]
+    evidence_refs:
+      - 09_资料证据/AI电影生产智能能力图谱与协同证据.md#E-PICG-VBENCH-001
+      - 09_资料证据/AI电影生产智能能力图谱与协同证据.md#E-PICG-T2VCOMP-001
+      - 09_资料证据/AI电影生产智能能力图谱与协同证据.md#E-PICG-VABENCH-001
+    representation_layers: [ReverseObservation, ExpectedVsObserved]
+    evaluation_dimensions: material_dimensions_from_handoff_only
+    handoff_to: [CAP-TARGETED-REPAIR, CAP-LEARNING]
+    maturity: existing_authority_bridge
+
+  - capability_id: CAP-TARGETED-REPAIR
+    problem_signatures: [material_eval_fail, material_eval_unknown]
+    epistemic_zones: [K3_ADJACENT_EXPERT, K4_FRONTIER_OR_OPAQUE]
+    department_owner: TARGETED_REPAIR
+    authority_refs: [10_运行时/targeted_repair_policy.yaml]
+    representation_layers: [TargetedRepairHandoff]
+    rule: must_call_existing_repair_authority_not_duplicate_it
+    handoff_to: [capability_owner_for_failed_dimension, CAP-LEARNING]
+    maturity: existing_authority_bridge
+
+  - capability_id: CAP-LEARNING
+    problem_signatures: [feedback, final_delta, repeated_failure, successful_controlled_change, conflict, revalidation]
+    epistemic_zones: [K1_EXPLICIT_USER, K2_TACIT_OR_IMPLICIT, K3_ADJACENT_EXPERT, K4_FRONTIER_OR_OPAQUE]
+    department_owner: LEARNING_MATURITY
+    authority_refs: [10_运行时/learning_application_gate.yaml, 10_运行时/maturity_model.yaml, 08_系统学习/反馈反推与系统反哺引擎.md]
+    representation_layers: [LearningEvidence]
+    evaluation_dimensions: []
+    rule: capability_graph_never_promotes_maturity
+    maturity: existing_authority_bridge
+
+  - capability_id: CAP-EXPERIMENT-DESIGN
+    problem_signatures: [causal_uncertainty, multiple_plausible_factors, interaction_suspected, expensive_generation, evaluator_disagreement]
+    epistemic_zones: [K3_ADJACENT_EXPERT, K4_FRONTIER_OR_OPAQUE]
+    department_owner: REVERSE_OBSERVATION_EVAL
+    supporting_participants: [PRODUCTION_MANAGEMENT, LEARNING_MATURITY]
+    authority_refs: [10_运行时/learning_application_gate.yaml]
+    evidence_refs:
+      - 09_资料证据/AI电影生产智能能力图谱与协同证据.md#E-PICG-NIST-DOE-001
+      - 09_资料证据/AI电影生产智能能力图谱与协同证据.md#E-PICG-NIST-GRR-001
+    representation_layers: [ProductionHandoffPacket, ReverseObservation, LearningEvidence]
+    evaluation_dimensions: experiment_specific
+    experiment_strategy: selected_by_experiment_strategy_router
+    maturity: candidate_research_supported
+
+  - capability_id: CAP-PROACTIVE-COLLABORATION
+    problem_signatures: [clear_next_step, repeated_manual_friction, low_cost_probe_opportunity, context_relevant_professional_gap]
+    epistemic_zones: [K2_TACIT_OR_IMPLICIT, K3_ADJACENT_EXPERT, K4_FRONTIER_OR_OPAQUE]
+    department_owner: PRODUCTION_MANAGEMENT
+    authority_refs: [10_运行时/proactive_execution_opportunity_router.yaml]
+    evidence_refs: [09_资料证据/AI电影生产智能能力图谱与协同证据.md#E-PICG-HUMAN-AI-001]
+    rule: extend_existing_proactive_router_do_not_create_second_intervention_authority
+    maturity: candidate_bridge
+
+  - capability_id: CAP-UNKNOWN-RESEARCH
+    problem_signatures: [material_unknown, external_capability_uncertain, frontier_specialist_question, contradictory_evidence]
+    epistemic_zones: [K4_FRONTIER_OR_OPAQUE]
+    department_owner: LEARNING_MATURITY
+    authority_refs: [12_未知项/UNKNOWN_REGISTRY.yaml, 09_资料证据/官方资料与证据索引.md]
+    representation_layers: [LearningEvidence]
+    default_experiment: EXTERNAL_RESEARCH
+    rule: unknown_cannot_be_relabelled_as_skill_until_evidence_and_validation_exist
+    maturity: existing_unknown_bridge
+
+handoff_compilation_rules:
+  - output_minimum_sufficient_packet_not_full_internal_reasoning
+  - preserve_work_item_identity_when_available
+  - preserve_hard_invariants_live_constraints_and_reference_identity
+  - include_only_material_departments_and_eval_dimensions
+  - unresolved_K4_unknowns_must_survive_handoff
+  - K2_inference_must_remain_labeled_inference
+  - K3_external_rule_must_keep_source_scope_boundary
+  - downstream_cannot_treat_packet_as_story_map_asset_authority
+  - failed_dimension_routes_to_existing_targeted_repair
+
+static_checks:
+  ERROR:
+    - CAPABILITY_GRAPH_MINTS_CANONICAL_FACT
+    - EXTERNAL_RESEARCH_OVERRIDES_PROJECT_AUTHORITY
+    - K2_INFERENCE_MASQUERADES_AS_EXPLICIT_USER_FACT
+    - K4_UNKNOWN_MASQUERADES_AS_ACQUIRED_SKILL
+    - DUPLICATE_REPAIR_OR_LEARNING_AUTHORITY
+    - HANDOFF_WORK_ITEM_IDENTITY_MISMATCH
+    - HIGH_IMPACT_CHANGE_BYPASSES_EXISTING_HUMAN_GATE
+  WARNING:
+    - DEPARTMENT_OVEREXPANSION
+    - NON_MATERIAL_EVAL_DIMENSION_SELECTED
+    - SINGLE_GLOBAL_VIDEO_SCORE
+    - MULTIFACTOR_CHANGE_WITHOUT_FACTOR_LEDGER
+    - PROXY_RESULT_TREATED_AS_FINAL_MODEL_RESULT
+    - EVALUATOR_DISAGREEMENT_WITHOUT_MEASUREMENT_CHECK
+    - VERSION_SENSITIVE_KNOWLEDGE_NOT_REVALIDATED
+    - HANDOFF_PACKET_TOO_VERBOSE
+  INFO:
+    - K3_PROFESSIONAL_KNOWLEDGE_AVAILABLE
+    - K4_RESEARCH_OR_PROBE_OPPORTUNITY
+    - LOW_COST_SEQUENTIAL_PROBE_AVAILABLE
+
+maturity:
+  current: candidate_unvalidated
+  promotion_requires:
+    - independent_architecture_review
+    - no_second_authority_regression_pass
+    - at_least_three_distinct_production_pilots
+    - evidence_of_reduced_handoff_loss_or_repeated_failure
+    - bounded_department_overexpansion_rate
+    - no_material_user_control_loss
