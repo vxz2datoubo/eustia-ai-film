@@ -1,0 +1,64 @@
+name: one-shot-canonical-character-typing-patch
+
+on:
+  push:
+    branches:
+      - gpt/learning-smart-recall-v1-1-current-main-v3
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: gpt/learning-smart-recall-v1-1-current-main-v3
+          fetch-depth: 0
+
+      - name: Apply exact canonical-character typing wiring
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('tools/learning_retriever/learning_retriever/feature_compiler.py')
+          text = path.read_text(encoding='utf-8')
+          replacements = [
+              (
+                  'def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeatures:\n',
+                  'def compile_director_features(\n    task: str,\n    *,\n    strict: bool = True,\n    known_actor_terms: tuple[str, ...] = (),\n) -> DirectorFeatures:\n',
+              ),
+              (
+                  '''    actor_terms = (\n        "群众", "人群", "百姓", "信徒", "灾民", "居民", "民众", "围观者", "人物", "角色", "男孩", "女孩",\n        "男人", "女人", "卫兵", "凯姆", "蒂娅", "圣女",\n    )\n''',
+                  '''    actor_terms = tuple(\n        dict.fromkeys(\n            (\n                "群众", "人群", "百姓", "信徒", "灾民", "居民", "民众", "围观者", "人物", "角色", "男孩", "女孩",\n                "男人", "女人", "卫兵", "凯姆", "蒂娅", "圣女",\n            )\n            + tuple(\n                str(term).strip()\n                for term in known_actor_terms\n                if str(term).strip()\n            )\n        )\n    )\n''',
+              ),
+              (
+                  '''    route_data: dict[str, Any] | None = None,\n    strict: bool = True,\n) -> dict[str, Any]:\n    features = compile_director_features(description, strict=strict)\n''',
+                  '''    route_data: dict[str, Any] | None = None,\n    strict: bool = True,\n    known_actor_terms: tuple[str, ...] = (),\n) -> dict[str, Any]:\n    features = compile_director_features(\n        description,\n        strict=strict,\n        known_actor_terms=known_actor_terms,\n    )\n''',
+              ),
+              (
+                  '''        "compiled_feature_keys": [key for key in FEATURE_KEYS if getattr(features, key)],\n        "matched_rules": list(features.matched_rules),\n''',
+                  '''        "compiled_feature_keys": [key for key in FEATURE_KEYS if getattr(features, key)],\n        "known_actor_terms_count": len({str(term).strip() for term in known_actor_terms if str(term).strip()}),\n        "matched_rules": list(features.matched_rules),\n''',
+              ),
+          ]
+          for old, new in replacements:
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'exact replacement count={count} for {old[:100]!r}')
+              text = text.replace(old, new, 1)
+          path.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Self-delete and commit bounded patch
+        shell: bash
+        run: |
+          git rm .github/workflows/one-shot-canonical-character-typing-patch.yml
+          git add tools/learning_retriever/learning_retriever/feature_compiler.py
+          git diff --cached --check
+          git diff --cached --stat
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git commit -m "Pass canonical character typing into feature compiler"
+          git push origin HEAD:gpt/learning-smart-recall-v1-1-current-main-v3
