@@ -1,4 +1,4 @@
-suite_id: LEARNING_EVIDENCE_PIPELINE_REGRESSION_V1
+suite_id: LEARNING_EVIDENCE_PIPELINE_REGRESSION_V2
 status: candidate_stacked
 runtime_contract: 10_运行时/learning_evidence_pipeline_orchestrator.yaml
 runtime: tools/learning_retriever/learning_retriever/learning_pipeline.py
@@ -11,7 +11,11 @@ policy:
   later_stage_execution_after_failure_forbidden: true
   before_repair_target_required: true
   before_after_eval_id_must_differ: true
-  prior_final_delta_must_be_revalidated: true
+  targeted_repair_source_reexecution_required: true
+  final_delta_source_reexecution_required: true
+  post_final_delta_source_reexecution_required: true
+  serialized_prior_final_delta_forbidden: true
+  prior_final_delta_source_input_must_be_reexecuted: true
   prompt_mutation_forbidden: true
   generation_forbidden: true
   camera_authority_forbidden: true
@@ -31,35 +35,34 @@ cases:
     expected_causal_evidence_status: OBSERVATIONAL_ONLY
     expected_post_final_delta_conflict: false
     expected_regression_proposal_count: 1
-    expected_maturity_route: NO_PROMOTION_REQUESTED
 
   - id: LEP-NO-REPAIR-TARGET-001
     before_expected_observed_status: PASS
     expected_error_code: LEARNING_PIPELINE_NO_REPAIR_TARGET
     expected_failure_stage: TARGETED_REPAIR_PRECONDITION
-    forbidden_completed_stage: AFTER_EXPECTED_OBSERVED
 
   - id: LEP-EVAL-ID-COLLISION-001
     before_after_eval_id_same: true
     expected_error_code: LEARNING_PIPELINE_EVAL_ID_COLLISION
     expected_failure_stage: AFTER_EXPECTED_OBSERVED_PRECONDITION
-    forbidden_completed_stage: FINAL_DELTA
 
   - id: LEP-BEFORE-PROVENANCE-FAIL-001
     mutation: remove_before_observation_provenance
-    expected_wrapper_code: LEARNING_PIPELINE_STAGE_FAILED
     expected_underlying_code: EVAL_MISSING_PROVENANCE
     expected_failure_stage: BEFORE_EXPECTED_OBSERVED
 
-  - id: LEP-PRIOR-FD-REVALIDATE-001
-    prior_final_delta_payload: structurally_fake_caller_object
-    expected_wrapper_code: LEARNING_PIPELINE_STAGE_FAILED
+  - id: LEP-SERIALIZED-PRIOR-FD-FORBIDDEN-001
+    mutation: add_prior_final_deltas_serialized_object
+    expected_error_code: LEARNING_PIPELINE_UNKNOWN_FIELD
+    expected_failure_stage: ORCHESTRATOR_INPUT
+
+  - id: LEP-PRIOR-FD-SOURCE-REEXECUTE-001
+    prior_final_delta_inputs: malformed_source_package
     expected_underlying_code: POST_FD_INVALID_FINAL_DELTA
     expected_failure_stage: POST_FINAL_DELTA
 
   - id: LEP-UNKNOWN-MATURITY-001
     requested_maturity: magic_verified
-    expected_wrapper_code: LEARNING_PIPELINE_STAGE_FAILED
     expected_underlying_code: POST_FD_UNKNOWN_MATURITY
     expected_failure_stage: POST_FINAL_DELTA
 
@@ -72,7 +75,8 @@ gates:
   exact_underlying_runtime_errors_are_not_hidden: true
   all_success_authority_flags_false: true
   orchestration_does_not_rewrite_stage_results: true
-  prior_evidence_not_trusted_without_revalidation: true
+  serialized_intermediate_artifacts_are_not_source_truth: true
+  prior_evidence_not_trusted_without_source_reexecution: true
   no_second_learning_authority: true
   no_write_route_created: true
   no_maturity_route_created: true
