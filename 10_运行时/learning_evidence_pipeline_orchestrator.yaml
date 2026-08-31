@@ -1,11 +1,11 @@
-policy_id: EUSTIA_LEARNING_EVIDENCE_PIPELINE_ORCHESTRATOR_V1
+policy_id: EUSTIA_LEARNING_EVIDENCE_PIPELINE_ORCHESTRATOR_V2
 status: candidate_stacked
-scope: before_eval_targeted_repair_after_eval_final_delta_post_final_delta_orchestration
+scope: source_bound_before_eval_targeted_repair_after_eval_final_delta_post_final_delta_orchestration
 
 purpose:
   - 将现有证据驱动学习阶段按固定顺序机械串联，减少人工拼接与阶段遗漏
-  - 保留每一阶段的真实 receipt、失败阶段、底层 error code 与完成阶段
-  - 为真实生成后的修复学习闭环提供一个执行入口，而不是建立第二学习系统
+  - 每个信任承载阶段都从原始 source payload 重执行，不信任 caller 序列化中间结果
+  - 为真实生成后的修复学习闭环提供执行入口，而不是建立第二学习系统
 
 authority_boundary:
   this_file_is_orchestration_contract_only: true
@@ -23,8 +23,8 @@ authority_boundary:
   feedback_learning_authority: 08_系统学习/反馈反推与系统反哺引擎.md
 
 stack_dependency:
-  required_upstream_pr: 34
-  required_upstream_exact_head_at_implementation: b5db44f3541f9192993990b983c2552ab56a26d9
+  required_upstream_pr: 55
+  required_final_delta_pr: 54
   canonical_registration_deferred_until_upstream_canonical: true
   branch_local_candidate_must_not_override_project_index: true
 
@@ -40,35 +40,36 @@ stage_implementations:
   TARGETED_REPAIR: tools/learning_retriever/learning_retriever/targeted_repair.py#plan_targeted_repair
   AFTER_EXPECTED_OBSERVED: tools/learning_retriever/learning_retriever/expected_observed.py#evaluate_expected_vs_observed
   FINAL_DELTA: tools/learning_retriever/learning_retriever/final_delta.py#compile_final_delta_learning_evidence
-  POST_FINAL_DELTA: tools/learning_retriever/learning_retriever/post_final_delta.py#assess_post_final_delta_validation
+  POST_FINAL_DELTA: tools/learning_retriever/learning_retriever/post_final_delta_source_bound.py#assess_source_bound_post_final_delta
+
+source_binding:
+  expected_observed_uses_raw_source: true
+  targeted_repair_uses_raw_before_source: true
+  final_delta_uses_raw_before_after_sources: true
+  post_final_delta_uses_final_delta_source_packages: true
+  serialized_eval_results_accepted: false
+  serialized_repair_plans_accepted: false
+  serialized_prior_final_deltas_accepted: false
+  prior_final_delta_inputs_must_be_reexecuted: true
 
 preconditions:
   before_eval_must_have_real_repair_target:
     required: true
-    definition: Targeted Repair must derive at least one FAIL or UNKNOWN repair item from the validated before evaluation.
     failure_code: LEARNING_PIPELINE_NO_REPAIR_TARGET
   before_after_eval_identity:
     distinct_eval_id_required: true
     failure_code: LEARNING_PIPELINE_EVAL_ID_COLLISION
-  prior_final_delta_handling:
-    caller_claims_are_not_trusted: true
-    action: pass_every_prior_artifact_through_existing_post_final_delta_validator
 
 failure_semantics:
   stop_on_first_failed_stage: true
   later_stages_must_not_execute: true
-  receipt_fields:
-    - code
-    - stage
-    - underlying_code
-    - completed_stages
-    - message
   wrapper_code: LEARNING_PIPELINE_STAGE_FAILED
   underlying_error_code_must_be_preserved: true
 
 output_contract:
   stage_receipts_required: true
   full_stage_artifacts_preserved: true
+  source_binding_receipt_required: true
   candidate_learning_evidence_exposed: true
   regression_proposals_exposed: true
   maturity_assessment_exposed: true
@@ -86,6 +87,9 @@ forbidden:
   - duplicate_targeted_repair_routing
   - duplicate_final_delta_logic
   - duplicate_post_final_delta_logic
+  - caller_serialized_eval_truth
+  - caller_serialized_repair_truth
+  - caller_serialized_final_delta_truth
   - semantic_auto_clustering
   - caller_minted_CLEAN
   - caller_minted_maturity_confirmation
@@ -114,7 +118,7 @@ promotion_and_writeback:
   this_runtime_can_promote: false
   this_runtime_can_write: false
   future_canonical_registration_requires:
-    - upstream_PR34_canonicalized
+    - upstream_PR54_and_PR55_canonicalized
     - exact_head_CI_green
     - independent_review_accept
     - current_main_content_reconcile
