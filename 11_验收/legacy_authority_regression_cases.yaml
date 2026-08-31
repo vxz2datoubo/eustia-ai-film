@@ -57,3 +57,35 @@ cases:
     scope: document
     sample: Seedance研究报告_v2.md 是历史证据，仅供研究参考。
     expected: pass_no_reference
+
+  - id: LEGACY-AUTHORITY-010
+    title: Issue6真实形态的下一行历史身份说明应通过
+    scope: document
+    sample: |-
+      - 来源：ChatGPT File Library `00_项目长期外部记忆与系统演化总文档_v1.0.35_更新补丁.md`。
+      - 身份：历史迁移证据，不是当前 canonical。
+    expected: pass_historical
+
+  - id: LEGACY-AUTHORITY-011
+    title: historical migration evidence not current canonical 英文语义应通过
+    scope: document
+    sample: |-
+      source: ChatGPT File Library AI电影化系统总纲_v1.3.3.md
+      identity: historical migration evidence; not the current canonical authority.
+    expected: pass_historical
+
+  - id: LEGACY-AUTHORITY-012
+    title: 历史身份说明不能洗白legacy-bearing活动指令
+    scope: document
+    sample: |-
+      当前导演必须读取 AI电影化系统总纲_v1.3.3.md。
+      身份：历史迁移证据，不是当前 canonical。
+    expected: fail_active
+
+  - id: LEGACY-AUTHORITY-013
+    title: 仅说历史证据但没有明确非当前身份仍保持模糊
+    scope: document
+    sample: |-
+      来源：AI电影化系统总纲_v1.3.3.md
+      身份：历史证据。
+    expected: fail_ambiguous
