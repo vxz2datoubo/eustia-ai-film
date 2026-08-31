@@ -21,6 +21,8 @@ canonical_github_readback_trust_boundary:
   inherited_git_path_or_remote_config_is_not_authority: true
   ambient_http_proxy_is_ignored_for_authority_readback: true
   https_hostname_and_certificate_verification_required: true
+  redirects_for_authority_readback_forbidden: true
+  successful_response_final_url_must_match_requested_fixed_api_endpoint: true
   auth_token_may_authorize_read_only_access_but_cannot_select_authority: true
   required_current_snapshot_checks:
     - fixed_GitHub_main_SHA_readback_succeeds
