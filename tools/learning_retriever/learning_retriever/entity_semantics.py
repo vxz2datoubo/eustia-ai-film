@@ -1,14 +1,25 @@
 """Bounded semantic evidence helpers for Director Feature Compiler.
 
-This module is not an entity authority and does not infer project truth. It only
-provides a fail-closed query-normalization predicate for cases where a surface
-clause leader must be proven capable of embodied character action before the
-compiler emits character-facing semantics.
+This module does not own character truth. Project character identity is read only
+through the character database path registered by PROJECT_INDEX; open-vocabulary
+human-role morphology remains query-normalization evidence, not a second entity
+authority.
 """
 
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable
+from pathlib import Path
+import re
+
+import yaml
+
+
+CHARACTER_DB_DOCUMENT_ID = "EUSTIA-CHARACTER-PERFORMANCE-LIBRARY"
+
+
+class EntitySemanticError(ValueError):
+    """Raised when canonical character typing cannot be read safely."""
 
 
 # Productive Chinese person-role endings. These are semantic morphology, not
@@ -36,7 +47,7 @@ PRODUCTIVE_HUMAN_ROLE_SUFFIXES = (
 
 # Irregular/common person-role heads that are not reliably captured by the
 # productive suffixes above. Keep this intentionally small; project character
-# names belong in canonical character semantics, not in this utility.
+# names come from the canonical character table instead of this utility.
 IRREGULAR_HUMAN_ROLE_TERMS = (
     "贵族",
     "医生",
@@ -45,8 +56,8 @@ IRREGULAR_HUMAN_ROLE_TERMS = (
 )
 
 # Open category endings that strongly indicate place/structure/object semantics.
-# This blocks unseen nouns such as 钟楼 / 塔楼 / 教堂 / 雕像 without growing a
-# literal noun blacklist for every future object.
+# This is a secondary negative boundary only. A canonical character identity,
+# when present, takes precedence over generic morphology.
 NON_AGENT_SEMANTIC_SUFFIXES = (
     "楼",
     "塔",
@@ -85,18 +96,74 @@ NON_AGENT_SEMANTIC_SUFFIXES = (
     "棚",
 )
 
-EMBODIED_ORIENTATION_TRANSITIONS = (
-    "转身",
-    "转过身",
-    "回身",
-)
-
 PRONOUN_AGENT_TERMS = (
     "他",
     "她",
     "他们",
     "她们",
 )
+
+
+def load_canonical_character_terms(project_root: str | Path) -> tuple[str, ...]:
+    """Read formal character names/aliases through PROJECT_INDEX only.
+
+    The loader intentionally extracts identity tokens from the canonical role
+    table and nothing else. It cannot create or mutate character truth.
+    """
+    root = Path(project_root).resolve()
+    index_path = root / "PROJECT_INDEX.yaml"
+    if not index_path.is_file():
+        raise EntitySemanticError("PROJECT_INDEX_REQUIRED_FOR_ENTITY_SEMANTICS")
+
+    try:
+        index = yaml.safe_load(index_path.read_text(encoding="utf-8")) or {}
+    except Exception as exc:  # pragma: no cover - surfaced as bounded runtime error
+        raise EntitySemanticError("PROJECT_INDEX_ENTITY_SEMANTICS_PARSE_FAILED") from exc
+
+    relative = str((index.get("canonical") or {}).get("character_db") or "").strip()
+    if not relative:
+        raise EntitySemanticError("CANONICAL_CHARACTER_DB_NOT_REGISTERED")
+
+    character_path = (root / relative).resolve()
+    try:
+        character_path.relative_to(root)
+    except ValueError as exc:
+        raise EntitySemanticError("CANONICAL_CHARACTER_DB_PATH_ESCAPES_PROJECT") from exc
+    if not character_path.is_file():
+        raise EntitySemanticError("CANONICAL_CHARACTER_DB_MISSING")
+
+    content = character_path.read_text(encoding="utf-8")
+    if f"document_id: {CHARACTER_DB_DOCUMENT_ID}" not in content:
+        raise EntitySemanticError("CANONICAL_CHARACTER_DB_IDENTITY_MISMATCH")
+
+    marker = "# 2. 角色总表"
+    if marker not in content:
+        raise EntitySemanticError("CANONICAL_CHARACTER_TABLE_MISSING")
+    section = content.split(marker, 1)[1]
+    if "# 3." in section:
+        section = section.split("# 3.", 1)[0]
+
+    terms: set[str] = set()
+    for raw_line in section.splitlines():
+        line = raw_line.strip()
+        if not line.startswith("| CHARACTER-EUSTIA-"):
+            continue
+        cells = [cell.strip().strip("`") for cell in line.strip("|").split("|")]
+        if len(cells) < 3:
+            continue
+        formal_name = cells[1].strip()
+        aliases = cells[2].strip()
+        if formal_name:
+            terms.add(formal_name)
+        if aliases and aliases != "无":
+            for alias in re.split(r"[、，,;/]+", aliases):
+                alias = alias.strip()
+                if alias and alias != "无":
+                    terms.add(alias)
+
+    if not terms:
+        raise EntitySemanticError("CANONICAL_CHARACTER_TABLE_EMPTY")
+    return tuple(sorted(terms, key=lambda value: (-len(value), value)))
 
 
 def _bounded_cjk(value: str, *, max_chars: int) -> bool:
@@ -119,7 +186,7 @@ def _has_positive_human_semantics(
     known_actor_terms: Iterable[str],
 ) -> bool:
     normalized = value.strip().replace(" ", "")
-    if not normalized or _is_non_agent_head(normalized):
+    if not normalized:
         return False
 
     actor_terms = tuple(
@@ -134,8 +201,11 @@ def _has_positive_human_semantics(
             reverse=True,
         )
     )
+    # Explicit/canonical character identity outranks generic noun morphology.
     if any(normalized.endswith(term) for term in actor_terms):
         return True
+    if _is_non_agent_head(normalized):
+        return False
     if any(normalized.endswith(term) for term in IRREGULAR_HUMAN_ROLE_TERMS):
         return True
     return normalized.endswith(PRODUCTIVE_HUMAN_ROLE_SUFFIXES)
@@ -149,15 +219,12 @@ def bounded_animate_agent_leader(
     modifier_tail_validator: Callable[[str], bool],
     max_chars: int = 20,
 ) -> bool:
-    """Return True only with bounded positive evidence of an embodied agent.
+    """Return True only with bounded positive evidence of an animate agent.
 
-    Evidence order:
-    1. known actor/pronoun or productive human-role semantics, optionally followed
-       by a bounded manner/modifier tail;
-    2. explicit embodied turn transition for an otherwise unseen bounded CJK
-       subject, unless the subject has strong non-agent category morphology.
-
-    A plain unknown noun before 面向/朝向 is therefore not sufficient evidence.
+    Positive evidence is limited to canonical/known character identity,
+    pronouns, or productive human-role semantics. An embodied verb such as
+    `转身` is an action predicate, not identity proof by itself; therefore novel
+    objects cannot become characters merely by being placed before that verb.
     """
     normalized = value.strip()
     if not _bounded_cjk(normalized, max_chars=max_chars):
@@ -173,24 +240,10 @@ def bounded_animate_agent_leader(
         if leader and modifier_tail_validator(tail):
             actor_candidates.append(leader)
 
-    for candidate in reversed(actor_candidates):
-        if _has_positive_human_semantics(
+    return any(
+        _has_positive_human_semantics(
             candidate,
             known_actor_terms=known_actor_terms,
-        ):
-            return True
-
-    embodied_transition = any(
-        action.startswith(term)
-        for term in EMBODIED_ORIENTATION_TRANSITIONS
+        )
+        for candidate in reversed(actor_candidates)
     )
-    if not embodied_transition:
-        return False
-
-    # A body-turn predicate is positive agent evidence for an unseen proper name
-    # or role, but not for a clearly structural/object noun.
-    for candidate in reversed(actor_candidates):
-        compact = candidate.strip().replace(" ", "")
-        if compact and not _is_non_agent_head(compact):
-            return True
-    return False
