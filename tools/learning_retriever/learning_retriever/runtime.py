@@ -4,8 +4,9 @@ Continuation-style requests first pass the Active Work Item Resolution Gate.
 The gate trusts only the repository-controlled canonical continuity snapshot;
 callers cannot inject freshness or historical-target verification callbacks.
 After work-item identity binding, the runtime reconstructs compact retrieval
-context and continues through Director Feature Compiler -> Hard Route ->
-existing LearningRetriever semantic recall.
+context, performs one final fixed-source revision revalidation immediately
+before Director Feature Compiler use, then continues through Director Feature
+Compiler -> Hard Route -> existing LearningRetriever semantic recall.
 """
 
 from __future__ import annotations
@@ -16,6 +17,7 @@ from typing import Any
 from .active_work_item import (
     ActiveWorkItemResolutionError,
     build_work_item_context_packet,
+    revalidate_source_revision,
     resolve_work_item,
 )
 from .feature_compiler import compile_retrieval_task
@@ -97,6 +99,12 @@ class DirectorLearningRuntime:
         feature_input, reconstructed = _reconstruct_feature_input(
             description, work_item_packet
         )
+
+        # Close the remote source-revision TOCTOU window at the first downstream
+        # compiler boundary. If the source Issue changed after initial resolution,
+        # fail closed before Director Feature Compiler can observe stale context.
+        source_revision_revalidation = revalidate_source_revision(resolution)
+
         task = compile_retrieval_task(
             feature_input,
             task_id=task_id,
@@ -111,6 +119,8 @@ class DirectorLearningRuntime:
         runtime_flow = ["active_work_item_resolution"]
         if reconstructed:
             runtime_flow.append("continuation_task_reconstruction")
+        if source_revision_revalidation.get("status") != "NOT_REQUIRED":
+            runtime_flow.append("source_revision_pre_compiler_revalidation")
         runtime_flow.extend(
             ["director_feature_compiler", "hard_route", "semantic_recall"]
         )
@@ -120,6 +130,7 @@ class DirectorLearningRuntime:
             "flow": runtime_flow,
             "active_work_item_gate_invoked": True,
             "active_work_item_resolution": resolution.as_dict(),
+            "source_revision_pre_compiler_revalidation": source_revision_revalidation,
             "work_item_context_packet": work_item_packet,
             "continuation_task_reconstructed": reconstructed,
             "serialized_work_item_authority_accepted": False,
