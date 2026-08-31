@@ -7,9 +7,10 @@ become an authority surface. This public wrapper adds two runtime invariants:
 2) callers can revalidate the same source revision immediately before the first
    downstream compiler use, closing the post-resolution remote TOCTOU window.
 
-The wrapper also exposes a pure read-only parser for already-fetched continuity
-text so bounded downstream checkpoint tooling can reuse the exact Active Work
-Item state schema instead of copying private field lists.
+The wrapper also exposes a pure read-only parser and read-only schema aliases for
+already-fetched continuity text so bounded downstream checkpoint tooling can
+reuse the exact Active Work Item state contract instead of copying private field
+lists or markers.
 """
 
 from __future__ import annotations
@@ -25,6 +26,7 @@ CONTINUITY_PATH = _remote.CONTINUITY_PATH
 PROJECT_INDEX_PATH = _remote.PROJECT_INDEX_PATH
 STATE_BEGIN = _remote.STATE_BEGIN
 STATE_END = _remote.STATE_END
+REQUIRED_STATE_FIELDS = _remote.REQUIRED_STATE_FIELDS
 WorkItemResolution = _remote.WorkItemResolution
 apply_constraint_ledger = _remote.apply_constraint_ledger
 build_work_item_context_packet = _remote.build_work_item_context_packet
@@ -126,8 +128,6 @@ def _validate_live_applied_checkpoint(
         and _remote._is_structured_revision_comment(comment.get("body"))
     )
     if not structured_ids:
-        # Defensive; the applied comment was proven structured above, so this
-        # branch should be unreachable unless the classification logic changes.
         raise ActiveWorkItemResolutionError(
             "WORK_ITEM_SOURCE_APPLIED_CHECKPOINT_INVALID",
             details={
@@ -208,6 +208,7 @@ __all__ = [
     "PROJECT_INDEX_PATH",
     "STATE_BEGIN",
     "STATE_END",
+    "REQUIRED_STATE_FIELDS",
     "WorkItemResolution",
     "apply_constraint_ledger",
     "build_work_item_context_packet",
