@@ -1,0 +1,110 @@
+suite_id: POST_FINAL_DELTA_VALIDATION_REGRESSION_V1
+status: candidate
+policy_authority: 10_运行时/post_final_delta_validation_policy.yaml
+maturity_authority: 10_运行时/maturity_model.yaml
+learning_authority: 08_系统学习/反馈反推与系统反哺引擎.md
+runtime: tools/learning_retriever/learning_retriever/post_final_delta.py
+source_final_delta_suite: 11_验收/final_delta_learning_regression_cases.yaml
+
+policy:
+  explicit_hypothesis_id_required: true
+  semantic_auto_clustering_forbidden: true
+  exact_lesson_payload_partitioning_required: true
+  model_version_partitioning_required: true
+  contradiction_visibility_required: true
+  latest_wins_forbidden: true
+  regression_proposal_write_forbidden: true
+  maturity_promotion_forbidden: true
+
+cases:
+  - id: PFD-SAME-VERSION-SUPPORT-COHORT-001
+    evidence_count: 2
+    model: C-DANCE
+    model_version: "2.5"
+    exact_candidate_lesson_payload: stable_lesson_text
+    expected_cohort_count: 1
+    expected_supporting_count: 2
+    expected_conflict_present: false
+
+  - id: PFD-MODEL-VERSION-SPLIT-001
+    evidence_count: 2
+    model: C-DANCE
+    model_versions: ["2.5", "2.6"]
+    expected_model_version_partition_count: 2
+    expected_cross_model_or_version_split_present: true
+    silent_pooling_forbidden: true
+
+  - id: PFD-EXACT-LESSON-PAYLOAD-SPLIT-001
+    evidence_count: 2
+    lesson_payloads: [lesson_A, lesson_B]
+    expected_exact_lesson_payload_count: 2
+    semantic_equivalence_inference_forbidden: true
+
+  - id: PFD-CONFLICT-VISIBLE-001
+    evidence_classifications: [SUPPORTING, CONTRADICTORY]
+    same_cohort: true
+    expected_conflict_present: true
+    expected_latest_wins_resolution_performed: false
+
+  - id: PFD-REGRESSION-PROPOSAL-001
+    source_regression_candidate_eligible: true
+    source_classification: SUPPORTING
+    expected_proposal_status: candidate
+    expected_write_authorized: false
+    expected_promotion_authorized: false
+    expected_human_or_governed_review_required: true
+
+  - id: PFD-SCENE-VERIFIED-GATE-001
+    requested_maturity: scene_verified
+    supporting_evidence_present: true
+    caller_confirmation_claim: CONFIRMED_USE
+    expected_route: TRUSTED_USER_OR_CANONICAL_CONFIRMATION_BINDING_REQUIRED
+    expected_trusted_confirmation_binding_present: false
+    expected_promotion_authorized: false
+
+  - id: PFD-PROJECT-VERIFIED-GATE-001
+    requested_maturity: project_verified
+    expected_route: HIGH_IMPACT_GOVERNED_PROMOTION_GATE_REQUIRED
+    expected_promotion_authorized: false
+
+  - id: PFD-GENERAL-STABLE-GATE-001
+    requested_maturity: general_stable
+    expected_route: HIGH_IMPACT_GOVERNED_PROMOTION_GATE_REQUIRED
+    expected_promotion_authorized: false
+
+structural_gate_cases:
+  - id: PFD-MISSING-HYPOTHESIS-ID-001
+    mutation: remove_hypothesis_id
+    expected_error_code: POST_FD_INVALID_SHAPE
+
+  - id: PFD-FAKE-MATURITY-001
+    mutation: set_candidate_maturity_scene_verified
+    expected_error_code: POST_FD_AUTHORITY_VIOLATION
+
+  - id: PFD-LEARNING-WRITE-AUTH-001
+    mutation: set_learning_writeback_authorized_true
+    expected_error_code: POST_FD_AUTHORITY_VIOLATION
+
+  - id: PFD-CAMERA-AUTH-001
+    mutation: set_camera_authority_mutation_authorized_true
+    expected_error_code: POST_FD_AUTHORITY_VIOLATION
+
+  - id: PFD-REGRESSION-WRITE-AUTH-001
+    mutation: set_regression_candidate_write_authorized_true
+    expected_error_code: POST_FD_AUTHORITY_VIOLATION
+
+  - id: PFD-UNKNOWN-MATURITY-001
+    mutation: request_unknown_maturity
+    expected_error_code: POST_FD_UNKNOWN_MATURITY
+
+gates:
+  evidence_is_partitioned_before_summary: true
+  no_semantic_auto_clustering: true
+  no_cross_model_version_pooling: true
+  conflict_cannot_be_silently_resolved: true
+  regression_proposal_cannot_write: true
+  caller_confirmation_claim_cannot_mint_trusted_confirmation: true
+  scene_verified_not_auto_promoted: true
+  project_verified_not_auto_promoted: true
+  general_stable_not_auto_promoted: true
+  no_second_learning_authority: true
