@@ -1,14 +1,8 @@
-"""Bounded orchestration for the evidence-driven continual-learning runtime.
+"""Source-bound orchestration for the evidence-driven continual-learning runtime.
 
-This module composes existing executable stages only:
-
-Expected-vs-Observed(before) -> Targeted Repair -> Expected-vs-Observed(after)
--> Final-Delta -> Post-Final-Delta validation.
-
-It owns no film method, evaluation vocabulary, repair routing, learning truth,
-maturity decision, prompt mutation, generation, camera authority or persistence.
-Every stage is executed by its existing canonical runtime and every failure is
-surfaced with the exact source stage and underlying error code.
+Every trust-bearing stage re-executes from original source payloads. Serialized
+Expected-vs-Observed results, repair plans, Final-Delta results, and prior
+Final-Delta records are not accepted as public upstream truth.
 """
 
 from __future__ import annotations
@@ -18,22 +12,13 @@ from typing import Any, Callable, Mapping
 
 from .expected_observed import ExpectedObservedEvalError, evaluate_expected_vs_observed
 from .final_delta import FinalDeltaEvidenceError, compile_final_delta_learning_evidence
-from .post_final_delta import PostFinalDeltaValidationError, assess_post_final_delta_validation
+from .post_final_delta import PostFinalDeltaValidationError
+from .post_final_delta_source_bound import assess_source_bound_post_final_delta
 from .targeted_repair import TargetedRepairPlanError, plan_targeted_repair
 
 
 class LearningEvidencePipelineError(ValueError):
-    """Fail-closed orchestration error with stage provenance."""
-
-    def __init__(
-        self,
-        code: str,
-        message: str,
-        *,
-        stage: str,
-        underlying_code: str | None = None,
-        completed_stages: list[str] | None = None,
-    ) -> None:
+    def __init__(self, code: str, message: str, *, stage: str, underlying_code: str | None = None, completed_stages: list[str] | None = None) -> None:
         super().__init__(f"{code}: {stage}: {message}")
         self.code = code
         self.message = message
@@ -68,7 +53,7 @@ _ALLOWED_ROOT_KEYS = {
     "change_record",
     "learning_context",
     "requested_maturity",
-    "prior_final_deltas",
+    "prior_final_delta_inputs",
 }
 
 _STAGE_ERRORS = (
@@ -81,29 +66,17 @@ _STAGE_ERRORS = (
 
 def _mapping(value: Any, *, field: str) -> dict[str, Any]:
     if not isinstance(value, Mapping):
-        raise LearningEvidencePipelineError(
-            "LEARNING_PIPELINE_INVALID_SHAPE",
-            f"{field} must be a mapping",
-            stage="ORCHESTRATOR_INPUT",
-        )
+        raise LearningEvidencePipelineError("LEARNING_PIPELINE_INVALID_SHAPE", f"{field} must be a mapping", stage="ORCHESTRATOR_INPUT")
     return dict(value)
 
 
 def _nonempty(value: Any, *, field: str) -> str:
     if not isinstance(value, str) or not value.strip():
-        raise LearningEvidencePipelineError(
-            "LEARNING_PIPELINE_INVALID_SHAPE",
-            f"{field} must be a non-empty string",
-            stage="ORCHESTRATOR_INPUT",
-        )
+        raise LearningEvidencePipelineError("LEARNING_PIPELINE_INVALID_SHAPE", f"{field} must be a non-empty string", stage="ORCHESTRATOR_INPUT")
     return value.strip()
 
 
-def _run_stage(
-    stage: str,
-    completed: list[str],
-    operation: Callable[[], dict[str, Any]],
-) -> dict[str, Any]:
+def _run_stage(stage: str, completed: list[str], operation: Callable[[], dict[str, Any]]) -> dict[str, Any]:
     try:
         result = operation()
     except _STAGE_ERRORS as exc:
@@ -122,24 +95,10 @@ def _validate_root(raw: Mapping[str, Any]) -> dict[str, Any]:
     payload = _mapping(raw, field="pipeline")
     unknown = set(payload) - _ALLOWED_ROOT_KEYS
     if unknown:
-        raise LearningEvidencePipelineError(
-            "LEARNING_PIPELINE_UNKNOWN_FIELD",
-            f"unknown pipeline fields: {sorted(unknown)}",
-            stage="ORCHESTRATOR_INPUT",
-        )
-    for required in (
-        "pipeline_id",
-        "hypothesis_id",
-        "before_eval_payload",
-        "after_eval_payload",
-        "change_record",
-    ):
+        raise LearningEvidencePipelineError("LEARNING_PIPELINE_UNKNOWN_FIELD", f"unknown pipeline fields: {sorted(unknown)}", stage="ORCHESTRATOR_INPUT")
+    for required in ("pipeline_id", "hypothesis_id", "before_eval_payload", "after_eval_payload", "change_record"):
         if required not in payload:
-            raise LearningEvidencePipelineError(
-                "LEARNING_PIPELINE_INVALID_SHAPE",
-                f"missing required field: {required}",
-                stage="ORCHESTRATOR_INPUT",
-            )
+            raise LearningEvidencePipelineError("LEARNING_PIPELINE_INVALID_SHAPE", f"missing required field: {required}", stage="ORCHESTRATOR_INPUT")
     _nonempty(payload["pipeline_id"], field="pipeline_id")
     _nonempty(payload["hypothesis_id"], field="hypothesis_id")
     _mapping(payload["before_eval_payload"], field="before_eval_payload")
@@ -147,43 +106,32 @@ def _validate_root(raw: Mapping[str, Any]) -> dict[str, Any]:
     _mapping(payload["change_record"], field="change_record")
     if payload.get("learning_context") is not None:
         _mapping(payload["learning_context"], field="learning_context")
-    prior = payload.get("prior_final_deltas") or []
+    prior = payload.get("prior_final_delta_inputs") or []
     if not isinstance(prior, list) or not all(isinstance(item, Mapping) for item in prior):
-        raise LearningEvidencePipelineError(
-            "LEARNING_PIPELINE_INVALID_SHAPE",
-            "prior_final_deltas must be a list of mappings",
-            stage="ORCHESTRATOR_INPUT",
-        )
+        raise LearningEvidencePipelineError("LEARNING_PIPELINE_INVALID_SHAPE", "prior_final_delta_inputs must be a list of source mappings", stage="ORCHESTRATOR_INPUT")
     if "requested_maturity" in payload and payload["requested_maturity"] is not None:
         _nonempty(payload["requested_maturity"], field="requested_maturity")
     return payload
 
 
-def run_learning_evidence_pipeline(
-    raw: Mapping[str, Any], *, project_root: str | Path
-) -> dict[str, Any]:
-    """Execute the existing evidence-learning stages in canonical order.
-
-    A successful result is still non-writing and non-promoting. The pipeline is
-    an execution envelope, not a new authority or a shortcut around any stage.
-    """
-
+def run_learning_evidence_pipeline(raw: Mapping[str, Any], *, project_root: str | Path) -> dict[str, Any]:
     payload = _validate_root(raw)
     root = Path(project_root)
     completed: list[str] = []
 
+    before_source = dict(payload["before_eval_payload"])
+    after_source = dict(payload["after_eval_payload"])
+    change_record = dict(payload["change_record"])
+    learning_context = dict(payload.get("learning_context") or {})
+
     before = _run_stage(
-        "BEFORE_EXPECTED_OBSERVED",
-        completed,
-        lambda: evaluate_expected_vs_observed(
-            payload["before_eval_payload"], project_root=root
-        ),
+        "BEFORE_EXPECTED_OBSERVED", completed,
+        lambda: evaluate_expected_vs_observed(before_source, project_root=root),
     )
 
     repair_plan = _run_stage(
-        "TARGETED_REPAIR",
-        completed,
-        lambda: plan_targeted_repair(before, project_root=root),
+        "TARGETED_REPAIR", completed,
+        lambda: plan_targeted_repair(before_source, project_root=root),
     )
     if repair_plan.get("repair_required") is not True or not repair_plan.get("repair_items"):
         raise LearningEvidencePipelineError(
@@ -194,15 +142,10 @@ def run_learning_evidence_pipeline(
         )
 
     after = _run_stage(
-        "AFTER_EXPECTED_OBSERVED",
-        completed,
-        lambda: evaluate_expected_vs_observed(
-            payload["after_eval_payload"], project_root=root
-        ),
+        "AFTER_EXPECTED_OBSERVED", completed,
+        lambda: evaluate_expected_vs_observed(after_source, project_root=root),
     )
-    before_eval_id = str(before.get("eval_id") or "").strip()
-    after_eval_id = str(after.get("eval_id") or "").strip()
-    if not before_eval_id or not after_eval_id or before_eval_id == after_eval_id:
+    if not str(before.get("eval_id") or "").strip() or not str(after.get("eval_id") or "").strip() or before["eval_id"] == after["eval_id"]:
         raise LearningEvidencePipelineError(
             "LEARNING_PIPELINE_EVAL_ID_COLLISION",
             "before and after evaluations must have distinct non-empty eval_id values",
@@ -210,35 +153,29 @@ def run_learning_evidence_pipeline(
             completed_stages=completed,
         )
 
+    current_final_delta_input = {
+        "before_eval_input": before_source,
+        "after_eval_input": after_source,
+        "change_record": change_record,
+        "learning_context": learning_context,
+    }
     final_delta = _run_stage(
-        "FINAL_DELTA",
-        completed,
-        lambda: compile_final_delta_learning_evidence(
-            {
-                "before_eval": before,
-                "after_eval": after,
-                "repair_plan": repair_plan,
-                "change_record": payload["change_record"],
-                "learning_context": payload.get("learning_context") or {},
-            },
-            project_root=root,
-        ),
+        "FINAL_DELTA", completed,
+        lambda: compile_final_delta_learning_evidence(current_final_delta_input, project_root=root),
     )
 
-    all_deltas = [dict(item) for item in (payload.get("prior_final_deltas") or [])]
-    all_deltas.append(final_delta)
+    source_inputs = [dict(item) for item in (payload.get("prior_final_delta_inputs") or [])]
+    source_inputs.append(current_final_delta_input)
     post_payload: dict[str, Any] = {
         "assessment_id": f"POST_FD::{payload['pipeline_id']}",
         "hypothesis_id": payload["hypothesis_id"],
-        "final_deltas": all_deltas,
+        "final_delta_inputs": source_inputs,
     }
     if payload.get("requested_maturity") is not None:
         post_payload["requested_maturity"] = payload["requested_maturity"]
-
     post = _run_stage(
-        "POST_FINAL_DELTA",
-        completed,
-        lambda: assess_post_final_delta_validation(post_payload, project_root=root),
+        "POST_FINAL_DELTA", completed,
+        lambda: assess_source_bound_post_final_delta(post_payload, project_root=root),
     )
 
     stages = {
@@ -272,11 +209,12 @@ def run_learning_evidence_pipeline(
             "conflict_present": post["conflict_present"],
             "regression_proposal_count": len(post["regression_proposals"]),
             "maturity_route": post["maturity_assessment"]["route"],
+            "source_binding": dict(post["source_binding"]),
         },
     }
 
     return {
-        "schema": "LEARNING_EVIDENCE_PIPELINE_RESULT/v1",
+        "schema": "LEARNING_EVIDENCE_PIPELINE_RESULT/v2",
         "status": "PASS",
         "pipeline_id": payload["pipeline_id"],
         "hypothesis_id": payload["hypothesis_id"],
@@ -290,6 +228,13 @@ def run_learning_evidence_pipeline(
             "final_delta": final_delta,
             "post_final_delta": post,
         },
+        "source_binding": {
+            "expected_observed_inputs_reexecuted": True,
+            "targeted_repair_source_reexecuted": True,
+            "final_delta_source_reexecuted": True,
+            "post_final_delta_source_reexecuted": True,
+            "serialized_prior_final_deltas_accepted": False,
+        },
         "candidate_learning_evidence": final_delta["candidate_learning_evidence"],
         "regression_proposals": list(post["regression_proposals"]),
         "maturity_assessment": dict(post["maturity_assessment"]),
@@ -301,5 +246,5 @@ def run_learning_evidence_pipeline(
         "regression_write_authorized": False,
         "maturity_promotion_authorized": False,
         "causal_claim_authorized": False,
-        "authority_boundary": "orchestration_only_existing_stage_authorities_unchanged",
+        "authority_boundary": "orchestration_only_source_bound_stage_authorities_unchanged",
     }
