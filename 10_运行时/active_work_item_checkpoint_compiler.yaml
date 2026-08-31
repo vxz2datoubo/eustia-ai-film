@@ -1,0 +1,306 @@
+component_id: EUSTIA_ACTIVE_WORK_ITEM_CHECKPOINT_COMPILER
+version: 1.2.0
+status: candidate
+name: ACTIVE-WORK-ITEM-CHECKPOINT-COMPILER-001
+scope: structured_revision_events_to_two_phase_verified_active_work_item_checkpoint
+
+dependency:
+  runtime_gate: 10_运行时/active_work_item_resolution_gate.yaml
+  continuity_authority: 07_连续性与生产状态/连续性与当前生产状态.md#ACTIVE_WORK_ITEM_STATE
+  write_route: 10_运行时/write_routes.yaml#revision_checkpoint_current_state
+  feedback_method: 08_系统学习/反馈反推与系统反哺引擎.md
+
+purpose:
+  - 将多轮 revision 事件机械压缩为下一份 ACTIVE_WORK_ITEM_STATE proposal
+  - 在真正 GitHub 写入前暴露 work item、checkpoint、parent chain、LOCK/REVOKE、Effective State 冲突
+  - 把计算当前有效状态、第一次 materialization、materialization 验证、第二阶段 finalization 与最终 canonical 声明分离
+  - 为外部受控 FETCH -> EDIT -> COMMIT -> FETCH VERIFY 两阶段事务提供最小可审计 patch
+
+authority_boundary:
+  this_component_is_not_continuity_authority: true
+  this_component_is_not_story_authority: true
+  this_component_has_no_persistence_authority: true
+  proposal_is_not_committed_state: true
+  finalization_proposal_is_not_committed_state: true
+  issue_comments_are_revision_trace_not_canonical_truth: true
+  runtime_may_not_write_github: true
+  runtime_may_not_accept_serialized_write_success_claim: true
+  runtime_may_not_claim_governed_branch_or_ref: true
+  external_orchestrator_must_execute_governed_write_protocol: true
+  revision_event_cannot_mint_story_scope: true
+  revision_event_cannot_mint_work_item_status: true
+  revision_event_cannot_mint_writeback_or_merge_status: true
+  revision_event_cannot_change_previous_work_item_identity: true
+
+input_contract:
+  baseline:
+    source: fetched_current_continuity_document
+    required:
+      - active_work_item block exists
+      - checkpoint_writeback_status == verified
+      - expected_work_item_id matches current block
+      - expected_baseline_checkpoint_ref matches latest_applied_checkpoint_ref
+  revision_event_required_fields:
+    - revision_id
+    - work_item_id
+    - event_type
+    - source_ref
+    - parent_revision
+    - changed
+    - preserved
+    - revoked
+    - experimental
+  revision_event_forbidden_authority_fields:
+    - story_scope_ref
+    - status
+    - writeback_verified_commit
+    - checkpoint_writeback_status
+    - canonical_merge_status
+    - previous_work_item_id
+  allowed_optional_evidence_fields:
+    - effective_state_summary
+    - next_expected_action
+    - current_best_ref
+    - bound_media_or_reference_refs
+    - unresolved_failures
+    - resolved_failures
+  allowed_event_types: [ADD, MODIFY, REVOKE, EXPERIMENT, LOCK, CHECKPOINT, CLOSE]
+  parent_chain:
+    first_event_parent_must_be_null_when_no_verified_expected_parent_exists: true
+    first_event_parent_must_equal_expected_parent_when_verified_parent_is_supplied: true
+    every_later_parent_must_equal_previous_revision_id: true
+  terminal_event_required: [CHECKPOINT, CLOSE]
+
+constraint_semantics:
+  formula: Effective State = Baseline + Accepted_or_Locked_Deltas - Explicitly_Revoked_Deltas
+  omission_is_not_revocation: true
+  latest_wins_forbidden: true
+  same_event_add_and_revoke_same_constraint: fail_closed
+  preserved_cannot_resurrect_revoked_constraint: true
+  revoked_constraint_reintroduction:
+    ADD:
+      allowed: true
+      effect: remove_from_revoked_and_add_to_preserved
+    LOCK:
+      allowed: true
+      effect: remove_from_revoked_and_add_to_locked
+    MODIFY:
+      allowed: false
+      fail_code: CHECKPOINT_REINTRODUCTION_REQUIRES_ADD_OR_LOCK
+    CHECKPOINT:
+      allowed: false
+      fail_code: CHECKPOINT_REINTRODUCTION_REQUIRES_ADD_OR_LOCK
+    CLOSE:
+      allowed: false
+      fail_code: CHECKPOINT_REINTRODUCTION_REQUIRES_ADD_OR_LOCK
+    EXPERIMENT:
+      allowed: true
+      effect: may_enter_experimental_pool_but_remains_revoked_from_effective_locked_preserved_state
+  ADD_MODIFY:
+    changed: accepted_preserved_constraint_except_revoked_reintroduction_rule
+    preserved: preserve_or_reassert_nonrevoked_constraint
+    experimental: experiment_pool
+    revoked: explicit_removal_only
+  LOCK:
+    changed: promote_to_locked_constraint
+    preserved: may_be_locked_when_explicitly_part_of_LOCK_event
+    revoked_same_event: conflict_fail_closed
+  EXPERIMENT:
+    changed: experimental_constraint
+    experimental: experimental_constraint
+    preserved: remains_preserved_when_not_revoked
+  REVOKE:
+    changed_must_be_empty: true
+    revoked: remove_named_constraint_from_locked_preserved_experimental_and_record_revoked
+  CHECKPOINT:
+    role: terminal_snapshot_event
+  CLOSE:
+    role: terminal_snapshot_event_and_close_work_item
+
+proposal_contract:
+  schema: ACTIVE_WORK_ITEM_CHECKPOINT_PROPOSAL/v1
+  status: PENDING_WRITE
+  proposed_snapshot_rules:
+    status: terminal_event_CLOSE_then_CLOSED_else_CHECKPOINTED
+    latest_applied_checkpoint_ref: proposed_checkpoint_ref
+    latest_evidence_ref: terminal_event.source_ref
+    checkpoint_writeback_status: pending_write
+    writeback_verified_commit: null
+    canonical_merge_status: pending_checkpoint_write
+  must_include:
+    - source_fingerprint
+    - baseline_checkpoint_ref
+    - proposed_checkpoint_ref
+    - applied_revision_ids
+    - replacement_block
+  may_not_include:
+    - write_succeeded_boolean_as_authority
+    - caller_verified_boolean_as_authority
+    - fake_commit_sha
+    - github_token
+    - automatic_story_or_asset_mutation
+
+post_write_verification:
+  input_must_be:
+    - exact_before_document_used_to_compile_proposal
+    - actually_fetched_post_write_document
+    - concrete_40_hex_materialization_commit_sha_from_external_transaction
+  checks:
+    - before fingerprint still matches proposal source fingerprint
+    - content before ACTIVE_WORK_ITEM_STATE block unchanged
+    - content after ACTIVE_WORK_ITEM_STATE block unchanged
+    - fetched active block exactly matches proposal replacement block
+    - parsed active state exactly matches proposal proposed_state
+  receipt_schema: ACTIVE_WORK_ITEM_CHECKPOINT_WRITE_VERIFICATION/v1
+  receipt_boundary:
+    - proves supplied fetched pending document matches proposal
+    - does not itself prove materialization commit is on governed target branch
+    - does not change checkpoint_writeback_status from pending_write to verified
+    - receipt must bind work_item checkpoint materialization commit and pending-document fingerprint
+
+finalization_phase:
+  implementation: tools/learning_retriever/learning_retriever/checkpoint_finalizer.py
+  activation_requires:
+    - fetched pending continuity document from first write
+    - ACTIVE_WORK_ITEM_CHECKPOINT_WRITE_VERIFICATION/v1 receipt
+    - exact receipt post_write_fingerprint equals fetched pending document fingerprint
+    - exact work_item_id and checkpoint_ref match
+    - exact verified materialization commit is concrete 40-hex SHA
+    - pending state has checkpoint_writeback_status == pending_write
+    - pending state has writeback_verified_commit unset
+    - pending state canonical_merge_status == pending_checkpoint_write
+  finalization_proposal:
+    schema: ACTIVE_WORK_ITEM_CHECKPOINT_FINALIZATION_PROPOSAL/v1
+    status: PENDING_FINALIZATION_WRITE
+    proposed_snapshot_rules:
+      checkpoint_writeback_status: verified
+      writeback_verified_commit: verified_materialization_commit_sha
+      canonical_merge_status: checkpoint_materialization_verified
+    self_referential_commit_sha_forbidden: true
+    reason: final ACTIVE_WORK_ITEM_STATE records the already verified materialization commit; the second finalization commit is recorded in the external verification receipt instead of attempting to embed its own SHA
+  second_write_verification:
+    input_must_be:
+      - exact fetched pending document used for finalization proposal
+      - actually fetched finalization document
+      - concrete_40_hex_finalization_commit_sha
+    checks:
+      - pending fingerprint still matches finalization proposal source fingerprint
+      - content before ACTIVE_WORK_ITEM_STATE block unchanged
+      - content after ACTIVE_WORK_ITEM_STATE block unchanged
+      - fetched active block exactly matches finalization proposal
+      - parsed final active state exactly matches proposed final state
+    receipt_schema: ACTIVE_WORK_ITEM_CHECKPOINT_FINALIZATION_VERIFICATION/v1
+    receipt_boundary:
+      - proves supplied fetched finalization document matches proposal
+      - runtime does not confirm governed branch or ref
+      - external orchestrator must separately confirm finalization commit is on governed target branch before canonical reporting
+
+forbidden_runtime_capabilities:
+  - GitHub REST or GraphQL writer
+  - git push or commit execution
+  - network token possession
+  - caller-supplied persisted=true shortcut
+  - caller-supplied verified=true shortcut
+  - caller-supplied governed_branch_verified shortcut
+  - mutation of screenplay or story_scope_ref
+  - mutation of map topology
+  - mutation of formal asset defaults
+  - mutation of learning maturity weights scope or conflict authority
+
+fail_codes:
+  - CHECKPOINT_CONTINUITY_INPUT_REQUIRED
+  - CHECKPOINT_BASELINE_STATE_INVALID
+  - CHECKPOINT_BASELINE_UNVERIFIED
+  - CHECKPOINT_BASELINE_STALE
+  - CHECKPOINT_EVENTS_EMPTY
+  - CHECKPOINT_EVENT_INVALID
+  - CHECKPOINT_EVENT_TYPE_INVALID
+  - CHECKPOINT_EVENT_AUTHORITY_FIELD_FORBIDDEN
+  - CHECKPOINT_REVISION_DUPLICATE
+  - CHECKPOINT_PARENT_BASELINE_UNKNOWN
+  - CHECKPOINT_PARENT_CHAIN_BROKEN
+  - CHECKPOINT_WORK_ITEM_MISMATCH
+  - CHECKPOINT_EVENT_AFTER_TERMINAL
+  - CHECKPOINT_TERMINAL_EVENT_REQUIRED
+  - CHECKPOINT_REF_INVALID
+  - CHECKPOINT_LOCK_CONFLICT
+  - CHECKPOINT_EVENT_CONSTRAINT_CONFLICT
+  - CHECKPOINT_PRESERVE_REVOKED_CONFLICT
+  - CHECKPOINT_REINTRODUCTION_REQUIRES_ADD_OR_LOCK
+  - CHECKPOINT_REVOKE_AMBIGUOUS
+  - CHECKPOINT_SOURCE_CHANGED
+  - CHECKPOINT_VERIFIED_COMMIT_INVALID
+  - CHECKPOINT_UNRELATED_CONTINUITY_MUTATION
+  - CHECKPOINT_POST_WRITE_MISMATCH
+  - CHECKPOINT_POST_WRITE_STATE_MISMATCH
+  - CHECKPOINT_FINALIZATION_DOCUMENT_REQUIRED
+  - CHECKPOINT_FINALIZATION_RECEIPT_INVALID
+  - CHECKPOINT_FINALIZATION_MATERIALIZATION_COMMIT_INVALID
+  - CHECKPOINT_FINALIZATION_RECEIPT_MISMATCH
+  - CHECKPOINT_FINALIZATION_EXPECTATION_REQUIRED
+  - CHECKPOINT_FINALIZATION_STATE_NOT_PENDING
+  - CHECKPOINT_FINALIZATION_STATE_ALREADY_STAMPED
+  - CHECKPOINT_FINALIZATION_STATE_MISMATCH
+  - CHECKPOINT_FINALIZATION_SOURCE_CHANGED
+  - CHECKPOINT_FINALIZATION_COMMIT_INVALID
+  - CHECKPOINT_FINALIZATION_UNRELATED_MUTATION
+  - CHECKPOINT_FINALIZATION_POST_WRITE_MISMATCH
+
+write_transaction_external_contract:
+  current_phase_supported: full_two_phase_checkpoint_proposal_and_document_verification
+  steps:
+    - FETCH_current_continuity
+    - compile_checkpoint_proposal
+    - human_or_governed_policy_gate_if_high_impact
+    - EDIT_only_ACTIVE_WORK_ITEM_STATE_block_to_pending
+    - COMMIT_serially_materialization
+    - FETCH_pending_document
+    - verify_post_write_document
+    - verify_materialization_commit_is_on_governed_target_branch
+    - compile_checkpoint_finalization_proposal
+    - EDIT_only_ACTIVE_WORK_ITEM_STATE_block_to_verified
+    - COMMIT_serially_finalization
+    - FETCH_finalization_document
+    - verify_finalization_document
+    - verify_finalization_commit_is_on_governed_target_branch
+    - write_CANONICAL_CHECKPOINT_receipt_to_source_issue
+  canonical_receipt_must_bind:
+    - work_item_id
+    - checkpoint_ref
+    - materialization_commit_sha
+    - finalization_commit_sha
+    - final_document_fingerprint
+    - governed_target_ref
+  success_reporting_rule: only_after_second_fetch_verify_and_external_governed_ref_confirmation_may_orchestration_report_checkpoint_canonicalized
+
+regression_requirements:
+  - issue19_like_revision_series_compiles_deterministically
+  - omission_preserves_existing_constraints
+  - explicit_revoke_removes_only_named_constraint
+  - revoked_reintroduction_requires_explicit_ADD_or_LOCK
+  - EXPERIMENT_may_retest_revoked_without_restoring_effective_state
+  - revision_event_cannot_mint_story_scope_status_or_persistence
+  - unknown_initial_parent_fails_closed
+  - lock_conflict_fails_closed
+  - duplicate_revision_id_fails_closed
+  - broken_parent_chain_fails_closed
+  - wrong_work_item_fails_closed
+  - stale_baseline_checkpoint_fails_closed
+  - terminal_checkpoint_or_close_required
+  - first_proposal_has_no_persistence_claim
+  - first_write_verifier_cannot_upgrade_pending_state
+  - finalization_requires_exact_first_write_receipt_and_fingerprint
+  - finalization_records_materialization_commit_not_self_referential_finalization_commit
+  - second_write_unrelated_continuity_mutation_rejected
+  - finalization_verifier_still_requires_external_governed_ref_confirmation
+  - malformed_commit_sha_rejected
+  - package_has_no_network_or_git_writer_dependency
+
+maturity:
+  current: candidate
+  promotion_gate:
+    - targeted_regression_pass
+    - independent_review
+    - full_two_phase_real_checkpoint_transaction_completed_via_external_governed_write_and_fetch_verify
+    - no_false_persistence_claim
+    - no_second_continuity_authority
