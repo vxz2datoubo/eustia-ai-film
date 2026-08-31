@@ -1,79 +1,80 @@
-"""Structured runtime for the candidate Production Intelligence Capability Atlas.
+"""Candidate Production Intelligence Capability Atlas runtime.
 
-The runtime intentionally does not parse free-form director language. Natural-language
-feature compilation remains owned by the existing Director Feature Compiler. This
-module consumes already-structured problem signals, validates the capability graph,
-selects bounded experiment strategies, and validates cross-department handoff packets.
+This module is coordination-only. It admits machine-validated Signal Envelopes,
+maps already-structured production signatures to sparse existing capability owners,
+selects bounded experiment forms, and delegates handoff validation to repository-owned
+contracts. It does not parse free-form director language or replace any existing
+story/director/eval/repair/learning authority.
 """
 from __future__ import annotations
 
 import argparse
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable, Mapping
+from typing import Any, Mapping
 
-import yaml
+from .contracts import (
+    CAPABILITY_ROUTABLE_SIGNAL_TYPES,
+    GRAPH_PATH,
+    HANDOFF_SCHEMA_PATH,
+    RESEARCH_POLICY_PATH,
+    SIGNAL_SCHEMA_PATH,
+    ProductionIntelligenceError,
+    as_list,
+    load_yaml,
+    validate_handoff_packet as _validate_handoff_packet,
+    validate_handoff_schema,
+    validate_handoff_transition as _validate_handoff_transition,
+    validate_research_policy,
+    validate_signal_envelope,
+    validate_signal_schema,
+    validate_workflow_coverage,
+)
 
-GRAPH_PATH = Path("10_运行时/production_intelligence_capability_graph.yaml")
-HANDOFF_SCHEMA_PATH = Path("10_运行时/production_handoff_packet_schema.yaml")
 REGRESSION_PATH = Path("11_验收/production_intelligence_capability_graph_regression_cases.yaml")
-
-
-class ProductionIntelligenceError(ValueError):
-    def __init__(self, code: str, *, details: Mapping[str, Any] | None = None) -> None:
-        self.code = code
-        self.details = dict(details or {})
-        super().__init__(code)
 
 
 @dataclass(frozen=True)
 class CapabilityResolution:
+    signal_id: str
+    signal_type: str
+    source_stage: str
+    materiality: str
     problem_signatures: tuple[str, ...]
     selected_capabilities: tuple[str, ...]
     unmatched_signatures: tuple[str, ...]
     sparse_expansion: bool = True
+    admitted: bool = True
 
     def as_dict(self) -> dict[str, Any]:
         return {
+            "signal_id": self.signal_id,
+            "signal_type": self.signal_type,
+            "source_stage": self.source_stage,
+            "materiality": self.materiality,
             "problem_signatures": list(self.problem_signatures),
             "selected_capabilities": list(self.selected_capabilities),
             "unmatched_signatures": list(self.unmatched_signatures),
             "sparse_expansion": self.sparse_expansion,
+            "admitted": self.admitted,
+            "authority_boundary": "coordination_receipt_only",
         }
-
-
-def _load_yaml(path: Path) -> dict[str, Any]:
-    try:
-        payload = yaml.safe_load(path.read_text(encoding="utf-8"))
-    except FileNotFoundError as exc:
-        raise ProductionIntelligenceError("PICG_FILE_MISSING", details={"path": str(path)}) from exc
-    except yaml.YAMLError as exc:
-        raise ProductionIntelligenceError("PICG_YAML_INVALID", details={"path": str(path), "error": str(exc)}) from exc
-    if not isinstance(payload, dict):
-        raise ProductionIntelligenceError("PICG_DOCUMENT_NOT_MAPPING", details={"path": str(path)})
-    return payload
-
-
-def _as_list(value: Any) -> list[Any]:
-    if value is None:
-        return []
-    if isinstance(value, list):
-        return value
-    return [value]
 
 
 class CapabilityAtlas:
     """Validated read-only view over the candidate capability graph."""
 
-    def __init__(self, graph: Mapping[str, Any]) -> None:
+    def __init__(self, graph: Mapping[str, Any], signal_schema: Mapping[str, Any]) -> None:
         self.graph = dict(graph)
+        self.signal_schema = dict(signal_schema)
+        validate_signal_schema(self.signal_schema)
         self._nodes: dict[str, dict[str, Any]] = {}
         self._validate_and_index()
 
     @classmethod
     def from_project_root(cls, project_root: str | Path) -> "CapabilityAtlas":
         root = Path(project_root)
-        return cls(_load_yaml(root / GRAPH_PATH))
+        return cls(load_yaml(root / GRAPH_PATH), load_yaml(root / SIGNAL_SCHEMA_PATH))
 
     def _validate_and_index(self) -> None:
         if self.graph.get("graph_id") != "EUSTIA_PRODUCTION_INTELLIGENCE_CAPABILITY_GRAPH":
@@ -111,7 +112,6 @@ class CapabilityAtlas:
         nodes = self.graph.get("capability_nodes")
         if not isinstance(nodes, list) or not nodes:
             raise ProductionIntelligenceError("PICG_CAPABILITY_NODES_MISSING")
-
         for node in nodes:
             if not isinstance(node, Mapping):
                 raise ProductionIntelligenceError("PICG_CAPABILITY_NODE_INVALID")
@@ -126,14 +126,13 @@ class CapabilityAtlas:
                     "PICG_CAPABILITY_OWNER_UNKNOWN",
                     details={"capability_id": node_id, "owner": owner},
                 )
-            node_zones = set(_as_list(node.get("epistemic_zones")))
+            node_zones = set(as_list(node.get("epistemic_zones")))
             if not node_zones or not node_zones.issubset(expected_zones):
                 raise ProductionIntelligenceError(
                     "PICG_CAPABILITY_ZONE_INVALID",
                     details={"capability_id": node_id, "zones": sorted(node_zones)},
                 )
-            node_dimensions = _as_list(node.get("evaluation_dimensions"))
-            for dimension in node_dimensions:
+            for dimension in as_list(node.get("evaluation_dimensions")):
                 if dimension in {"material_dimensions_from_handoff_only", "experiment_specific"}:
                     continue
                 if dimension not in dimensions:
@@ -144,7 +143,7 @@ class CapabilityAtlas:
             self._nodes[node_id] = dict(node)
 
         for node_id, node in self._nodes.items():
-            for target in _as_list(node.get("handoff_to")):
+            for target in as_list(node.get("handoff_to")):
                 if isinstance(target, str) and target.startswith("CAP-") and target not in self._nodes:
                     raise ProductionIntelligenceError(
                         "PICG_HANDOFF_TARGET_UNKNOWN",
@@ -152,8 +151,6 @@ class CapabilityAtlas:
                     )
 
         strategies = self.graph.get("experiment_strategy_router")
-        if not isinstance(strategies, Mapping):
-            raise ProductionIntelligenceError("PICG_EXPERIMENT_ROUTER_MISSING")
         expected_strategies = {
             "NONE",
             "COMPARATIVE_AB",
@@ -165,7 +162,7 @@ class CapabilityAtlas:
             "EXTERNAL_RESEARCH",
             "HUMAN_DECISION",
         }
-        if set(strategies) != expected_strategies:
+        if not isinstance(strategies, Mapping) or set(strategies) != expected_strategies:
             raise ProductionIntelligenceError("PICG_EXPERIMENT_STRATEGIES_INVALID")
 
     @property
@@ -182,47 +179,64 @@ class CapabilityAtlas:
 
     def resolve(
         self,
-        problem_signatures: Iterable[str],
+        signal_envelope: Mapping[str, Any],
         *,
-        material_capabilities: Iterable[str] = (),
+        expected_work_item_id: str | None = None,
     ) -> CapabilityResolution:
-        """Resolve exact structured signatures without performing free-text NLP.
+        """Resolve only an admitted Signal Envelope into a coordination receipt.
 
-        `material_capabilities` is an explicit sparse expansion supplied by an
-        upstream director/authority layer. The atlas never recursively expands every
-        handoff target because doing so would create department over-expansion.
+        Raw signature lists and caller-selected capability IDs are intentionally not
+        accepted. Existing upstream authorities own the signal; this atlas only maps
+        admitted structured signatures to existing capability owners.
         """
-        signatures = tuple(dict.fromkeys(str(x).strip() for x in problem_signatures if str(x).strip()))
+        admission = validate_signal_envelope(
+            signal_envelope,
+            schema=self.signal_schema,
+            expected_work_item_id=expected_work_item_id,
+        )
+        if admission.signal_type not in CAPABILITY_ROUTABLE_SIGNAL_TYPES:
+            raise ProductionIntelligenceError(
+                "SIGNAL_NOT_CAPABILITY_ROUTABLE",
+                details={
+                    "signal_type": admission.signal_type,
+                    "source_stage": admission.source_stage,
+                },
+            )
+
+        signatures = admission.problem_signatures
+        if admission.materiality == "INFORMATIONAL":
+            return CapabilityResolution(
+                signal_id=admission.signal_id,
+                signal_type=admission.signal_type,
+                source_stage=admission.source_stage,
+                materiality=admission.materiality,
+                problem_signatures=signatures,
+                selected_capabilities=(),
+                unmatched_signatures=signatures,
+            )
+
         selected: list[str] = []
         matched: set[str] = set()
         for node_id, node in self._nodes.items():
-            node_signatures = {str(x) for x in _as_list(node.get("problem_signatures"))}
+            node_signatures = {str(x) for x in as_list(node.get("problem_signatures"))}
             intersection = node_signatures.intersection(signatures)
             if intersection:
                 matched.update(intersection)
                 selected.append(node_id)
 
-        for capability_id in material_capabilities:
-            capability_id = str(capability_id).strip()
-            if not capability_id:
-                continue
-            if capability_id not in self._nodes:
-                raise ProductionIntelligenceError(
-                    "PICG_CAPABILITY_UNKNOWN", details={"capability_id": capability_id}
-                )
-            if capability_id not in selected:
-                selected.append(capability_id)
-
-        unmatched = tuple(sig for sig in signatures if sig not in matched)
-        return CapabilityResolution(signatures, tuple(selected), unmatched, True)
+        unmatched = tuple(signature for signature in signatures if signature not in matched)
+        return CapabilityResolution(
+            signal_id=admission.signal_id,
+            signal_type=admission.signal_type,
+            source_stage=admission.source_stage,
+            materiality=admission.materiality,
+            problem_signatures=signatures,
+            selected_capabilities=tuple(selected),
+            unmatched_signatures=unmatched,
+        )
 
     def select_experiment_strategy(self, profile: Mapping[str, Any]) -> str:
-        """Choose a bounded strategy from structured uncertainty metadata.
-
-        This is a routing heuristic, not a statistical inference engine. It selects
-        the *form* of the next information-gathering step and makes no significance
-        claim.
-        """
+        """Choose a bounded information-gathering form, not a statistical verdict."""
         if profile.get("high_impact_human_choice") is True:
             return "HUMAN_DECISION"
         if profile.get("evaluator_disagreement") is True and profile.get("decision_impact") in {"MEDIUM", "HIGH"}:
@@ -233,7 +247,6 @@ class CapabilityAtlas:
             return "SEQUENTIAL_PROBE"
         if profile.get("continuous_parameter") is True:
             return "PARAMETER_SEARCH"
-
         factor_count = int(profile.get("factor_count") or 0)
         if factor_count > 1 and profile.get("interaction_suspected") is True:
             return "BOUNDED_FACTORIAL"
@@ -246,119 +259,47 @@ class CapabilityAtlas:
         return "NONE"
 
 
-def _require_mapping(value: Any, code: str) -> Mapping[str, Any]:
-    if not isinstance(value, Mapping):
-        raise ProductionIntelligenceError(code)
-    return value
-
-
 def validate_handoff_packet(
     packet: Mapping[str, Any],
     *,
+    project_root: str | Path,
     expected_work_item_id: str | None = None,
 ) -> bool:
-    """Validate authority/epistemic invariants of a handoff packet.
+    return _validate_handoff_packet(
+        packet,
+        project_root=project_root,
+        expected_work_item_id=expected_work_item_id,
+    )
 
-    The function intentionally does not decide creative correctness or evaluation
-    verdicts. It only checks coordination invariants that must survive handoff.
-    """
-    required = {
-        "packet_id",
-        "task",
-        "context",
-        "participant",
-        "authority_receipt",
-        "creative_contract",
-        "inputs",
-        "expected_outputs",
-        "acceptance_contract",
-        "unresolved_unknowns",
-        "next_handoff",
-    }
-    missing = sorted(required.difference(packet))
-    if missing:
-        raise ProductionIntelligenceError("HANDOFF_REQUIRED_FIELD_MISSING", details={"missing": missing})
 
-    context = _require_mapping(packet["context"], "HANDOFF_CONTEXT_INVALID")
-    observed_work_item = str(context.get("work_item_id_when_required") or "").strip()
-    expected = str(expected_work_item_id or "").strip()
-    if expected and observed_work_item != expected:
-        raise ProductionIntelligenceError(
-            "WORK_ITEM_IDENTITY_MISMATCH",
-            details={"expected": expected, "observed": observed_work_item or None},
-        )
-
-    authority = _require_mapping(packet["authority_receipt"], "HANDOFF_AUTHORITY_RECEIPT_INVALID")
-    for item in _as_list(authority.get("inferred_user_constraints")):
-        if not isinstance(item, Mapping):
-            raise ProductionIntelligenceError("K2_INFERENCE_INVALID")
-        if not all(item.get(key) not in (None, "", []) for key in ("statement", "confidence", "evidence")):
-            raise ProductionIntelligenceError("K2_INFERENCE_MISSING_PROVENANCE")
-        if item.get("explicit_user_confirmed") is True:
-            raise ProductionIntelligenceError("K2_INFERENCE_MASQUERADES_AS_EXPLICIT_USER_FACT")
-
-    for item in _as_list(authority.get("external_candidate_refs")):
-        if not isinstance(item, Mapping):
-            raise ProductionIntelligenceError("K3_EXTERNAL_CANDIDATE_INVALID")
-        required_external = ("source_ref", "supported_claim", "project_translation", "scope", "boundary", "maturity")
-        if not all(item.get(key) not in (None, "", []) for key in required_external):
-            raise ProductionIntelligenceError("K3_EXTERNAL_CANDIDATE_MISSING_BOUNDARY")
-        if str(item.get("maturity")).casefold() not in {"candidate", "needs_revalidation", "conflicted"}:
-            raise ProductionIntelligenceError("K3_EXTERNAL_CANDIDATE_ILLEGAL_MATURITY")
-
-    for unknown in _as_list(packet.get("unresolved_unknowns")):
-        if not isinstance(unknown, Mapping):
-            raise ProductionIntelligenceError("K4_UNKNOWN_INVALID")
-        if unknown.get("epistemic_zone") != "K4_FRONTIER_OR_OPAQUE":
-            raise ProductionIntelligenceError("K4_UNKNOWN_WRONG_ZONE")
-        if unknown.get("materiality") == "HIGH" and not unknown.get("next_information_action"):
-            raise ProductionIntelligenceError("K4_MATERIAL_UNKNOWN_MISSING_NEXT_ACTION")
-
-    inputs = _require_mapping(packet["inputs"], "HANDOFF_INPUTS_INVALID")
-    responsibilities = inputs.get("reference_responsibilities")
-    if isinstance(responsibilities, Mapping):
-        for namespace, claim in responsibilities.items():
-            if not isinstance(claim, Mapping):
-                raise ProductionIntelligenceError(
-                    "REFERENCE_RESPONSIBILITY_INVALID", details={"namespace": namespace}
-                )
-            owners = claim.get("owners")
-            if isinstance(owners, list) and len(set(str(x) for x in owners)) > 1 and claim.get("both_declared_strong") is True and claim.get("compatibility_proven") is not True:
-                raise ProductionIntelligenceError(
-                    "STRONG_REFERENCE_RESPONSIBILITY_CONFLICT",
-                    details={"namespace": namespace, "owners": owners},
-                )
-
-    acceptance = _require_mapping(packet["acceptance_contract"], "HANDOFF_ACCEPTANCE_INVALID")
-    material_dimensions = _as_list(acceptance.get("material_dimensions"))
-    if not material_dimensions:
-        raise ProductionIntelligenceError("HANDOFF_MATERIAL_DIMENSIONS_MISSING")
-    pass_logic = acceptance.get("pass_logic")
-    if isinstance(pass_logic, Mapping) and pass_logic.get("global_score_overrides_material_failure") is True:
-        raise ProductionIntelligenceError("GLOBAL_SCORE_HIDES_MATERIAL_FAILURE")
-
-    experiment = packet.get("experiment_contract")
-    if isinstance(experiment, Mapping):
-        factors = _as_list(experiment.get("factors"))
-        if len(factors) > 1 and not experiment.get("factor_ledger"):
-            raise ProductionIntelligenceError("MULTIFACTOR_EXPERIMENT_WITHOUT_LEDGER")
-        if experiment.get("proxy_pass_equals_final_pass") is True:
-            raise ProductionIntelligenceError("PROXY_FINAL_CONFUSION")
-
-    return True
+def validate_handoff_transition(
+    upstream_packet: Mapping[str, Any],
+    downstream_packet: Mapping[str, Any],
+    *,
+    project_root: str | Path,
+    expected_work_item_id: str | None = None,
+) -> bool:
+    return _validate_handoff_transition(
+        upstream_packet,
+        downstream_packet,
+        project_root=project_root,
+        expected_work_item_id=expected_work_item_id,
+    )
 
 
 def validate_project(project_root: str | Path) -> dict[str, Any]:
     root = Path(project_root)
-    graph = _load_yaml(root / GRAPH_PATH)
-    handoff = _load_yaml(root / HANDOFF_SCHEMA_PATH)
-    regression = _load_yaml(root / REGRESSION_PATH)
-    atlas = CapabilityAtlas(graph)
+    graph = load_yaml(root / GRAPH_PATH)
+    handoff = load_yaml(root / HANDOFF_SCHEMA_PATH)
+    signal = load_yaml(root / SIGNAL_SCHEMA_PATH)
+    research = load_yaml(root / RESEARCH_POLICY_PATH)
+    regression = load_yaml(root / REGRESSION_PATH)
 
-    if handoff.get("schema_id") != "EUSTIA_PRODUCTION_HANDOFF_PACKET":
-        raise ProductionIntelligenceError("HANDOFF_SCHEMA_ID_MISMATCH")
-    if not str(handoff.get("status") or "").startswith("candidate"):
-        raise ProductionIntelligenceError("HANDOFF_UNREVIEWED_SCHEMA_MUST_REMAIN_CANDIDATE")
+    validate_handoff_schema(handoff)
+    validate_signal_schema(signal)
+    validate_research_policy(research)
+    validate_workflow_coverage(root)
+    atlas = CapabilityAtlas(graph, signal)
 
     cases = regression.get("cases")
     if not isinstance(cases, list) or len(cases) < 20:
@@ -373,6 +314,11 @@ def validate_project(project_root: str | Path) -> dict[str, Any]:
         "regression_case_count": len(cases),
         "epistemic_zone_count": len(graph["epistemic_zones"]),
         "evaluation_dimension_count": len(graph["evaluation_dimension_registry"]),
+        "signal_type_count": len(signal["signal_types"]),
+        "signal_envelope_bound": True,
+        "handoff_nested_contract_bound": True,
+        "research_policy_bound": True,
+        "workflow_coverage_bound": True,
     }
 
 
