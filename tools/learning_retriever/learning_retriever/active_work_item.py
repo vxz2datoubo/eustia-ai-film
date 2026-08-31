@@ -6,6 +6,10 @@ become an authority surface. This public wrapper adds two runtime invariants:
    revision comment on the fixed source Issue;
 2) callers can revalidate the same source revision immediately before the first
    downstream compiler use, closing the post-resolution remote TOCTOU window.
+
+The wrapper also exposes a pure read-only parser for already-fetched continuity
+text so bounded downstream checkpoint tooling can reuse the exact Active Work
+Item state schema instead of copying private field lists.
 """
 
 from __future__ import annotations
@@ -19,6 +23,8 @@ CANONICAL_BRANCH = _remote.CANONICAL_BRANCH
 CANONICAL_REPOSITORY = _remote.CANONICAL_REPOSITORY
 CONTINUITY_PATH = _remote.CONTINUITY_PATH
 PROJECT_INDEX_PATH = _remote.PROJECT_INDEX_PATH
+STATE_BEGIN = _remote.STATE_BEGIN
+STATE_END = _remote.STATE_END
 WorkItemResolution = _remote.WorkItemResolution
 apply_constraint_ledger = _remote.apply_constraint_ledger
 build_work_item_context_packet = _remote.build_work_item_context_packet
@@ -27,6 +33,20 @@ load_active_work_item_state = _remote.load_active_work_item_state
 validate_output_work_item = _remote.validate_output_work_item
 validate_state_transition = _remote.validate_state_transition
 validate_work_item_context_packet = _remote.validate_work_item_context_packet
+
+
+def parse_active_work_item_state(markdown: str) -> dict[str, Any]:
+    """Parse and validate ACTIVE_WORK_ITEM_STATE from supplied continuity text.
+
+    This is deliberately a pure parser. It performs no GitHub/network read and
+    grants no freshness, persistence or canonical-authority claim. Callers that
+    need current authority must still use the existing fixed-GitHub resolution
+    path. The parser delegates to the same v3 schema validation used by that
+    trust root, preventing downstream duplication of REQUIRED_STATE_FIELDS.
+    """
+    if not isinstance(markdown, str) or not markdown:
+        raise ActiveWorkItemResolutionError("ACTIVE_WORK_ITEM_STATE_MISSING")
+    return dict(_remote._extract_state_payload(markdown))
 
 
 def _validate_live_applied_checkpoint(
@@ -186,11 +206,14 @@ __all__ = [
     "CANONICAL_REPOSITORY",
     "CONTINUITY_PATH",
     "PROJECT_INDEX_PATH",
+    "STATE_BEGIN",
+    "STATE_END",
     "WorkItemResolution",
     "apply_constraint_ledger",
     "build_work_item_context_packet",
     "is_continuation_request",
     "load_active_work_item_state",
+    "parse_active_work_item_state",
     "revalidate_source_revision",
     "resolve_work_item",
     "validate_output_work_item",
