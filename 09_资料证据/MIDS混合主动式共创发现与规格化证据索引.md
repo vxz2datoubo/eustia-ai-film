@@ -126,6 +126,49 @@ MIDS 需要解决的不是“怎样写一个更长的澄清 Prompt”，而是�
   - complexity budget 本身是 architecture cost。
 - boundary: 不复制 Anthropic agent architecture，不建立第二 evaluator authority。
 
+### E-MIDS-010｜Requirements Elicitation / Traceability
+
+- source: ISO/IEC/IEEE 29148:2018, *Systems and software engineering — Life cycle processes — Requirements engineering*.
+- URLs:
+  - https://www.iso.org/standard/72089.html
+  - https://www.iso.org/obp/ui#iso:std:iso-iec-ieee:29148:ed-2:v1:en
+- evidence tier: T1 international standard
+- version note: 2018 edition remains published/current while a 2026 Edition 3 DIS is under development; MIDS uses only stable elicitation/traceability concepts, not draft-specific changes.
+- useful idea: requirements elicitation is the proactive use of systematic techniques to identify and document user/customer needs; requirements engineering includes discovering, eliciting, developing, analyzing, validating, communicating, documenting and managing requirements; traceability preserves derivation and flow-down paths.
+- project translation:
+  - MIDS discovery receipt must retain provenance from raw intent to confirmed decision to downstream spec candidate;
+  - “用户没说清楚”不是许可去猜，而是触发有边界的 elicitation；
+  - elicitation 与 final authority 分离：发现出来的内容仍须按用户确认和项目 source authority 裁决。
+- boundary: 不把电影创作规格化成软件 shall-statements，也不要求用户填写正式 requirements document。
+
+### E-MIDS-011｜Continuous Discovery / Opportunity-Solution Separation
+
+- source: Teresa Torres / Product Talk, *Opportunity Solution Trees: Visualize Your Discovery to Stay Aligned and Drive Outcomes* and Opportunity Solution Tree glossary.
+- URLs:
+  - https://www.producttalk.org/2016/08/opportunity-solution-tree/
+  - https://www.producttalk.org/glossary-discovery-opportunity-solution-tree/
+- evidence tier: T3/T4 established product discovery practice
+- useful idea: desired outcome、opportunity space、solution space、assumption tests 应保持可区分；新证据或失败实验到来时可以回到上游重新审视 opportunity/solution，而不是只在既有方案上打补丁。
+- project translation:
+  - MIDS 先问“要让故事/观众/角色/成片发生什么”，再提出具体导演或生产方案；
+  - AI_DISCOVERABLE_OPTION 属于可探索 solution space，不得反向伪造成用户原始 need；
+  - failed prototype 可以触发重新打开 discovery，而不是自动把当前方案继续修到死。
+- boundary: 不建立 Opportunity Solution Tree 第二知识库；只吸收 outcome/opportunity/solution/assumption 的分离原则。
+
+### E-MIDS-012｜Spec-Driven Development / Intent Before Implementation
+
+- source: GitHub Spec Kit official repository and documentation.
+- URLs:
+  - https://github.com/github/spec-kit
+  - https://github.github.com/spec-kit/
+- evidence tier: T1 official current tooling/documentation
+- useful idea: Spec-Driven Development 强调先定义 what / intent，再进入 plan → tasks → implement，并使用结构化 artifacts / quality checks 给 agent 提供稳定上下文，而不是让 implementation 从临时自然语言直接漂移出来。
+- project translation:
+  - MIDS handoff 的价值不是形成另一份长期 spec 主档，而是在需要时把 discovery 收敛成 minimum-sufficient `DiscoverySpecCandidate`；
+  - director/execution/engineering 下游只消费已经达到 readiness gate 的候选，并继续服从各自 canonical authority；
+  - spec candidate 可以被后续反馈重新打开，不把一次收敛当不可逆真理。
+- boundary: 不采用 Spec Kit 的命令体系，不把 `DiscoverySpecCandidate` 设为 screenplay/director canonical，也不让 spec 直接绕过现有 Feature Compiler / review / write routes。
+
 ## 3. 与当前项目已有知识的融合
 
 MIDS 不新增第二 Epistemic authority。现有 `反馈反推与系统反哺引擎.md` 已定义 EDCM：
@@ -154,5 +197,7 @@ EXPERT_BLIND_ZONE       -> EDCM K2/K3（按证据与可解释性）
 4. **例子和反例是规格边界。** 关键行为只写抽象词会在后续 Feature Compiler / prompt compilation 中重新产生歧义。
 5. **拒绝必须是一等状态。** 没有 reject ledger，LLM 很容易在后续总结里把曾提议但被否决的方向重新混入。
 6. **MIDS 的成功指标不是“用户回答了多少问题”，而是更早发现 critical unknown、降低重复提问和 post-spec rework，同时不越权。**
+7. **需求、机会与方案必须分层。** 用户想达成的效果不等于 AI 提出的实现手段；两者混在一起会让后续拒绝/替换方案时误伤真实需求。
+8. **真正 hidden-answer replay 必须由未见答案的独立上下文执行。** 当前机器 fixture 可以验证问题筛选、守门和评分管线，但不能把同一实现上下文中预置的候选问题冒充“未知答案下的自主发现能力”。
 
 以上全部 maturity=`candidate`，需要 replay 与真实项目 SHADOW pilot 后再判断是否值得激活。
