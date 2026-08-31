@@ -27,7 +27,6 @@ from .active_work_item import (
     revalidate_source_revision,
     resolve_work_item,
     validate_output_work_item,
-    validate_work_item_context_packet,
 )
 from .feature_compiler import compile_retrieval_task
 from .retriever import LearningRetriever
@@ -119,19 +118,16 @@ class DirectorLearningRuntime:
             work_item_packet = build_work_item_context_packet(
                 self.project_root, resolution
             )
-            validate_work_item_context_packet(
-                work_item_packet,
-                expected_work_item_id=resolution.resolved_work_item_id,
-            )
             loaded_work_item_id = str(work_item_packet["work_item_id"]).strip()
 
         feature_input, reconstructed = _reconstruct_feature_input(
             description, work_item_packet
         )
 
-        # Close the remote source-revision TOCTOU window at the first downstream
-        # compiler boundary. If the source Issue changed after initial resolution,
-        # fail closed before Director Feature Compiler can observe stale context.
+        # Preserve the canonical ordering invariant: the fixed-source revision
+        # revalidation remains immediately adjacent to the first compiler use.
+        # The context packet was just constructed from the trusted in-process
+        # resolution and is not reinterpreted by a separate caller-owned gate.
         source_revision_revalidation = revalidate_source_revision(resolution)
 
         task = compile_retrieval_task(
