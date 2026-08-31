@@ -21,10 +21,6 @@ from .feature_compiler import (
 from .retriever import LearningRetriever, RetrievalGateError, validate_index
 from .route_resolver import RouteResolutionError, resolve_hard_routes
 from .runtime import DirectorLearningRuntime
-from .targeted_repair import (
-    TargetedRepairPlanError,
-    plan_targeted_repair,
-)
 
 __all__ = [
     "CinematicIntentContract",
@@ -38,13 +34,11 @@ __all__ = [
     "ObservationProvenance",
     "RetrievalGateError",
     "RouteResolutionError",
-    "TargetedRepairPlanError",
     "compile_cinematic_intent_contract",
     "compile_director_features",
     "compile_retrieval_task",
     "evaluate_cinematic_intent",
     "evaluate_expected_vs_observed",
-    "plan_targeted_repair",
     "resolve_hard_routes",
     "validate_cinematic_intent_contract",
     "validate_index",
