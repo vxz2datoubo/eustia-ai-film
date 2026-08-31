@@ -1,6 +1,13 @@
+from pathlib import Path
 import unittest
 
+import yaml
+
 from learning_retriever.feature_compiler import FeatureCompilationError, compile_director_features, compile_retrieval_task
+
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+ROUTE_DATA = yaml.safe_load((REPO_ROOT / "10_运行时/director_route_index.yaml").read_text(encoding="utf-8"))
 
 
 class AnimateAgentCompilerBoundaryTests(unittest.TestCase):
@@ -57,7 +64,7 @@ class AnimateAgentCompilerBoundaryTests(unittest.TestCase):
         self.assert_no_character_facing("雕像回身面向圣女。")
 
     def test_noncharacter_sentence_cannot_mint_target_spatial_hard_route(self):
-        task = compile_retrieval_task("钟楼面向圣女。", strict=False)
+        task = compile_retrieval_task("钟楼面向圣女。", route_data=ROUTE_DATA, strict=False)
         self.assertNotIn("TARGET_ORIENTED_SPATIAL_BINDING", task.get("hard_routes") or [])
         self.assertNotIn("facing_to_target", task.get("relation_type") or [])
 

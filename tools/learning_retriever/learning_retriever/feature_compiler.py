@@ -16,6 +16,7 @@ from typing import Any
 
 import yaml
 
+from .entity_semantics import bounded_animate_agent_leader
 from .route_resolver import RouteResolutionError, resolve_hard_routes
 
 
@@ -386,14 +387,13 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
         max_prefix_chars: int = 20,
         max_target_chars: int = 16,
     ) -> tuple[bool, bool, bool]:
-        """Parse facing predicates with open-vocabulary bounded subject syntax.
+        """Parse facing predicates only after bounded animate-agent proof.
 
-        Positive actor recognition is structural, not a fixed role/name whitelist:
-        a bounded CJK clause leader may function as the subject unless stronger
-        camera/body/non-actor evidence applies. Known camera and architecture
-        surfaces are negative guards, not positive actor authority. Ambiguous
-        lexical `王朝/前朝/本朝 + 向` cross-token forms fail closed rather than
-        being promoted into a body-orientation predicate.
+        A syntactic clause leader is not automatically a character. Positive
+        evidence comes from known actor/pronoun semantics, productive human-role
+        morphology, or an explicit embodied turn transition for an otherwise
+        unseen bounded subject. Strong structure/object morphology remains
+        fail-closed. Camera/body and dynasty cross-token boundaries are preserved.
         """
         separators = ("，", "。", "；", "！", "？", ",", ";", "!", "?")
         leading_glue = (
@@ -410,13 +410,6 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
         bounded_cameras = tuple(sorted(set(camera_terms), key=len, reverse=True))
         body_anchors = ("身体", "躯干", "上身")
         object_candidates = tuple(sorted(set(objects), key=len, reverse=True))
-        non_actor_heads = (
-            "城堡", "建筑", "街道", "道路", "房间", "大厅", "墙", "大门", "门", "窗口", "窗户",
-            "舞台", "出口", "画面", "背景", "场景", "天空", "地面",
-        )
-        non_actor_facets = (
-            "正面", "背面", "侧面", "入口", "出口", "外墙", "内墙", "顶部", "底部",
-        )
         dynasty_cross_token_leaders = (
             "前", "本", "王", "这个王", "那个王", "一个王",
         )
@@ -451,21 +444,14 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
                         break
             return not residual
 
-        def generic_actor_leader(value: str) -> bool:
-            normalized = value.strip()
-            if not normalized or len(normalized) > max_prefix_chars:
-                return False
-            if not all(("\u4e00" <= char <= "\u9fff") or char.isspace() for char in normalized):
-                return False
-            if normalized in non_actor_heads:
-                return False
-            if any(
-                normalized == head + facet
-                for head in non_actor_heads
-                for facet in non_actor_facets
-            ):
-                return False
-            return True
+        def proven_actor_leader(value: str, action: str) -> bool:
+            return bounded_animate_agent_leader(
+                value,
+                action=action,
+                known_actor_terms=actor_terms,
+                modifier_tail_validator=bounded_modifier_tail,
+                max_chars=max_prefix_chars,
+            )
 
         def classify_leader(value: str, action: str) -> str | None:
             normalized = strip_leading_glue(value)
@@ -485,7 +471,7 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
                     return "BODY"
             if action == "朝向" and normalized in dynasty_cross_token_leaders:
                 return None
-            if generic_actor_leader(normalized):
+            if proven_actor_leader(normalized, action):
                 return "ACTOR"
             return None
 
