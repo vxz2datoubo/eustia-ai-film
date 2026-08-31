@@ -4,7 +4,9 @@ on:
   pull_request:
     paths:
       - '09_资料证据/AI电影生产智能能力图谱与协同证据.md'
+      - '09_资料证据/AI电影生产认知与迭代优化证据.md'
       - '10_运行时/production_intelligence_capability_graph.yaml'
+      - '10_运行时/production_intelligence_epistemic_cycle_policy.yaml'
       - '10_运行时/production_handoff_packet_schema.yaml'
       - '11_验收/production_intelligence_capability_graph_regression_cases.yaml'
       - 'tools/production_intelligence/**'
@@ -46,11 +48,16 @@ jobs:
           python - <<'PY'
           import yaml
           graph=yaml.safe_load(open('10_运行时/production_intelligence_capability_graph.yaml', encoding='utf-8'))
-          assert graph['non_goals']
+          policy=yaml.safe_load(open('10_运行时/production_intelligence_epistemic_cycle_policy.yaml', encoding='utf-8'))
           assert 'second_director_method' in graph['non_goals']
+          assert 'second_natural_language_director_parser' in graph['non_goals']
           assert 'second_learning_authority' in graph['non_goals']
           assert graph['authority_boundary']['director_method']=='01_AI电影系统/AI电影系统.md'
+          assert graph['authority_boundary']['natural_language_features']=='10_运行时/director_feature_compiler.yaml'
+          assert graph['authority_boundary']['hard_routes']=='10_运行时/director_route_index.yaml'
           assert graph['authority_boundary']['learning']=='10_运行时/learning_application_gate.yaml'
           assert graph['authority_boundary']['repair']=='10_运行时/targeted_repair_policy.yaml'
-          print('PASS unique-authority boundary')
+          assert policy['authority_boundary']['learning_abstraction']=='10_运行时/learning_application_gate.yaml#knowledge_abstraction_ladder'
+          assert policy['authority_boundary']['maturity']=='10_运行时/maturity_model.yaml'
+          print('PASS unique-authority and orthogonal-knowledge boundary')
           PY
