@@ -6,7 +6,9 @@ on:
       - 'PROJECT_INDEX.yaml'
       - '01_AI电影系统/AI电影系统.md'
       - '09_资料证据/Cinematic Visual Grammar外部研究与融合证据.md'
+      - '09_资料证据/AI电影生产智能能力图谱与协同证据.md'
       - 'tools/learning_retriever/**'
+      - 'tools/production_intelligence/**'
       - '10_运行时/director_feature_compiler.yaml'
       - '10_运行时/director_route_index.yaml'
       - '10_运行时/read_sets.yaml'
@@ -16,12 +18,16 @@ on:
       - '10_运行时/screen_observable_audible_ir_schema.yaml'
       - '10_运行时/learning_recall_index.yaml'
       - '10_运行时/targeted_repair_policy.yaml'
+      - '10_运行时/production_intelligence_capability_graph.yaml'
+      - '10_运行时/production_handoff_packet_schema.yaml'
       - '11_验收/director_feature_compiler_regression_cases.yaml'
       - '11_验收/cinematic_visual_grammar_regression_cases.yaml'
       - '11_验收/cinematic_intent_contract_regression_cases.yaml'
       - '11_验收/expected_observed_eval_regression_cases.yaml'
       - '11_验收/targeted_repair_regression_cases.yaml'
+      - '11_验收/production_intelligence_capability_graph_regression_cases.yaml'
       - '.github/workflows/learning-feature-compiler.yml'
+      - '.github/workflows/production-intelligence-capability-atlas.yml'
 
 jobs:
   feature-compiler-regression:
@@ -62,3 +68,9 @@ jobs:
       - name: Run full learning retriever tests
         run: |
           PYTHONPATH=tools/learning_retriever python -m pytest tools/learning_retriever/tests
+      - name: Validate Production Intelligence Capability Atlas bundle
+        run: |
+          PYTHONPATH=tools/production_intelligence python -m production_intelligence.runtime --project-root .
+      - name: Run Production Intelligence Capability Atlas regressions
+        run: |
+          PYTHONPATH=tools/production_intelligence python -m pytest tools/production_intelligence/tests -q
