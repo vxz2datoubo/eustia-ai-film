@@ -1,4 +1,4 @@
-policy_id: EUSTIA_FINAL_DELTA_LEARNING_EVIDENCE_V2_SOURCE_BOUND
+policy_id: EUSTIA_FINAL_DELTA_LEARNING_EVIDENCE_V3_SOURCE_BOUND_MEASUREMENT_LOCKED
 status: candidate
 scope: repair_outcome_final_delta_candidate_learning_evidence
 
@@ -24,6 +24,21 @@ source_binding:
   caller_internal_consistency_is_not_source_authenticity: true
   upstream_error_provenance_must_be_preserved: true
 
+measurement_contract_binding:
+  required_for_repair_attribution: true
+  comparison_mode_identity_required: true
+  expectation_declared_value_identity_required: true
+  expectation_provenance_identity_required: true
+  observation_inspection_mode_identity_required: true
+  observation_temporal_coverage_contract_identity_required: true
+  frame_by_frame_claim_identity_required: true
+  output_specific_media_refs_excluded_from_contract_identity: true
+  output_specific_evidence_refs_excluded_from_contract_identity: true
+  confidence_excluded_from_contract_identity: true
+  mismatch_status: NOT_COMPARABLE
+  mismatch_must_clear_resolved_and_regression_candidate_eligibility: true
+  changed_ruler_cannot_be_recorded_as_repair: true
+
 principles:
   observation_is_not_causality: true
   single_success_cannot_universalize: true
@@ -41,14 +56,16 @@ principles:
   canonical_upstream_source_reexecution_required: true
   serialized_upstream_artifact_cannot_define_truth: true
   joint_tampering_of_result_and_handoff_must_not_suppress_repair: true
+  before_after_semantic_measurement_contract_must_match: true
+  measurement_contract_drift_is_not_outcome_improvement: true
 
 comparison_status:
   COMPARABLE:
-    meaning: work item/model/version and expectation contract are aligned
+    meaning: work item/model/version, expectation contract and measurement contract are aligned
   COMPARABLE_WITH_GAPS:
     meaning: no material contradiction detected, but one or more identity fields are missing
   NOT_COMPARABLE:
-    meaning: material identity or expectation mismatch prevents repair-effect attribution
+    meaning: material identity, expectation, or measurement-contract mismatch prevents repair-effect attribution
 
 field_transition_vocabulary:
   PRESERVED: PASS_to_PASS
@@ -106,6 +123,7 @@ allowed_scope:
 output_contract:
   final_delta_is_ephemeral_execution_artifact: true
   candidate_learning_evidence_is_evidence_only: true
+  measurement_contract_receipt_required: true
   canonical_write_target: null
   prompt_mutation_authorized: false
   generation_authorized: false

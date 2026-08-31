@@ -1,4 +1,4 @@
-suite_id: FINAL_DELTA_LEARNING_EVIDENCE_REGRESSION_V2_SOURCE_BOUND
+suite_id: FINAL_DELTA_LEARNING_EVIDENCE_REGRESSION_V3_SOURCE_BOUND_MEASUREMENT_LOCKED
 status: candidate
 policy_authority: 10_运行时/final_delta_learning_policy.yaml
 learning_authority: 08_系统学习/反馈反推与系统反哺引擎.md
@@ -16,6 +16,16 @@ source_binding:
   jointly_tampered_result_status_handoff_cannot_define_truth: true
   jointly_tampered_repair_plan_cannot_define_truth: true
 
+measurement_contract_binding:
+  comparison_mode_must_match: true
+  expectation_provenance_must_match: true
+  inspection_mode_must_match: true
+  temporal_coverage_contract_must_match: true
+  frame_by_frame_claim_must_match: true
+  mismatch_is_not_comparable: true
+  mismatch_cannot_emit_resolved: true
+  mismatch_cannot_emit_regression_candidate: true
+
 policy:
   observation_is_not_causality: true
   one_success_cannot_promote: true
@@ -24,6 +34,7 @@ policy:
   automatic_maturity_promotion_forbidden: true
   model_version_mismatch_not_aggregated: true
   pass_regression_blocks_clean_repair_claim: true
+  changed_ruler_cannot_become_repair_success: true
   missing_alternative_explanations_remain_unknown: true
   missing_counterfactuals_remain_unknown: true
   camera_authority_cannot_reappear: true
@@ -39,10 +50,6 @@ cases:
     expected_generalization_authorized: false
     expected_promotion_authorized: false
     expected_writeback_authorized: false
-    expected_source_binding:
-      before: canonical_expected_observed_reexecution
-      after: canonical_expected_observed_reexecution
-      repair: canonical_targeted_repair_reexecution
 
   - id: FD-CALLER-CONTROL-UNVERIFIED-001
     target_field: visual_density
@@ -64,7 +71,32 @@ cases:
     after_model_version: "2.6"
     expected_comparison_status: NOT_COMPARABLE
     expected_reason: MODEL_VERSION_MISMATCH
-    expected_causal_evidence_status: NOT_ELIGIBLE_NOT_COMPARABLE
+
+  - id: FD-MEASUREMENT-MODE-DRIFT-001
+    before_comparison_mode: exact_value
+    after_comparison_mode: explicit_observation_judgment
+    same_expected_value: true
+    same_observed_value: true
+    synthetic_outcome_without_gate: FAIL_to_PASS
+    expected_comparison_status: NOT_COMPARABLE
+    expected_reason: COMPARISON_MODE_MISMATCH
+    expected_resolved_fields: []
+    expected_regression_candidate_eligible: false
+
+  - id: FD-EXPECTATION-PROVENANCE-DRIFT-001
+    same_expected_value: true
+    expectation_provenance_changes: true
+    expected_comparison_status: NOT_COMPARABLE
+    expected_reason: EXPECTATION_CONTRACT_MISMATCH
+    expected_resolved_fields: []
+
+  - id: FD-INSPECTION-METHOD-DRIFT-001
+    same_expected_value: true
+    same_comparison_mode: true
+    inspection_mode_changes: true
+    expected_comparison_status: NOT_COMPARABLE
+    expected_reason: OBSERVATION_METHOD_MISMATCH
+    expected_resolved_fields: []
 
 structural_gate_cases:
   - id: FD-LEGACY-SERIALIZED-EVAL-INPUT-FORBIDDEN-001
@@ -102,6 +134,9 @@ gates:
   serialized_eval_result_never_authoritative: true
   serialized_repair_plan_never_authoritative: true
   caller_internal_consistency_is_not_source_authenticity: true
+  measurement_contract_identity_required_for_attribution: true
+  changed_measurement_contract_cannot_yield_resolved: true
+  changed_measurement_contract_cannot_yield_regression_candidate: true
   joint_tampering_cannot_suppress_or_misroute_repair: true
   source_eval_learning_handoff_must_be_non_promoting: true
   repair_plan_must_exactly_match_before_fail_unknown: true
