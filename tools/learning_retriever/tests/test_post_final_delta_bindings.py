@@ -3,82 +3,54 @@ import unittest
 
 import yaml
 
-import learning_retriever
-
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 POLICY = "10_运行时/post_final_delta_validation_policy.yaml"
 REGRESSION = "11_验收/post_final_delta_validation_regression_cases.yaml"
+WRAPPER = "tools/learning_retriever/learning_retriever/post_final_delta_source_bound.py"
 
 
 class PostFinalDeltaBindingTests(unittest.TestCase):
-    def test_project_index_registers_post_final_delta_as_execution_only(self):
+    def test_candidate_stack_does_not_self_promote_over_project_index(self):
         project = yaml.safe_load((REPO_ROOT / "PROJECT_INDEX.yaml").read_text(encoding="utf-8"))
-        policy = project["policy"]
-        self.assertTrue(policy["post_final_delta_validation_runtime_is_execution_only"])
-        self.assertTrue(policy["post_final_delta_validation_cannot_promote_or_write"])
-        self.assertTrue(policy["post_final_delta_cross_version_pooling_forbidden"])
-        self.assertEqual(project["canonical"]["post_final_delta_validation_policy"], POLICY)
-        self.assertEqual(project["canonical"]["post_final_delta_validation_regression_cases"], REGRESSION)
-        self.assertEqual(project["effective_sources"][POLICY], "github_verified")
-        self.assertEqual(project["effective_sources"][REGRESSION], "github_verified")
+        canonical = project.get("canonical") or {}
+        effective = project.get("effective_sources") or {}
+        self.assertNotIn("post_final_delta_validation_policy", canonical)
+        self.assertNotIn("post_final_delta_validation_regression_cases", canonical)
+        self.assertNotIn(POLICY, effective)
+        self.assertNotIn(REGRESSION, effective)
 
-    def test_read_sets_are_conditional_not_always_on(self):
+    def test_candidate_stack_does_not_amplify_ordinary_directing_reads(self):
         read_sets = yaml.safe_load((REPO_ROOT / "10_运行时/read_sets.yaml").read_text(encoding="utf-8"))
         directing = read_sets["read_sets"]["directing"]
-        system_research = read_sets["read_sets"]["system_research"]
         self.assertNotIn("post_final_delta_validation_policy", directing["always"])
-        self.assertEqual(
-            directing["conditional"]["post_final_delta_validation_policy"],
-            "post_final_delta_validation_policy#when_final_delta_evidence_cohort_regression_proposal_or_maturity_assessment_is_relevant",
-        )
-        self.assertEqual(
-            directing["conditional"]["post_final_delta_validation_regression"],
-            "post_final_delta_validation_regression_cases#when_post_final_delta_partition_conflict_or_maturity_gate_is_relevant",
-        )
-        self.assertEqual(
-            system_research["conditional"]["post_final_delta_validation_policy"],
-            "post_final_delta_validation_policy#when_evidence_aggregation_regression_proposal_or_maturity_governance_is_under_review",
-        )
-        self.assertEqual(
-            system_research["conditional"]["post_final_delta_validation_regression"],
-            "post_final_delta_validation_regression_cases#when_post_final_delta_validation_runtime_is_under_review",
-        )
+        self.assertNotIn("post_final_delta_validation_policy", directing.get("conditional") or {})
+        self.assertNotIn("post_final_delta_validation_regression", directing.get("conditional") or {})
 
-    def test_write_route_is_regression_only_and_no_maturity_or_evidence_write_route_exists(self):
+    def test_candidate_stack_has_no_post_final_delta_write_route(self):
         routes = yaml.safe_load((REPO_ROOT / "10_运行时/write_routes.yaml").read_text(encoding="utf-8"))["routes"]
-        self.assertEqual(routes["post_final_delta_validation_regression_case"], REGRESSION)
-        matches = [name for name, target in routes.items() if target == REGRESSION]
-        self.assertEqual(matches, ["post_final_delta_validation_regression_case"])
+        self.assertNotIn("post_final_delta_validation_regression_case", routes)
         self.assertNotIn("maturity_promotion", routes)
         self.assertNotIn("evidence_cohort", routes)
         self.assertNotIn("regression_proposal", routes)
-        self.assertNotEqual(routes["revision_trace_and_learning"], REGRESSION)
-        self.assertNotEqual(routes["learning_evidence_and_outcome"], REGRESSION)
 
-    def test_package_exports_assessment_but_no_promotion_or_write_helpers(self):
-        self.assertTrue(hasattr(learning_retriever, "PostFinalDeltaValidationError"))
-        self.assertTrue(hasattr(learning_retriever, "assess_post_final_delta_validation"))
-        forbidden = {
-            "promote_maturity",
-            "write_regression_proposal",
-            "write_learning_evidence",
-            "mint_trusted_confirmation",
-            "mint_camera_authority",
-            "_mint_camera_authority",
-        }
-        for name in forbidden:
-            with self.subTest(name=name):
-                self.assertFalse(hasattr(learning_retriever, name))
+    def test_policy_requires_source_bound_reexecution(self):
+        policy = yaml.safe_load((REPO_ROOT / POLICY).read_text(encoding="utf-8"))
+        self.assertEqual(policy["status"], "candidate_stacked")
+        binding = policy["source_binding"]
+        self.assertEqual(binding["public_input"], "final_delta_inputs")
+        self.assertFalse(binding["serialized_final_deltas_accepted"])
+        self.assertTrue(binding["canonical_final_delta_reexecution_required"])
+        self.assertEqual(binding["source_bound_wrapper"], WRAPPER)
+        self.assertTrue(binding["caller_consistent_serialized_artifacts_are_not_source_truth"])
 
-    def test_ci_runs_post_final_delta_regressions_without_write_permission(self):
-        workflow = (REPO_ROOT / ".github/workflows/learning-feature-compiler.yml").read_text(encoding="utf-8")
-        self.assertIn(POLICY, workflow)
-        self.assertIn(REGRESSION, workflow)
-        self.assertIn("test_post_final_delta_validation.py", workflow)
-        self.assertIn("test_post_final_delta_bindings.py", workflow)
-        self.assertNotIn("contents: write", workflow)
-        self.assertNotIn("tmp-wire-post-final-delta", workflow)
+    def test_source_bound_wrapper_exists_without_canonical_registration(self):
+        wrapper = (REPO_ROOT / WRAPPER).read_text(encoding="utf-8")
+        self.assertIn("compile_final_delta_learning_evidence", wrapper)
+        self.assertIn("serialized_final_deltas_accepted", wrapper)
+        self.assertIn("False", wrapper)
+        self.assertNotIn("write_regression", wrapper)
+        self.assertNotIn("promote_maturity", wrapper)
 
     def test_policy_output_contract_has_zero_mutation_or_promotion_authority(self):
         policy = yaml.safe_load((REPO_ROOT / POLICY).read_text(encoding="utf-8"))
