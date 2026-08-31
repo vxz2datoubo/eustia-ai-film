@@ -42,6 +42,11 @@ policy:
   expected_observed_eval_cannot_claim_automatic_media_grading: true
   targeted_repair_runtime_is_execution_only: true
   targeted_repair_cannot_mutate_prompt_or_canonical_authority: true
+  final_delta_learning_runtime_is_execution_only: true
+  final_delta_learning_cannot_promote_or_writeback: true
+  final_delta_single_success_cannot_generalize: true
+  final_delta_requires_canonical_upstream_source_reexecution: true
+  final_delta_serialized_upstream_artifacts_cannot_define_truth: true
 
 canonical:
   project_entry: 项目入口.md
@@ -92,6 +97,8 @@ canonical:
   expected_observed_eval_regression_cases: 11_验收/expected_observed_eval_regression_cases.yaml
   targeted_repair_policy: 10_运行时/targeted_repair_policy.yaml
   targeted_repair_regression_cases: 11_验收/targeted_repair_regression_cases.yaml
+  final_delta_learning_policy: 10_运行时/final_delta_learning_policy.yaml
+  final_delta_learning_regression_cases: 11_验收/final_delta_learning_regression_cases.yaml
   asset_retrieval_regression_cases: 11_验收/asset_retrieval_regression_cases.yaml
   learning_application_gate_regression_cases: 11_验收/learning_application_gate_regression_cases.yaml
   golden_prompt_cases: 11_验收/golden_prompt_cases.yaml
@@ -140,6 +147,7 @@ effective_sources:
   10_运行时/learning_application_gate.yaml: github_verified
   10_运行时/learning_recall_index.yaml: github_verified
   10_运行时/targeted_repair_policy.yaml: github_verified
+  10_运行时/final_delta_learning_policy.yaml: github_verified
   10_运行时/source_authority.yaml: github_verified
   10_运行时/read_sets.yaml: github_verified
   10_运行时/write_routes.yaml: github_verified
@@ -151,6 +159,7 @@ effective_sources:
   11_验收/cinematic_intent_contract_regression_cases.yaml: github_verified
   11_验收/expected_observed_eval_regression_cases.yaml: github_verified
   11_验收/targeted_repair_regression_cases.yaml: github_verified
+  11_验收/final_delta_learning_regression_cases.yaml: github_verified
   11_验收/asset_retrieval_regression_cases.yaml: github_verified
   11_验收/learning_application_gate_regression_cases.yaml: github_verified
   11_验收/golden_prompt_cases.yaml: github_verified

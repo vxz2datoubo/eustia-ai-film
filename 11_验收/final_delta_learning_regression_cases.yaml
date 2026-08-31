@@ -1,0 +1,151 @@
+suite_id: FINAL_DELTA_LEARNING_EVIDENCE_REGRESSION_V3_SOURCE_BOUND_MEASUREMENT_LOCKED
+status: candidate
+policy_authority: 10_运行时/final_delta_learning_policy.yaml
+learning_authority: 08_系统学习/反馈反推与系统反哺引擎.md
+maturity_authority: 10_运行时/maturity_model.yaml
+runtime: tools/learning_retriever/learning_retriever/final_delta.py
+source_eval_suite: 11_验收/expected_observed_eval_regression_cases.yaml
+source_repair_suite: 11_验收/targeted_repair_regression_cases.yaml
+
+source_binding:
+  before_eval_from_source_reexecution: required
+  after_eval_from_source_reexecution: required
+  repair_plan_from_before_source_reexecution: required
+  serialized_eval_result_input: forbidden
+  serialized_repair_plan_input: forbidden
+  jointly_tampered_result_status_handoff_cannot_define_truth: true
+  jointly_tampered_repair_plan_cannot_define_truth: true
+
+measurement_contract_binding:
+  comparison_mode_must_match: true
+  expectation_provenance_must_match: true
+  inspection_mode_must_match: true
+  temporal_coverage_contract_must_match: true
+  frame_by_frame_claim_must_match: true
+  mismatch_is_not_comparable: true
+  mismatch_cannot_emit_resolved: true
+  mismatch_cannot_emit_regression_candidate: true
+
+policy:
+  observation_is_not_causality: true
+  one_success_cannot_promote: true
+  candidate_learning_evidence_only: true
+  automatic_writeback_forbidden: true
+  automatic_maturity_promotion_forbidden: true
+  model_version_mismatch_not_aggregated: true
+  pass_regression_blocks_clean_repair_claim: true
+  changed_ruler_cannot_become_repair_success: true
+  missing_alternative_explanations_remain_unknown: true
+  missing_counterfactuals_remain_unknown: true
+  camera_authority_cannot_reappear: true
+
+cases:
+  - id: FD-PROD-KAIM-RESOLVED-SOURCE-BOUND-001
+    source_before_eval_case: EOE-PROD-KAIM-DISAPPEARANCE-001
+    target_field: attention_handoff
+    after_observation: PASS
+    expected_transition: RESOLVED
+    expected_causal_evidence_status: OBSERVATIONAL_ONLY
+    expected_maturity: candidate
+    expected_generalization_authorized: false
+    expected_promotion_authorized: false
+    expected_writeback_authorized: false
+
+  - id: FD-CALLER-CONTROL-UNVERIFIED-001
+    target_field: visual_density
+    caller_declares_complete_controls: true
+    expected_before_control_status: UNVERIFIED_CONTROL
+    expected_after_control_status: UNVERIFIED_CONTROL
+    expected_causal_evidence_status: CONTROL_NOT_VERIFIED
+    expected_causal_claim_authorized: false
+
+  - id: FD-PASS-REGRESSION-001
+    target_field: visual_density
+    regressed_field: composition
+    expected_target_transition: RESOLVED
+    expected_regressed_transition: REGRESSED
+    expected_regression_candidate_eligible: false
+
+  - id: FD-MODEL-VERSION-SPLIT-001
+    before_model_version: "2.5"
+    after_model_version: "2.6"
+    expected_comparison_status: NOT_COMPARABLE
+    expected_reason: MODEL_VERSION_MISMATCH
+
+  - id: FD-MEASUREMENT-MODE-DRIFT-001
+    before_comparison_mode: exact_value
+    after_comparison_mode: explicit_observation_judgment
+    same_expected_value: true
+    same_observed_value: true
+    synthetic_outcome_without_gate: FAIL_to_PASS
+    expected_comparison_status: NOT_COMPARABLE
+    expected_reason: COMPARISON_MODE_MISMATCH
+    expected_resolved_fields: []
+    expected_regression_candidate_eligible: false
+
+  - id: FD-EXPECTATION-PROVENANCE-DRIFT-001
+    same_expected_value: true
+    expectation_provenance_changes: true
+    expected_comparison_status: NOT_COMPARABLE
+    expected_reason: EXPECTATION_CONTRACT_MISMATCH
+    expected_resolved_fields: []
+
+  - id: FD-INSPECTION-METHOD-DRIFT-001
+    same_expected_value: true
+    same_comparison_mode: true
+    inspection_mode_changes: true
+    expected_comparison_status: NOT_COMPARABLE
+    expected_reason: OBSERVATION_METHOD_MISMATCH
+    expected_resolved_fields: []
+
+structural_gate_cases:
+  - id: FD-LEGACY-SERIALIZED-EVAL-INPUT-FORBIDDEN-001
+    mutation: supply_before_eval_after_eval_serialized_results
+    expected_error_code: FINAL_DELTA_UNKNOWN_FIELD
+
+  - id: FD-LEGACY-SERIALIZED-REPAIR-PLAN-FORBIDDEN-001
+    mutation: supply_serialized_repair_plan_alongside_source_inputs
+    expected_error_code: FINAL_DELTA_UNKNOWN_FIELD
+
+  - id: FD-JOINT-RESULT-HANDOFF-TAMPER-CANNOT-SUPPRESS-001
+    attack: jointly_change_FAIL_to_PASS_status_to_PASS_and_handoff_to_empty
+    authoritative_input: original_before_eval_input
+    expected_behavior: canonical_reexecution_preserves_original_failure_and_repair_target
+
+  - id: FD-JOINT-REPAIR-PLAN-TAMPER-CANNOT-MISROUTE-001
+    attack: remove_or_change_serialized_repair_items
+    expected_behavior: serialized_plan_has_no_public_authority_surface
+
+  - id: FD-BEFORE-UPSTREAM-REJECT-PROVENANCE-001
+    mutation: remove_before_observation_provenance
+    expected_error_code: FINAL_DELTA_BEFORE_EVAL_REJECTED
+    expected_underlying_error: EVAL_MISSING_PROVENANCE
+
+  - id: FD-EVAL-ID-COLLISION-001
+    mutation: before_after_use_same_eval_id
+    expected_error_code: FINAL_DELTA_EVAL_ID_COLLISION
+
+  - id: FD-MISSING-CHANGE-RECORD-001
+    mutation: remove_changed_variables
+    expected_error_code: FINAL_DELTA_CHANGE_RECORD_REQUIRED
+
+gates:
+  canonical_upstream_source_reexecution_required: true
+  serialized_eval_result_never_authoritative: true
+  serialized_repair_plan_never_authoritative: true
+  caller_internal_consistency_is_not_source_authenticity: true
+  measurement_contract_identity_required_for_attribution: true
+  changed_measurement_contract_cannot_yield_resolved: true
+  changed_measurement_contract_cannot_yield_regression_candidate: true
+  joint_tampering_cannot_suppress_or_misroute_repair: true
+  source_eval_learning_handoff_must_be_non_promoting: true
+  repair_plan_must_exactly_match_before_fail_unknown: true
+  pass_dimensions_must_be_compared_for_regression: true
+  single_success_cannot_promote: true
+  causal_claim_never_auto_authorized: true
+  candidate_lesson_never_invented: true
+  missing_alternatives_and_counterfactuals_are_unknown: true
+  model_version_split_is_fail_closed_for_attribution: true
+  camera_authority_cannot_reappear: true
+  regression_candidate_does_not_authorize_regression_write: true
+  no_second_learning_authority: true
