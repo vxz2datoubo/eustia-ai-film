@@ -1,0 +1,85 @@
+schema_version: "4.0"
+component_id: ACTIVE_WORK_ITEM_CHECKPOINT_COMPILER
+status: candidate
+source_issue: 38
+activation: absent_until_independent_accept
+
+dependency:
+  active_work_item_authority: tools/learning_retriever/learning_retriever/_active_work_item_remote.py
+  runtime_gate: 10_运行时/active_work_item_resolution_gate.yaml
+  continuity_authority: 07_连续性与生产状态/连续性与当前生产状态.md#ACTIVE_WORK_ITEM_STATE
+  write_route: 10_运行时/write_routes.yaml#revision_checkpoint_current_state
+
+authority_boundary:
+  this_component_has_no_story_authority: true
+  this_component_has_no_work_item_identity_authority: true
+  this_component_has_no_persistence_authority: true
+  this_component_has_no_github_write_capability: true
+  this_component_has_no_governed_ref_confirmation_authority: true
+  caller_continuity_markdown_as_authority: forbidden
+  caller_verified_boolean_as_authority: forbidden
+  caller_proposed_checkpoint_ref_as_authority: forbidden
+  serialized_first_write_receipt_as_finalization_authority: forbidden
+  canonical_v3_lifecycle_transition_delegation_required: true
+
+trusted_baseline:
+  repository_and_branch: inherited_only_from_canonical_active_work_item_v3
+  fixed_github_readback_required: true
+  project_index_registration_required: true
+  local_projection_must_equal_fixed_github: true
+  baseline_materialization_commit_must_exist: true
+  baseline_materialization_must_be_canonical_ancestor: true
+  baseline_snapshot_identity_must_match_materialization: true
+  applied_checkpoint_must_exist_as_structured_source_comment: true
+  source_issue_may_be_ahead_during_checkpoint_reconciliation: true
+  latest_source_checkpoint_does_not_become_story_authority: true
+
+revision_semantics:
+  event_types: [ADD, MODIFY, REVOKE, EXPERIMENT, LOCK, CHECKPOINT, CLOSE]
+  omission_is_not_revocation: true
+  revoked_reintroduction_requires: [ADD, LOCK]
+  terminal_event_required: [CHECKPOINT, CLOSE]
+  terminal_source_ref_is_checkpoint_identity: true
+  terminal_source_ref_must_be_latest_live_structured_comment: true
+  independent_caller_checkpoint_id: forbidden
+  target_status:
+    CHECKPOINT: CHECKPOINTED
+    CLOSE: CLOSED
+  target_status_must_pass_canonical_v3_validate_state_transition: true
+
+write_transaction_external_contract:
+  runtime_writes: false
+  steps:
+    - compile_checkpoint_proposal_from_fixed_github_baseline
+    - external_FETCH_EDIT_COMMIT_materialization
+    - verify_actual_fixed_repository_materialization_commit
+    - compile_checkpoint_finalization_proposal_by_reexecution
+    - external_COMMIT_finalization
+    - verify_actual_fixed_repository_finalization_commit
+    - external_confirm_governed_target_ref
+  first_write_verification:
+    caller_supplied_post_write_document: forbidden
+    caller_supplied_success_receipt: forbidden
+    exact_fixed_repository_commit_readback: required
+    outside_active_block_unchanged: required
+    active_block_matches_proposal: required
+    live_structured_checkpoint_revalidation: required
+  second_write_finalization:
+    serialized_first_write_receipt_input: forbidden
+    materialization_commit_must_be_reverified: true
+    writeback_verified_commit: exact_materialization_commit_sha
+    canonical_reporting_before_external_ref_confirmation: forbidden
+
+candidate_isolation:
+  project_index_registration_before_accept: forbidden
+  ordinary_directing_always_read: forbidden
+  new_parallel_continuity_write_route: forbidden
+  activation_requires_separate_bounded_slice: true
+
+maturity:
+  current: candidate
+  promotion_gate:
+    - exact_head_ci
+    - independent_T3_review
+    - all_prior_P1_blockers_closed
+    - activation_slice_reviewed_separately
