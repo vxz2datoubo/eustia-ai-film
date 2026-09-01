@@ -1,0 +1,112 @@
+schema_version: "4.0"
+suite_id: ACTIVE_WORK_ITEM_CHECKPOINT_COMPILER_REGRESSION
+status: candidate
+source_issue: 38
+
+cases:
+  - id: AWIC-P1-01-FORGED-LOCAL-VERIFIED
+    class: caller_local_continuity_cannot_mint_trusted_baseline
+    attack:
+      local_active_state_self_declares_checkpoint_writeback_status: verified
+      caller_supplies_continuity_markdown: true
+    expected:
+      public_raw_continuity_input_exists: false
+      fixed_github_baseline_required: true
+
+  - id: AWIC-P1-01-LOCAL-REMOTE-DRIFT
+    class: local_projection_must_match_fixed_github
+    expected_error: CHECKPOINT_CONTINUITY_DRIFT_FROM_FIXED_GITHUB
+
+  - id: AWIC-P1-01-MATERIALIZATION-INVALID
+    class: baseline_materialization_must_reuse_v3_remote_proof
+    expected:
+      commit_must_exist: true
+      commit_must_be_canonical_ancestor: true
+      snapshot_identity_must_match: true
+
+  - id: AWIC-P1-02-SERIALIZED-RECEIPT-FORBIDDEN
+    class: caller_dict_cannot_mint_second_phase_verified_state
+    attack:
+      receipt_schema: ACTIVE_WORK_ITEM_CHECKPOINT_WRITE_VERIFICATION/v2
+      status: VERIFIED_FIXED_GITHUB_MATERIALIZATION
+      arbitrary_40_hex: true
+    expected:
+      public_finalizer_receipt_input_exists: false
+      actual_fixed_repository_materialization_reexecution_required: true
+
+  - id: AWIC-P1-03-CLOSED-NO-OUTGOING
+    class: lifecycle_delegates_to_canonical_v3
+    input:
+      baseline_status: CLOSED
+      terminal_event: CHECKPOINT
+    expected_error: CHECKPOINT_LIFECYCLE_TRANSITION_INVALID
+
+  - id: AWIC-P1-03-RESOLVED-UNVERIFIED-NO-CHECKPOINT
+    class: illegal_lifecycle_jump_fails_closed
+    input:
+      baseline_status: RESOLVED_UNVERIFIED
+      terminal_event: CHECKPOINT
+    expected_error: CHECKPOINT_LIFECYCLE_TRANSITION_INVALID
+
+  - id: AWIC-P1-03-ACTIVE-REVISION-CHECKPOINT
+    class: canonical_valid_transition_preserved
+    input:
+      baseline_status: ACTIVE_REVISION
+      terminal_event: CHECKPOINT
+    expected:
+      proposed_status: CHECKPOINTED
+
+  - id: AWIC-P1-04-ARBITRARY-CHECKPOINT-ID-FORBIDDEN
+    class: caller_cannot_supply_second_checkpoint_identity
+    expected:
+      public_proposed_checkpoint_ref_input_exists: false
+      identity_source: terminal_revision_source_ref
+
+  - id: AWIC-P1-04-LIVE-STRUCTURED-IDENTITY
+    class: terminal_source_ref_must_exist_and_be_structured
+    expected:
+      source_issue_fixed_from_trusted_baseline: true
+      exact_comment_exists: true
+      structured_revision_classifier_reused_from_v3: true
+      must_be_latest_structured_comment: true
+
+  - id: AWIC-P1-04-ROUNDTRIP
+    class: finalized_checkpoint_remains_v3_compatible
+    expected:
+      latest_applied_checkpoint_ref_numeric_comment_id: true
+      checkpoint_writeback_status: verified
+      writeback_verified_commit_is_materialization_commit: true
+      next_v3_trusted_read_can_validate_identity: true
+
+  - id: AWIC-OMISSION-NOT-REVOKE
+    class: revision_ledger_semantics_preserved
+    expected:
+      omitted_constraints_preserved: true
+      only_explicit_revoke_removes: true
+
+  - id: AWIC-REJECTED-REINTRODUCTION
+    class: revoked_constraint_requires_explicit_add_or_lock
+    expected_error: CHECKPOINT_REINTRODUCTION_REQUIRES_ADD_OR_LOCK
+
+  - id: AWIC-NO-RUNTIME-WRITE
+    class: candidate_has_read_validation_only
+    expected:
+      git_push: false
+      github_write: false
+      branch_mutation: false
+      canonical_reporting_before_external_ref_confirmation: false
+
+authority_boundary:
+  eval_fixture_only: true
+  proposal_is_not_persistence: true
+  finalization_proposal_is_not_persistence: true
+  source_issue_is_revision_identity_trace_not_story_authority: true
+
+acceptance:
+  trust_adapter_suite: tools/learning_retriever/tests/test_checkpoint_trust_adapter.py
+  compiler_suite: tools/learning_retriever/tests/test_checkpoint_trust_bound.py
+  finalizer_suite: tools/learning_retriever/tests/test_checkpoint_finalizer_trust_bound.py
+  full_learning_retriever_regression_required: true
+  learning_smart_recall_cross_platform_required: true
+  exact_head_ci_required: true
+  independent_T3_required: true
