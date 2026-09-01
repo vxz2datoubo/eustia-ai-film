@@ -1,9 +1,9 @@
 """Trust-bound Active Work Item revision checkpoint compiler.
 
-Public checkpoint compilation never accepts caller-supplied continuity markdown
-or caller-supplied checkpoint identity. It first reads the current baseline via
-the canonical Active Work Item v3 fixed-GitHub trust primitives, then applies a
-pure deterministic revision reducer. Persistence remains external.
+Public compilation accepts no caller continuity snapshot and no caller checkpoint
+identity. It obtains the baseline from the canonical fixed-GitHub v3 trust root,
+then applies a private deterministic revision reducer. Persistence remains
+external.
 """
 from __future__ import annotations
 
@@ -15,7 +15,8 @@ from typing import Any, Iterable
 
 import yaml
 
-from .active_work_item import ActiveWorkItemResolutionError, STATE_BEGIN, STATE_END, validate_state_transition
+from . import _active_work_item_remote as _remote
+from .active_work_item import ActiveWorkItemResolutionError, validate_state_transition
 from .checkpoint_trust import (
     FixedCommitContinuity,
     TrustedCheckpointBaseline,
@@ -24,6 +25,8 @@ from .checkpoint_trust import (
     validate_live_checkpoint,
 )
 
+STATE_BEGIN = _remote.STATE_BEGIN
+STATE_END = _remote.STATE_END
 ALLOWED_EVENT_TYPES = {"ADD", "MODIFY", "REVOKE", "EXPERIMENT", "LOCK", "CHECKPOINT", "CLOSE"}
 REQUIRED_EVENT_FIELDS = (
     "revision_id", "work_item_id", "event_type", "source_ref", "parent_revision",
@@ -66,13 +69,13 @@ def _items(value: Any, field_name: str) -> list[str]:
 
 
 def _union(*groups: Iterable[str]) -> list[str]:
-    result: list[str] = []
+    out: list[str] = []
     for group in groups:
         for item in group:
             item = str(item).strip()
-            if item and item not in result:
-                result.append(item)
-    return result
+            if item and item not in out:
+                out.append(item)
+    return out
 
 
 def _remove(values: Iterable[str], removed: set[str]) -> list[str]:
@@ -112,39 +115,36 @@ def _normalize_event(raw: dict[str, Any]) -> dict[str, Any]:
     return event
 
 
-def _validate_event_chain(events: list[dict[str, Any]], *, work_item_id: str, expected_parent_revision: str | None) -> None:
+def _validate_event_chain(events: list[dict[str, Any]], work_item_id: str, expected_parent: str | None) -> None:
     if not events:
         raise _error("CHECKPOINT_EVENTS_EMPTY")
-    previous = expected_parent_revision
-    seen: set[str] = set()
-    terminal_seen = False
+    previous, seen, terminal_seen = expected_parent, set(), False
     for index, event in enumerate(events):
         rid = event["revision_id"]
         if rid in seen:
             raise _error("CHECKPOINT_REVISION_DUPLICATE", revision_id=rid)
         seen.add(rid)
         if event["work_item_id"] != work_item_id:
-            raise _error("CHECKPOINT_WORK_ITEM_MISMATCH", expected=work_item_id, observed=event["work_item_id"], revision_id=rid)
+            raise _error("CHECKPOINT_WORK_ITEM_MISMATCH", expected=work_item_id, observed=event["work_item_id"])
         observed_parent = event["parent_revision"]
         if index == 0:
-            if expected_parent_revision is None and observed_parent is not None:
-                raise _error("CHECKPOINT_PARENT_BASELINE_UNKNOWN", revision_id=rid, observed_parent=observed_parent)
-            if expected_parent_revision is not None and observed_parent != expected_parent_revision:
-                raise _error("CHECKPOINT_PARENT_CHAIN_BROKEN", revision_id=rid, expected_parent=expected_parent_revision, observed_parent=observed_parent)
+            if expected_parent is None and observed_parent is not None:
+                raise _error("CHECKPOINT_PARENT_BASELINE_UNKNOWN", revision_id=rid)
+            if expected_parent is not None and observed_parent != expected_parent:
+                raise _error("CHECKPOINT_PARENT_CHAIN_BROKEN", revision_id=rid)
         elif observed_parent != previous:
-            raise _error("CHECKPOINT_PARENT_CHAIN_BROKEN", revision_id=rid, expected_parent=previous, observed_parent=observed_parent)
+            raise _error("CHECKPOINT_PARENT_CHAIN_BROKEN", revision_id=rid)
         previous = rid
         if terminal_seen:
             raise _error("CHECKPOINT_EVENT_AFTER_TERMINAL", revision_id=rid)
         terminal_seen = event["event_type"] in {"CHECKPOINT", "CLOSE"}
     if events[-1]["event_type"] not in {"CHECKPOINT", "CLOSE"}:
-        raise _error("CHECKPOINT_TERMINAL_EVENT_REQUIRED", last_event_type=events[-1]["event_type"])
+        raise _error("CHECKPOINT_TERMINAL_EVENT_REQUIRED")
 
 
 def _extract_block_parts(markdown: str) -> tuple[str, str, str]:
-    start = markdown.find(STATE_BEGIN)
-    end = markdown.find(STATE_END)
-    if start < 0 or end < 0 or end <= start:
+    start, end = markdown.find(STATE_BEGIN), markdown.find(STATE_END)
+    if start < 0 or end <= start:
         raise _error("ACTIVE_WORK_ITEM_STATE_MISSING")
     end += len(STATE_END)
     return markdown[:start], markdown[start:end], markdown[end:]
@@ -170,7 +170,7 @@ def _parse_state(markdown: str) -> dict[str, Any]:
 
 
 def _render_state_block(state: dict[str, Any]) -> str:
-    payload = yaml.safe_dump({"active_work_item": state}, allow_unicode=True, sort_keys=False, default_flow_style=False).rstrip()
+    payload = yaml.safe_dump({"active_work_item": state}, allow_unicode=True, sort_keys=False).rstrip()
     return f"{STATE_BEGIN}\n```yaml\n{payload}\n```\n{STATE_END}"
 
 
@@ -239,26 +239,22 @@ class CheckpointWriteVerification:
 def _compile_checkpoint_core(
     continuity_markdown: str,
     events: Iterable[dict[str, Any]],
-    *,
-    expected_work_item_id: str,
-    expected_baseline_checkpoint_ref: str,
-    proposed_checkpoint_ref: str,
-    expected_parent_revision: str | None = None,
+    *, expected_work_item_id: str, expected_baseline_checkpoint_ref: str,
+    proposed_checkpoint_ref: str, expected_parent_revision: str | None = None,
 ) -> CheckpointProposal:
-    """Pure reducer. Private: no authority claims are derived from its inputs."""
+    """Private pure reducer. No authority is derived from these inputs."""
     baseline = _parse_state(continuity_markdown)
-    work_item_id = str(expected_work_item_id or "").strip()
-    if str(baseline.get("work_item_id") or "").strip() != work_item_id:
-        raise _error("CHECKPOINT_WORK_ITEM_MISMATCH", expected=work_item_id, observed=baseline.get("work_item_id"))
+    work_item = str(expected_work_item_id or "").strip()
     baseline_ref = str(expected_baseline_checkpoint_ref or "").strip()
+    if str(baseline.get("work_item_id") or "").strip() != work_item:
+        raise _error("CHECKPOINT_WORK_ITEM_MISMATCH")
     if str(baseline.get("latest_applied_checkpoint_ref") or "").strip() != baseline_ref:
-        raise _error("CHECKPOINT_BASELINE_STALE", expected=baseline_ref, observed=baseline.get("latest_applied_checkpoint_ref"))
+        raise _error("CHECKPOINT_BASELINE_STALE")
     checkpoint_ref = str(proposed_checkpoint_ref or "").strip()
     if not checkpoint_ref or checkpoint_ref == baseline_ref:
-        raise _error("CHECKPOINT_REF_INVALID", proposed_checkpoint_ref=checkpoint_ref or None)
-
+        raise _error("CHECKPOINT_REF_INVALID")
     normalized = [_normalize_event(item) for item in events]
-    _validate_event_chain(normalized, work_item_id=work_item_id, expected_parent_revision=expected_parent_revision)
+    _validate_event_chain(normalized, work_item, expected_parent_revision)
 
     locked = _union(baseline.get("locked_constraints") or [])
     preserved = _union(baseline.get("preserved_constraints") or [])
@@ -269,139 +265,101 @@ def _compile_checkpoint_core(
     state = copy.deepcopy(baseline)
 
     for event in normalized:
-        etype = event["event_type"]
-        changed, keep = event["changed"], event["preserved"]
-        remove = set(event["revoked"])
-        experiments = event["experimental"]
-        rid = event["revision_id"]
-        overlap = sorted((set(changed) | set(keep) | set(experiments)).intersection(remove))
-        if overlap:
-            raise _error("CHECKPOINT_EVENT_CONSTRAINT_CONFLICT", revision_id=rid, constraints=overlap)
+        etype, rid = event["event_type"], event["revision_id"]
+        changed, keep, experiments = event["changed"], event["preserved"], event["experimental"]
+        removed = set(event["revoked"])
+        if (set(changed) | set(keep) | set(experiments)).intersection(removed):
+            raise _error("CHECKPOINT_EVENT_CONSTRAINT_CONFLICT", revision_id=rid)
         if set(keep).intersection(revoked):
             raise _error("CHECKPOINT_PRESERVE_REVOKED_CONFLICT", revision_id=rid)
         reintroduced = set(changed).intersection(revoked)
         if reintroduced and etype in {"MODIFY", "CHECKPOINT", "CLOSE"}:
-            raise _error("CHECKPOINT_REINTRODUCTION_REQUIRES_ADD_OR_LOCK", revision_id=rid, constraints=sorted(reintroduced))
+            raise _error("CHECKPOINT_REINTRODUCTION_REQUIRES_ADD_OR_LOCK", revision_id=rid)
         if reintroduced and etype in {"ADD", "LOCK"}:
             revoked = _remove(revoked, reintroduced)
         if etype == "REVOKE" and changed:
             raise _error("CHECKPOINT_REVOKE_AMBIGUOUS", revision_id=rid)
-        if remove:
-            lock_conflicts = sorted(set(locked).intersection(remove))
-            if lock_conflicts and etype != "REVOKE":
-                raise _error("CHECKPOINT_LOCK_CONFLICT", revision_id=rid, constraints=lock_conflicts)
-            locked = _remove(locked, remove)
-            preserved = _remove(preserved, remove)
-            experimental = _remove(experimental, remove)
-            revoked = _union(revoked, remove)
+        if removed:
+            lock_conflict = set(locked).intersection(removed)
+            if lock_conflict and etype != "REVOKE":
+                raise _error("CHECKPOINT_LOCK_CONFLICT", revision_id=rid)
+            locked, preserved = _remove(locked, removed), _remove(preserved, removed)
+            experimental, revoked = _remove(experimental, removed), _union(revoked, removed)
         if etype == "LOCK":
             locked = _union(locked, changed, keep)
         elif etype == "EXPERIMENT":
-            experimental = _union(experimental, changed, experiments)
-            preserved = _union(preserved, keep)
+            experimental, preserved = _union(experimental, changed, experiments), _union(preserved, keep)
         else:
-            preserved = _union(preserved, keep, changed)
-            experimental = _union(experimental, experiments)
+            preserved, experimental = _union(preserved, keep, changed), _union(experimental, experiments)
         if "resolved_failures" in event:
             unresolved = _remove(unresolved, set(event["resolved_failures"]))
         if "unresolved_failures" in event:
             unresolved = _union(unresolved, event["unresolved_failures"])
         if "bound_media_or_reference_refs" in event:
             media_refs = _union(media_refs, event["bound_media_or_reference_refs"])
-        for source, target in (
-            ("effective_state_summary", "current_effective_state_summary"),
-            ("next_expected_action", "next_expected_action"),
-            ("current_best_ref", "current_best_ref"),
-        ):
+        for source, target in (("effective_state_summary", "current_effective_state_summary"), ("next_expected_action", "next_expected_action"), ("current_best_ref", "current_best_ref")):
             if event.get(source):
                 state[target] = event[source]
 
     terminal = normalized[-1]
-    state["status"] = "CLOSED" if terminal["event_type"] == "CLOSE" else "CHECKPOINTED"
-    state["locked_constraints"] = locked
-    state["preserved_constraints"] = preserved
-    state["revoked_constraints"] = revoked
-    state["experimental_constraints"] = experimental
-    state["unresolved_failures"] = unresolved
-    state["bound_media_or_reference_refs"] = media_refs
-    state["latest_applied_checkpoint_ref"] = checkpoint_ref
-    state["latest_evidence_ref"] = terminal["source_ref"]
-    state["checkpoint_writeback_status"] = "pending_write"
-    state["writeback_verified_commit"] = None
-    state["canonical_merge_status"] = "pending_checkpoint_write"
+    state.update({
+        "status": "CLOSED" if terminal["event_type"] == "CLOSE" else "CHECKPOINTED",
+        "locked_constraints": locked, "preserved_constraints": preserved,
+        "revoked_constraints": revoked, "experimental_constraints": experimental,
+        "unresolved_failures": unresolved, "bound_media_or_reference_refs": media_refs,
+        "latest_applied_checkpoint_ref": checkpoint_ref, "latest_evidence_ref": terminal["source_ref"],
+        "checkpoint_writeback_status": "pending_write", "writeback_verified_commit": None,
+        "canonical_merge_status": "pending_checkpoint_write",
+    })
     return CheckpointProposal(
-        work_item_id=work_item_id,
-        baseline_checkpoint_ref=baseline_ref,
-        proposed_checkpoint_ref=checkpoint_ref,
-        source_fingerprint=_fingerprint(continuity_markdown),
-        proposed_state=state,
-        replacement_block=_render_state_block(state),
-        applied_revision_ids=tuple(item["revision_id"] for item in normalized),
-        event_count=len(normalized),
+        work_item_id=work_item, baseline_checkpoint_ref=baseline_ref,
+        proposed_checkpoint_ref=checkpoint_ref, source_fingerprint=_fingerprint(continuity_markdown),
+        proposed_state=state, replacement_block=_render_state_block(state),
+        applied_revision_ids=tuple(item["revision_id"] for item in normalized), event_count=len(normalized),
     )
 
 
 def compile_checkpoint_proposal(
-    project_root: str | Path,
-    events: Iterable[dict[str, Any]],
-    *,
-    expected_work_item_id: str,
-    expected_baseline_checkpoint_ref: str,
+    project_root: str | Path, events: Iterable[dict[str, Any]], *,
+    expected_work_item_id: str, expected_baseline_checkpoint_ref: str,
     expected_parent_revision: str | None = None,
 ) -> CheckpointProposal:
-    """Public authority-safe checkpoint proposal entry.
-
-    The terminal revision's ``source_ref`` is the proposed checkpoint identity;
-    callers cannot supply a second arbitrary checkpoint id.
-    """
-    raw_events = list(events)
-    normalized = [_normalize_event(item) for item in raw_events]
+    raw = list(events)
+    normalized = [_normalize_event(item) for item in raw]
     if not normalized:
         raise _error("CHECKPOINT_EVENTS_EMPTY")
     terminal = normalized[-1]
     if terminal["event_type"] not in {"CHECKPOINT", "CLOSE"}:
-        raise _error("CHECKPOINT_TERMINAL_EVENT_REQUIRED", last_event_type=terminal["event_type"])
-
+        raise _error("CHECKPOINT_TERMINAL_EVENT_REQUIRED")
     trusted: TrustedCheckpointBaseline = load_trusted_checkpoint_baseline(project_root)
     baseline = trusted.state
-    work_item_id = str(expected_work_item_id or "").strip()
-    if str(baseline.get("work_item_id") or "").strip() != work_item_id:
-        raise _error("CHECKPOINT_WORK_ITEM_MISMATCH", expected=work_item_id, observed=baseline.get("work_item_id"))
-    if str(baseline.get("latest_applied_checkpoint_ref") or "").strip() != str(expected_baseline_checkpoint_ref or "").strip():
+    work_item = str(expected_work_item_id or "").strip()
+    baseline_ref = str(expected_baseline_checkpoint_ref or "").strip()
+    if str(baseline.get("work_item_id") or "").strip() != work_item:
+        raise _error("CHECKPOINT_WORK_ITEM_MISMATCH")
+    if str(baseline.get("latest_applied_checkpoint_ref") or "").strip() != baseline_ref:
         raise _error("CHECKPOINT_BASELINE_STALE")
-
-    target_status = "CLOSED" if terminal["event_type"] == "CLOSE" else "CHECKPOINTED"
+    target = "CLOSED" if terminal["event_type"] == "CLOSE" else "CHECKPOINTED"
     try:
-        validate_state_transition(str(baseline.get("status") or ""), target_status)
+        validate_state_transition(str(baseline.get("status") or ""), target)
     except ActiveWorkItemResolutionError as exc:
         raise _error("CHECKPOINT_LIFECYCLE_TRANSITION_INVALID", **exc.details) from exc
-
-    checkpoint_ref = validate_live_checkpoint(
-        baseline.get("source_issue"), terminal["source_ref"], require_latest=True
-    )
-    if checkpoint_ref == str(baseline.get("latest_applied_checkpoint_ref") or "").strip():
-        raise _error("CHECKPOINT_REF_INVALID", proposed_checkpoint_ref=checkpoint_ref)
-
-    proposal = _compile_checkpoint_core(
-        trusted.continuity_markdown,
-        raw_events,
-        expected_work_item_id=work_item_id,
-        expected_baseline_checkpoint_ref=str(expected_baseline_checkpoint_ref),
-        proposed_checkpoint_ref=checkpoint_ref,
+    checkpoint_ref = validate_live_checkpoint(baseline.get("source_issue"), terminal["source_ref"], require_latest=True)
+    if checkpoint_ref == baseline_ref:
+        raise _error("CHECKPOINT_REF_INVALID")
+    core = _compile_checkpoint_core(
+        trusted.continuity_markdown, raw, expected_work_item_id=work_item,
+        expected_baseline_checkpoint_ref=baseline_ref, proposed_checkpoint_ref=checkpoint_ref,
         expected_parent_revision=expected_parent_revision,
     )
-    return CheckpointProposal(
-        **{
-            **proposal.__dict__,
-            "canonical_baseline_sha": trusted.canonical_sha,
-            "source_issue": baseline.get("source_issue"),
-            "trusted_snapshot_fingerprint": trusted.snapshot_fingerprint,
-        }
-    )
+    return CheckpointProposal(**{
+        **core.__dict__, "canonical_baseline_sha": trusted.canonical_sha,
+        "source_issue": baseline.get("source_issue"),
+        "trusted_snapshot_fingerprint": trusted.snapshot_fingerprint,
+    })
 
 
 def apply_proposal_to_document(continuity_markdown: str, proposal: CheckpointProposal) -> str:
-    """Pure in-memory helper; it grants no write authority."""
     prefix, _, suffix = _extract_block_parts(continuity_markdown)
     if _fingerprint(continuity_markdown) != proposal.source_fingerprint:
         raise _error("CHECKPOINT_SOURCE_CHANGED")
@@ -418,40 +376,25 @@ def _verify_fixed_materialization(proposal: CheckpointProposal, fetched: FixedCo
     after_prefix, after_block, after_suffix = _extract_block_parts(fetched.continuity_markdown)
     if before_prefix != after_prefix or before_suffix != after_suffix:
         raise _error("CHECKPOINT_UNRELATED_CONTINUITY_MUTATION")
-    if after_block != proposal.replacement_block:
+    if after_block != proposal.replacement_block or _parse_state(fetched.continuity_markdown) != proposal.proposed_state:
         raise _error("CHECKPOINT_POST_WRITE_MISMATCH")
-    if _parse_state(fetched.continuity_markdown) != proposal.proposed_state:
-        raise _error("CHECKPOINT_POST_WRITE_STATE_MISMATCH")
     validate_live_checkpoint(proposal.source_issue, proposal.proposed_checkpoint_ref, require_latest=True)
     return CheckpointWriteVerification(
-        proposal=proposal,
-        commit_sha=fetched.commit_sha,
+        proposal=proposal, commit_sha=fetched.commit_sha,
         fetched_pending_markdown=fetched.continuity_markdown,
         post_write_fingerprint=_fingerprint(fetched.continuity_markdown),
     )
 
 
 def verify_post_write_document(
-    project_root: str | Path,
-    events: Iterable[dict[str, Any]],
-    *,
-    materialization_commit_sha: str,
-    expected_work_item_id: str,
-    expected_baseline_checkpoint_ref: str,
-    expected_parent_revision: str | None = None,
+    project_root: str | Path, events: Iterable[dict[str, Any]], *,
+    materialization_commit_sha: str, expected_work_item_id: str,
+    expected_baseline_checkpoint_ref: str, expected_parent_revision: str | None = None,
 ) -> CheckpointWriteVerification:
-    """Recompile from fixed-GitHub baseline and verify the actual fixed-repo commit.
-
-    No caller-supplied post-write markdown or serialized success receipt is
-    accepted by this public boundary.
-    """
-    raw_events = list(events)
+    raw = list(events)
     proposal = compile_checkpoint_proposal(
-        project_root,
-        raw_events,
-        expected_work_item_id=expected_work_item_id,
+        project_root, raw, expected_work_item_id=expected_work_item_id,
         expected_baseline_checkpoint_ref=expected_baseline_checkpoint_ref,
         expected_parent_revision=expected_parent_revision,
     )
-    fetched = fetch_fixed_continuity_at_commit(materialization_commit_sha)
-    return _verify_fixed_materialization(proposal, fetched)
+    return _verify_fixed_materialization(proposal, fetch_fixed_continuity_at_commit(materialization_commit_sha))
