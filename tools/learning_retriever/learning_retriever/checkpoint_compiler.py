@@ -268,8 +268,10 @@ def _compile_checkpoint_core(
         etype, rid = event["event_type"], event["revision_id"]
         changed, keep, experiments = event["changed"], event["preserved"], event["experimental"]
         removed = set(event["revoked"])
-        if (set(changed) | set(keep) | set(experiments)).intersection(removed):
-            raise _error("CHECKPOINT_EVENT_CONSTRAINT_CONFLICT", revision_id=rid)
+        overlap = (set(changed) | set(keep) | set(experiments)).intersection(removed)
+        if overlap:
+            code = "CHECKPOINT_LOCK_CONFLICT" if etype == "LOCK" else "CHECKPOINT_EVENT_CONSTRAINT_CONFLICT"
+            raise _error(code, revision_id=rid, constraints=sorted(overlap))
         if set(keep).intersection(revoked):
             raise _error("CHECKPOINT_PRESERVE_REVOKED_CONFLICT", revision_id=rid)
         reintroduced = set(changed).intersection(revoked)
@@ -285,12 +287,19 @@ def _compile_checkpoint_core(
                 raise _error("CHECKPOINT_LOCK_CONFLICT", revision_id=rid)
             locked, preserved = _remove(locked, removed), _remove(preserved, removed)
             experimental, revoked = _remove(experimental, removed), _union(revoked, removed)
+
         if etype == "LOCK":
             locked = _union(locked, changed, keep)
+            experimental = _union(experimental, experiments)
         elif etype == "EXPERIMENT":
-            experimental, preserved = _union(experimental, changed, experiments), _union(preserved, keep)
+            experimental = _union(experimental, changed, experiments)
+            preserved = _union(preserved, keep)
+        elif etype == "REVOKE":
+            preserved = _union(preserved, keep)
         else:
-            preserved, experimental = _union(preserved, keep, changed), _union(experimental, experiments)
+            preserved = _union(preserved, keep, changed)
+            experimental = _union(experimental, experiments)
+
         if "resolved_failures" in event:
             unresolved = _remove(unresolved, set(event["resolved_failures"]))
         if "unresolved_failures" in event:
