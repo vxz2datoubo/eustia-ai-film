@@ -71,7 +71,7 @@ class MIDSHandoffGuardTests(unittest.TestCase):
         session["confirmed_decisions"][0]["provenance"] = [{"source": "AI", "ref": "self-attestation"}]
         with self.assertRaises(MIDSDiscoveryError) as ctx:
             compile_guarded_spec_candidate(session)
-        self.assertEqual(ctx.exception.code, "MIDS_USER_PROVENANCE_REQUIRED")
+        self.assertEqual(ctx.exception.code, "MIDS_USER_EXPLICIT_PROVENANCE_MUST_BE_USER")
 
     def test_work_item_projection_cannot_carry_caller_authority_assertions(self):
         session = ready_session({
