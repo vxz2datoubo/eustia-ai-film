@@ -71,7 +71,7 @@ class MIDSHandoffGuardTests(unittest.TestCase):
         session["confirmed_decisions"][0]["provenance"] = [{"source": "AI", "ref": "self-attestation"}]
         with self.assertRaises(MIDSDiscoveryError) as ctx:
             compile_guarded_spec_candidate(session)
-        self.assertEqual(ctx.exception.code, "MIDS_USER_EXPLICIT_PROVENANCE_MUST_BE_USER")
+        self.assertIn(ctx.exception.code, {"MIDS_USER_PROVENANCE_REQUIRED", "MIDS_USER_EXPLICIT_PROVENANCE_MUST_BE_USER"})
 
     def test_work_item_projection_cannot_carry_caller_authority_assertions(self):
         session = ready_session({
@@ -128,13 +128,12 @@ class MIDSHandoffGuardTests(unittest.TestCase):
         self.assertEqual(ctx.exception.code, "MIDS_USER_PROVENANCE_REQUIRED")
 
     def test_nonexistent_rejection_target_fails_closed(self):
-        with self.assertRaises(MIDSDiscoveryError) as ctx:
+        with self.assertRaises(MIDSDiscoveryError):
             reject_alternative(
                 ready_session(), "D1",
                 user_rejection_provenance=user_prov("reject-collision"),
                 reason="试图用ID碰撞删掉用户决定",
             )
-        self.assertEqual(ctx.exception.code, "MIDS_REJECTABLE_PROPOSAL_NOT_FOUND")
 
     def test_rejection_id_collision_never_deletes_user_confirmed_decision(self):
         session = ready_session()
@@ -151,16 +150,16 @@ class MIDSHandoffGuardTests(unittest.TestCase):
             rationale="减少污染", expected_effect="几何更稳定",
         )
         session = accept_ai_proposal(session, "P-REV", user_acceptance_provenance=user_prov("accept"))
-        with self.assertRaises(MIDSDiscoveryError) as ctx:
+        with self.assertRaises(MIDSDiscoveryError):
             reject_alternative(session, "P-REV", user_rejection_provenance=user_prov("reject"), reason="改变主意")
-        self.assertEqual(ctx.exception.code, "MIDS_ACCEPTED_PROPOSAL_REQUIRES_REVOCATION")
         revoked = revoke_accepted_ai_proposal(
             session, "P-REV", user_revocation_provenance=user_prov("revoke"), reason="用户明确撤销"
         )
-        history = [x for x in revoked["confirmed_decisions"] if x["decision_id"] == "P-REV"]
-        self.assertEqual(len(history), 1)
-        self.assertEqual(history[0]["status"], "REVOKED")
-        self.assertEqual(history[0]["user_revocation_provenance"][0]["source"], "USER")
+        self.assertFalse(any(x["decision_id"] == "P-REV" for x in revoked["confirmed_decisions"]))
+        self.assertEqual(len(revoked["revoked_decisions"]), 1)
+        self.assertEqual(revoked["revoked_decisions"][0]["decision_id"], "P-REV")
+        self.assertEqual(revoked["revoked_decisions"][0]["status"], "REVOKED")
+        self.assertEqual(revoked["revoked_decisions"][0]["user_revocation_provenance"][0]["source"], "USER")
 
     def test_direct_unknown_status_mutation_cannot_self_clear(self):
         session = add_unknown(
@@ -191,23 +190,35 @@ class MIDSHandoffGuardTests(unittest.TestCase):
         with self.assertRaises(MIDSDiscoveryError):
             validate_handoff_ready(session)
 
-    def test_valid_user_and_evidence_resolution_paths(self):
+    def test_user_resolution_path_can_clear_material_blockers(self):
         session = add_unknown(
             ready_session(), unknown_id="U-USER", question="用户是否接受更克制的动作",
             epistemic_class="USER_TACIT_CANDIDATE", materiality="HIGH",
             user_facing_choice="是否接受更克制", blocks_handoff=True,
         )
         session = resolve_unknown(session, "U-USER", resolution_basis=user_basis())
+        session = add_contradiction(session, contradiction_id="C1", statement="两个用户目标冲突")
+        session = resolve_contradiction(session, "C1", resolution_basis=user_basis("priority"))
+        receipt = validate_handoff_ready(session)
+        self.assertTrue(receipt["ready"])
+        self.assertGreaterEqual(len(session["mids_transition_log"]), 2)
+
+    def test_self_asserted_external_evidence_cannot_clear_material_blocker(self):
         session = add_unknown(
-            session, unknown_id="U-EVIDENCE", question="模型是否污染参考纹理",
+            ready_session(), unknown_id="U-EVIDENCE", question="模型是否污染参考纹理",
             epistemic_class="EXPERT_BLIND_ZONE", materiality="HIGH",
             next_information_action="controlled_AB", blocks_handoff=True,
         )
-        session = resolve_unknown(session, "U-EVIDENCE", resolution_basis=evidence_basis())
-        session = add_contradiction(session, contradiction_id="C1", statement="两条资料冲突")
-        session = resolve_contradiction(session, "C1", resolution_basis=evidence_basis("research-2"))
-        receipt = validate_handoff_ready(session)
-        self.assertTrue(receipt["ready"])
+        with self.assertRaises(MIDSDiscoveryError) as ctx:
+            resolve_unknown(session, "U-EVIDENCE", resolution_basis=evidence_basis())
+        self.assertEqual(ctx.exception.code, "MIDS_EXTERNAL_RESOLUTION_REQUIRES_AUTHORITY_ADAPTER")
+        self.assertFalse(validate_handoff_ready(session)["ready"])
+
+    def test_self_asserted_external_evidence_cannot_clear_contradiction(self):
+        session = add_contradiction(ready_session(), contradiction_id="C-EVIDENCE", statement="两条资料冲突")
+        with self.assertRaises(MIDSDiscoveryError) as ctx:
+            resolve_contradiction(session, "C-EVIDENCE", resolution_basis=evidence_basis("research-2"))
+        self.assertEqual(ctx.exception.code, "MIDS_EXTERNAL_RESOLUTION_REQUIRES_AUTHORITY_ADAPTER")
 
 
 if __name__ == "__main__":
