@@ -57,3 +57,17 @@ cases:
     scope: document
     sample: Seedance研究报告_v2.md 是历史证据，仅供研究参考。
     expected: pass_no_reference
+
+  - id: LEGACY-AUTHORITY-010
+    title: 声音历史 File Library locator 紧邻明确否定 authority 时允许保留
+    scope: document
+    sample: |-
+      来源：ChatGPT File Library `00_项目长期外部记忆与系统演化总文档_v1.0.35_更新补丁.md`。
+      身份：历史迁移证据；不得作为当前 canonical 规则、active source 或运行时 authority 使用。
+    expected: pass_historical
+
+  - id: LEGACY-AUTHORITY-011
+    title: 同一声音历史 locator 若重新声明为当前依据仍必须失败
+    scope: document
+    sample: 当前依据是 ChatGPT File Library `00_项目长期外部记忆与系统演化总文档_v1.0.35_更新补丁.md`。
+    expected: fail_active
