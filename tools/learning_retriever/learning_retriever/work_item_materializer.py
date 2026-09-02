@@ -1,20 +1,20 @@
-"""Candidate WorkItem Context Materialization P0.
+"""Read-only WorkItem structured-context materialization candidate.
 
-This module does not create story/world authority. It resolves the current work item
-through the existing fixed-GitHub Active Work Item runtime, verifies the live source
-revision, and compiles a bounded *projection candidate* from a reviewed profile.
+This module never turns a local/static proposal into world truth. Trusted structured
+world baseline and LOCK semantics can come only from a machine block already
+materialized in the canonical continuity document on fixed GitHub ``main``.
 
-The public function intentionally takes no arguments. Caller-selected project roots,
-work-item ids, entities, semantic locks, provenance refs, or authority flags are not an
-input surface. Until this candidate is independently accepted and separately integrated,
-its output is explicitly non-authoritative and cannot satisfy an execution gate.
+The public entrypoint takes no arguments. When the canonical block is absent, the
+current work item remains explicitly ``STRUCTURED_CONTEXT_UNAVAILABLE``. A later,
+separately reviewed write transaction may materialize such a block; this P0 never does.
 """
-
 from __future__ import annotations
 
+from dataclasses import dataclass
 from hashlib import sha256
 import json
 from pathlib import Path
+from types import MappingProxyType
 from typing import Any, Mapping
 
 import yaml
@@ -25,10 +25,14 @@ from .active_work_item import (
     revalidate_source_revision,
     resolve_work_item,
 )
-
+from . import _active_work_item_remote as _remote
 
 POLICY_PATH = Path("10_运行时/work_item_context_materialization_candidate.yaml")
+CONTINUITY_PATH = Path("07_连续性与生产状态/连续性与当前生产状态.md")
+BEGIN = "<!-- WORK_ITEM_STRUCTURED_CONTEXT_BEGIN -->"
+END = "<!-- WORK_ITEM_STRUCTURED_CONTEXT_END -->"
 _CURRENT_DESCRIPTION = "继续当前工作项"
+_ALLOWED_ENTITY_KINDS = {"character", "object", "environment_anchor", "group"}
 
 
 class WorkItemMaterializationError(ValueError):
@@ -43,14 +47,47 @@ def _fail(code: str, message: str, **details: Any) -> WorkItemMaterializationErr
     return WorkItemMaterializationError(code, message, details=details or None)
 
 
+def _freeze(value: Any) -> Any:
+    if isinstance(value, Mapping):
+        return MappingProxyType({str(key): _freeze(item) for key, item in value.items()})
+    if isinstance(value, list):
+        return tuple(_freeze(item) for item in value)
+    if isinstance(value, tuple):
+        return tuple(_freeze(item) for item in value)
+    return value
+
+
+def _thaw(value: Any) -> Any:
+    if isinstance(value, Mapping):
+        return {str(key): _thaw(item) for key, item in value.items()}
+    if isinstance(value, tuple):
+        return [_thaw(item) for item in value]
+    return value
+
+
 def _stable_digest(value: Any) -> str:
     encoded = json.dumps(
-        value,
+        _thaw(value),
         ensure_ascii=False,
         sort_keys=True,
         separators=(",", ":"),
     ).encode("utf-8")
     return sha256(encoded).hexdigest()
+
+
+def _full_sha(value: Any) -> str:
+    text = str(value or "").strip().lower()
+    if len(text) != 40 or any(ch not in "0123456789abcdef" for ch in text):
+        raise _fail("WORK_ITEM_MATERIALIZER_CANONICAL_MAIN_INVALID", "main SHA is invalid")
+    return text
+
+
+def _current_main_sha() -> str:
+    branch = _remote._github_api_json(
+        f"/repos/{_remote.CANONICAL_REPOSITORY}/branches/{_remote.CANONICAL_BRANCH}"
+    )
+    commit = branch.get("commit") if isinstance(branch, Mapping) else None
+    return _full_sha(commit.get("sha") if isinstance(commit, Mapping) else None)
 
 
 def _governed_project_root() -> Path:
@@ -64,288 +101,291 @@ def _governed_project_root() -> Path:
     if missing:
         raise _fail(
             "WORK_ITEM_MATERIALIZER_GOVERNED_ROOT_INVALID",
-            "candidate checkout is missing required materializer anchors",
+            "candidate checkout is missing required code/config anchors",
             missing=missing,
         )
     return root
 
 
 def _load_policy(root: Path) -> dict[str, Any]:
-    raw = yaml.safe_load((root / POLICY_PATH).read_text(encoding="utf-8"))
+    try:
+        raw = yaml.safe_load((root / POLICY_PATH).read_text(encoding="utf-8")) or {}
+    except yaml.YAMLError as exc:
+        raise _fail("WORK_ITEM_MATERIALIZER_POLICY_INVALID", "policy YAML invalid") from exc
     if not isinstance(raw, Mapping):
-        raise _fail("WORK_ITEM_MATERIALIZER_PROFILE_INVALID", "policy must be a mapping")
+        raise _fail("WORK_ITEM_MATERIALIZER_POLICY_INVALID", "policy must be a mapping")
     policy = dict(raw)
     if policy.get("component_id") != "EUSTIA_WORK_ITEM_CONTEXT_MATERIALIZATION_P0":
-        raise _fail("WORK_ITEM_MATERIALIZER_PROFILE_INVALID", "component id mismatch")
+        raise _fail("WORK_ITEM_MATERIALIZER_POLICY_INVALID", "component id mismatch")
     if policy.get("status") != "candidate":
-        raise _fail("WORK_ITEM_MATERIALIZER_PROFILE_INVALID", "P0 policy must remain candidate")
+        raise _fail("WORK_ITEM_MATERIALIZER_POLICY_INVALID", "P0 policy must remain candidate")
     boundary = policy.get("trust_boundary")
     if not isinstance(boundary, Mapping):
-        raise _fail("WORK_ITEM_MATERIALIZER_PROFILE_INVALID", "trust boundary missing")
-    required_false = (
+        raise _fail("WORK_ITEM_MATERIALIZER_POLICY_INVALID", "trust boundary missing")
+    forbidden = (
         "caller_project_root_supported",
         "caller_work_item_id_supported",
+        "caller_structured_context_supported",
         "caller_entities_supported",
         "caller_lock_semantics_supported",
-        "caller_source_refs_supported",
         "caller_authority_booleans_supported",
     )
-    if any(boundary.get(key) is not False for key in required_false):
-        raise _fail("WORK_ITEM_MATERIALIZER_PROFILE_INVALID", "caller authority surface leaked")
-    output = policy.get("output_contract")
-    if not isinstance(output, Mapping) or output.get("serialized_output_is_authority") is not False:
-        raise _fail("WORK_ITEM_MATERIALIZER_PROFILE_INVALID", "serialized projection cannot be authority")
+    if any(boundary.get(key) is not False for key in forbidden):
+        raise _fail("WORK_ITEM_MATERIALIZER_POLICY_INVALID", "caller authority surface leaked")
+    if boundary.get("static_proposal_can_satisfy_trusted_readback") is not False:
+        raise _fail("WORK_ITEM_MATERIALIZER_POLICY_INVALID", "proposal laundering is enabled")
     return policy
 
 
-def _require_provenance(value: Any, *, field: str) -> list[str]:
+def _parse_yaml(text: str, *, code: str) -> dict[str, Any]:
+    try:
+        raw = yaml.safe_load(text) or {}
+    except yaml.YAMLError as exc:
+        raise _fail(code, "YAML parsing failed") from exc
+    if not isinstance(raw, Mapping):
+        raise _fail(code, "YAML root must be a mapping")
+    return dict(raw)
+
+
+def _extract_structured_block(continuity_text: str) -> dict[str, Any] | None:
+    start = continuity_text.find(BEGIN)
+    end = continuity_text.find(END)
+    if start < 0 and end < 0:
+        return None
+    if start < 0 or end <= start:
+        raise _fail("WORK_ITEM_STRUCTURED_CONTEXT_BLOCK_INVALID", "structured context markers malformed")
+    if continuity_text.find(BEGIN, start + len(BEGIN)) >= 0:
+        raise _fail("WORK_ITEM_STRUCTURED_CONTEXT_BLOCK_INVALID", "multiple structured context blocks found")
+    raw = continuity_text[start + len(BEGIN):end].strip()
+    for fence in ("```yaml", "```yml", "```"):
+        if raw.startswith(fence):
+            raw = raw[len(fence):].strip()
+            break
+    if raw.endswith("```"):
+        raw = raw[:-3].strip()
+    parsed = _parse_yaml(raw, code="WORK_ITEM_STRUCTURED_CONTEXT_BLOCK_INVALID")
+    block = parsed.get("work_item_structured_context")
+    if not isinstance(block, Mapping):
+        raise _fail("WORK_ITEM_STRUCTURED_CONTEXT_BLOCK_INVALID", "root key missing")
+    return dict(block)
+
+
+def _require_text(value: Any, *, field: str) -> str:
+    if not isinstance(value, str) or not value.strip():
+        raise _fail("WORK_ITEM_STRUCTURED_CONTEXT_BLOCK_INVALID", f"{field} must be non-empty text")
+    return value.strip()
+
+
+def _require_refs(value: Any, *, field: str) -> tuple[str, ...]:
     if not isinstance(value, list) or not value:
-        raise _fail(
-            "WORK_ITEM_MATERIALIZER_PROVENANCE_MISSING",
-            f"{field} requires non-empty provenance",
-        )
+        raise _fail("WORK_ITEM_MATERIALIZER_PROVENANCE_MISSING", f"{field} requires provenance")
     refs: list[str] = []
     for item in value:
-        if not isinstance(item, str) or not item.strip():
-            raise _fail(
-                "WORK_ITEM_MATERIALIZER_PROVENANCE_MISSING",
-                f"{field} contains invalid provenance",
-            )
-        refs.append(item.strip())
-    return refs
+        refs.append(_require_text(item, field=f"{field}[]"))
+    return tuple(refs)
 
 
-def _validate_profile(profile: Mapping[str, Any], *, work_item_id: str) -> None:
-    required_locks = profile.get("required_locked_constraints")
-    if not isinstance(required_locks, list) or not required_locks:
-        raise _fail("WORK_ITEM_MATERIALIZER_PROFILE_INVALID", "required LOCK set missing")
-    if len(required_locks) != len(set(map(str, required_locks))):
-        raise _fail("WORK_ITEM_MATERIALIZER_PROFILE_INVALID", "duplicate required LOCK id")
-
-    semantics = profile.get("locked_constraint_semantics")
-    if not isinstance(semantics, Mapping) or set(map(str, semantics)) != set(map(str, required_locks)):
-        raise _fail(
-            "WORK_ITEM_MATERIALIZER_PROFILE_INVALID",
-            "LOCK semantic profile must exactly cover the required LOCK set",
-            work_item_id=work_item_id,
-        )
-    for lock_id, raw in semantics.items():
-        if not isinstance(raw, Mapping):
-            raise _fail("WORK_ITEM_MATERIALIZER_PROFILE_INVALID", f"semantic {lock_id} invalid")
-        text = raw.get("text")
-        provenance = raw.get("provenance")
-        if not isinstance(text, str) or not text.strip():
-            raise _fail("WORK_ITEM_MATERIALIZER_PROFILE_INVALID", f"semantic {lock_id} has no text")
-        if not isinstance(provenance, str) or not provenance.strip():
-            raise _fail("WORK_ITEM_MATERIALIZER_PROVENANCE_MISSING", f"semantic {lock_id} has no provenance")
-
-    baseline = profile.get("world_state_baseline")
-    if not isinstance(baseline, Mapping):
-        raise _fail("WORK_ITEM_MATERIALIZER_PROFILE_INVALID", "world baseline missing")
-    entities = baseline.get("entities")
-    invariants = baseline.get("invariants")
-    if not isinstance(entities, Mapping) or not entities:
-        raise _fail("WORK_ITEM_MATERIALIZER_PROFILE_INVALID", "baseline entities missing")
-    if not isinstance(invariants, list) or not invariants:
-        raise _fail("WORK_ITEM_MATERIALIZER_PROFILE_INVALID", "baseline invariants missing")
-    for entity_id, raw in entities.items():
-        if not isinstance(raw, Mapping):
-            raise _fail("WORK_ITEM_MATERIALIZER_PROFILE_INVALID", f"entity {entity_id} invalid")
-        if set(raw) != {"kind", "position", "state", "provenance"}:
-            raise _fail("WORK_ITEM_MATERIALIZER_PROFILE_INVALID", f"entity {entity_id} field set invalid")
-        for key in ("kind", "position", "state"):
-            if not isinstance(raw.get(key), str) or not str(raw.get(key)).strip():
-                raise _fail("WORK_ITEM_MATERIALIZER_PROFILE_INVALID", f"entity {entity_id}.{key} invalid")
-        _require_provenance(raw.get("provenance"), field=f"baseline.entities.{entity_id}.provenance")
-    for index, raw in enumerate(invariants):
-        if not isinstance(raw, Mapping):
-            raise _fail("WORK_ITEM_MATERIALIZER_PROFILE_INVALID", f"invariant[{index}] invalid")
-        if not isinstance(raw.get("invariant_id"), str) or not str(raw.get("invariant_id")).strip():
-            raise _fail("WORK_ITEM_MATERIALIZER_PROFILE_INVALID", f"invariant[{index}] id invalid")
-        if not isinstance(raw.get("description"), str) or not str(raw.get("description")).strip():
-            raise _fail("WORK_ITEM_MATERIALIZER_PROFILE_INVALID", f"invariant[{index}] description invalid")
-        _require_provenance(raw.get("provenance"), field=f"baseline.invariants[{index}].provenance")
-
-    baseline_ids = set(map(str, entities))
-    for section in ("authorized_scope_entities", "authorized_explicit_entries"):
-        entries = profile.get(section) or {}
-        if not isinstance(entries, Mapping):
-            raise _fail("WORK_ITEM_MATERIALIZER_PROFILE_INVALID", f"{section} invalid")
-        overlap = baseline_ids.intersection(map(str, entries))
-        if overlap:
-            raise _fail(
-                "WORK_ITEM_MATERIALIZER_PROFILE_INVALID",
-                f"{section} may not duplicate baseline entities",
-                overlap=sorted(overlap),
-            )
-        for entity_id, raw in entries.items():
-            if not isinstance(raw, Mapping):
-                raise _fail("WORK_ITEM_MATERIALIZER_PROFILE_INVALID", f"{section}.{entity_id} invalid")
-            _require_provenance(raw.get("provenance"), field=f"{section}.{entity_id}.provenance")
-
-
-def _compile_projection(
-    context: Mapping[str, Any],
-    profile: Mapping[str, Any],
+def _validate_block(
+    block: Mapping[str, Any],
     *,
-    source_revision_revalidation: Mapping[str, Any],
-    policy_digest: str,
-) -> dict[str, Any]:
-    work_item_id = str(context.get("work_item_id") or "").strip()
-    if not work_item_id:
-        raise _fail("WORK_ITEM_MATERIALIZER_RESOLUTION_FAILED", "trusted context has no work item id")
-    _validate_profile(profile, work_item_id=work_item_id)
-
-    required_story_scope = str(profile.get("story_scope_ref_required") or "").strip()
-    observed_story_scope = str(context.get("story_scope_ref") or "").strip()
-    if not required_story_scope or observed_story_scope != required_story_scope:
+    context: Mapping[str, Any],
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, str], dict[str, Any]]:
+    allowed = {
+        "work_item_id",
+        "story_scope_ref",
+        "source_checkpoint_ref",
+        "materialization_status",
+        "world_state_baseline",
+        "authorized_explicit_entries",
+        "locked_constraint_semantics",
+        "provenance",
+    }
+    required = set(allowed)
+    unknown = set(block) - allowed
+    missing = required - set(block)
+    if unknown or missing:
         raise _fail(
-            "WORK_ITEM_MATERIALIZER_STORY_SCOPE_MISMATCH",
-            "current story scope does not match the bounded profile",
-            expected=required_story_scope or None,
-            observed=observed_story_scope or None,
+            "WORK_ITEM_STRUCTURED_CONTEXT_BLOCK_INVALID",
+            "structured context field set invalid",
+            unknown=sorted(unknown),
+            missing=sorted(missing),
         )
 
-    summary = str(context.get("effective_state_summary") or "").strip()
-    missing_tokens = [
-        str(token)
-        for token in profile.get("required_summary_tokens") or []
-        if str(token) not in summary
-    ]
-    if missing_tokens:
+    work_item_id = _require_text(block.get("work_item_id"), field="work_item_id")
+    if work_item_id != str(context.get("work_item_id") or "").strip():
+        raise _fail("WORK_ITEM_STRUCTURED_CONTEXT_WORK_ITEM_MISMATCH", "structured context work item mismatch")
+    if block.get("materialization_status") != "VERIFIED":
+        raise _fail("WORK_ITEM_STRUCTURED_CONTEXT_STATUS_INVALID", "materialization status is not VERIFIED")
+    if _require_text(block.get("story_scope_ref"), field="story_scope_ref") != str(
+        context.get("story_scope_ref") or ""
+    ).strip():
+        raise _fail("WORK_ITEM_STRUCTURED_CONTEXT_STORY_SCOPE_MISMATCH", "story scope mismatch")
+    expected_checkpoint = str(context.get("checkpoint_ref") or "").strip()
+    if _require_text(block.get("source_checkpoint_ref"), field="source_checkpoint_ref") != expected_checkpoint:
         raise _fail(
-            "WORK_ITEM_MATERIALIZER_SUMMARY_DRIFT",
-            "current effective-state summary no longer satisfies the profile",
-            missing_tokens=missing_tokens,
+            "WORK_ITEM_STRUCTURED_CONTEXT_CHECKPOINT_MISMATCH",
+            "structured context was not materialized for the current applied checkpoint",
+            expected=expected_checkpoint or None,
         )
+
+    baseline = block.get("world_state_baseline")
+    if not isinstance(baseline, Mapping) or set(baseline) != {"entities", "invariants"}:
+        raise _fail("WORK_ITEM_STRUCTURED_CONTEXT_BLOCK_INVALID", "world_state_baseline invalid")
+    entities_raw = baseline.get("entities")
+    invariants_raw = baseline.get("invariants")
+    if not isinstance(entities_raw, Mapping) or not entities_raw:
+        raise _fail("WORK_ITEM_STRUCTURED_CONTEXT_BLOCK_INVALID", "baseline entities missing")
+    if not isinstance(invariants_raw, list):
+        raise _fail("WORK_ITEM_STRUCTURED_CONTEXT_BLOCK_INVALID", "baseline invariants invalid")
+    entities: dict[str, dict[str, str]] = {}
+    for entity_id, raw in entities_raw.items():
+        entity_id = _require_text(str(entity_id), field="entity_id")
+        if not isinstance(raw, Mapping) or set(raw) != {"kind", "position", "state"}:
+            raise _fail("WORK_ITEM_STRUCTURED_CONTEXT_BLOCK_INVALID", f"entity {entity_id} invalid")
+        kind = _require_text(raw.get("kind"), field=f"entities.{entity_id}.kind")
+        if kind not in _ALLOWED_ENTITY_KINDS:
+            raise _fail("WORK_ITEM_STRUCTURED_CONTEXT_BLOCK_INVALID", f"entity {entity_id} kind invalid")
+        entities[entity_id] = {
+            "kind": kind,
+            "position": _require_text(raw.get("position"), field=f"entities.{entity_id}.position"),
+            "state": _require_text(raw.get("state"), field=f"entities.{entity_id}.state"),
+        }
+    invariants = [_require_text(item, field="world_state_baseline.invariants[]") for item in invariants_raw]
+    if len(invariants) != len(set(invariants)):
+        raise _fail("WORK_ITEM_STRUCTURED_CONTEXT_BLOCK_INVALID", "duplicate baseline invariant")
+
+    entries_raw = block.get("authorized_explicit_entries")
+    if not isinstance(entries_raw, Mapping):
+        raise _fail("WORK_ITEM_STRUCTURED_CONTEXT_BLOCK_INVALID", "authorized_explicit_entries invalid")
+    entries: dict[str, Any] = {}
+    for entity_id, raw in entries_raw.items():
+        entity_id = _require_text(str(entity_id), field="authorized_explicit_entries id")
+        if entity_id in entities:
+            raise _fail("WORK_ITEM_STRUCTURED_CONTEXT_BLOCK_INVALID", "explicit entry duplicates baseline entity")
+        if not isinstance(raw, Mapping):
+            raise _fail("WORK_ITEM_STRUCTURED_CONTEXT_BLOCK_INVALID", f"entry {entity_id} invalid")
+        if set(raw) != {"kind", "entry_condition", "exact_entry_time_authorized", "exact_entry_position_authorized"}:
+            raise _fail("WORK_ITEM_STRUCTURED_CONTEXT_BLOCK_INVALID", f"entry {entity_id} field set invalid")
+        kind = _require_text(raw.get("kind"), field=f"entry.{entity_id}.kind")
+        if kind not in _ALLOWED_ENTITY_KINDS:
+            raise _fail("WORK_ITEM_STRUCTURED_CONTEXT_BLOCK_INVALID", f"entry {entity_id} kind invalid")
+        if raw.get("exact_entry_time_authorized") is not False or raw.get("exact_entry_position_authorized") is not False:
+            raise _fail("WORK_ITEM_STRUCTURED_CONTEXT_BLOCK_INVALID", f"entry {entity_id} over-authorized")
+        entries[entity_id] = {
+            "kind": kind,
+            "entry_condition": _require_text(raw.get("entry_condition"), field=f"entry.{entity_id}.entry_condition"),
+            "exact_entry_time_authorized": False,
+            "exact_entry_position_authorized": False,
+        }
 
     constraints = context.get("constraints")
     if not isinstance(constraints, Mapping):
-        raise _fail("WORK_ITEM_MATERIALIZER_RESOLUTION_FAILED", "trusted constraints missing")
-    observed_locks = [str(item).strip() for item in constraints.get("locked") or [] if str(item).strip()]
-    required_locks = [str(item).strip() for item in profile.get("required_locked_constraints") or []]
-    if observed_locks != required_locks:
+        raise _fail("WORK_ITEM_MATERIALIZER_RESOLUTION_FAILED", "trusted constraint packet missing")
+    locked = [_require_text(item, field="constraints.locked[]") for item in list(constraints.get("locked") or [])]
+    semantics_raw = block.get("locked_constraint_semantics")
+    if not isinstance(semantics_raw, Mapping) or set(map(str, semantics_raw)) != set(locked):
         raise _fail(
-            "WORK_ITEM_MATERIALIZER_LOCK_SET_MISMATCH",
-            "canonical LOCK set/order drifted from the bounded profile",
-            expected=required_locks,
-            observed=observed_locks,
+            "WORK_ITEM_STRUCTURED_CONTEXT_LOCK_COVERAGE_MISMATCH",
+            "LOCK semantics must exactly cover canonical LOCK ids",
+            expected=locked,
+            observed=sorted(map(str, semantics_raw)) if isinstance(semantics_raw, Mapping) else None,
         )
-    preserved = {str(item).strip() for item in constraints.get("preserved") or [] if str(item).strip()}
-    required_preserved = {str(item).strip() for item in profile.get("required_preserved_constraints") or []}
-    missing_preserved = sorted(required_preserved - preserved)
-    if missing_preserved:
-        raise _fail(
-            "WORK_ITEM_MATERIALIZER_PRESERVED_CONSTRAINT_MISSING",
-            "required preserved constraints are no longer canonical",
-            missing=missing_preserved,
-        )
-
-    verification_basis = str(context.get("verification_basis") or "").strip()
-    if not verification_basis.startswith("canonical_github_readback_"):
-        raise _fail(
-            "WORK_ITEM_MATERIALIZER_RESOLUTION_FAILED",
-            "trusted context lacks fixed-GitHub verification basis",
-            verification_basis=verification_basis or None,
-        )
-    if context.get("authority_boundary") != "coordination_projection_only":
-        raise _fail("WORK_ITEM_MATERIALIZER_RESOLUTION_FAILED", "unexpected WorkItemContext authority boundary")
-
-    baseline_profile = profile["world_state_baseline"]
-    baseline_entities: dict[str, dict[str, str]] = {}
-    provenance_manifest: dict[str, Any] = {"baseline_entities": {}, "baseline_invariants": {}}
-    for entity_id, raw in baseline_profile["entities"].items():
-        baseline_entities[str(entity_id)] = {
-            "kind": str(raw["kind"]),
-            "position": str(raw["position"]),
-            "state": str(raw["state"]),
-        }
-        provenance_manifest["baseline_entities"][str(entity_id)] = list(raw["provenance"])
-
-    invariant_descriptions: list[str] = []
-    for raw in baseline_profile["invariants"]:
-        invariant_id = str(raw["invariant_id"])
-        invariant_descriptions.append(str(raw["description"]))
-        provenance_manifest["baseline_invariants"][invariant_id] = list(raw["provenance"])
-
-    semantics_profile = profile["locked_constraint_semantics"]
     semantics = {
-        lock_id: str(semantics_profile[lock_id]["text"]).strip()
-        for lock_id in required_locks
-    }
-    provenance_manifest["locked_constraint_semantics"] = {
-        lock_id: str(semantics_profile[lock_id]["provenance"]).strip()
-        for lock_id in required_locks
+        lock_id: _require_text(semantics_raw.get(lock_id), field=f"locked_constraint_semantics.{lock_id}")
+        for lock_id in locked
     }
 
-    source_payload = {
-        "work_item_id": work_item_id,
-        "story_scope_ref": observed_story_scope,
-        "effective_state_summary": summary,
-        "constraints": {
-            "locked": observed_locks,
-            "preserved": sorted(preserved),
-            "revoked": list(constraints.get("revoked") or []),
-            "experimental": list(constraints.get("experimental") or []),
-            "unresolved": list(constraints.get("unresolved") or []),
-        },
-        "checkpoint_ref": context.get("checkpoint_ref"),
-        "source_issue": context.get("source_issue"),
-        "snapshot_fingerprint": context.get("snapshot_fingerprint"),
-        "verification_basis": verification_basis,
+    provenance = block.get("provenance")
+    if not isinstance(provenance, Mapping):
+        raise _fail("WORK_ITEM_MATERIALIZER_PROVENANCE_MISSING", "provenance manifest missing")
+    allowed_prov = {
+        "world_state_entities",
+        "world_state_invariants",
+        "authorized_explicit_entries",
+        "locked_constraint_semantics",
     }
-    source_digest = _stable_digest(source_payload)
-    projection_payload = {
-        "world_state_baseline": {
-            "entities": baseline_entities,
-            "invariants": invariant_descriptions,
-        },
-        "authorized_scope_entities": dict(profile.get("authorized_scope_entities") or {}),
-        "authorized_explicit_entries": dict(profile.get("authorized_explicit_entries") or {}),
-        "locked_constraint_semantics": semantics,
-    }
-    projection_digest = _stable_digest(projection_payload)
+    if set(provenance) != allowed_prov:
+        raise _fail("WORK_ITEM_MATERIALIZER_PROVENANCE_MISSING", "provenance field set invalid")
 
-    return {
-        "schema": "WORK_ITEM_MATERIALIZATION_CANDIDATE/v1",
-        "status": "CANDIDATE_READY",
-        "work_item_id": work_item_id,
-        **projection_payload,
-        "materialization_receipt": {
-            "component_id": "EUSTIA_WORK_ITEM_CONTEXT_MATERIALIZATION_P0",
-            "source_issue": context.get("source_issue"),
-            "checkpoint_ref": context.get("checkpoint_ref"),
-            "latest_source_checkpoint_ref": context.get("latest_source_checkpoint_ref"),
-            "source_snapshot_fingerprint": context.get("snapshot_fingerprint"),
-            "source_context_digest": source_digest,
-            "profile_digest": policy_digest,
-            "projection_digest": projection_digest,
-            "source_revision_revalidation": dict(source_revision_revalidation),
-            "projection_provenance": provenance_manifest,
-            "fixed_github_context_verified": True,
-            "projection_only": True,
+    entity_prov = provenance.get("world_state_entities")
+    if not isinstance(entity_prov, Mapping) or set(map(str, entity_prov)) != set(entities):
+        raise _fail("WORK_ITEM_MATERIALIZER_PROVENANCE_MISSING", "entity provenance coverage mismatch")
+    for entity_id in entities:
+        _require_refs(entity_prov.get(entity_id), field=f"provenance.world_state_entities.{entity_id}")
+
+    inv_prov = provenance.get("world_state_invariants")
+    if not isinstance(inv_prov, list) or len(inv_prov) != len(invariants):
+        raise _fail("WORK_ITEM_MATERIALIZER_PROVENANCE_MISSING", "invariant provenance coverage mismatch")
+    seen_invariants: set[str] = set()
+    for item in inv_prov:
+        if not isinstance(item, Mapping) or set(item) != {"invariant", "refs"}:
+            raise _fail("WORK_ITEM_MATERIALIZER_PROVENANCE_MISSING", "invariant provenance record invalid")
+        invariant = _require_text(item.get("invariant"), field="provenance.world_state_invariants.invariant")
+        if invariant not in invariants or invariant in seen_invariants:
+            raise _fail("WORK_ITEM_MATERIALIZER_PROVENANCE_MISSING", "invariant provenance mismatch")
+        seen_invariants.add(invariant)
+        _require_refs(item.get("refs"), field=f"provenance.world_state_invariants[{invariant}]")
+    if seen_invariants != set(invariants):
+        raise _fail("WORK_ITEM_MATERIALIZER_PROVENANCE_MISSING", "invariant provenance incomplete")
+
+    entry_prov = provenance.get("authorized_explicit_entries")
+    if not isinstance(entry_prov, Mapping) or set(map(str, entry_prov)) != set(entries):
+        raise _fail("WORK_ITEM_MATERIALIZER_PROVENANCE_MISSING", "explicit-entry provenance coverage mismatch")
+    for entity_id in entries:
+        _require_refs(entry_prov.get(entity_id), field=f"provenance.authorized_explicit_entries.{entity_id}")
+
+    lock_prov = provenance.get("locked_constraint_semantics")
+    if not isinstance(lock_prov, Mapping) or set(map(str, lock_prov)) != set(locked):
+        raise _fail("WORK_ITEM_MATERIALIZER_PROVENANCE_MISSING", "LOCK provenance coverage mismatch")
+    for lock_id in locked:
+        _require_refs(lock_prov.get(lock_id), field=f"provenance.locked_constraint_semantics.{lock_id}")
+
+    return (
+        {"entities": entities, "invariants": invariants},
+        entries,
+        semantics,
+        _thaw(provenance),
+    )
+
+
+@dataclass(frozen=True)
+class WorkItemMaterializationReadback:
+    status: str
+    work_item_id: str
+    trusted_materialization_available: bool
+    world_state_baseline: Mapping[str, Any] | None
+    authorized_explicit_entries: Mapping[str, Any]
+    locked_constraint_semantics: Mapping[str, str]
+    materialization_receipt: Mapping[str, Any]
+    execution_authorized: bool = False
+    canonical_write_authorized: bool = False
+    learning_writeback_authorized: bool = False
+    maturity_promotion_authorized: bool = False
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "schema": "WORK_ITEM_STRUCTURED_CONTEXT_READBACK/v1",
+            "status": self.status,
+            "work_item_id": self.work_item_id,
+            "trusted_materialization_available": self.trusted_materialization_available,
+            "world_state_baseline": _thaw(self.world_state_baseline) if self.world_state_baseline is not None else None,
+            "authorized_explicit_entries": _thaw(self.authorized_explicit_entries),
+            "locked_constraint_semantics": _thaw(self.locked_constraint_semantics),
+            "materialization_receipt": _thaw(self.materialization_receipt),
+            "execution_authorized": False,
+            "canonical_write_authorized": False,
+            "learning_writeback_authorized": False,
+            "maturity_promotion_authorized": False,
             "serialized_output_is_authority": False,
-            "fresh_materialization_required_before_consumption": True,
-        },
-        "execution_authorized": False,
-        "canonical_write_authorized": False,
-        "learning_writeback_authorized": False,
-        "maturity_promotion_authorized": False,
-    }
+            "fresh_readback_required_before_consumption": True,
+        }
 
 
-def materialize_current_work_item() -> dict[str, Any]:
-    """Fresh-materialize the one current work item supported by P0.
-
-    No caller input is accepted. Any attempt to pass a root, work-item id, profile,
-    entities or semantics fails at the Python call surface with ``TypeError``.
-    """
+def materialize_current_work_item() -> WorkItemMaterializationReadback:
+    """Fresh-read current WorkItem structured context from fixed GitHub canonical state."""
     root = _governed_project_root()
     policy = _load_policy(root)
-    profiles = policy.get("profiles")
-    if not isinstance(profiles, Mapping):
-        raise _fail("WORK_ITEM_MATERIALIZER_PROFILE_INVALID", "profiles registry missing")
-
+    policy_digest = _stable_digest(policy)
     try:
         resolution = resolve_work_item(_CURRENT_DESCRIPTION, project_root=root)
         context = build_work_item_context_packet(root, resolution)
@@ -358,23 +398,85 @@ def materialize_current_work_item() -> dict[str, Any]:
             upstream_details=exc.details,
         ) from exc
 
+    if source_revision_revalidation.get("status") != "PASS":
+        raise _fail("WORK_ITEM_MATERIALIZER_RESOLUTION_FAILED", "source revision revalidation did not pass")
     work_item_id = str(context.get("work_item_id") or "").strip()
-    profile = profiles.get(work_item_id)
-    if not isinstance(profile, Mapping):
-        raise _fail(
-            "WORK_ITEM_MATERIALIZER_UNSUPPORTED_WORK_ITEM",
-            "P0 has no reviewed materialization profile for the current work item",
-            work_item_id=work_item_id or None,
+    if not work_item_id:
+        raise _fail("WORK_ITEM_MATERIALIZER_RESOLUTION_FAILED", "trusted context has no work item id")
+    if not str(context.get("verification_basis") or "").startswith("canonical_github_readback_"):
+        raise _fail("WORK_ITEM_MATERIALIZER_RESOLUTION_FAILED", "context lacks fixed-GitHub verification basis")
+    if context.get("authority_boundary") != "coordination_projection_only":
+        raise _fail("WORK_ITEM_MATERIALIZER_RESOLUTION_FAILED", "unexpected WorkItemContext authority boundary")
+
+    main_sha = _current_main_sha()
+    continuity_text = _remote._github_file_text(CONTINUITY_PATH, main_sha)
+    block = _extract_structured_block(continuity_text)
+    context_digest = _stable_digest(
+        {
+            "work_item_id": work_item_id,
+            "story_scope_ref": context.get("story_scope_ref"),
+            "effective_state_summary": context.get("effective_state_summary"),
+            "constraints": context.get("constraints"),
+            "checkpoint_ref": context.get("checkpoint_ref"),
+            "source_issue": context.get("source_issue"),
+            "snapshot_fingerprint": context.get("snapshot_fingerprint"),
+            "verification_basis": context.get("verification_basis"),
+        }
+    )
+    common_receipt = {
+        "component_id": "EUSTIA_WORK_ITEM_CONTEXT_MATERIALIZATION_P0",
+        "canonical_main_sha": main_sha,
+        "source_issue": context.get("source_issue"),
+        "checkpoint_ref": context.get("checkpoint_ref"),
+        "latest_source_checkpoint_ref": context.get("latest_source_checkpoint_ref"),
+        "source_snapshot_fingerprint": context.get("snapshot_fingerprint"),
+        "source_context_digest": context_digest,
+        "policy_digest": policy_digest,
+        "source_revision_revalidation": dict(source_revision_revalidation),
+        "fixed_github_context_verified": True,
+        "static_proposal_used_as_authority": False,
+        "serialized_output_is_authority": False,
+        "fresh_readback_required_before_consumption": True,
+    }
+    if block is None:
+        return WorkItemMaterializationReadback(
+            status="STRUCTURED_CONTEXT_UNAVAILABLE",
+            work_item_id=work_item_id,
+            trusted_materialization_available=False,
+            world_state_baseline=None,
+            authorized_explicit_entries=_freeze({}),
+            locked_constraint_semantics=_freeze({}),
+            materialization_receipt=_freeze({**common_receipt, "structured_block_present": False}),
         )
-    return _compile_projection(
-        context,
-        profile,
-        source_revision_revalidation=source_revision_revalidation,
-        policy_digest=_stable_digest(policy),
+
+    baseline, entries, semantics, provenance = _validate_block(block, context=context)
+    block_digest = _stable_digest(block)
+    receipt = {
+        **common_receipt,
+        "structured_block_present": True,
+        "structured_block_digest": block_digest,
+        "projection_digest": _stable_digest(
+            {
+                "world_state_baseline": baseline,
+                "authorized_explicit_entries": entries,
+                "locked_constraint_semantics": semantics,
+            }
+        ),
+        "provenance": provenance,
+    }
+    return WorkItemMaterializationReadback(
+        status="STRUCTURED_CONTEXT_READY",
+        work_item_id=work_item_id,
+        trusted_materialization_available=True,
+        world_state_baseline=_freeze(baseline),
+        authorized_explicit_entries=_freeze(entries),
+        locked_constraint_semantics=_freeze(semantics),
+        materialization_receipt=_freeze(receipt),
     )
 
 
 __all__ = [
     "WorkItemMaterializationError",
+    "WorkItemMaterializationReadback",
     "materialize_current_work_item",
 ]
