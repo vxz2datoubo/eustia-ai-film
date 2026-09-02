@@ -1,9 +1,9 @@
 """Public trust-bound facade for the MIDS shadow candidate.
 
-The deterministic implementation lives in :mod:`mids_discovery_core`.  This facade
-owns public mutation/state-transition semantics.  USER authority is not inferred from
-a caller label: every user-authoritative transition must consume a subject/purpose-bound
-receipt from the separate immutable pilot upstream-evidence fixture.
+The deterministic implementation lives in :mod:`mids_discovery_core`. This facade
+owns public mutation/state-transition semantics. USER authority is never inferred from
+a caller label: every user-authoritative transition must consume an upstream receipt
+bound to session context, purpose, subject and exact statement/result where applicable.
 """
 from __future__ import annotations
 
@@ -27,10 +27,15 @@ def _fail(code: str, **details: Any) -> MIDSDiscoveryError:
     return MIDSDiscoveryError(code, details=details or None)
 
 
+def _context(session: Mapping[str, Any]) -> str:
+    return _core._text(session.get("raw_user_intent"), "raw_user_intent")
+
+
 def _trusted_user_provenance(
     value: Any,
     field: str,
     *,
+    context_text: str,
     purpose: str,
     subject_ref: str,
     statement: str | None = None,
@@ -43,6 +48,7 @@ def _trusted_user_provenance(
     try:
         receipt = resolve_user_evidence(
             receipt_id,
+            context_text=context_text,
             purpose=purpose,
             subject_ref=subject_ref,
             statement=statement,
@@ -109,56 +115,53 @@ def _matching_transition(
 
 
 def _validate_root_user_evidence(session: Mapping[str, Any]) -> None:
+    context_text = _context(session)
     _trusted_user_provenance(
-        session.get("raw_user_intent_provenance"),
-        "raw_user_intent_provenance",
-        purpose="SESSION_INPUT",
-        subject_ref="RAW_USER_INTENT",
-        statement=str(session.get("raw_user_intent") or ""),
+        session.get("raw_user_intent_provenance"), "raw_user_intent_provenance",
+        context_text=context_text, purpose="SESSION_INPUT", subject_ref="RAW_USER_INTENT",
+        statement=context_text,
     )
     intent = session.get("material_director_intent")
     if intent is not None:
         if not isinstance(intent, Mapping):
             raise _fail("MIDS_MATERIAL_DIRECTOR_INTENT_INVALID")
         _trusted_user_provenance(
-            intent.get("provenance"),
-            "material_director_intent.provenance",
-            purpose="MATERIAL_DIRECTOR_INTENT",
-            subject_ref="MATERIAL_DIRECTOR_INTENT",
-            statement=str(intent.get("statement") or ""),
+            intent.get("provenance"), "material_director_intent.provenance",
+            context_text=context_text, purpose="MATERIAL_DIRECTOR_INTENT",
+            subject_ref="MATERIAL_DIRECTOR_INTENT", statement=str(intent.get("statement") or ""),
         )
 
 
-def _validate_decision_user_evidence(record: Mapping[str, Any]) -> None:
+def _validate_decision_user_evidence(record: Mapping[str, Any], *, context_text: str) -> None:
     decision_id = _decision_id(record)
     epistemic = str(record.get("epistemic_class") or "")
     status = str(record.get("status") or "")
     if epistemic == "USER_EXPLICIT_CONFIRMED":
         _trusted_user_provenance(
             record.get("provenance"), "decision.provenance",
-            purpose="USER_EXPLICIT_DECISION", subject_ref=decision_id,
+            context_text=context_text, purpose="USER_EXPLICIT_DECISION", subject_ref=decision_id,
             statement=str(record.get("statement") or ""),
         )
     elif epistemic == "USER_TACIT_CANDIDATE" and status == "CONFIRMED":
         _trusted_user_provenance(
             record.get("user_confirmation_provenance"), "decision.user_confirmation_provenance",
-            purpose="CONFIRM_TACIT_CANDIDATE", subject_ref=decision_id,
+            context_text=context_text, purpose="CONFIRM_TACIT_CANDIDATE", subject_ref=decision_id,
         )
     elif epistemic == "AI_DISCOVERABLE_OPTION":
         if status == "ACCEPTED":
             _trusted_user_provenance(
                 record.get("user_acceptance_provenance"), "decision.user_acceptance_provenance",
-                purpose="ACCEPT_AI_PROPOSAL", subject_ref=decision_id,
+                context_text=context_text, purpose="ACCEPT_AI_PROPOSAL", subject_ref=decision_id,
             )
         elif status == "REJECTED":
             _trusted_user_provenance(
                 record.get("user_rejection_provenance"), "decision.user_rejection_provenance",
-                purpose="REJECT_AI_PROPOSAL", subject_ref=decision_id,
+                context_text=context_text, purpose="REJECT_AI_PROPOSAL", subject_ref=decision_id,
             )
         elif status == "REVOKED":
             _trusted_user_provenance(
                 record.get("user_revocation_provenance"), "decision.user_revocation_provenance",
-                purpose="REVOKE_AI_PROPOSAL", subject_ref=decision_id,
+                context_text=context_text, purpose="REVOKE_AI_PROPOSAL", subject_ref=decision_id,
             )
 
 
@@ -177,13 +180,14 @@ def _validate_transition_log(session: Mapping[str, Any]) -> None:
 
 
 def _validate_decision_relations(session: Mapping[str, Any]) -> None:
+    context_text = _context(session)
     by_id: dict[str, list[tuple[str, Mapping[str, Any]]]] = {}
     for field in ("confirmed_decisions", "inferred_preferences", "candidate_directions"):
         for raw in session.get(field, []):
             if not isinstance(raw, Mapping) or not _decision_id(raw):
                 continue
             by_id.setdefault(_decision_id(raw), []).append((field, raw))
-            _validate_decision_user_evidence(raw)
+            _validate_decision_user_evidence(raw, context_text=context_text)
 
     for decision_id, occurrences in by_id.items():
         if len(occurrences) == 1:
@@ -195,13 +199,11 @@ def _validate_decision_relations(session: Mapping[str, Any]) -> None:
         statuses = {str(record.get("status") or "") for _, record in occurrences}
         tacit_copy = (
             fields == {"confirmed_decisions", "inferred_preferences"}
-            and epistemics == {"USER_TACIT_CANDIDATE"}
-            and statuses == {"CONFIRMED"}
+            and epistemics == {"USER_TACIT_CANDIDATE"} and statuses == {"CONFIRMED"}
         )
         ai_copy = (
             fields == {"confirmed_decisions", "candidate_directions"}
-            and epistemics == {"AI_DISCOVERABLE_OPTION"}
-            and statuses == {"ACCEPTED"}
+            and epistemics == {"AI_DISCOVERABLE_OPTION"} and statuses == {"ACCEPTED"}
         )
         if not (tacit_copy or ai_copy):
             raise _fail(
@@ -216,7 +218,7 @@ def _validate_decision_relations(session: Mapping[str, Any]) -> None:
         _core.validate_decision(raw)
         if raw.get("epistemic_class") != "AI_DISCOVERABLE_OPTION" or raw.get("status") != "REVOKED":
             raise _fail("MIDS_REVOKED_DECISION_HISTORY_INVALID", decision_id=_decision_id(raw))
-        _validate_decision_user_evidence(raw)
+        _validate_decision_user_evidence(raw, context_text=context_text)
         decision_id = _decision_id(raw)
         if not decision_id or decision_id in revoked_ids:
             raise _fail("MIDS_REVOKED_DECISION_ID_DUPLICATE", decision_id=decision_id)
@@ -224,14 +226,13 @@ def _validate_decision_relations(session: Mapping[str, Any]) -> None:
 
 
 def _validate_rejection_relations(session: Mapping[str, Any]) -> None:
+    context_text = _context(session)
     candidates = {
-        _decision_id(raw): raw
-        for raw in session.get("candidate_directions", [])
+        _decision_id(raw): raw for raw in session.get("candidate_directions", [])
         if isinstance(raw, Mapping) and _decision_id(raw)
     }
     revoked = {
-        _decision_id(raw): raw
-        for raw in session.get(_REVOKED, [])
+        _decision_id(raw): raw for raw in session.get(_REVOKED, [])
         if isinstance(raw, Mapping) and _decision_id(raw)
     }
     for raw in session.get("rejected_alternatives", []):
@@ -245,7 +246,7 @@ def _validate_rejection_relations(session: Mapping[str, Any]) -> None:
         transition = str(raw.get("transition") or "")
         purpose = "REJECT_AI_PROPOSAL" if transition == "PROPOSED_TO_REJECTED" else "REVOKE_AI_PROPOSAL"
         _trusted_user_provenance(
-            raw.get("provenance"), "rejection.provenance",
+            raw.get("provenance"), "rejection.provenance", context_text=context_text,
             purpose=purpose, subject_ref=alternative_id,
         )
         candidate = candidates.get(alternative_id)
@@ -262,6 +263,7 @@ def _validate_rejection_relations(session: Mapping[str, Any]) -> None:
 
 
 def _validate_resolution_transitions(session: Mapping[str, Any]) -> None:
+    context_text = _context(session)
     for raw in session.get("unknowns", []):
         if not isinstance(raw, Mapping) or str(raw.get("status") or "") != "RESOLVED":
             continue
@@ -274,7 +276,7 @@ def _validate_resolution_transitions(session: Mapping[str, Any]) -> None:
         if basis_type != "USER_DECISION":
             raise _fail("MIDS_EXTERNAL_RESOLUTION_REQUIRES_AUTHORITY_ADAPTER", unknown_id=unknown_id, basis_type=basis_type)
         _trusted_user_provenance(
-            basis.get("provenance"), "unknown.resolution_basis.provenance",
+            basis.get("provenance"), "unknown.resolution_basis.provenance", context_text=context_text,
             purpose="RESOLVE_UNKNOWN", subject_ref=unknown_id, result_ref=basis_ref,
         )
         transition = _matching_transition(
@@ -284,7 +286,7 @@ def _validate_resolution_transitions(session: Mapping[str, Any]) -> None:
         if transition is None:
             raise _fail("MIDS_UNKNOWN_RESOLUTION_TRANSITION_MISSING", unknown_id=unknown_id)
         _trusted_user_provenance(
-            transition.get("provenance"), "unknown.transition.provenance",
+            transition.get("provenance"), "unknown.transition.provenance", context_text=context_text,
             purpose="RESOLVE_UNKNOWN", subject_ref=unknown_id, result_ref=basis_ref,
         )
 
@@ -300,7 +302,7 @@ def _validate_resolution_transitions(session: Mapping[str, Any]) -> None:
         if basis_type != "USER_DECISION":
             raise _fail("MIDS_EXTERNAL_RESOLUTION_REQUIRES_AUTHORITY_ADAPTER", contradiction_id=contradiction_id, basis_type=basis_type)
         _trusted_user_provenance(
-            basis.get("provenance"), "contradiction.resolution_basis.provenance",
+            basis.get("provenance"), "contradiction.resolution_basis.provenance", context_text=context_text,
             purpose="RESOLVE_CONTRADICTION", subject_ref=contradiction_id, result_ref=basis_ref,
         )
         transition = _matching_transition(
@@ -310,7 +312,7 @@ def _validate_resolution_transitions(session: Mapping[str, Any]) -> None:
         if transition is None:
             raise _fail("MIDS_CONTRADICTION_RESOLUTION_TRANSITION_MISSING", contradiction_id=contradiction_id)
         _trusted_user_provenance(
-            transition.get("provenance"), "contradiction.transition.provenance",
+            transition.get("provenance"), "contradiction.transition.provenance", context_text=context_text,
             purpose="RESOLVE_CONTRADICTION", subject_ref=contradiction_id, result_ref=basis_ref,
         )
 
@@ -331,12 +333,12 @@ def new_session(
     work_item_binding: Mapping[str, Any] | None = None, current_understanding: str = "",
 ) -> dict[str, Any]:
     trusted = _trusted_user_provenance(
-        provenance, "raw_user_intent_provenance",
+        provenance, "raw_user_intent_provenance", context_text=raw_user_intent,
         purpose="SESSION_INPUT", subject_ref="RAW_USER_INTENT", statement=raw_user_intent,
     )
     session = _core.new_session(
-        raw_user_intent, provenance=trusted,
-        work_item_binding=work_item_binding, current_understanding=current_understanding,
+        raw_user_intent, provenance=trusted, work_item_binding=work_item_binding,
+        current_understanding=current_understanding,
     )
     session[_TRANSITIONS] = []
     session[_REVOKED] = []
@@ -357,12 +359,12 @@ def add_user_confirmed_decision(
 ) -> dict[str, Any]:
     _assert_new_id_available(session, decision_id)
     trusted = _trusted_user_provenance(
-        provenance, "decision.provenance",
+        provenance, "decision.provenance", context_text=_context(session),
         purpose="USER_EXPLICIT_DECISION", subject_ref=decision_id, statement=statement,
     )
     return _delegate(
-        "add_user_confirmed_decision", session,
-        decision_id=decision_id, statement=statement, provenance=trusted, rationale=rationale,
+        "add_user_confirmed_decision", session, decision_id=decision_id,
+        statement=statement, provenance=trusted, rationale=rationale,
     )
 
 
@@ -384,12 +386,9 @@ def confirm_tacit_candidate(
 ) -> dict[str, Any]:
     trusted = _trusted_user_provenance(
         user_confirmation_provenance, "decision.user_confirmation_provenance",
-        purpose="CONFIRM_TACIT_CANDIDATE", subject_ref=decision_id,
+        context_text=_context(session), purpose="CONFIRM_TACIT_CANDIDATE", subject_ref=decision_id,
     )
-    return _delegate(
-        "confirm_tacit_candidate", session, decision_id,
-        user_confirmation_provenance=trusted,
-    )
+    return _delegate("confirm_tacit_candidate", session, decision_id, user_confirmation_provenance=trusted)
 
 
 def accept_ai_proposal(
@@ -398,12 +397,9 @@ def accept_ai_proposal(
 ) -> dict[str, Any]:
     trusted = _trusted_user_provenance(
         user_acceptance_provenance, "decision.user_acceptance_provenance",
-        purpose="ACCEPT_AI_PROPOSAL", subject_ref=proposal_id,
+        context_text=_context(session), purpose="ACCEPT_AI_PROPOSAL", subject_ref=proposal_id,
     )
-    return _delegate(
-        "accept_ai_proposal", session, proposal_id,
-        user_acceptance_provenance=trusted,
-    )
+    return _delegate("accept_ai_proposal", session, proposal_id, user_acceptance_provenance=trusted)
 
 
 def reject_alternative(
@@ -413,11 +409,9 @@ def reject_alternative(
     validate_session(session)
     trusted = _trusted_user_provenance(
         user_rejection_provenance, "decision.user_rejection_provenance",
-        purpose="REJECT_AI_PROPOSAL", subject_ref=alternative_id,
+        context_text=_context(session), purpose="REJECT_AI_PROPOSAL", subject_ref=alternative_id,
     )
-    result = _core.reject_alternative(
-        session, alternative_id, user_rejection_provenance=trusted, reason=reason,
-    )
+    result = _core.reject_alternative(session, alternative_id, user_rejection_provenance=trusted, reason=reason)
     _append_transition(
         result, target_kind="AI_PROPOSAL", target_id=alternative_id,
         from_status="PROPOSED", to_status="REJECTED", basis_type="USER_DECISION",
@@ -434,28 +428,20 @@ def revoke_accepted_ai_proposal(
     validate_session(session)
     trusted = _trusted_user_provenance(
         user_revocation_provenance, "decision.user_revocation_provenance",
-        purpose="REVOKE_AI_PROPOSAL", subject_ref=proposal_id,
+        context_text=_context(session), purpose="REVOKE_AI_PROPOSAL", subject_ref=proposal_id,
     )
-    result = _core.revoke_accepted_ai_proposal(
-        session, proposal_id, user_revocation_provenance=trusted, reason=reason,
-    )
+    result = _core.revoke_accepted_ai_proposal(session, proposal_id, user_revocation_provenance=trusted, reason=reason)
     preserved_history = [
         copy.deepcopy(record) for record in result.get("confirmed_decisions", [])
-        if isinstance(record, Mapping)
-        and record.get("decision_id") == proposal_id
-        and record.get("epistemic_class") == "AI_DISCOVERABLE_OPTION"
-        and record.get("status") == "REVOKED"
+        if isinstance(record, Mapping) and record.get("decision_id") == proposal_id
+        and record.get("epistemic_class") == "AI_DISCOVERABLE_OPTION" and record.get("status") == "REVOKED"
     ]
     if len(preserved_history) != 1:
         raise _fail("MIDS_REVOCATION_HISTORY_MISSING", proposal_id=proposal_id)
     result["confirmed_decisions"] = [
         record for record in result.get("confirmed_decisions", [])
-        if not (
-            isinstance(record, Mapping)
-            and record.get("decision_id") == proposal_id
-            and record.get("epistemic_class") == "AI_DISCOVERABLE_OPTION"
-            and record.get("status") == "REVOKED"
-        )
+        if not (isinstance(record, Mapping) and record.get("decision_id") == proposal_id
+                and record.get("epistemic_class") == "AI_DISCOVERABLE_OPTION" and record.get("status") == "REVOKED")
     ]
     result[_REVOKED].append(preserved_history[0])
     _append_transition(
@@ -471,7 +457,7 @@ def set_material_director_intent(
     session: Mapping[str, Any], statement: str, *, provenance: Sequence[Mapping[str, Any]],
 ) -> dict[str, Any]:
     trusted = _trusted_user_provenance(
-        provenance, "material_director_intent.provenance",
+        provenance, "material_director_intent.provenance", context_text=_context(session),
         purpose="MATERIAL_DIRECTOR_INTENT", subject_ref="MATERIAL_DIRECTOR_INTENT", statement=statement,
     )
     return _delegate("set_material_director_intent", session, statement, provenance=trusted)
@@ -486,9 +472,7 @@ def defer_unknown_as_assumption(
     reason: str, provenance: Sequence[Mapping[str, Any]],
 ) -> dict[str, Any]:
     validate_session(session)
-    result = _core.defer_unknown_as_assumption(
-        session, unknown_id, safe_default=safe_default, reason=reason, provenance=provenance,
-    )
+    result = _core.defer_unknown_as_assumption(session, unknown_id, safe_default=safe_default, reason=reason, provenance=provenance)
     prov = _core._provenance(list(provenance), "unknown.defer_provenance")
     _append_transition(
         result, target_kind="UNKNOWN", target_id=unknown_id,
@@ -514,7 +498,7 @@ def resolve_unknown(
     basis_ref = _core._text(resolution_basis.get("result_ref"), "unknown.resolution_basis.result_ref")
     trusted = _trusted_user_provenance(
         resolution_basis.get("provenance"), "unknown.resolution_basis.provenance",
-        purpose="RESOLVE_UNKNOWN", subject_ref=unknown_id, result_ref=basis_ref,
+        context_text=_context(session), purpose="RESOLVE_UNKNOWN", subject_ref=unknown_id, result_ref=basis_ref,
     )
     normalized_basis = {"type": "USER_DECISION", "provenance": trusted, "result_ref": basis_ref}
     result = _core.resolve_unknown(session, unknown_id, resolution_basis=normalized_basis)
@@ -543,7 +527,7 @@ def resolve_contradiction(
     basis_ref = _core._text(resolution_basis.get("result_ref"), "contradiction.resolution_basis.result_ref")
     trusted = _trusted_user_provenance(
         resolution_basis.get("provenance"), "contradiction.resolution_basis.provenance",
-        purpose="RESOLVE_CONTRADICTION", subject_ref=contradiction_id, result_ref=basis_ref,
+        context_text=_context(session), purpose="RESOLVE_CONTRADICTION", subject_ref=contradiction_id, result_ref=basis_ref,
     )
     normalized_basis = {"type": "USER_DECISION", "provenance": trusted, "result_ref": basis_ref}
     result = _core.resolve_contradiction(session, contradiction_id, resolution_basis=normalized_basis)
