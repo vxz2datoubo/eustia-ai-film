@@ -272,7 +272,14 @@ def validate_session(session: Mapping[str, Any]) -> None:
     for field in ("questions", "options", "criteria"): _list(qoc.get(field), f"qoc.{field}")
     for record in list(session["confirmed_decisions"]) + list(session["inferred_preferences"]) + list(session["candidate_directions"]):
         validate_decision(_mapping(record, "decision"))
-    for record in session["unknowns"]: validate_unknown(_mapping(record, "unknown"))
+    unknown_ids: set[str] = set()
+    for record in session["unknowns"]:
+        unknown = _mapping(record, "unknown")
+        validate_unknown(unknown)
+        unknown_id = _text(unknown.get("unknown_id"), "unknown.unknown_id")
+        if unknown_id in unknown_ids:
+            raise _fail("MIDS_UNKNOWN_ID_DUPLICATE", unknown_id=unknown_id)
+        unknown_ids.add(unknown_id)
     for record in session["contradictions"]: validate_contradiction(_mapping(record, "contradiction"))
 
 
@@ -424,7 +431,10 @@ def add_unknown(session: Mapping[str, Any], *, unknown_id: str, question: str, e
     out = _next(session); mat = str(materiality or "").strip().upper()
     if epistemic_class not in EPIS_CLASSES: raise _fail("MIDS_EPISTEMIC_CLASS_INVALID", epistemic_class=epistemic_class)
     if mat not in UNKNOWN_MATERIALITIES: raise _fail("MIDS_UNKNOWN_MATERIALITY_INVALID", materiality=materiality)
-    record = {"unknown_id": _text(unknown_id, "unknown_id"), "question": _text(question, "question"), "epistemic_class": epistemic_class,
+    normalized_unknown_id = _text(unknown_id, "unknown_id")
+    if any(str(x.get("unknown_id") or "").strip() == normalized_unknown_id for x in out["unknowns"] if isinstance(x, Mapping)):
+        raise _fail("MIDS_UNKNOWN_ID_DUPLICATE", unknown_id=normalized_unknown_id)
+    record = {"unknown_id": normalized_unknown_id, "question": _text(question, "question"), "epistemic_class": epistemic_class,
               "materiality": mat, "status": "OPEN", "blocks_handoff": bool(blocks_handoff)}
     for key, value in {"user_facing_choice": user_facing_choice, "safe_default": safe_default, "next_information_action": next_information_action}.items():
         if value: record[key] = str(value).strip()
@@ -494,9 +504,16 @@ def validate_handoff_ready(session: Mapping[str, Any]) -> dict[str, Any]:
     if not any(str(x.get("kind") or "").upper() == "POSITIVE" for x in session.get("examples", [])): blockers.append("POSITIVE_EXAMPLE_MISSING")
     if not session.get("counterexamples") and not session.get("non_goals"): blockers.append("COUNTEREXAMPLE_OR_NON_GOAL_MISSING")
     if not session.get("downstream_dependencies"): blockers.append("DOWNSTREAM_DEPENDENCY_MISSING")
-    if any(x.get("status") != "RESOLVED" and (x.get("blocks_handoff") is True or x.get("materiality") in {"HIGH", "MATERIAL"}) for x in session.get("unknowns", [])):
+    if any(
+        str(x.get("status") or "").strip().upper() != "RESOLVED"
+        and (
+            x.get("blocks_handoff") is True
+            or str(x.get("materiality") or "").strip().upper() in {"HIGH", "MATERIAL"}
+        )
+        for x in session.get("unknowns", [])
+    ):
         blockers.append("MATERIAL_UNKNOWN_UNRESOLVED")
-    if any(x.get("status") != "RESOLVED" for x in session.get("contradictions", [])): blockers.append("MATERIAL_CONTRADICTION_UNRESOLVED")
+    if any(str(x.get("status") or "").strip().upper() != "RESOLVED" for x in session.get("contradictions", [])): blockers.append("MATERIAL_CONTRADICTION_UNRESOLVED")
     rejected = _rejection_ids(session)
     if any(x.get("decision_id") in rejected and _decision_origin_allowed(x) for x in session.get("confirmed_decisions", [])):
         blockers.append("REJECTED_ALTERNATIVE_LEAKED_INTO_CONFIRMED_STATE")
