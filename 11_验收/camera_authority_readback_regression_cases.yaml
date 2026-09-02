@@ -1,4 +1,4 @@
-schema_version: "0.1.0"
+schema_version: "0.2.0"
 suite_id: EUSTIA_CAMERA_AUTHORITY_READBACK_REGRESSION
 status: candidate
 source_issue: 80
@@ -49,7 +49,7 @@ cases:
     expected: CAMERA_BINDING_STATUS_NOT_AUTHORITATIVE
 
   - id: CAM-AUTH-010
-    scenario: multiple_bindings_match_same_selector
+    scenario: multiple_bindings_match_same_active_work_item_and_shot_selector
     expected: CAMERA_BINDING_AMBIGUOUS
 
   - id: CAM-AUTH-011
@@ -61,6 +61,32 @@ cases:
     expected: RESOLVE_ASSET_CURRENT_VERSION_METADATA_ONLY
     must_not_claim_pixels_seen: true
 
+  - id: CAM-AUTH-013
+    scenario: caller_attempts_raw_nonactive_or_historical_work_item_selector
+    expected: NO_PUBLIC_WORK_ITEM_SELECTOR_SURFACE
+    rationale: historical_readback_requires_canonical_historical_resolution_not_raw_ID
+
+  - id: CAM-AUTH-014
+    scenario: caller_mutates_nested_receipt_binding_or_orientation_after_verified_readback
+    expected: AUTHORITY_RECEIPT_IMMUTABLE
+    serialization_projection_mutation_must_not_change_receipt: true
+
+  - id: CAM-AUTH-015
+    scenario: PROJECT_INDEX_points_to_identity_schema_but_identity_schema_itself_points_to_different_registry_resolver_or_continuity
+    expected: CAMERA_IDENTITY_SCHEMA_INVALID
+
+  - id: CAM-AUTH-016
+    scenario: binding_relation_id_does_not_contain_selected_view
+    expected: CAMERA_IDENTITY_CHAIN_INVALID
+
+  - id: CAM-AUTH-017
+    scenario: resolver_selected_media_version_claims_different_asset_id
+    expected: CAMERA_MEDIA_RESOLVER_INVALID_OR_PIN_INVALID
+
+  - id: CAM-AUTH-018
+    scenario: caller_passes_blank_shot_selector
+    expected: CAMERA_SHOT_SELECTOR_INVALID
+
 metrics:
   - false_camera_authority_rate
   - unbound_fail_closed_rate
@@ -68,3 +94,5 @@ metrics:
   - stale_materialization_rejection_rate
   - inferred_position_or_lens_rate
   - caller_authority_injection_rate
+  - historical_selector_bypass_rate
+  - receipt_mutation_rate
