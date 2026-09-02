@@ -1,10 +1,10 @@
-import copy
 import unittest
 from unittest.mock import patch
 
 import yaml
 
 from learning_retriever import camera_authority as cam
+from learning_retriever.camera_authority_test_fixture import read_untrusted_camera_fixture
 
 MAIN = "a" * 40
 MATERIALIZATION = "b" * 40
@@ -20,16 +20,10 @@ RELATION = "EUS-REL-000004"
 
 def binding():
     return {
-        "work_item_id": ACTIVE,
-        "shot_id": SHOT,
-        "scene_id": SCENE,
-        "camera_anchor_id": CAMERA,
-        "view_id": VIEW,
-        "asset_id": ASSET,
-        "relation_id": RELATION,
-        "media_version_id": VERSION,
-        "binding_status": "LOCKED",
-        "provenance": {"source": "TEST_FIXTURE"},
+        "work_item_id": ACTIVE, "shot_id": SHOT, "scene_id": SCENE,
+        "camera_anchor_id": CAMERA, "view_id": VIEW, "asset_id": ASSET,
+        "relation_id": RELATION, "media_version_id": VERSION,
+        "binding_status": "LOCKED", "provenance": {"source": "TEST_FIXTURE"},
         "writeback_verified_commit": MATERIALIZATION,
     }
 
@@ -37,11 +31,9 @@ def binding():
 def continuity(with_binding=True):
     block = ""
     if with_binding:
-        block = (
-            cam.BINDINGS_BEGIN + "\n```yaml\n" +
-            yaml.safe_dump({"shot_camera_bindings": [binding()]}, allow_unicode=True, sort_keys=False) +
-            "```\n" + cam.BINDINGS_END
-        )
+        block = cam.BINDINGS_BEGIN + "\n```yaml\n" + yaml.safe_dump(
+            {"shot_camera_bindings": [binding()]}, allow_unicode=True, sort_keys=False
+        ) + "```\n" + cam.BINDINGS_END
     return "CONTINUITY\n" + block
 
 
@@ -60,20 +52,10 @@ def resolver(version_asset=ASSET):
 
 
 def fixture_read(*, with_binding=True, graph_value=None, resolver_value=None, shot_id=SHOT):
-    """Explicit non-production seam: exercise semantic validators without trust minting.
-
-    Production ``read_camera_authority`` never uses this seam and remains provenance
-    closed. These deterministic unit fixtures existed before the provenance hardening;
-    keeping them here avoids monkeypatching production authority-bearing dependencies.
-    """
-    return cam._read_camera_authority_untrusted_test_fixture(
-        main_sha=MAIN,
-        continuity_text=continuity(with_binding),
-        active_state={"work_item_id": ACTIVE},
-        identity_graph=graph_value or graph(),
-        resolver=resolver_value or resolver(),
-        materialization_verified=True,
-        shot_id=shot_id,
+    return read_untrusted_camera_fixture(
+        main_sha=MAIN, continuity_text=continuity(with_binding),
+        active_state={"work_item_id": ACTIVE}, identity_graph=graph_value or graph(),
+        resolver=resolver_value or resolver(), materialization_verified=True, shot_id=shot_id,
     )
 
 
@@ -108,8 +90,7 @@ class CameraAuthorityReadbackTests(unittest.TestCase):
 
     def test_identity_schema_cannot_redirect_canonical_registry(self):
         malicious = {
-            "schema_id": "EUSTIA_SCENE_ASSET_IDENTITY",
-            "status": "active",
+            "schema_id": "EUSTIA_SCENE_ASSET_IDENTITY", "status": "active",
             "source_authority": {
                 "formal_logical_asset_registry": "fake-registry.md",
                 "media_version_and_locator_resolver": cam.RESOLVER_PATH.as_posix(),
