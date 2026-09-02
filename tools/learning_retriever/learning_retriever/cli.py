@@ -10,11 +10,26 @@ from .retriever import LearningRetriever, RetrievalGateError, validate_index
 from .runtime import DirectorLearningRuntime
 
 
+def _load_execution_body(path: str) -> dict:
+    raw = json.loads(Path(path).read_text(encoding="utf-8"))
+    if not isinstance(raw, dict):
+        raise ValueError("execution body must be a JSON object")
+    return raw
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="EUSTIA Learning Smart Recall V1.1")
     parser.add_argument("--project-root", default=str(Path(__file__).resolve().parents[3]))
     parser.add_argument("--task", help="JSON structured task feature file")
     parser.add_argument("--description", help="natural-language director task description")
+    parser.add_argument(
+        "--execution-packet",
+        help=(
+            "JSON output content body. Despite the compatibility flag name, caller data "
+            "is NOT accepted as a pre-built packet; canonical runtime constructs packet "
+            "identity and provenance after work-item resolution."
+        ),
+    )
     parser.add_argument("--task-id", default="UNSPECIFIED_TASK")
     parser.add_argument("--top-k", type=int, default=None)
     parser.add_argument("--expand", action="store_true", help="expand only selected Top-K canonical cases")
@@ -36,18 +51,28 @@ def main() -> int:
         parser.error("use either --task or --description, not both")
     if not args.task and not args.description:
         parser.error("--task or --description is required unless a validation flag is used")
+    if args.execution_packet and not args.description:
+        parser.error("--execution-packet requires --description so canonical work-item resolution precedes construction")
 
     try:
         if args.description:
-            # CLI intentionally has no serialized freshness override. Continuation
-            # requests with a source Issue fail closed until a host runtime supplies
-            # an in-process freshness provider backed by a real source read.
-            result = DirectorLearningRuntime(root).retrieve(
-                args.description,
-                task_id=args.task_id,
-                top_k=args.top_k,
-                expand=args.expand,
-            )
+            runtime = DirectorLearningRuntime(root)
+            if args.execution_packet:
+                execution_body = _load_execution_body(args.execution_packet)
+                result = runtime.build_executable_output(
+                    args.description,
+                    output_content=execution_body,
+                    task_id=args.task_id,
+                    top_k=args.top_k,
+                    expand=args.expand,
+                )
+            else:
+                result = runtime.retrieve(
+                    args.description,
+                    task_id=args.task_id,
+                    top_k=args.top_k,
+                    expand=args.expand,
+                )
         else:
             raw_task = json.loads(Path(args.task).read_text(encoding="utf-8"))
             description = raw_task.pop("director_task_description", None)
@@ -66,8 +91,16 @@ def main() -> int:
                     expand=args.expand,
                     fail_closed=True,
                 )
+                if isinstance(result, dict):
+                    result["artifact_class"] = "STRUCTURED_RETRIEVAL_ONLY"
+                    result["execution_authorized"] = False
+                    result["executable"] = False
+                    result["deliverable"] = False
+    except (ValueError, json.JSONDecodeError) as exc:
+        print(json.dumps({"status": "FAIL", "stage": "execution_packet_input", "error": str(exc)}, ensure_ascii=False, indent=2))
+        return 2
     except ActiveWorkItemResolutionError as exc:
-        print(json.dumps({"status": "FAIL", "stage": "active_work_item_resolution", "error": exc.code, "details": exc.details}, ensure_ascii=False, indent=2))
+        print(json.dumps({"status": "FAIL", "stage": "active_work_item_or_pre_output_scope", "error": exc.code, "details": exc.details}, ensure_ascii=False, indent=2))
         return 2
     except FeatureCompilationError as exc:
         print(json.dumps({"status": "FAIL", "stage": "feature_compiler", "error": str(exc)}, ensure_ascii=False, indent=2))
