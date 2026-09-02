@@ -1,18 +1,34 @@
-schema_version: "0.1.0"
+schema_version: "0.2.0"
 suite_id: EUSTIA_DIRECTOR_RUNTIME_ORCHESTRATOR_REGRESSION
 source_issue: 78
 status: candidate
 
 cases:
   - id: DR-P0-KAIM-SCARF-POSITIVE
-    title: 当前凯姆围巾晾衣绳横移可编译为非执行候选
+    title: 当前凯姆围巾晾衣绳横移在可信世界baseline与LOCK语义存在时可编译为非执行候选
     work_item_id: KAIM-SCARF-CLOTHESLINE-TRAVERSE
+    preconditions:
+      trusted_world_state_baseline_present: true
+      trusted_locked_constraint_semantics_present: true
     expectation:
       status: CANDIDATE_READY
       execution_authorized: false
       locked_constraints_preserved: true
+      canonical_lock_semantics_injected: true
       persistent_entities_preserved: true
       cinematic_intent_reused: true
+
+  - id: DR-P0-ROOT-001
+    title: Python构造器不得接受caller project root
+    attack:
+      constructor_argument: alternate_project_root
+    expected: TYPE_ERROR_BEFORE_ANY_AUTHORITY_READ
+
+  - id: DR-P0-ROOT-CLI-001
+    title: CLI不得暴露project-root authority flag
+    attack:
+      argv: [--project-root, /tmp/forged-project]
+    expected: ARGPARSE_REJECTION
 
   - id: DR-P0-AUTHORITY-FORGE-001
     title: Creative packet 不得自带 work item 或 canonical receipt
@@ -20,6 +36,29 @@ cases:
       field: work_item_id
       value: FORGED-WORK-ITEM
     expected_error: DIRECTOR_PACKET_AUTHORITY_VIOLATION
+
+  - id: DR-P0-WORLD-BASELINE-MISSING-001
+    title: 已绑定work item若没有可信结构化world entry baseline必须停止
+    attack:
+      work_item_bound: true
+      trusted_world_state_baseline_present: false
+    expected_error: DIRECTOR_WORLD_BASELINE_UNAVAILABLE
+
+  - id: DR-P0-WORLD-INVENT-BOTH-001
+    title: caller把虚构实体同时写入entry和exit也不能铸造世界事实
+    attack:
+      canonical_entry_entities: [kaim, scarf]
+      caller_entry_entities: [kaim, ghost_actor]
+      caller_exit_entities: [kaim, ghost_actor]
+    expected_error: DIRECTOR_WORLD_ENTRY_BASELINE_MISMATCH
+
+  - id: DR-P0-WORLD-OMIT-BOTH-001
+    title: caller把真实persistent实体从entry和exit同时省略也不能擦除世界事实
+    attack:
+      canonical_entry_entities: [kaim, scarf]
+      caller_entry_entities: [kaim]
+      caller_exit_entities: [kaim]
+    expected_error: DIRECTOR_WORLD_ENTRY_BASELINE_MISMATCH
 
   - id: DR-P0-PERSISTENCE-001
     title: Prompt omission 不能让 live persistent entity 消失
@@ -68,11 +107,29 @@ cases:
     expected_error: DIRECTOR_TRANSITION_STATE_MISMATCH
 
   - id: DR-P0-LOCK-001
-    title: 当前 work item LOCK 不能因执行稿省略而消失
+    title: 当前 work item LOCK ID 不能因执行稿省略而消失
     required_locked_constraint: scarf_midpoint_single_drape_over_fixed_thick_line
     attack:
       locked_constraints_preserved: []
     expected_error: DIRECTOR_LOCKED_CONSTRAINT_DROPPED
+
+  - id: DR-P0-LOCK-SEMANTICS-MISSING-001
+    title: 已绑定LOCK若没有可信material semantic映射必须停止
+    attack:
+      canonical_locked_constraints_present: true
+      trusted_locked_constraint_semantics_present: false
+    expected_error: DIRECTOR_LOCK_SEMANTICS_UNAVAILABLE
+
+  - id: DR-P0-LOCK-RUBBER-STAMP-001
+    title: caller复制所有LOCK ID但把hard invariants换成无关句子不能删除canonical material semantics
+    attack:
+      locked_constraint_ids_preserved: true
+      caller_hard_invariants: [unrelated harmless sentence]
+    expectation:
+      compile_may_continue: true
+      canonical_lock_semantics_injected_from_trusted_context: true
+      caller_hard_invariants_are_lock_authority: false
+      canonical_lock_semantics_remain_in_execution_text: true
 
   - id: DR-P0-CINEMATIC-INTENT-001
     title: CinematicIntent 必须复用现有 contract 且不能自铸 camera authority
