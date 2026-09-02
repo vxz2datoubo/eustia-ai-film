@@ -1,4 +1,4 @@
-schema_version: "0.2.0"
+schema_version: "0.3.0"
 component_id: EUSTIA_DIRECTOR_RUNTIME_ORCHESTRATOR_P0
 name: DIRECTOR-RUNTIME-P0
 status: candidate
@@ -10,6 +10,7 @@ purpose:
   - 让AI负责导演创造性判断让程序负责authority结构连续性实体绑定世界状态与执行资格守门
   - 把丰富导演决策压缩为模型无关的MinimumSufficientExecutionCandidate
   - 在可信world baseline或LOCK语义尚未由上游canonical结构化提供时fail closed而不是让creative packet补铸事实
+  - 生产路径在消费任何canonical receipt前验证仓库源码与运行时身份防止同进程替换重新铸造authority
 
 not_a_second_authority:
   director_method: 01_AI电影系统/AI电影系统.md
@@ -37,21 +38,53 @@ public_trust_boundary:
     - trusted_boolean
     - verification_callback
     - runtime_override
+  production_binding:
+    construction: import_time_captured_non_injected_closure
+    verified_before_receipt_consumption: true
+    captured_and_revalidated:
+      - orchestrator_source_path
+      - orchestrator_source_digest
+      - governed_repository_root
+      - DirectorLearningRuntime_class_identity
+      - DirectorLearningRuntime_init_method_identity
+      - DirectorLearningRuntime_retrieve_method_identity
+      - DirectorLearningRuntime_module_identity
+      - DirectorLearningRuntime_source_path
+      - DirectorLearningRuntime_source_digest
+      - CinematicIntent_compiler_identity
+      - CinematicIntent_error_contract_identity
+      - core_compiler_identity
+    source_and_runtime_must_share_governed_repository_root: true
+    caller_dependency_injection_supported: false
+    module_global_runtime_substitution: fail_closed
+    module_global_source_locator_substitution: fail_closed
+    runtime_method_substitution: fail_closed
+    cinematic_compiler_substitution: fail_closed
+    source_file_mutation_after_binding: fail_closed
   governed_project_root:
-    source: executing_module_repository_checkout
-    implementation: Path(__file__).resolve().parents[3]
+    source: import_time_captured_orchestrator_source_path
+    caller_override_port: absent
+    CLI_project_root_flag: absent
+    stored_as_instance_authority: false
     required_anchor_files:
       - PROJECT_INDEX.yaml
       - 10_运行时/active_work_item_resolution_gate.yaml
       - 10_运行时/director_feature_compiler.yaml
-    caller_override_port: absent
-    CLI_project_root_flag: absent
-    stored_as_instance_authority: false
-  canonical_runtime_is_instantiated_inside_compile_call: true
-  replaceable_public_learning_runtime_attribute: forbidden
+  synthetic_test_context:
+    seam: _compile_untrusted_test_fixture
+    purpose: validators_and_regressions_only
+    production_authority: false
+    output_status: UNTRUSTED_TEST_CANDIDATE
+    production_context_trusted: false
+    world_entry_authority: untrusted_test_fixture_not_world_truth
+    execution_authorized: false
+    deliverable: false
+    cannot_claim_canonical_receipt: true
 
 public_flow:
+  - verify_production_runtime_provenance
   - resolve_governed_project_root
+  - instantiate_captured_DirectorLearningRuntime
   - DirectorLearningRuntime.retrieve
   - canonical_work_item_and_learning_receipt
   - require_trusted_world_entry_baseline_when_work_item_bound
@@ -117,6 +150,8 @@ creative_packet:
     - continuity_override
     - authority_verified
     - execution_authorized
+    - runtime_override
+    - verification_callback
 
 world_state_contract:
   entry_and_exit_entities_required: true
@@ -164,6 +199,7 @@ Performance_contract:
 CinematicIntent_contract:
   implementation: tools/learning_retriever/learning_retriever/cinematic_intent.py
   reuse_required: true
+  production_binding_identity_verified_before_use: true
   camera_sensitive_authority_cannot_be_minted_here: true
   warnings_allowed: true
   structural_or_error_failure_fails_closed: true
@@ -204,9 +240,16 @@ constraint_autonomy_contract:
 
 output:
   schema: DIRECTOR_RUNTIME_CANDIDATE/v1
-  status: CANDIDATE_ONLY
+  production_status: CANDIDATE_READY
+  untrusted_test_status: UNTRUSTED_TEST_CANDIDATE
   execution_authorized: false
   deliverable: false
+  production_output_must_include:
+    - production_context_trusted_true
+    - PRODUCTION_VERIFIED_trust_provenance
+  untrusted_test_output_must_include:
+    - production_context_trusted_false
+    - fixture_receipt_is_production_authority_false
   minimum_execution_candidate_contains:
     - shot_purpose
     - audience_change
@@ -239,7 +282,8 @@ first_production_replay:
     - screen_right_to_screen_left_side_on_traverse
     - no_open_sky_prison_city_enclosure
     - disappearance_reveal_return_to_same_master_with_kaim_already_absent
-  regression_fixture_may_simulate_trusted_upstream_materialization: true
+  regression_fixture_may_simulate_upstream_materialization: true
+  regression_fixture_authority: UNTRUSTED_TEST_ONLY
   regression_fixture_does_not_claim_current_canonical_materialization_exists: true
 
 activation:
@@ -254,6 +298,8 @@ activation:
     - independent_T3_ACCEPT
 
 fail_codes:
+  - DIRECTOR_RUNTIME_PROVENANCE_SUBSTITUTED
+  - DIRECTOR_RUNTIME_PROVENANCE_INVALID
   - DIRECTOR_GOVERNED_PROJECT_ROOT_INVALID
   - DIRECTOR_PACKET_SCHEMA_INVALID
   - DIRECTOR_PACKET_AUTHORITY_VIOLATION
