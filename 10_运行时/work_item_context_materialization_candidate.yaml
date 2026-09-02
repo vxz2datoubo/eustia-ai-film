@@ -1,0 +1,224 @@
+schema_version: "0.1.0"
+component_id: EUSTIA_WORK_ITEM_CONTEXT_MATERIALIZATION_P0
+status: candidate
+source_issue: 82
+scope: fixed_github_current_work_item_to_non_authoritative_structured_world_and_lock_projection
+
+purpose:
+  - 为Director Runtime提供可机器验证的world_state_baseline与LOCK material semantic候选投影
+  - 把起点持续实体与后续明确进入事件链的实体分开，避免把未来事件角色偷塞进entry world truth
+  - 保持当前canonical screenplay map continuity与ActiveWorkItem为唯一事实authority
+
+not_a_new_authority:
+  screenplay_authority: false
+  map_authority: false
+  continuity_authority: false
+  character_authority: false
+  asset_authority: false
+  director_authority: false
+  output_is_projection_only: true
+  generated_output_can_mutate_projection: false
+
+trust_boundary:
+  fixed_repository: vxz2datoubo/eustia-ai-film
+  fixed_branch: main
+  public_materializer_arguments: []
+  caller_project_root_supported: false
+  caller_work_item_id_supported: false
+  caller_entities_supported: false
+  caller_lock_semantics_supported: false
+  caller_source_refs_supported: false
+  caller_authority_booleans_supported: false
+  current_work_item_resolution_runtime: learning_retriever.active_work_item.resolve_work_item
+  context_projection_runtime: learning_retriever.active_work_item.build_work_item_context_packet
+  required_verification_basis_prefix: canonical_github_readback_
+
+output_contract:
+  schema: WORK_ITEM_MATERIALIZATION_CANDIDATE/v1
+  fields:
+    - work_item_id
+    - world_state_baseline
+    - authorized_scope_entities
+    - authorized_explicit_entries
+    - locked_constraint_semantics
+    - materialization_receipt
+  execution_authorized: false
+  canonical_write_authorized: false
+  learning_writeback_authorized: false
+  maturity_promotion_authorized: false
+  serialized_output_is_authority: false
+  fresh_materialization_required_before_consumption: true
+
+projection_rules:
+  world_state_baseline:
+    rule: include_only_entities_whose_entry_persistence_is_supported_by_current_active_work_item_constraints_or_summary
+    uncertain_entry_state_behavior: omit_from_baseline
+    future_event_entity_behavior: route_to_authorized_explicit_entries_or_authorized_scope_entities
+    omission_is_not_revocation: true
+  authorized_scope_entities:
+    rule: known_material_entities_or_anchors_in_the_work_item_that_are_not_asserted_as_entry_live_state
+    authority_granted: false
+  authorized_explicit_entries:
+    rule: entity_may_be_introduced_later_only_when_current_canonical_work_item_explicitly_requires_that_later_event_or_presence
+    entry_time_or_exact_position_may_not_be_invented: true
+    authority_granted: false
+  locked_constraint_semantics:
+    rule: semantic_expansion_must_preserve_each_exact_canonical_LOCK_ID_without_relaxation_or_new_fact
+    coverage: exact_one_to_one
+    source: current_ACTIVE_WORK_ITEM_STATE_locked_constraints_plus_effective_summary
+
+profiles:
+  KAIM-SCARF-CLOTHESLINE-TRAVERSE:
+    status: candidate_first_production_profile
+    story_scope_ref_required: "03_剧本与改编/当前改编剧本.md#凯姆高位搜索之后的屋顶横向移动/当前制作扩展"
+    required_summary_tokens:
+      - 凯姆
+      - 围巾
+      - 固定粗晾衣绳
+      - 右向左
+      - 女人开窗
+      - 同一master
+      - 消失
+    required_locked_constraints:
+      - scarf_clothesline_geometry
+      - scarf_midpoint_single_drape_over_fixed_thick_line
+      - scarf_ends_separate_and_one_end_per_hand
+      - kaim_body_and_hands_remain_below_fixed_line
+      - scarf_and_kaim_co_translate_while_clothesline_stays_fixed
+      - screen_right_to_screen_left_side_on_traverse
+      - no_open_sky_prison_city_enclosure
+      - disappearance_reveal_return_to_same_master_with_kaim_already_absent
+    required_preserved_constraints:
+      - mass_laundry_collision
+      - two_foot_wall_arrival_buffer
+      - adjacent_woman_opens_window
+      - final_crowd_faces_bell_tower
+      - only_one_child_breaks_attention_upward
+      - kaim_skilled_efficient_dry_not_clownish
+
+    world_state_baseline:
+      entities:
+        kaim:
+          kind: character
+          position: rooftop_traverse_start_screen_right
+          state: skilled_traverse_active
+          provenance:
+            - continuity.active_work_item.current_effective_state_summary
+            - continuity.active_work_item.locked_constraints.screen_right_to_screen_left_side_on_traverse
+        scarf:
+          kind: object
+          position: midpoint_draped_over_fixed_thick_clothesline
+          state: ends_separate_one_end_per_hand
+          provenance:
+            - continuity.active_work_item.locked_constraints.scarf_midpoint_single_drape_over_fixed_thick_line
+            - continuity.active_work_item.locked_constraints.scarf_ends_separate_and_one_end_per_hand
+        clothesline:
+          kind: environment_anchor
+          position: fixed_rooftop_span
+          state: fixed_not_translating
+          provenance:
+            - continuity.active_work_item.locked_constraints.scarf_clothesline_geometry
+            - continuity.active_work_item.locked_constraints.scarf_and_kaim_co_translate_while_clothesline_stays_fixed
+        laundry:
+          kind: group
+          position: distributed_on_clothesline_path
+          state: hanging_before_collision
+          provenance:
+            - continuity.active_work_item.preserved_constraints.mass_laundry_collision
+            - continuity.active_work_item.current_effective_state_summary
+      invariants:
+        - invariant_id: fixed_clothesline_does_not_translate
+          description: 凯姆与围巾可横向移动但固定晾衣绳本体不随之平移
+          provenance:
+            - continuity.active_work_item.locked_constraints.scarf_and_kaim_co_translate_while_clothesline_stays_fixed
+        - invariant_id: kaim_body_and_hands_below_fixed_line
+          description: 横移期间凯姆身体与双手保持在固定晾衣绳下方
+          provenance:
+            - continuity.active_work_item.locked_constraints.kaim_body_and_hands_remain_below_fixed_line
+        - invariant_id: prison_city_enclosure_no_open_sky
+          description: 当前监牢城市空间保持封闭感，不打开成自由开放天空
+          provenance:
+            - continuity.active_work_item.locked_constraints.no_open_sky_prison_city_enclosure
+
+    authorized_scope_entities:
+      left_arrival_wall:
+        kind: environment_anchor
+        canonical_reason: current summary explicitly requires arrival at left building and two-foot wall buffer
+        provenance:
+          - continuity.active_work_item.current_effective_state_summary
+          - continuity.active_work_item.preserved_constraints.two_foot_wall_arrival_buffer
+      adjacent_window:
+        kind: environment_anchor
+        canonical_reason: current work item explicitly requires an adjacent woman to open a window
+        provenance:
+          - continuity.active_work_item.preserved_constraints.adjacent_woman_opens_window
+
+    authorized_explicit_entries:
+      adjacent_woman:
+        kind: character
+        entry_condition: adjacent_woman_opens_window_event
+        exact_entry_time_authorized: false
+        exact_entry_position_authorized: false
+        provenance:
+          - continuity.active_work_item.current_effective_state_summary
+          - continuity.active_work_item.preserved_constraints.adjacent_woman_opens_window
+      final_crowd_group:
+        kind: group
+        entry_condition: final_crowd_reaction_layer
+        exact_entry_time_authorized: false
+        exact_entry_position_authorized: false
+        provenance:
+          - continuity.active_work_item.preserved_constraints.final_crowd_faces_bell_tower
+      one_attention_breaking_child:
+        kind: character
+        entry_condition: final_falling_laundry_attention_event
+        exact_entry_time_authorized: false
+        exact_entry_position_authorized: false
+        provenance:
+          - continuity.active_work_item.preserved_constraints.only_one_child_breaks_attention_upward
+
+    locked_constraint_semantics:
+      scarf_clothesline_geometry:
+        text: 围巾与固定粗晾衣绳的承重接触关系必须保持为围巾搭过固定线，不能把晾衣绳改成随凯姆移动的绳索或把二者角色互换。
+        provenance: continuity.active_work_item.locked_constraints.scarf_clothesline_geometry
+      scarf_midpoint_single_drape_over_fixed_thick_line:
+        text: 围巾只以中点单次搭过一根固定粗晾衣绳，不改成多圈缠绕、多支点或整条绳索替代。
+        provenance: continuity.active_work_item.locked_constraints.scarf_midpoint_single_drape_over_fixed_thick_line
+      scarf_ends_separate_and_one_end_per_hand:
+        text: 围巾两端保持分离，凯姆左右手各握一端，不能合并到同一手或让端点失去控制关系。
+        provenance: continuity.active_work_item.locked_constraints.scarf_ends_separate_and_one_end_per_hand
+      kaim_body_and_hands_remain_below_fixed_line:
+        text: 横移期间凯姆身体与双手保持在固定晾衣绳下方，不能翻到绳线上方或骑跨固定线。
+        provenance: continuity.active_work_item.locked_constraints.kaim_body_and_hands_remain_below_fixed_line
+      scarf_and_kaim_co_translate_while_clothesline_stays_fixed:
+        text: 凯姆与围巾作为共同移动系统从右向左横移，固定晾衣绳保持世界位置不平移。
+        provenance: continuity.active_work_item.locked_constraints.scarf_and_kaim_co_translate_while_clothesline_stays_fixed
+      screen_right_to_screen_left_side_on_traverse:
+        text: 主横移动作保持侧面关系可读，并以画面右侧到画面左侧为锁定运动方向。
+        provenance: continuity.active_work_item.locked_constraints.screen_right_to_screen_left_side_on_traverse
+      no_open_sky_prison_city_enclosure:
+        text: 当前监牢城市空间保持封闭围困感，镜头不能生成大面积自由开放天空从而改变世界空间属性。
+        provenance: continuity.active_work_item.locked_constraints.no_open_sky_prison_city_enclosure
+      disappearance_reveal_return_to_same_master_with_kaim_already_absent:
+        text: 凯姆的离开发生在reaction cutaway遮蔽期间，回到同一master时凯姆已经不在画面中，不能改成镜头内完整展示离开过程。
+        provenance: continuity.active_work_item.locked_constraints.disappearance_reveal_return_to_same_master_with_kaim_already_absent
+
+activation:
+  PROJECT_INDEX_registration: absent
+  read_sets_registration: absent
+  write_routes_registration: absent
+  current_mode: CANDIDATE_ONLY
+  merge_does_not_activate_runtime_consumption: true
+  independent_T3_required: true
+  runtime_integration_requires_separate_slice: true
+
+fail_codes:
+  - WORK_ITEM_MATERIALIZER_GOVERNED_ROOT_INVALID
+  - WORK_ITEM_MATERIALIZER_RESOLUTION_FAILED
+  - WORK_ITEM_MATERIALIZER_UNSUPPORTED_WORK_ITEM
+  - WORK_ITEM_MATERIALIZER_STORY_SCOPE_MISMATCH
+  - WORK_ITEM_MATERIALIZER_SUMMARY_DRIFT
+  - WORK_ITEM_MATERIALIZER_LOCK_SET_MISMATCH
+  - WORK_ITEM_MATERIALIZER_PRESERVED_CONSTRAINT_MISSING
+  - WORK_ITEM_MATERIALIZER_PROFILE_INVALID
+  - WORK_ITEM_MATERIALIZER_PROVENANCE_MISSING
