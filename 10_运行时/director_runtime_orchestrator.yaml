@@ -1,0 +1,321 @@
+schema_version: "0.3.0"
+component_id: EUSTIA_DIRECTOR_RUNTIME_ORCHESTRATOR_P0
+name: DIRECTOR-RUNTIME-P0
+status: candidate
+source_issue: 78
+scope: trust_bound_story_to_structured_director_ir_and_minimal_execution_candidate
+
+purpose:
+  - 把现有ActiveWorkItem DirectorFeatureCompiler HardRoute SmartRecall与SOAC结构真正串成第一条Director Runtime候选链
+  - 让AI负责导演创造性判断让程序负责authority结构连续性实体绑定世界状态与执行资格守门
+  - 把丰富导演决策压缩为模型无关的MinimumSufficientExecutionCandidate
+  - 在可信world baseline或LOCK语义尚未由上游canonical结构化提供时fail closed而不是让creative packet补铸事实
+  - 生产路径在消费任何canonical receipt前验证仓库源码与运行时身份防止同进程替换重新铸造authority
+
+not_a_second_authority:
+  director_method: 01_AI电影系统/AI电影系统.md
+  soac_schema: 10_运行时/screen_observable_audible_ir_schema.yaml
+  work_item_authority: 07_连续性与生产状态/连续性与当前生产状态.md#ACTIVE_WORK_ITEM_STATE
+  route_authority: 10_运行时/director_route_index.yaml
+  learning_authority: 10_运行时/learning_application_gate.yaml
+  map_authority: 05_场景与空间/00_项目地图文件.md
+  continuity_authority: 07_连续性与生产状态/连续性与当前生产状态.md
+  may_not_create_parallel_story_map_asset_continuity_or_learning_truth: true
+
+public_trust_boundary:
+  caller_may_supply:
+    - natural_language_directing_description
+    - DIRECTOR_CREATIVE_DECISION_PACKET/v1
+  caller_may_not_supply:
+    - project_root
+    - ActiveWorkItemResolution
+    - work_item_id
+    - learning_receipt
+    - feature_compiler_receipt
+    - hard_routes
+    - world_state_baseline
+    - locked_constraint_semantics
+    - trusted_boolean
+    - verification_callback
+    - runtime_override
+  production_binding:
+    construction: import_time_captured_non_injected_closure
+    verified_before_receipt_consumption: true
+    captured_and_revalidated:
+      - orchestrator_source_path
+      - orchestrator_source_digest
+      - governed_repository_root
+      - DirectorLearningRuntime_class_identity
+      - DirectorLearningRuntime_init_method_identity
+      - DirectorLearningRuntime_retrieve_method_identity
+      - DirectorLearningRuntime_module_identity
+      - DirectorLearningRuntime_source_path
+      - DirectorLearningRuntime_source_digest
+      - CinematicIntent_compiler_identity
+      - CinematicIntent_error_contract_identity
+      - core_compiler_identity
+    source_and_runtime_must_share_governed_repository_root: true
+    caller_dependency_injection_supported: false
+    module_global_runtime_substitution: fail_closed
+    module_global_source_locator_substitution: fail_closed
+    runtime_method_substitution: fail_closed
+    cinematic_compiler_substitution: fail_closed
+    source_file_mutation_after_binding: fail_closed
+  governed_project_root:
+    source: import_time_captured_orchestrator_source_path
+    caller_override_port: absent
+    CLI_project_root_flag: absent
+    stored_as_instance_authority: false
+    required_anchor_files:
+      - PROJECT_INDEX.yaml
+      - 10_运行时/active_work_item_resolution_gate.yaml
+      - 10_运行时/director_feature_compiler.yaml
+  synthetic_test_context:
+    seam: _compile_untrusted_test_fixture
+    purpose: validators_and_regressions_only
+    production_authority: false
+    output_status: UNTRUSTED_TEST_CANDIDATE
+    production_context_trusted: false
+    world_entry_authority: untrusted_test_fixture_not_world_truth
+    execution_authorized: false
+    deliverable: false
+    cannot_claim_canonical_receipt: true
+
+public_flow:
+  - verify_production_runtime_provenance
+  - resolve_governed_project_root
+  - instantiate_captured_DirectorLearningRuntime
+  - DirectorLearningRuntime.retrieve
+  - canonical_work_item_and_learning_receipt
+  - require_trusted_world_entry_baseline_when_work_item_bound
+  - require_trusted_LOCK_semantics_when_LOCKs_exist
+  - validate_creative_decision_packet
+  - validate_world_entry_against_trusted_baseline
+  - validate_world_state_persistence
+  - validate_world_invariant_persistence
+  - validate_event_entity_binding
+  - validate_blocking_and_performance_binding
+  - reuse_existing_CinematicIntent_contract_runtime
+  - validate_shot_event_binding
+  - validate_transition_contract
+  - validate_locked_constraint_ID_preservation
+  - inject_trusted_LOCK_semantics_into_execution_candidate
+  - compile_minimum_sufficient_execution_candidate
+
+creative_judgment_boundary:
+  AI_owned_fields:
+    - scene_diagnosis
+    - director_intent
+    - events
+    - blocking
+    - performance
+    - cinematic_intent
+    - shot_plan
+    - guided_choices
+    - free_model_space
+  runtime_may_validate_but_not_invent: true
+  forbidden_deterministic_directing_examples:
+    - emotion_label_to_fixed_shot_size
+    - tension_to_handheld_formula
+    - power_to_low_angle_formula
+    - beauty_to_lens_formula
+
+creative_packet:
+  schema: DIRECTOR_CREATIVE_DECISION_PACKET/v1
+  required_top_level:
+    - packet_id
+    - scene_diagnosis
+    - director_intent
+    - world_state
+    - events
+    - blocking
+    - performance
+    - cinematic_intent
+    - shot_plan
+    - transition
+    - constraint_autonomy
+    - provenance
+  forbidden_authority_fields:
+    - project_root
+    - work_item_id
+    - active_work_item_resolution
+    - canonical_runtime_receipt
+    - feature_compiler_receipt
+    - hard_routes
+    - world_state_baseline
+    - locked_constraint_semantics
+    - story_override
+    - map_override
+    - asset_override
+    - continuity_override
+    - authority_verified
+    - execution_authorized
+    - runtime_override
+    - verification_callback
+
+world_state_contract:
+  entry_and_exit_entities_required: true
+  entity_fields: [kind, position, state]
+  entity_kind_enum: [character, object, environment_anchor, group]
+  bound_work_item_requires_trusted_world_state_baseline: true
+  trusted_baseline_source: canonical_WorkItemContext_only
+  caller_entry_role: assertion_not_authority
+  caller_entry_must_exactly_match_trusted_baseline:
+    - entity_ids
+    - entity_kind
+    - entity_position
+    - entity_state
+    - invariants
+  missing_structured_baseline: fail_closed
+  current_upstream_materialization_status: NOT_YET_AVAILABLE_IN_CANONICAL_WORKITEM_CONTEXT
+  activation_dependency: persistent_world_or_equivalent_canonical_materialization_must_supply_trusted_baseline
+  omission_is_not_removal: true
+  entity_may_disappear_only_if_listed_in_explicit_exits_or_removals: true
+  generated_output_cannot_mint_world_truth: true
+  P0_implicit_new_entity_entry: forbidden_until_explicit_entry_contract_exists
+  entry_world_invariants_must_equal_exit_world_invariants_in_P0: true
+  prompt_omission_cannot_retire_world_invariant: true
+  invented_entity_in_both_entry_and_exit: reject_against_trusted_baseline
+  real_entity_omitted_from_both_entry_and_exit: reject_against_trusted_baseline
+
+EventGraph_contract:
+  required_event_fields: [event_id, agent, action, result]
+  agent_must_be_declared_world_entity: true
+  target_kind_enum: [ENTITY, ABSTRACT, NONE]
+  ENTITY_target_must_be_declared_world_entity: true
+  instrument_if_present_must_be_declared_world_entity: true
+  support_or_contact_if_present_must_reference_declared_world_entities: true
+
+Blocking_contract:
+  required_fields: [initial_positions, movement_paths, final_positions, support_contacts]
+  all_entity_keys_must_exist_in_world_state: true
+  support_contact_counterpart_values_must_exist_in_world_state: true
+  final_positions_must_not_contradict_world_exit_state_when_declared: true
+
+Performance_contract:
+  actor_must_be_character_entity: true
+  required_actor_fields: [objective, subtext, observable_behavior]
+
+CinematicIntent_contract:
+  implementation: tools/learning_retriever/learning_retriever/cinematic_intent.py
+  reuse_required: true
+  production_binding_identity_verified_before_use: true
+  camera_sensitive_authority_cannot_be_minted_here: true
+  warnings_allowed: true
+  structural_or_error_failure_fails_closed: true
+
+ShotPlan_contract:
+  required_fields: [shot_id, dramatic_function, entry_state, events, exit_state, necessity]
+  every_event_ref_must_exist_in_EventGraph: true
+  camera_proposal_optional: true
+  camera_proposal_authority_must_equal: PROPOSAL_ONLY
+  absolute_camera_lock_or_lens_authority_forbidden_until_canonical_readback_exists: true
+
+Transition_contract:
+  required_fields: [inherited_entities, changed_entities, explicit_exits_or_removals, next_entry_state]
+  next_entry_entities_must_equal_world_exit_entities: true
+  inherited_live_entities_cannot_silently_disappear: true
+  inherited_changed_and_exited_sets_must_be_pairwise_disjoint: true
+  every_entry_entity_must_be_classified_exactly_once: true
+
+constraint_autonomy_contract:
+  required_fields:
+    - locked_constraints_preserved
+    - hard_invariants
+    - guided_choices
+    - free_model_space
+    - final_state
+  all_canonical_work_item_locked_constraint_IDs_must_be_preserved: true
+  omitted_locked_constraint_is_not_revoked: true
+  bound_LOCKs_require_trusted_material_semantics: true
+  trusted_LOCK_semantics_source: canonical_WorkItemContext_only
+  current_upstream_semantic_materialization_status: NOT_YET_AVAILABLE_IN_CANONICAL_WORKITEM_CONTEXT
+  missing_or_incomplete_trusted_LOCK_semantics: fail_closed
+  caller_hard_invariants_role: supplemental_candidate_only
+  caller_hard_invariants_are_LOCK_authority: false
+  canonical_LOCK_semantics_are_injected_directly_into_execution_candidate: true
+  canonical_LOCK_semantics_digest_is_emitted: true
+  LOCK_ID_rubber_stamp_cannot_delete_material_semantics: true
+  runtime_cannot_promote_guided_choice_to_hard_invariant: true
+
+output:
+  schema: DIRECTOR_RUNTIME_CANDIDATE/v1
+  production_status: CANDIDATE_READY
+  untrusted_test_status: UNTRUSTED_TEST_CANDIDATE
+  execution_authorized: false
+  deliverable: false
+  production_output_must_include:
+    - production_context_trusted_true
+    - PRODUCTION_VERIFIED_trust_provenance
+  untrusted_test_output_must_include:
+    - production_context_trusted_false
+    - fixture_receipt_is_production_authority_false
+  minimum_execution_candidate_contains:
+    - shot_purpose
+    - audience_change
+    - event_order
+    - blocking
+    - performance
+    - material_cinematic_intent_overlay
+    - shot_plan
+    - canonical_LOCK_hard_invariants
+    - canonical_LOCK_semantics_digest
+    - caller_supplemental_hard_invariants_when_present
+    - final_state
+  forbidden_output:
+    - hidden_chain_of_thought
+    - fake_camera_authority
+    - fake_work_item_receipt
+    - fake_learning_receipt
+    - canonical_write_claim
+  downstream_requirement: canonical_pre_output_execution_gate_before_any_real_model_execution
+
+first_production_replay:
+  work_item_id: KAIM-SCARF-CLOTHESLINE-TRAVERSE
+  current_real_runtime_status: FAIL_CLOSED_UNTIL_UPSTREAM_STRUCTURED_WORLD_AND_LOCK_SEMANTICS_ARE_MATERIALIZED
+  required_locked_constraints:
+    - scarf_clothesline_geometry
+    - scarf_midpoint_single_drape_over_fixed_thick_line
+    - scarf_ends_separate_and_one_end_per_hand
+    - kaim_body_and_hands_remain_below_fixed_line
+    - scarf_and_kaim_co_translate_while_clothesline_stays_fixed
+    - screen_right_to_screen_left_side_on_traverse
+    - no_open_sky_prison_city_enclosure
+    - disappearance_reveal_return_to_same_master_with_kaim_already_absent
+  regression_fixture_may_simulate_upstream_materialization: true
+  regression_fixture_authority: UNTRUSTED_TEST_ONLY
+  regression_fixture_does_not_claim_current_canonical_materialization_exists: true
+
+activation:
+  PROJECT_INDEX_registration: absent
+  read_sets_registration: absent
+  current_mode: CANDIDATE
+  independent_T3_required: true
+  activation_requires_separate_bounded_slice: true
+  activation_blocked_until:
+    - canonical_world_state_baseline_materialization_exists
+    - canonical_LOCK_semantics_materialization_exists
+    - independent_T3_ACCEPT
+
+fail_codes:
+  - DIRECTOR_RUNTIME_PROVENANCE_SUBSTITUTED
+  - DIRECTOR_RUNTIME_PROVENANCE_INVALID
+  - DIRECTOR_GOVERNED_PROJECT_ROOT_INVALID
+  - DIRECTOR_PACKET_SCHEMA_INVALID
+  - DIRECTOR_PACKET_AUTHORITY_VIOLATION
+  - DIRECTOR_PACKET_MISSING_PROVENANCE
+  - DIRECTOR_WORLD_BASELINE_UNAVAILABLE
+  - DIRECTOR_WORLD_ENTRY_BASELINE_MISMATCH
+  - DIRECTOR_WORLD_ENTITY_DROPPED
+  - DIRECTOR_WORLD_ENTITY_INVALID
+  - DIRECTOR_WORLD_INVARIANT_DROPPED
+  - DIRECTOR_EVENT_ENTITY_UNBOUND
+  - DIRECTOR_BLOCKING_ENTITY_UNBOUND
+  - DIRECTOR_PERFORMANCE_ACTOR_UNBOUND
+  - DIRECTOR_SHOT_EVENT_UNBOUND
+  - DIRECTOR_CAMERA_AUTHORITY_MINT_ATTEMPT
+  - DIRECTOR_TRANSITION_STATE_MISMATCH
+  - DIRECTOR_LOCKED_CONSTRAINT_DROPPED
+  - DIRECTOR_LOCK_SEMANTICS_UNAVAILABLE
+  - DIRECTOR_CINEMATIC_INTENT_REJECTED
+  - DIRECTOR_EXECUTION_NOT_AUTHORIZED
