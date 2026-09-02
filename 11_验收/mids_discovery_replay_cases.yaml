@@ -1,0 +1,328 @@
+schema_version: "1.0"
+suite_id: MIDS_DISCOVERY_REPLAY_PILOT
+status: candidate_shadow
+source_issue: 67
+authority_boundary:
+  replay_prompts_are_not_canonical_user_quotes: true
+  reconstructed_prompt_label_required: true
+  hidden_targets_are_eval_only: true
+  fixture_does_not_define_director_truth: true
+metrics:
+  - useful_decisions_per_question
+  - critical_unknown_discovery
+  - redundant_question_rate
+  - novel_direction_acceptance
+  - contradiction_leakage
+  - post_spec_rework
+  - user_interruption_cognitive_cost
+  - authority_violation
+  - traceability_coverage
+cases:
+  - case_id: MIDS-REPLAY-KAIM-SCARF-001
+    provenance_class: RECONSTRUCTED_FROM_PROJECT_TRACE
+    source_refs:
+      - issue: 19
+      - continuity: 07_连续性与生产状态/连续性与当前生产状态.md#ACTIVE_WORK_ITEM_STATE
+    initial_fuzzy_input: >-
+      凯姆到屋顶后我想让他借晾衣绳和围巾横过去，过程有一点好笑，
+      但还是要看起来很熟练，然后继续寻找男孩。
+    canonical_known_keys:
+      - work_item_identity
+      - kaim_current_goal
+      - no_open_sky
+      - final_story_mainline_returns_to_bell_tower
+    hidden_critical_targets:
+      - scarf_load_bearing_topology
+      - screen_plane_lateral_trajectory
+      - skilled_not_clownish_comedy_boundary
+      - disappearance_reaction_cutaway_reveal
+      - reference_role_separation
+    candidate_questions:
+      - question_id: Q-KAIM-WHICH-30S
+        text: 你说的是哪一个30秒镜头？
+        resolves_keys: [work_item_identity]
+        material: true
+        blocks_handoff: true
+        decision_impact: 3
+        uncertainty_reduction: 3
+        dependency_centrality: 3
+        irreversibility: 2
+        novelty_potential: 0
+        cognitive_load: 1
+        interruption_cost: 2
+        requires_technical_jargon: false
+        rationale: 工作项身份如果未知会阻塞后续，但当前 canonical 已经可靠知道，因此应被 suppress。
+      - question_id: Q-KAIM-PHYSICS
+        text: 这段横移里，你更希望观众能清楚看懂“围巾真的承受凯姆重量、和他一起沿固定绳移动”，还是只要视觉上觉得他滑过去很利落就够？
+        resolves_keys: [scarf_load_bearing_topology, scarf_persistence]
+        material: true
+        blocks_handoff: true
+        decision_impact: 3
+        uncertainty_reduction: 3
+        dependency_centrality: 3
+        irreversibility: 2
+        novelty_potential: 1
+        cognitive_load: 1
+        interruption_cost: 1
+        requires_technical_jargon: false
+        rationale: 决定是否必须把围巾/固定绳的承重关系做成硬可读不变量。
+      - question_id: Q-KAIM-TRAJECTORY
+        text: 如果“横着掠过画面”和“更有冲击力的纵深运动”冲突，你更在意哪一个？
+        resolves_keys: [screen_plane_lateral_trajectory, camera_energy_tradeoff]
+        material: true
+        blocks_handoff: true
+        decision_impact: 3
+        uncertainty_reduction: 3
+        dependency_centrality: 2
+        irreversibility: 2
+        novelty_potential: 1
+        cognitive_load: 1
+        interruption_cost: 1
+        requires_technical_jargon: false
+        rationale: 直接决定摄影机与运动向量关系，并能提前暴露纵深漂移风险。
+      - question_id: Q-KAIM-COMEDY
+        text: 这段笑点你希望观众是“笑意外落到一个很能干的人身上”，还是“笑凯姆自己笨手笨脚”？
+        resolves_keys: [skilled_not_clownish_comedy_boundary]
+        material: true
+        blocks_handoff: false
+        decision_impact: 3
+        uncertainty_reduction: 3
+        dependency_centrality: 2
+        irreversibility: 1
+        novelty_potential: 2
+        cognitive_load: 1
+        interruption_cost: 1
+        requires_technical_jargon: false
+        rationale: 直接保护凯姆角色指纹并决定动作节奏与表演方式。
+      - question_id: Q-KAIM-DISAPPEAR
+        text: 女人的反应之后，凯姆是要让观众亲眼看见他离开，还是切回原来的画面时他已经不见，形成一个干冷的小惊喜？
+        resolves_keys: [disappearance_reaction_cutaway_reveal]
+        material: true
+        blocks_handoff: false
+        decision_impact: 2
+        uncertainty_reduction: 3
+        dependency_centrality: 1
+        irreversibility: 1
+        novelty_potential: 2
+        cognitive_load: 1
+        interruption_cost: 1
+        requires_technical_jargon: false
+        rationale: 这是剪辑揭示设计的高价值二选一，但优先级低于物理与主轨迹。
+      - question_id: Q-KAIM-REFERENCE-TECH
+        text: 你要使用 motion reference 的 latent appearance disentanglement 还是 geometry-only conditioning？
+        resolves_keys: [reference_role_separation]
+        material: true
+        blocks_handoff: false
+        decision_impact: 2
+        uncertainty_reduction: 2
+        dependency_centrality: 2
+        irreversibility: 1
+        novelty_potential: 3
+        cognitive_load: 3
+        interruption_cost: 2
+        requires_technical_jargon: true
+        rationale: 专业盲区不应直接这样问用户，应由 AI 转译成效果/风险选择或先研究。
+    expected_first_round:
+      max_questions: 3
+      must_not_select: [Q-KAIM-WHICH-30S, Q-KAIM-REFERENCE-TECH]
+      should_cover_any: [scarf_load_bearing_topology, screen_plane_lateral_trajectory, skilled_not_clownish_comedy_boundary]
+
+  - case_id: MIDS-REPLAY-CROWD-MOTIVE-001
+    provenance_class: RECONSTRUCTED_FROM_PROJECT_TRACE
+    source_refs:
+      - learning_case: 08_系统学习/导演反馈学习案例.yaml#MOTIVE-FIRST-CROWD-001
+      - route: 10_运行时/director_route_index.yaml#MOTIVATION_BEFORE_TONE
+    initial_fuzzy_input: 圣女出现的时候，我想让群众有很强的宗教反应和跪拜感。
+    canonical_known_keys:
+      - poverty_context
+      - church_relief_distribution
+      - crowd_is_at_public_ritual
+    hidden_critical_targets:
+      - material_dependency
+      - hope_and_spiritual_dependency
+      - grievance_and_legitimacy_ambivalence
+      - group_heterogeneity
+    candidate_questions:
+      - question_id: Q-CROWD-MOTIVE
+        text: 他们跪下最重要的原因是什么：敬畏神圣本身，还是因为教会真的给了他们食物、秩序和活下去的希望？
+        resolves_keys: [material_dependency, hope_and_spiritual_dependency]
+        material: true
+        blocks_handoff: true
+        decision_impact: 3
+        uncertainty_reduction: 3
+        dependency_centrality: 3
+        irreversibility: 2
+        novelty_potential: 2
+        cognitive_load: 1
+        interruption_cost: 1
+        requires_technical_jargon: false
+        rationale: 先定动机再定表演，能改变群众宏观行为与声音。
+      - question_id: Q-CROWD-AMBIVALENCE
+        text: 你希望这种敬爱是纯粹的，还是里面同时藏着“依赖他们、也对这个制度有怨气”的复杂感？
+        resolves_keys: [grievance_and_legitimacy_ambivalence]
+        material: true
+        blocks_handoff: false
+        decision_impact: 3
+        uncertainty_reduction: 3
+        dependency_centrality: 2
+        irreversibility: 1
+        novelty_potential: 3
+        cognitive_load: 1
+        interruption_cost: 1
+        requires_technical_jargon: false
+        rationale: 决定群众是否被拍成单一宗教模板，且为后续态度逆转提供空间。
+      - question_id: Q-CROWD-HETEROGENEITY
+        text: 整体都跪下时，你要不要保留少数人的微差异，比如迟疑、急切、感激或只是跟着别人做？
+        resolves_keys: [group_heterogeneity]
+        material: true
+        blocks_handoff: false
+        decision_impact: 2
+        uncertainty_reduction: 2
+        dependency_centrality: 1
+        irreversibility: 1
+        novelty_potential: 2
+        cognitive_load: 1
+        interruption_cost: 1
+        requires_technical_jargon: false
+        rationale: 用微差异防止群众模板化而不破坏宏观仪式统一。
+      - question_id: Q-CROWD-CAMERA
+        text: 你想用35mm还是50mm拍群众？
+        resolves_keys: [lens_choice]
+        material: false
+        blocks_handoff: false
+        decision_impact: 1
+        uncertainty_reduction: 1
+        dependency_centrality: 0
+        irreversibility: 0
+        novelty_potential: 0
+        cognitive_load: 2
+        interruption_cost: 1
+        requires_technical_jargon: true
+        rationale: 当前阶段不应先让用户替系统选摄影工程参数。
+    expected_first_round:
+      max_questions: 3
+      must_select: [Q-CROWD-MOTIVE]
+      must_not_select: [Q-CROWD-CAMERA]
+
+  - case_id: MIDS-REPLAY-EXPOSITION-001
+    provenance_class: RECONSTRUCTED_FROM_PROJECT_TRACE
+    source_refs:
+      - learning_case: 08_系统学习/导演反馈学习案例.yaml#EXPOSITION-MEDIA-DISTANCE-001
+      - route: 10_运行时/director_route_index.yaml#EXPOSITION_STALL
+    initial_fuzzy_input: 这段世界观历史很重要，但现在太像讲课了，我想电影化一点又不想把信息删没。
+    canonical_known_keys:
+      - exposition_is_high_value
+      - religious_context
+    hidden_critical_targets:
+      - epistemic_status_of_history
+      - representation_medium
+      - temporal_distance
+      - return_to_present
+      - asset_lock_cost
+    candidate_questions:
+      - question_id: Q-EXP-EPISTEMIC
+        text: 观众在这里应该把这段历史当成“客观发生过的真相”，还是“教会正在讲给群众听的官方记忆/信仰叙事”？
+        resolves_keys: [epistemic_status_of_history, representation_medium, temporal_distance]
+        material: true
+        blocks_handoff: true
+        decision_impact: 3
+        uncertainty_reduction: 3
+        dependency_centrality: 3
+        irreversibility: 3
+        novelty_potential: 2
+        cognitive_load: 1
+        interruption_cost: 1
+        requires_technical_jargon: false
+        rationale: 这会决定写实闪回、宗教图像、羊皮纸等媒介是否改变观众对历史真实性的判断。
+      - question_id: Q-EXP-RETURN
+        text: 历史段结束后，你最希望观众被什么拉回现在：神官的声音、群众的反应，还是圣女/仪式正在继续的动作？
+        resolves_keys: [return_to_present]
+        material: true
+        blocks_handoff: false
+        decision_impact: 2
+        uncertainty_reduction: 2
+        dependency_centrality: 2
+        irreversibility: 1
+        novelty_potential: 2
+        cognitive_load: 1
+        interruption_cost: 1
+        requires_technical_jargon: false
+        rationale: 防止说明段成为与当前场景脱节的独立短片。
+      - question_id: Q-EXP-COST
+        text: 如果完整写实闪回需要先锁定初代圣女、旧时代建筑和服装等一整套资产，你愿意为更强沉浸付这个制作成本，还是更偏向用现有宗教视觉语言解决？
+        resolves_keys: [asset_lock_cost, representation_medium]
+        material: true
+        blocks_handoff: false
+        decision_impact: 2
+        uncertainty_reduction: 3
+        dependency_centrality: 3
+        irreversibility: 2
+        novelty_potential: 2
+        cognitive_load: 2
+        interruption_cost: 1
+        requires_technical_jargon: false
+        rationale: 把专家生产成本翻译成用户能判断的创作/成本取舍。
+      - question_id: Q-EXP-FPS
+        text: 你希望历史闪回是24fps还是30fps？
+        resolves_keys: [capture_fps]
+        material: false
+        blocks_handoff: false
+        decision_impact: 0
+        uncertainty_reduction: 0
+        dependency_centrality: 0
+        irreversibility: 0
+        novelty_potential: 0
+        cognitive_load: 2
+        interruption_cost: 1
+        requires_technical_jargon: true
+        rationale: 不属于当前信息价值最高的设计问题。
+    expected_first_round:
+      max_questions: 3
+      must_select: [Q-EXP-EPISTEMIC]
+      must_not_select: [Q-EXP-FPS]
+
+  - case_id: MIDS-REPLAY-AWI-NO-REDUNDANT-001
+    provenance_class: CANONICAL_REGRESSION_DERIVED
+    source_refs:
+      - regression: 11_验收/active_work_item_resolution_regression_cases.yaml#AWIR-WRONG-30S-001
+    initial_fuzzy_input: 继续上一版，把这30秒做得更自然一点。
+    canonical_known_keys:
+      - work_item_identity
+      - current_locked_constraints
+      - current_rejected_constraints
+    hidden_critical_targets:
+      - naturalness_dimension
+      - residual_failure_priority
+    candidate_questions:
+      - question_id: Q-AWI-IDENTITY
+        text: 你说的是哪一段30秒？
+        resolves_keys: [work_item_identity]
+        material: true
+        blocks_handoff: true
+        decision_impact: 3
+        uncertainty_reduction: 3
+        dependency_centrality: 3
+        irreversibility: 2
+        novelty_potential: 0
+        cognitive_load: 1
+        interruption_cost: 2
+        requires_technical_jargon: false
+        rationale: 如果没有 Active Work Item gate 这会很重要，但 canonical 已经解决，所以必须 suppress。
+      - question_id: Q-AWI-NATURALNESS
+        text: 你说的“更自然”现在最影响你的是起步加速不像高手的一气呵成，还是围巾/身体的受力看起来不真实？
+        resolves_keys: [naturalness_dimension, residual_failure_priority]
+        material: true
+        blocks_handoff: true
+        decision_impact: 3
+        uncertainty_reduction: 3
+        dependency_centrality: 3
+        irreversibility: 1
+        novelty_potential: 1
+        cognitive_load: 1
+        interruption_cost: 1
+        requires_technical_jargon: false
+        rationale: 在已知工作项内定位“自然”的失败维度，避免重新问 canonical 已有信息。
+    expected_first_round:
+      max_questions: 3
+      must_select: [Q-AWI-NATURALNESS]
+      must_not_select: [Q-AWI-IDENTITY]
