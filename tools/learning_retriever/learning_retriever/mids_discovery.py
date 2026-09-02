@@ -1,0 +1,507 @@
+"""Public trust-bound facade for the MIDS shadow candidate.
+
+The deterministic implementation lives in :mod:`mids_discovery_core`. This facade
+owns public mutation/state-transition semantics. USER authority is never inferred from
+a caller label: every user-authoritative transition must consume an upstream receipt
+bound to session context, purpose, subject and exact content.
+"""
+from __future__ import annotations
+
+import copy
+from typing import Any, Mapping, Sequence
+
+from .mids_discovery_core import *  # noqa: F401,F403
+from . import mids_discovery_core as _core
+from .mids_user_evidence_fixture import resolve_user_evidence
+
+MIDSDiscoveryError = _core.MIDSDiscoveryError
+_TRANSITIONS = "mids_transition_log"
+_REVOKED = "revoked_decisions"
+_TRANSITION_KEYS = {
+    "event_type", "target_kind", "target_id", "from_status", "to_status",
+    "basis_type", "basis_ref", "provenance",
+}
+
+
+def _fail(code: str, **details: Any) -> MIDSDiscoveryError:
+    return MIDSDiscoveryError(code, details=details or None)
+
+
+def _context(session: Mapping[str, Any]) -> str:
+    return _core._text(session.get("raw_user_intent"), "raw_user_intent")
+
+
+def _transition_statement(statement: Any, reason: Any) -> str:
+    statement_text = _core._text(statement, "decision.statement")
+    reason_text = _core._text(reason, "transition.reason")
+    return f"{statement_text}\nUSER_REASON:{reason_text}"
+
+
+def _trusted_user_provenance(
+    value: Any, field: str, *, context_text: str, purpose: str, subject_ref: str,
+    statement: str | None = None, result_ref: str | None = None,
+) -> list[dict[str, str]]:
+    provenance = _core._provenance(value, field)
+    if len(provenance) != 1 or str(provenance[0].get("source") or "").strip().upper() != "USER":
+        raise _fail("MIDS_TRUSTED_USER_RECEIPT_REQUIRED", field=field)
+    receipt_id = str(provenance[0].get("ref") or "").strip()
+    try:
+        receipt = resolve_user_evidence(
+            receipt_id, context_text=context_text, purpose=purpose,
+            subject_ref=subject_ref, statement=statement, result_ref=result_ref,
+        )
+    except LookupError as exc:
+        raise _fail(str(exc), field=field, receipt_id=receipt_id) from exc
+    return [{"source": "USER", "ref": receipt.receipt_id}]
+
+
+def _decision_id(record: Mapping[str, Any]) -> str:
+    return str(record.get("decision_id") or "").strip()
+
+
+def _existing_decision_ids(session: Mapping[str, Any]) -> set[str]:
+    result: set[str] = set()
+    for field in ("confirmed_decisions", "inferred_preferences", "candidate_directions", _REVOKED):
+        for raw in session.get(field, []):
+            if isinstance(raw, Mapping) and _decision_id(raw):
+                result.add(_decision_id(raw))
+    return result
+
+
+def _assert_new_id_available(session: Mapping[str, Any], decision_id: str) -> None:
+    normalized = str(decision_id or "").strip()
+    if normalized and normalized in _existing_decision_ids(session):
+        raise _fail("MIDS_DECISION_ID_COLLISION", decision_id=normalized)
+
+
+def _single_decision(session: Mapping[str, Any], field: str, decision_id: str, *, not_found_code: str) -> Mapping[str, Any]:
+    matches = [raw for raw in session.get(field, []) if isinstance(raw, Mapping) and _decision_id(raw) == str(decision_id or "").strip()]
+    if len(matches) != 1:
+        raise _fail(not_found_code, decision_id=decision_id, occurrences=len(matches))
+    return matches[0]
+
+
+def _append_transition(
+    session: dict[str, Any], *, target_kind: str, target_id: str,
+    from_status: str, to_status: str, basis_type: str, basis_ref: str,
+    provenance: Sequence[Mapping[str, Any]],
+) -> None:
+    session[_TRANSITIONS].append({
+        "event_type": "STATE_TRANSITION", "target_kind": target_kind,
+        "target_id": str(target_id), "from_status": from_status, "to_status": to_status,
+        "basis_type": basis_type, "basis_ref": str(basis_ref),
+        "provenance": copy.deepcopy(list(provenance)),
+    })
+
+
+def _matching_transition(
+    session: Mapping[str, Any], *, target_kind: str, target_id: str,
+    from_status: str, to_status: str, basis_type: str, basis_ref: str,
+) -> Mapping[str, Any] | None:
+    for raw in reversed(session.get(_TRANSITIONS, [])):
+        if not isinstance(raw, Mapping):
+            continue
+        if (
+            str(raw.get("target_kind") or "") == target_kind
+            and str(raw.get("target_id") or "") == target_id
+            and str(raw.get("from_status") or "") == from_status
+            and str(raw.get("to_status") or "") == to_status
+            and str(raw.get("basis_type") or "") == basis_type
+            and str(raw.get("basis_ref") or "") == basis_ref
+        ):
+            return raw
+    return None
+
+
+def _validate_canonical_enums(session: Mapping[str, Any]) -> None:
+    for raw in session.get("unknowns", []):
+        if not isinstance(raw, Mapping):
+            continue
+        materiality = str(raw.get("materiality") or "").strip()
+        status = str(raw.get("status") or "").strip()
+        if materiality not in _core.UNKNOWN_MATERIALITIES:
+            raise _fail("MIDS_UNKNOWN_MATERIALITY_NONCANONICAL", materiality=materiality)
+        if status not in _core.UNKNOWN_STATUSES:
+            raise _fail("MIDS_UNKNOWN_STATUS_NONCANONICAL", status=status)
+    for raw in session.get("contradictions", []):
+        if not isinstance(raw, Mapping):
+            continue
+        materiality = str(raw.get("materiality") or "").strip()
+        status = str(raw.get("status") or "").strip()
+        if materiality not in _core.UNKNOWN_MATERIALITIES:
+            raise _fail("MIDS_CONTRADICTION_MATERIALITY_NONCANONICAL", materiality=materiality)
+        if status not in _core.CONTRADICTION_STATUSES:
+            raise _fail("MIDS_CONTRADICTION_STATUS_NONCANONICAL", status=status)
+
+
+def _validate_root_user_evidence(session: Mapping[str, Any]) -> None:
+    context_text = _context(session)
+    _trusted_user_provenance(
+        session.get("raw_user_intent_provenance"), "raw_user_intent_provenance",
+        context_text=context_text, purpose="SESSION_INPUT", subject_ref="RAW_USER_INTENT",
+        statement=context_text,
+    )
+    intent = session.get("material_director_intent")
+    if intent is not None:
+        if not isinstance(intent, Mapping):
+            raise _fail("MIDS_MATERIAL_DIRECTOR_INTENT_INVALID")
+        _trusted_user_provenance(
+            intent.get("provenance"), "material_director_intent.provenance",
+            context_text=context_text, purpose="MATERIAL_DIRECTOR_INTENT",
+            subject_ref="MATERIAL_DIRECTOR_INTENT", statement=str(intent.get("statement") or ""),
+        )
+
+
+def _validate_decision_user_evidence(record: Mapping[str, Any], *, context_text: str) -> None:
+    decision_id = _decision_id(record)
+    epistemic = str(record.get("epistemic_class") or "")
+    status = str(record.get("status") or "")
+    statement = str(record.get("statement") or "")
+    if epistemic == "USER_EXPLICIT_CONFIRMED":
+        _trusted_user_provenance(
+            record.get("provenance"), "decision.provenance", context_text=context_text,
+            purpose="USER_EXPLICIT_DECISION", subject_ref=decision_id, statement=statement,
+        )
+    elif epistemic == "USER_TACIT_CANDIDATE" and status == "CONFIRMED":
+        _trusted_user_provenance(
+            record.get("user_confirmation_provenance"), "decision.user_confirmation_provenance",
+            context_text=context_text, purpose="CONFIRM_TACIT_CANDIDATE",
+            subject_ref=decision_id, statement=statement,
+        )
+    elif epistemic == "AI_DISCOVERABLE_OPTION":
+        if status == "ACCEPTED":
+            _trusted_user_provenance(
+                record.get("user_acceptance_provenance"), "decision.user_acceptance_provenance",
+                context_text=context_text, purpose="ACCEPT_AI_PROPOSAL",
+                subject_ref=decision_id, statement=statement,
+            )
+        elif status == "REJECTED":
+            bound = _transition_statement(statement, record.get("rejection_reason"))
+            _trusted_user_provenance(
+                record.get("user_rejection_provenance"), "decision.user_rejection_provenance",
+                context_text=context_text, purpose="REJECT_AI_PROPOSAL",
+                subject_ref=decision_id, statement=bound,
+            )
+        elif status == "REVOKED":
+            bound = _transition_statement(statement, record.get("revocation_reason"))
+            _trusted_user_provenance(
+                record.get("user_revocation_provenance"), "decision.user_revocation_provenance",
+                context_text=context_text, purpose="REVOKE_AI_PROPOSAL",
+                subject_ref=decision_id, statement=bound,
+            )
+
+
+def _validate_transition_log(session: Mapping[str, Any]) -> None:
+    log = session.get(_TRANSITIONS)
+    if not isinstance(log, list):
+        raise _fail("MIDS_TRANSITION_LOG_REQUIRED")
+    for index, raw in enumerate(log):
+        if not isinstance(raw, Mapping) or set(raw) != _TRANSITION_KEYS:
+            raise _fail("MIDS_TRANSITION_SCHEMA_CLOSED", index=index)
+        if raw.get("event_type") != "STATE_TRANSITION":
+            raise _fail("MIDS_TRANSITION_EVENT_TYPE_INVALID", index=index)
+        for key in ("target_kind", "target_id", "from_status", "to_status", "basis_type", "basis_ref"):
+            _core._text(raw.get(key), f"{_TRANSITIONS}[{index}].{key}")
+        _core._provenance(raw.get("provenance"), f"{_TRANSITIONS}[{index}].provenance")
+
+
+def _validate_decision_relations(session: Mapping[str, Any]) -> None:
+    context_text = _context(session)
+    by_id: dict[str, list[tuple[str, Mapping[str, Any]]]] = {}
+    for field in ("confirmed_decisions", "inferred_preferences", "candidate_directions"):
+        for raw in session.get(field, []):
+            if not isinstance(raw, Mapping) or not _decision_id(raw):
+                continue
+            by_id.setdefault(_decision_id(raw), []).append((field, raw))
+            _validate_decision_user_evidence(raw, context_text=context_text)
+
+    for decision_id, occurrences in by_id.items():
+        if len(occurrences) == 1:
+            field, record = occurrences[0]
+            epistemic = str(record.get("epistemic_class") or "")
+            status = str(record.get("status") or "")
+            if (
+                (epistemic == "AI_DISCOVERABLE_OPTION" and status == "ACCEPTED")
+                or (epistemic == "USER_TACIT_CANDIDATE" and status == "CONFIRMED")
+            ):
+                raise _fail("MIDS_DECISION_RELATION_MISSING", decision_id=decision_id, field=field, status=status)
+            continue
+        if len(occurrences) != 2:
+            raise _fail("MIDS_DECISION_ID_COLLISION", decision_id=decision_id, occurrences=len(occurrences))
+        fields = {field for field, _ in occurrences}
+        epistemics = {str(record.get("epistemic_class") or "") for _, record in occurrences}
+        statuses = {str(record.get("status") or "") for _, record in occurrences}
+        tacit_copy = fields == {"confirmed_decisions", "inferred_preferences"} and epistemics == {"USER_TACIT_CANDIDATE"} and statuses == {"CONFIRMED"}
+        ai_copy = fields == {"confirmed_decisions", "candidate_directions"} and epistemics == {"AI_DISCOVERABLE_OPTION"} and statuses == {"ACCEPTED"}
+        if not (tacit_copy or ai_copy):
+            raise _fail("MIDS_DECISION_ID_COLLISION", decision_id=decision_id, fields=sorted(fields), epistemic_classes=sorted(epistemics), statuses=sorted(statuses))
+        if dict(occurrences[0][1]) != dict(occurrences[1][1]):
+            raise _fail("MIDS_DECISION_COPY_MISMATCH", decision_id=decision_id)
+
+    revoked_ids: set[str] = set()
+    for raw in session.get(_REVOKED, []):
+        if not isinstance(raw, Mapping):
+            raise _fail("MIDS_REVOKED_DECISION_INVALID")
+        _core.validate_decision(raw)
+        _validate_decision_user_evidence(raw, context_text=context_text)
+        decision_id = _decision_id(raw)
+        if not decision_id or decision_id in revoked_ids:
+            raise _fail("MIDS_REVOKED_DECISION_ID_DUPLICATE", decision_id=decision_id)
+        revoked_ids.add(decision_id)
+
+
+def _validate_rejection_relations(session: Mapping[str, Any]) -> None:
+    context_text = _context(session)
+    candidates = {_decision_id(raw): raw for raw in session.get("candidate_directions", []) if isinstance(raw, Mapping) and _decision_id(raw)}
+    revoked = {_decision_id(raw): raw for raw in session.get(_REVOKED, []) if isinstance(raw, Mapping) and _decision_id(raw)}
+    for raw in session.get("rejected_alternatives", []):
+        if not isinstance(raw, Mapping):
+            raise _fail("MIDS_REJECTION_RECORD_INVALID")
+        allowed = {"alternative_id", "reason", "provenance", "transition"}
+        if set(raw) != allowed:
+            raise _fail("MIDS_REJECTION_SCHEMA_CLOSED", keys=sorted(raw))
+        alternative_id = _core._text(raw.get("alternative_id"), "rejection.alternative_id")
+        reason = _core._text(raw.get("reason"), "rejection.reason")
+        candidate = candidates.get(alternative_id)
+        if candidate is None or candidate.get("epistemic_class") != "AI_DISCOVERABLE_OPTION":
+            raise _fail("MIDS_REJECTION_TARGET_NOT_BOUND", alternative_id=alternative_id)
+        transition = str(raw.get("transition") or "")
+        if transition == "PROPOSED_TO_REJECTED":
+            if candidate.get("status") != "REJECTED" or alternative_id in revoked:
+                raise _fail("MIDS_REJECTION_TARGET_STATE_MISMATCH", alternative_id=alternative_id)
+            if str(candidate.get("rejection_reason") or "") != reason:
+                raise _fail("MIDS_REJECTION_REASON_MISMATCH", alternative_id=alternative_id)
+            purpose = "REJECT_AI_PROPOSAL"
+        elif transition == "ACCEPTED_TO_REVOKED":
+            if candidate.get("status") != "REVOKED" or alternative_id not in revoked:
+                raise _fail("MIDS_REVOCATION_HISTORY_MISSING", alternative_id=alternative_id)
+            if str(candidate.get("revocation_reason") or "") != reason or str(revoked[alternative_id].get("revocation_reason") or "") != reason:
+                raise _fail("MIDS_REJECTION_REASON_MISMATCH", alternative_id=alternative_id)
+            purpose = "REVOKE_AI_PROPOSAL"
+        else:
+            raise _fail("MIDS_REJECTION_TRANSITION_INVALID", transition=transition)
+        bound = _transition_statement(candidate.get("statement"), reason)
+        _trusted_user_provenance(
+            raw.get("provenance"), "rejection.provenance", context_text=context_text,
+            purpose=purpose, subject_ref=alternative_id, statement=bound,
+        )
+
+
+def _validate_resolution_transitions(session: Mapping[str, Any]) -> None:
+    context_text = _context(session)
+    for raw in session.get("unknowns", []):
+        if not isinstance(raw, Mapping) or str(raw.get("status") or "").strip().upper() != "RESOLVED":
+            continue
+        unknown_id = str(raw.get("unknown_id") or "")
+        basis = raw.get("resolution_basis")
+        if not isinstance(basis, Mapping):
+            raise _fail("MIDS_TYPED_RESOLUTION_BASIS_REQUIRED", unknown_id=unknown_id)
+        basis_type = str(basis.get("type") or "")
+        basis_ref = str(basis.get("result_ref") or "")
+        if basis_type != "USER_DECISION":
+            raise _fail("MIDS_EXTERNAL_RESOLUTION_REQUIRES_AUTHORITY_ADAPTER", unknown_id=unknown_id, basis_type=basis_type)
+        _trusted_user_provenance(basis.get("provenance"), "unknown.resolution_basis.provenance", context_text=context_text, purpose="RESOLVE_UNKNOWN", subject_ref=unknown_id, result_ref=basis_ref)
+        transition = _matching_transition(session, target_kind="UNKNOWN", target_id=unknown_id, from_status="OPEN", to_status="RESOLVED", basis_type=basis_type, basis_ref=basis_ref)
+        if transition is None:
+            raise _fail("MIDS_UNKNOWN_RESOLUTION_TRANSITION_MISSING", unknown_id=unknown_id)
+        _trusted_user_provenance(transition.get("provenance"), "unknown.transition.provenance", context_text=context_text, purpose="RESOLVE_UNKNOWN", subject_ref=unknown_id, result_ref=basis_ref)
+
+    for raw in session.get("contradictions", []):
+        if not isinstance(raw, Mapping) or str(raw.get("status") or "").strip().upper() != "RESOLVED":
+            continue
+        contradiction_id = str(raw.get("contradiction_id") or "")
+        basis = raw.get("resolution_basis")
+        if not isinstance(basis, Mapping):
+            raise _fail("MIDS_TYPED_RESOLUTION_BASIS_REQUIRED", contradiction_id=contradiction_id)
+        basis_type = str(basis.get("type") or "")
+        basis_ref = str(basis.get("result_ref") or "")
+        if basis_type != "USER_DECISION":
+            raise _fail("MIDS_EXTERNAL_RESOLUTION_REQUIRES_AUTHORITY_ADAPTER", contradiction_id=contradiction_id, basis_type=basis_type)
+        _trusted_user_provenance(basis.get("provenance"), "contradiction.resolution_basis.provenance", context_text=context_text, purpose="RESOLVE_CONTRADICTION", subject_ref=contradiction_id, result_ref=basis_ref)
+        transition = _matching_transition(session, target_kind="CONTRADICTION", target_id=contradiction_id, from_status="OPEN", to_status="RESOLVED", basis_type=basis_type, basis_ref=basis_ref)
+        if transition is None:
+            raise _fail("MIDS_CONTRADICTION_RESOLUTION_TRANSITION_MISSING", contradiction_id=contradiction_id)
+        _trusted_user_provenance(transition.get("provenance"), "contradiction.transition.provenance", context_text=context_text, purpose="RESOLVE_CONTRADICTION", subject_ref=contradiction_id, result_ref=basis_ref)
+
+
+def validate_session(session: Mapping[str, Any]) -> None:
+    _core.validate_session(session)
+    _validate_canonical_enums(session)
+    if not isinstance(session.get(_REVOKED), list):
+        raise _fail("MIDS_REVOKED_DECISIONS_LEDGER_REQUIRED")
+    contradiction_ids: set[str] = set()
+    for raw in session.get("contradictions", []):
+        if not isinstance(raw, Mapping):
+            continue
+        contradiction_id = _core._text(raw.get("contradiction_id"), "contradiction.contradiction_id")
+        if contradiction_id in contradiction_ids:
+            raise _fail("MIDS_CONTRADICTION_ID_DUPLICATE", contradiction_id=contradiction_id)
+        contradiction_ids.add(contradiction_id)
+    _validate_root_user_evidence(session)
+    _validate_transition_log(session)
+    _validate_decision_relations(session)
+    _validate_rejection_relations(session)
+    _validate_resolution_transitions(session)
+
+
+def new_session(raw_user_intent: str, *, provenance: Sequence[Mapping[str, Any]], work_item_binding: Mapping[str, Any] | None = None, current_understanding: str = "") -> dict[str, Any]:
+    trusted = _trusted_user_provenance(provenance, "raw_user_intent_provenance", context_text=raw_user_intent, purpose="SESSION_INPUT", subject_ref="RAW_USER_INTENT", statement=raw_user_intent)
+    session = _core.new_session(raw_user_intent, provenance=trusted, work_item_binding=work_item_binding, current_understanding=current_understanding)
+    session[_TRANSITIONS] = []
+    session[_REVOKED] = []
+    validate_session(session)
+    return session
+
+
+def _delegate(name: str, session: Mapping[str, Any], *args: Any, **kwargs: Any) -> dict[str, Any]:
+    validate_session(session)
+    result = getattr(_core, name)(session, *args, **kwargs)
+    validate_session(result)
+    return result
+
+
+def add_user_confirmed_decision(session: Mapping[str, Any], *, decision_id: str, statement: str, provenance: Sequence[Mapping[str, Any]], rationale: str | None = None) -> dict[str, Any]:
+    _assert_new_id_available(session, decision_id)
+    trusted = _trusted_user_provenance(provenance, "decision.provenance", context_text=_context(session), purpose="USER_EXPLICIT_DECISION", subject_ref=decision_id, statement=statement)
+    return _delegate("add_user_confirmed_decision", session, decision_id=decision_id, statement=statement, provenance=trusted, rationale=rationale)
+
+
+def add_tacit_candidate(session: Mapping[str, Any], *args: Any, **kwargs: Any) -> dict[str, Any]:
+    decision_id = kwargs.get("decision_id") if "decision_id" in kwargs else (args[0] if args else "")
+    _assert_new_id_available(session, str(decision_id))
+    return _delegate("add_tacit_candidate", session, *args, **kwargs)
+
+
+def add_ai_proposal(session: Mapping[str, Any], *args: Any, **kwargs: Any) -> dict[str, Any]:
+    proposal_id = kwargs.get("proposal_id") if "proposal_id" in kwargs else (args[0] if args else "")
+    _assert_new_id_available(session, str(proposal_id))
+    return _delegate("add_ai_proposal", session, *args, **kwargs)
+
+
+def confirm_tacit_candidate(session: Mapping[str, Any], decision_id: str, *, user_confirmation_provenance: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    validate_session(session)
+    candidate = _single_decision(session, "inferred_preferences", decision_id, not_found_code="MIDS_DECISION_NOT_FOUND")
+    if candidate.get("status") != "INFERRED":
+        raise _fail("MIDS_TACIT_NOT_OPEN_FOR_CONFIRMATION", decision_id=decision_id)
+    trusted = _trusted_user_provenance(user_confirmation_provenance, "decision.user_confirmation_provenance", context_text=_context(session), purpose="CONFIRM_TACIT_CANDIDATE", subject_ref=decision_id, statement=str(candidate.get("statement") or ""))
+    return _delegate("confirm_tacit_candidate", session, decision_id, user_confirmation_provenance=trusted)
+
+
+def accept_ai_proposal(session: Mapping[str, Any], proposal_id: str, *, user_acceptance_provenance: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    validate_session(session)
+    proposal = _single_decision(session, "candidate_directions", proposal_id, not_found_code="MIDS_PROPOSAL_NOT_FOUND")
+    if proposal.get("status") != "PROPOSED":
+        raise _fail("MIDS_PROPOSAL_NOT_OPEN", proposal_id=proposal_id)
+    trusted = _trusted_user_provenance(user_acceptance_provenance, "decision.user_acceptance_provenance", context_text=_context(session), purpose="ACCEPT_AI_PROPOSAL", subject_ref=proposal_id, statement=str(proposal.get("statement") or ""))
+    return _delegate("accept_ai_proposal", session, proposal_id, user_acceptance_provenance=trusted)
+
+
+def reject_alternative(session: Mapping[str, Any], alternative_id: str, *, user_rejection_provenance: Sequence[Mapping[str, Any]], reason: str) -> dict[str, Any]:
+    validate_session(session)
+    proposal = _single_decision(session, "candidate_directions", alternative_id, not_found_code="MIDS_REJECTABLE_PROPOSAL_NOT_FOUND")
+    if proposal.get("status") != "PROPOSED":
+        if proposal.get("status") == "ACCEPTED":
+            raise _fail("MIDS_ACCEPTED_PROPOSAL_REQUIRES_REVOCATION", alternative_id=alternative_id)
+        raise _fail("MIDS_PROPOSAL_NOT_OPEN", proposal_id=alternative_id)
+    reason_text = _core._text(reason, "reason")
+    bound = _transition_statement(proposal.get("statement"), reason_text)
+    trusted = _trusted_user_provenance(user_rejection_provenance, "decision.user_rejection_provenance", context_text=_context(session), purpose="REJECT_AI_PROPOSAL", subject_ref=alternative_id, statement=bound)
+    result = _core.reject_alternative(session, alternative_id, user_rejection_provenance=trusted, reason=reason_text)
+    candidate = _single_decision(result, "candidate_directions", alternative_id, not_found_code="MIDS_REJECTABLE_PROPOSAL_NOT_FOUND")
+    candidate["rejection_reason"] = reason_text
+    _append_transition(result, target_kind="AI_PROPOSAL", target_id=alternative_id, from_status="PROPOSED", to_status="REJECTED", basis_type="USER_DECISION", basis_ref=trusted[0]["ref"], provenance=trusted)
+    validate_session(result)
+    return result
+
+
+def revoke_accepted_ai_proposal(session: Mapping[str, Any], proposal_id: str, *, user_revocation_provenance: Sequence[Mapping[str, Any]], reason: str) -> dict[str, Any]:
+    validate_session(session)
+    proposal = _single_decision(session, "candidate_directions", proposal_id, not_found_code="MIDS_PROPOSAL_NOT_FOUND")
+    if proposal.get("epistemic_class") != "AI_DISCOVERABLE_OPTION" or proposal.get("status") != "ACCEPTED":
+        raise _fail("MIDS_PROPOSAL_NOT_ACCEPTED_FOR_REVOCATION", proposal_id=proposal_id)
+    reason_text = _core._text(reason, "reason")
+    bound = _transition_statement(proposal.get("statement"), reason_text)
+    trusted = _trusted_user_provenance(user_revocation_provenance, "decision.user_revocation_provenance", context_text=_context(session), purpose="REVOKE_AI_PROPOSAL", subject_ref=proposal_id, statement=bound)
+    result = _core.revoke_accepted_ai_proposal(session, proposal_id, user_revocation_provenance=trusted, reason=reason_text)
+    preserved_history = [copy.deepcopy(record) for record in result.get("confirmed_decisions", []) if isinstance(record, Mapping) and record.get("decision_id") == proposal_id and record.get("epistemic_class") == "AI_DISCOVERABLE_OPTION" and record.get("status") == "REVOKED"]
+    if len(preserved_history) != 1:
+        raise _fail("MIDS_REVOCATION_HISTORY_MISSING", proposal_id=proposal_id)
+    result["confirmed_decisions"] = [record for record in result.get("confirmed_decisions", []) if not (isinstance(record, Mapping) and record.get("decision_id") == proposal_id and record.get("epistemic_class") == "AI_DISCOVERABLE_OPTION" and record.get("status") == "REVOKED")]
+    result[_REVOKED].append(preserved_history[0])
+    _append_transition(result, target_kind="AI_PROPOSAL", target_id=proposal_id, from_status="ACCEPTED", to_status="REVOKED", basis_type="USER_DECISION", basis_ref=trusted[0]["ref"], provenance=trusted)
+    validate_session(result)
+    return result
+
+
+def set_material_director_intent(session: Mapping[str, Any], statement: str, *, provenance: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    trusted = _trusted_user_provenance(provenance, "material_director_intent.provenance", context_text=_context(session), purpose="MATERIAL_DIRECTOR_INTENT", subject_ref="MATERIAL_DIRECTOR_INTENT", statement=statement)
+    return _delegate("set_material_director_intent", session, statement, provenance=trusted)
+
+
+def add_unknown(session: Mapping[str, Any], *args: Any, **kwargs: Any) -> dict[str, Any]:
+    return _delegate("add_unknown", session, *args, **kwargs)
+
+
+def defer_unknown_as_assumption(session: Mapping[str, Any], unknown_id: str, *, safe_default: str, reason: str, provenance: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    validate_session(session)
+    result = _core.defer_unknown_as_assumption(session, unknown_id, safe_default=safe_default, reason=reason, provenance=provenance)
+    prov = _core._provenance(list(provenance), "unknown.defer_provenance")
+    _append_transition(result, target_kind="UNKNOWN", target_id=unknown_id, from_status="OPEN", to_status="DEFERRED_ASSUMPTION", basis_type="BOUNDED_ASSUMPTION", basis_ref=prov[-1]["ref"], provenance=prov)
+    validate_session(result)
+    return result
+
+
+def resolve_unknown(session: Mapping[str, Any], unknown_id: str, *, resolution_basis: Mapping[str, Any] | None = None, resolution_ref: str | None = None) -> dict[str, Any]:
+    validate_session(session)
+    if resolution_ref is not None and resolution_basis is None:
+        raise _fail("MIDS_TYPED_RESOLUTION_BASIS_REQUIRED", unknown_id=unknown_id)
+    if not isinstance(resolution_basis, Mapping):
+        raise _fail("MIDS_TYPED_RESOLUTION_BASIS_REQUIRED", unknown_id=unknown_id)
+    basis_type = str(resolution_basis.get("type") or "")
+    if basis_type != "USER_DECISION":
+        raise _fail("MIDS_EXTERNAL_RESOLUTION_REQUIRES_AUTHORITY_ADAPTER", unknown_id=unknown_id, basis_type=basis_type)
+    basis_ref = _core._text(resolution_basis.get("result_ref"), "unknown.resolution_basis.result_ref")
+    trusted = _trusted_user_provenance(resolution_basis.get("provenance"), "unknown.resolution_basis.provenance", context_text=_context(session), purpose="RESOLVE_UNKNOWN", subject_ref=unknown_id, result_ref=basis_ref)
+    normalized_basis = {"type": "USER_DECISION", "provenance": trusted, "result_ref": basis_ref}
+    result = _core.resolve_unknown(session, unknown_id, resolution_basis=normalized_basis)
+    _append_transition(result, target_kind="UNKNOWN", target_id=unknown_id, from_status="OPEN", to_status="RESOLVED", basis_type="USER_DECISION", basis_ref=basis_ref, provenance=trusted)
+    validate_session(result)
+    return result
+
+
+def add_contradiction(session: Mapping[str, Any], *args: Any, **kwargs: Any) -> dict[str, Any]:
+    validate_session(session)
+    contradiction_id = kwargs.get("contradiction_id") if "contradiction_id" in kwargs else (args[0] if args else "")
+    normalized = str(contradiction_id or "").strip()
+    if any(isinstance(raw, Mapping) and str(raw.get("contradiction_id") or "").strip() == normalized for raw in session.get("contradictions", [])):
+        raise _fail("MIDS_CONTRADICTION_ID_DUPLICATE", contradiction_id=normalized)
+    return _delegate("add_contradiction", session, *args, **kwargs)
+
+
+def resolve_contradiction(session: Mapping[str, Any], contradiction_id: str, *, resolution_basis: Mapping[str, Any]) -> dict[str, Any]:
+    validate_session(session)
+    if not isinstance(resolution_basis, Mapping):
+        raise _fail("MIDS_TYPED_RESOLUTION_BASIS_REQUIRED", contradiction_id=contradiction_id)
+    basis_type = str(resolution_basis.get("type") or "")
+    if basis_type != "USER_DECISION":
+        raise _fail("MIDS_EXTERNAL_RESOLUTION_REQUIRES_AUTHORITY_ADAPTER", contradiction_id=contradiction_id, basis_type=basis_type)
+    basis_ref = _core._text(resolution_basis.get("result_ref"), "contradiction.resolution_basis.result_ref")
+    trusted = _trusted_user_provenance(resolution_basis.get("provenance"), "contradiction.resolution_basis.provenance", context_text=_context(session), purpose="RESOLVE_CONTRADICTION", subject_ref=contradiction_id, result_ref=basis_ref)
+    normalized_basis = {"type": "USER_DECISION", "provenance": trusted, "result_ref": basis_ref}
+    result = _core.resolve_contradiction(session, contradiction_id, resolution_basis=normalized_basis)
+    _append_transition(result, target_kind="CONTRADICTION", target_id=contradiction_id, from_status="OPEN", to_status="RESOLVED", basis_type="USER_DECISION", basis_ref=basis_ref, provenance=trusted)
+    validate_session(result)
+    return result
+
+
+def validate_handoff_ready(session: Mapping[str, Any]) -> dict[str, Any]:
+    validate_session(session)
+    return _core.validate_handoff_ready(session)
+
+
+def compile_spec_candidate(session: Mapping[str, Any]) -> dict[str, Any]:
+    validate_session(session)
+    spec = copy.deepcopy(_core.compile_spec_candidate(session))
+    spec["mids_transition_log"] = copy.deepcopy(session[_TRANSITIONS])
+    spec["revoked_decisions"] = copy.deepcopy(session[_REVOKED])
+    return spec

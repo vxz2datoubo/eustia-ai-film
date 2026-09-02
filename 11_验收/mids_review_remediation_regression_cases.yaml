@@ -1,0 +1,65 @@
+suite_id: EUSTIA_MIDS_REVIEW_REMEDIATION_REGRESSION
+version: 1.0.0
+status: candidate
+source_review_pr: 93
+scope: mids_handoff_materiality_unknown_identity_and_user_receipt_content_binding
+
+cases:
+  - id: MIDS-REV-P1-MATERIALITY-CASE-001
+    title: lowercase HIGH or MATERIAL unknown cannot bypass handoff readiness
+    attack:
+      unknown_status: OPEN
+      blocks_handoff: false
+      materiality_variants: [high, material, HIGH, MATERIAL]
+    expect:
+      handoff_ready: false
+      blocker: MATERIAL_UNKNOWN_UNRESOLVED
+
+  - id: MIDS-REV-P1-RECEIPT-CONTENT-001
+    title: accepted proposal receipt is bound to exact proposal statement not only proposal id
+    attack:
+      proposal_id: P2
+      trusted_receipt: accept
+      original_statement: 先白模验证
+      mutated_same_id_statement: 直接改成完全不同的导演方案
+    expect:
+      error: USER_EVIDENCE_BINDING_MISMATCH
+      confirmed_decision_created: false
+
+  - id: MIDS-REV-P1-RECEIPT-CONTENT-002
+    title: post-acceptance same-id statement mutation invalidates session trust
+    attack:
+      mutate_candidate_and_confirmed_copy_after_acceptance: true
+    expect:
+      error: USER_EVIDENCE_BINDING_MISMATCH
+      mutated_statement_cannot_remain_user_accepted: true
+
+  - id: MIDS-REV-P1-RECEIPT-CONTENT-003
+    title: tacit confirmation receipt also binds exact candidate statement
+    attack:
+      decision_id: T1
+      mutate_statement_before_confirmation: true
+    expect:
+      error: USER_EVIDENCE_BINDING_MISMATCH
+      inference_cannot_become_confirmed: true
+
+  - id: MIDS-REV-P2-UNKNOWN-ID-001
+    title: add_unknown rejects duplicate unknown id
+    attack:
+      add_same_unknown_id_twice: true
+    expect:
+      error: MIDS_UNKNOWN_ID_DUPLICATE
+
+  - id: MIDS-REV-P2-UNKNOWN-ID-002
+    title: externally mutated session with duplicate unknown ids fails validation
+    attack:
+      append_duplicate_unknown_record_directly: true
+    expect:
+      error: MIDS_UNKNOWN_ID_DUPLICATE
+      unreachable_unknown_state_forbidden: true
+
+invariants:
+  - user_authority_receipts_for_content_transitions_bind_session_purpose_subject_and_exact_statement
+  - normalized_materiality_controls_handoff_semantics
+  - unknown_id_is_unique_within_a_session
+  - regression_fixes_do_not_grant_canonical_director_route_learning_or_execution_authority
