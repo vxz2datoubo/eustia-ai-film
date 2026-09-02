@@ -1,4 +1,4 @@
-schema_version: "0.1.1"
+schema_version: "0.2.0"
 component_id: EUSTIA_DIRECTOR_RUNTIME_ORCHESTRATOR_P0
 name: DIRECTOR-RUNTIME-P0
 status: candidate
@@ -9,6 +9,7 @@ purpose:
   - 把现有ActiveWorkItem DirectorFeatureCompiler HardRoute SmartRecall与SOAC结构真正串成第一条Director Runtime候选链
   - 让AI负责导演创造性判断让程序负责authority结构连续性实体绑定世界状态与执行资格守门
   - 把丰富导演决策压缩为模型无关的MinimumSufficientExecutionCandidate
+  - 在可信world baseline或LOCK语义尚未由上游canonical结构化提供时fail closed而不是让creative packet补铸事实
 
 not_a_second_authority:
   director_method: 01_AI电影系统/AI电影系统.md
@@ -25,21 +26,38 @@ public_trust_boundary:
     - natural_language_directing_description
     - DIRECTOR_CREATIVE_DECISION_PACKET/v1
   caller_may_not_supply:
+    - project_root
     - ActiveWorkItemResolution
     - work_item_id
     - learning_receipt
     - feature_compiler_receipt
     - hard_routes
+    - world_state_baseline
+    - locked_constraint_semantics
     - trusted_boolean
     - verification_callback
     - runtime_override
+  governed_project_root:
+    source: executing_module_repository_checkout
+    implementation: Path(__file__).resolve().parents[3]
+    required_anchor_files:
+      - PROJECT_INDEX.yaml
+      - 10_运行时/active_work_item_resolution_gate.yaml
+      - 10_运行时/director_feature_compiler.yaml
+    caller_override_port: absent
+    CLI_project_root_flag: absent
+    stored_as_instance_authority: false
   canonical_runtime_is_instantiated_inside_compile_call: true
   replaceable_public_learning_runtime_attribute: forbidden
 
 public_flow:
+  - resolve_governed_project_root
   - DirectorLearningRuntime.retrieve
   - canonical_work_item_and_learning_receipt
+  - require_trusted_world_entry_baseline_when_work_item_bound
+  - require_trusted_LOCK_semantics_when_LOCKs_exist
   - validate_creative_decision_packet
+  - validate_world_entry_against_trusted_baseline
   - validate_world_state_persistence
   - validate_world_invariant_persistence
   - validate_event_entity_binding
@@ -47,7 +65,8 @@ public_flow:
   - reuse_existing_CinematicIntent_contract_runtime
   - validate_shot_event_binding
   - validate_transition_contract
-  - validate_locked_constraint_preservation
+  - validate_locked_constraint_ID_preservation
+  - inject_trusted_LOCK_semantics_into_execution_candidate
   - compile_minimum_sufficient_execution_candidate
 
 creative_judgment_boundary:
@@ -84,11 +103,14 @@ creative_packet:
     - constraint_autonomy
     - provenance
   forbidden_authority_fields:
+    - project_root
     - work_item_id
     - active_work_item_resolution
     - canonical_runtime_receipt
     - feature_compiler_receipt
     - hard_routes
+    - world_state_baseline
+    - locked_constraint_semantics
     - story_override
     - map_override
     - asset_override
@@ -100,12 +122,26 @@ world_state_contract:
   entry_and_exit_entities_required: true
   entity_fields: [kind, position, state]
   entity_kind_enum: [character, object, environment_anchor, group]
+  bound_work_item_requires_trusted_world_state_baseline: true
+  trusted_baseline_source: canonical_WorkItemContext_only
+  caller_entry_role: assertion_not_authority
+  caller_entry_must_exactly_match_trusted_baseline:
+    - entity_ids
+    - entity_kind
+    - entity_position
+    - entity_state
+    - invariants
+  missing_structured_baseline: fail_closed
+  current_upstream_materialization_status: NOT_YET_AVAILABLE_IN_CANONICAL_WORKITEM_CONTEXT
+  activation_dependency: persistent_world_or_equivalent_canonical_materialization_must_supply_trusted_baseline
   omission_is_not_removal: true
   entity_may_disappear_only_if_listed_in_explicit_exits_or_removals: true
   generated_output_cannot_mint_world_truth: true
   P0_implicit_new_entity_entry: forbidden_until_explicit_entry_contract_exists
   entry_world_invariants_must_equal_exit_world_invariants_in_P0: true
   prompt_omission_cannot_retire_world_invariant: true
+  invented_entity_in_both_entry_and_exit: reject_against_trusted_baseline
+  real_entity_omitted_from_both_entry_and_exit: reject_against_trusted_baseline
 
 EventGraph_contract:
   required_event_fields: [event_id, agent, action, result]
@@ -153,9 +189,17 @@ constraint_autonomy_contract:
     - guided_choices
     - free_model_space
     - final_state
-  all_canonical_work_item_locked_constraints_must_be_preserved: true
+  all_canonical_work_item_locked_constraint_IDs_must_be_preserved: true
   omitted_locked_constraint_is_not_revoked: true
-  bound_work_item_with_LOCKs_requires_nonempty_hard_invariants: true
+  bound_LOCKs_require_trusted_material_semantics: true
+  trusted_LOCK_semantics_source: canonical_WorkItemContext_only
+  current_upstream_semantic_materialization_status: NOT_YET_AVAILABLE_IN_CANONICAL_WORKITEM_CONTEXT
+  missing_or_incomplete_trusted_LOCK_semantics: fail_closed
+  caller_hard_invariants_role: supplemental_candidate_only
+  caller_hard_invariants_are_LOCK_authority: false
+  canonical_LOCK_semantics_are_injected_directly_into_execution_candidate: true
+  canonical_LOCK_semantics_digest_is_emitted: true
+  LOCK_ID_rubber_stamp_cannot_delete_material_semantics: true
   runtime_cannot_promote_guided_choice_to_hard_invariant: true
 
 output:
@@ -171,7 +215,9 @@ output:
     - performance
     - material_cinematic_intent_overlay
     - shot_plan
-    - hard_invariants
+    - canonical_LOCK_hard_invariants
+    - canonical_LOCK_semantics_digest
+    - caller_supplemental_hard_invariants_when_present
     - final_state
   forbidden_output:
     - hidden_chain_of_thought
@@ -183,6 +229,7 @@ output:
 
 first_production_replay:
   work_item_id: KAIM-SCARF-CLOTHESLINE-TRAVERSE
+  current_real_runtime_status: FAIL_CLOSED_UNTIL_UPSTREAM_STRUCTURED_WORLD_AND_LOCK_SEMANTICS_ARE_MATERIALIZED
   required_locked_constraints:
     - scarf_clothesline_geometry
     - scarf_midpoint_single_drape_over_fixed_thick_line
@@ -192,6 +239,8 @@ first_production_replay:
     - screen_right_to_screen_left_side_on_traverse
     - no_open_sky_prison_city_enclosure
     - disappearance_reveal_return_to_same_master_with_kaim_already_absent
+  regression_fixture_may_simulate_trusted_upstream_materialization: true
+  regression_fixture_does_not_claim_current_canonical_materialization_exists: true
 
 activation:
   PROJECT_INDEX_registration: absent
@@ -199,11 +248,18 @@ activation:
   current_mode: CANDIDATE
   independent_T3_required: true
   activation_requires_separate_bounded_slice: true
+  activation_blocked_until:
+    - canonical_world_state_baseline_materialization_exists
+    - canonical_LOCK_semantics_materialization_exists
+    - independent_T3_ACCEPT
 
 fail_codes:
+  - DIRECTOR_GOVERNED_PROJECT_ROOT_INVALID
   - DIRECTOR_PACKET_SCHEMA_INVALID
   - DIRECTOR_PACKET_AUTHORITY_VIOLATION
   - DIRECTOR_PACKET_MISSING_PROVENANCE
+  - DIRECTOR_WORLD_BASELINE_UNAVAILABLE
+  - DIRECTOR_WORLD_ENTRY_BASELINE_MISMATCH
   - DIRECTOR_WORLD_ENTITY_DROPPED
   - DIRECTOR_WORLD_ENTITY_INVALID
   - DIRECTOR_WORLD_INVARIANT_DROPPED
@@ -214,5 +270,6 @@ fail_codes:
   - DIRECTOR_CAMERA_AUTHORITY_MINT_ATTEMPT
   - DIRECTOR_TRANSITION_STATE_MISMATCH
   - DIRECTOR_LOCKED_CONSTRAINT_DROPPED
+  - DIRECTOR_LOCK_SEMANTICS_UNAVAILABLE
   - DIRECTOR_CINEMATIC_INTENT_REJECTED
   - DIRECTOR_EXECUTION_NOT_AUTHORIZED
