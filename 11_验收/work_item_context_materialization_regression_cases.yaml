@@ -1,0 +1,78 @@
+schema_version: "0.1.0"
+suite_id: EUSTIA_WORK_ITEM_CONTEXT_MATERIALIZATION_P0_REGRESSION
+status: candidate
+source_issue: 82
+
+cases:
+  - id: WIM-P0-CURRENT-KAIM-001
+    scenario: current_supported_work_item_with_fresh_fixed_github_context
+    work_item_id: KAIM-SCARF-CLOTHESLINE-TRAVERSE
+    expected:
+      status: CANDIDATE_READY
+      projection_only: true
+      execution_authorized: false
+      serialized_output_is_authority: false
+      world_baseline_entities: [kaim, scarf, clothesline, laundry]
+      adjacent_woman_in_entry_baseline: false
+      adjacent_woman_authorized_explicit_entry: true
+      lock_semantic_coverage: EXACT
+
+  - id: WIM-P0-CALLER-ROOT-001
+    scenario: caller_passes_alternate_project_root
+    expected: PYTHON_CALL_SURFACE_REJECTS_ARGUMENT
+
+  - id: WIM-P0-CALLER-WORK-ITEM-001
+    scenario: caller_passes_work_item_id
+    expected: PYTHON_CALL_SURFACE_REJECTS_ARGUMENT
+
+  - id: WIM-P0-UNSUPPORTED-WORK-ITEM-001
+    scenario: fixed_github_current_work_item_changes_to_unreviewed_id
+    expected_error: WORK_ITEM_MATERIALIZER_UNSUPPORTED_WORK_ITEM
+
+  - id: WIM-P0-STORY-SCOPE-DRIFT-001
+    scenario: current_work_item_id_same_but_story_scope_ref_changes
+    expected_error: WORK_ITEM_MATERIALIZER_STORY_SCOPE_MISMATCH
+
+  - id: WIM-P0-SUMMARY-DRIFT-001
+    scenario: current_work_item_summary_loses_required_material_tokens
+    expected_error: WORK_ITEM_MATERIALIZER_SUMMARY_DRIFT
+
+  - id: WIM-P0-LOCK-MISSING-001
+    scenario: one_canonical_LOCK_removed
+    expected_error: WORK_ITEM_MATERIALIZER_LOCK_SET_MISMATCH
+
+  - id: WIM-P0-LOCK-EXTRA-001
+    scenario: unreviewed_new_LOCK_added_to_same_work_item
+    expected_error: WORK_ITEM_MATERIALIZER_LOCK_SET_MISMATCH
+
+  - id: WIM-P0-PRESERVED-MISSING-001
+    scenario: adjacent_woman_opens_window_is_no_longer_preserved
+    expected_error: WORK_ITEM_MATERIALIZER_PRESERVED_CONSTRAINT_MISSING
+
+  - id: WIM-P0-UNVERIFIED-CONTEXT-001
+    scenario: context_verification_basis_is_not_fixed_github
+    expected_error: WORK_ITEM_MATERIALIZER_RESOLUTION_FAILED
+
+  - id: WIM-P0-FUTURE-ENTITY-LAUNDER-001
+    scenario: future_adjacent_woman_is_added_to_entry_baseline_while_also_declared_as_explicit_entry
+    expected_error: WORK_ITEM_MATERIALIZER_PROFILE_INVALID
+
+  - id: WIM-P0-PROVENANCE-001
+    scenario: baseline_entity_or_LOCK_semantic_has_empty_provenance
+    expected_error: WORK_ITEM_MATERIALIZER_PROVENANCE_MISSING
+
+  - id: WIM-P0-ACTIVATION-001
+    scenario: candidate_file_is_added_to_PROJECT_INDEX_read_sets_or_write_routes
+    expected: FAIL_CANDIDATE_ISOLATION
+
+  - id: WIM-P0-GENERATED-OUTPUT-001
+    scenario: generated_video_or_prompt_attempts_to_mutate_materialized_world_or_LOCK_semantics
+    expected: NO_INPUT_SURFACE_AND_NO_AUTHORITY
+
+metrics:
+  - unsupported_work_item_false_accept_rate
+  - canonical_lock_coverage
+  - unsupported_entry_baseline_invention_rate
+  - provenance_coverage
+  - stale_or_unverified_context_rejection_rate
+  - accidental_activation_rate
