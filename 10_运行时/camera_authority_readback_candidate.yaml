@@ -1,0 +1,86 @@
+contract_id: EUSTIA_CAMERA_AUTHORITY_READBACK_P1A
+version: 0.2.0
+status: candidate_unregistered_unactivated
+source_issue: 80
+scope: read_only_current_active_work_item_camera_authority_resolution
+
+purpose:
+  - 为 CinematicIntent 和 Director Runtime 提供唯一只读的正式摄影绑定读取候选接口
+  - 把无绑定、存在待校验绑定、正式绑定已验证区分成机器状态
+  - 防止 AI camera proposal、文件名、默认 View 或 caller 参数静默升级为摄影 authority
+  - P1a 只读取当前 canonical active work item；历史工作项必须等待独立的 canonical historical resolver 集成
+
+authority_chain:
+  - PROJECT_INDEX.yaml
+  - 07_连续性与生产状态/连续性与当前生产状态.md#ACTIVE_WORK_ITEM_STATE
+  - 07_连续性与生产状态/连续性与当前生产状态.md#SHOT_CAMERA_BINDINGS
+  - 10_运行时/scene_asset_identity_schema.yaml
+  - 06_视觉资产/视觉资产登记库.md#新体系正式场景身份图
+  - 10_运行时/scene_media_resolver_manifest.yaml
+
+states:
+  CAMERA_AUTHORITY_UNBOUND:
+    camera_authority_available: false
+  CAMERA_BINDING_PRESENT_REQUIRES_IDENTITY_VALIDATION:
+    camera_authority_available: false
+  CAMERA_AUTHORITY_BOUND_VERIFIED:
+    camera_authority_available: true
+
+public_api:
+  function: read_camera_authority
+  accepted_selectors: [shot_id]
+  forbidden_authority_inputs:
+    - work_item_id
+    - project_root
+    - continuity_payload
+    - binding_payload
+    - camera_anchor_id
+    - view_id
+    - asset_id
+    - media_version_id
+    - verified_boolean
+    - trusted_receipt
+    - callback
+  historical_work_item_selector_supported: false
+
+binding_contract:
+  continuity_marker_begin: "<!-- SHOT_CAMERA_BINDINGS_BEGIN -->"
+  continuity_marker_end: "<!-- SHOT_CAMERA_BINDINGS_END -->"
+  root_key: shot_camera_bindings
+  required_fields: [work_item_id, shot_id, scene_id, camera_anchor_id, view_id, asset_id, binding_status, provenance, writeback_verified_commit]
+  optional_fields: [relation_id, media_version_id]
+  allowed_binding_status: [CONFIRMED, LOCKED]
+
+readback_rules:
+  - fixed GitHub repository/main is the authority surface; caller cannot inject continuity, registry, resolver, callbacks, verified booleans or receipts
+  - PROJECT_INDEX must resolve the canonical continuity, asset registry, identity schema and resolver paths
+  - scene_asset_identity_schema itself must be active and must point back to the same canonical registry, resolver and continuity surfaces
+  - P1a uses canonical ACTIVE_WORK_ITEM_STATE as the only work-item selector authority
+  - caller cannot request an arbitrary current or historical work_item_id
+  - historical camera readback requires a separately reviewed canonical historical work-item resolution path
+  - no binding means CAMERA_AUTHORITY_UNBOUND; never choose a default View to make compilation succeed
+  - binding work_item_id must equal the canonical active work item because only active-item bindings are selected
+  - camera_anchor.scene_id must equal binding.scene_id
+  - view.scene_id and view.camera_anchor_id must equal binding scene/anchor
+  - media_asset.view_id must equal binding.view_id
+  - optional relation_id must resolve to an active relation containing the selected view
+  - all Scene/Camera/View/Asset records must be active
+  - binding writeback_verified_commit must be a real canonical ancestor of current main and contain the same material binding semantics
+  - perspective facing comes only from View.facing_cardinal; top-view orientation comes only from View.screen_top_cardinal
+  - physical position fields come only from Camera Anchor metadata actually present
+  - lens fields come only from View metadata actually present
+  - absent exact_transform/map_xy/elevation/camera_height/focal_length/lens_intent remain null/unknown
+  - filenames, display names and legacy IDs never mint direction or exact transform
+  - AI camera proposal may be compared later but cannot materialize or mutate this binding
+  - returned authority receipt recursively freezes nested mappings/lists; as_dict returns only a detached serialization projection
+  - readback never claims pixels_seen from metadata alone
+
+activation_boundary:
+  registered_in_project_index: false
+  ordinary_directing_read_set_active: false
+  cinematic_intent_integration_active: false
+  director_runtime_integration_active: false
+  canonical_write_authority: false
+  camera_choice_authority: false
+  historical_camera_resolution_active: false
+  activation_requires_separate_reviewed_slice: true
