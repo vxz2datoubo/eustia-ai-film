@@ -26,6 +26,39 @@ LOCKED = [
     "disappearance_reveal_return_to_same_master_with_kaim_already_absent",
 ]
 
+LOCK_SEMANTICS = {
+    "scarf_clothesline_geometry": "围巾与固定晾衣绳保持单一明确承重拓扑，不把晾衣绳变成随凯姆移动的绳索。",
+    "scarf_midpoint_single_drape_over_fixed_thick_line": "围巾中点只搭过一根固定粗晾衣绳形成单次披挂。",
+    "scarf_ends_separate_and_one_end_per_hand": "围巾两端保持分离，凯姆左右手各握一端。",
+    "kaim_body_and_hands_remain_below_fixed_line": "凯姆身体与双手在横移期间保持在固定晾衣绳下方。",
+    "scarf_and_kaim_co_translate_while_clothesline_stays_fixed": "凯姆与围巾一起从右向左平移，晾衣绳本体固定不平移。",
+    "screen_right_to_screen_left_side_on_traverse": "横移主动作保持侧面可读并从画面右向左完成。",
+    "no_open_sky_prison_city_enclosure": "监牢城市空间保持封闭感，画面不得打开成自由天空。",
+    "disappearance_reveal_return_to_same_master_with_kaim_already_absent": "女人 reaction cutaway 后回到同一 master 时凯姆已经离开，不把离开发生成镜头内显式表演。",
+}
+
+
+def entry_entities_fixture() -> dict:
+    return {
+        "kaim": {"kind": "character", "position": "roof_right", "state": "traverse_ready"},
+        "scarf": {"kind": "object", "position": "on_fixed_clothesline_midpoint", "state": "one_end_per_hand"},
+        "clothesline": {"kind": "environment_anchor", "position": "fixed_roof_span", "state": "fixed"},
+        "laundry": {"kind": "group", "position": "along_clothesline", "state": "hanging"},
+        "wall": {"kind": "environment_anchor", "position": "left_building", "state": "static"},
+        "window": {"kind": "environment_anchor", "position": "left_building_window", "state": "closed"},
+        "woman": {"kind": "character", "position": "window_interior", "state": "approaching_window"},
+    }
+
+
+def world_entry_baseline() -> dict:
+    return {
+        "entities": entry_entities_fixture(),
+        "invariants": [
+            "no_open_sky_prison_city_enclosure",
+            "fixed_clothesline_does_not_translate_with_kaim",
+        ],
+    }
+
 
 def retrieval_result() -> dict:
     return {
@@ -36,6 +69,8 @@ def retrieval_result() -> dict:
             "work_item_context_packet": {
                 "work_item_id": "KAIM-SCARF-CLOTHESLINE-TRAVERSE",
                 "constraints": {"locked": list(LOCKED)},
+                "world_state_baseline": world_entry_baseline(),
+                "locked_constraint_semantics": dict(LOCK_SEMANTICS),
             },
             "hard_routes": ["TARGET_ORIENTED_SPATIAL_BINDING"],
             "feature_compiler_receipt": {
@@ -47,15 +82,7 @@ def retrieval_result() -> dict:
 
 
 def creative_packet() -> dict:
-    entry_entities = {
-        "kaim": {"kind": "character", "position": "roof_right", "state": "traverse_ready"},
-        "scarf": {"kind": "object", "position": "on_fixed_clothesline_midpoint", "state": "one_end_per_hand"},
-        "clothesline": {"kind": "environment_anchor", "position": "fixed_roof_span", "state": "fixed"},
-        "laundry": {"kind": "group", "position": "along_clothesline", "state": "hanging"},
-        "wall": {"kind": "environment_anchor", "position": "left_building", "state": "static"},
-        "window": {"kind": "environment_anchor", "position": "left_building_window", "state": "closed"},
-        "woman": {"kind": "character", "position": "window_interior", "state": "approaching_window"},
-    }
+    entry_entities = entry_entities_fixture()
     exit_entities = {
         "scarf": {"kind": "object", "position": "left_building", "state": "still_with_kaim_after_exit"},
         "clothesline": {"kind": "environment_anchor", "position": "fixed_roof_span", "state": "fixed"},
@@ -304,12 +331,12 @@ def creative_packet() -> dict:
 
 
 class DirectorRuntimeOrchestratorTests(unittest.TestCase):
-    def make_runtime(self):
+    def make_runtime(self, retrieval: dict | None = None):
         patcher = patch("learning_retriever.director_orchestrator.DirectorLearningRuntime")
         runtime_cls = patcher.start()
         self.addCleanup(patcher.stop)
-        runtime_cls.return_value.retrieve.return_value = retrieval_result()
-        orchestrator = DirectorRuntimeOrchestrator(PROJECT_ROOT)
+        runtime_cls.return_value.retrieve.return_value = retrieval or retrieval_result()
+        orchestrator = DirectorRuntimeOrchestrator()
         return orchestrator, runtime_cls.return_value
 
     def assert_code(self, expected: str, fn) -> None:
@@ -322,12 +349,35 @@ class DirectorRuntimeOrchestratorTests(unittest.TestCase):
         result = orchestrator.compile("继续当前凯姆围巾晾衣绳横移这段", creative_packet())
         self.assertEqual("CANDIDATE_READY", result["status"])
         self.assertEqual("KAIM-SCARF-CLOTHESLINE-TRAVERSE", result["work_item_binding"]["work_item_id"])
+        self.assertEqual("trusted_work_item_context", result["work_item_binding"]["world_entry_authority"])
         self.assertFalse(result["execution_authorized"])
         self.assertFalse(result["deliverable"])
         self.assertTrue(result["downstream_gate_required"])
         self.assertEqual(set(LOCKED), set(result["director_ir"]["constraint_autonomy"]["locked_constraints_preserved"]))
+        execution = result["minimum_execution_prompt_candidate"]
+        self.assertEqual(list(LOCKED), execution["hard_invariant_refs"])
+        self.assertEqual([LOCK_SEMANTICS[item] for item in LOCKED], execution["canonical_hard_invariants"])
+        self.assertFalse(execution["caller_hard_invariants_are_lock_authority"])
         self.assertEqual("PROPOSAL_ONLY", result["director_ir"]["shot_plan"][0]["camera_proposal"]["authority_status"])
         learning_runtime.retrieve.assert_called_once()
+
+    def test_bound_work_item_without_world_baseline_fails_closed(self):
+        retrieval = retrieval_result()
+        retrieval["canonical_runtime_receipt"]["work_item_context_packet"].pop("world_state_baseline")
+        orchestrator, _ = self.make_runtime(retrieval)
+        self.assert_code(
+            "DIRECTOR_WORLD_BASELINE_UNAVAILABLE",
+            lambda: orchestrator.compile("继续当前这段", creative_packet()),
+        )
+
+    def test_bound_work_item_without_lock_semantics_fails_closed(self):
+        retrieval = retrieval_result()
+        retrieval["canonical_runtime_receipt"]["work_item_context_packet"].pop("locked_constraint_semantics")
+        orchestrator, _ = self.make_runtime(retrieval)
+        self.assert_code(
+            "DIRECTOR_LOCK_SEMANTICS_UNAVAILABLE",
+            lambda: orchestrator.compile("继续当前这段", creative_packet()),
+        )
 
     def test_creative_packet_cannot_supply_work_item_authority(self):
         orchestrator, _ = self.make_runtime()
@@ -344,6 +394,35 @@ class DirectorRuntimeOrchestratorTests(unittest.TestCase):
         packet["world_state"]["exit"]["entities"].pop("scarf")
         self.assert_code(
             "DIRECTOR_WORLD_ENTITY_DROPPED",
+            lambda: orchestrator.compile("继续当前这段", packet),
+        )
+
+    def test_caller_cannot_invent_entity_in_both_entry_and_exit(self):
+        orchestrator, _ = self.make_runtime()
+        packet = creative_packet()
+        ghost = {"kind": "character", "position": "roof_right", "state": "invented"}
+        packet["world_state"]["entry"]["entities"]["ghost_actor"] = deepcopy(ghost)
+        packet["world_state"]["exit"]["entities"]["ghost_actor"] = deepcopy(ghost)
+        self.assert_code(
+            "DIRECTOR_WORLD_ENTRY_BASELINE_MISMATCH",
+            lambda: orchestrator.compile("继续当前这段", packet),
+        )
+
+    def test_caller_cannot_erase_real_entity_from_both_entry_and_exit(self):
+        orchestrator, _ = self.make_runtime()
+        packet = creative_packet()
+        packet["world_state"]["entry"]["entities"].pop("scarf")
+        packet["world_state"]["exit"]["entities"].pop("scarf")
+        packet["events"][0]["instrument"] = None
+        packet["events"][0]["support_or_contact"] = ["clothesline"]
+        packet["blocking"]["initial_positions"].pop("scarf")
+        packet["blocking"]["movement_paths"].pop("scarf")
+        packet["blocking"]["final_positions"].pop("scarf")
+        packet["blocking"]["support_contacts"].pop("scarf")
+        packet["transition"]["changed_entities"].remove("scarf")
+        packet["transition"]["next_entry_state"]["entities"].remove("scarf")
+        self.assert_code(
+            "DIRECTOR_WORLD_ENTRY_BASELINE_MISMATCH",
             lambda: orchestrator.compile("继续当前这段", packet),
         )
 
@@ -396,7 +475,7 @@ class DirectorRuntimeOrchestratorTests(unittest.TestCase):
             lambda: orchestrator.compile("继续当前这段", packet),
         )
 
-    def test_locked_constraint_cannot_be_dropped(self):
+    def test_locked_constraint_id_cannot_be_dropped(self):
         orchestrator, _ = self.make_runtime()
         packet = creative_packet()
         packet["constraint_autonomy"]["locked_constraints_preserved"].remove(
@@ -406,6 +485,17 @@ class DirectorRuntimeOrchestratorTests(unittest.TestCase):
             "DIRECTOR_LOCKED_CONSTRAINT_DROPPED",
             lambda: orchestrator.compile("继续当前这段", packet),
         )
+
+    def test_lock_id_rubber_stamp_cannot_drop_material_semantics(self):
+        orchestrator, _ = self.make_runtime()
+        packet = creative_packet()
+        packet["constraint_autonomy"]["hard_invariants"] = ["unrelated harmless sentence"]
+        result = orchestrator.compile("继续当前这段", packet)
+        execution = result["minimum_execution_prompt_candidate"]
+        self.assertEqual([LOCK_SEMANTICS[item] for item in LOCKED], execution["canonical_hard_invariants"])
+        self.assertIn(LOCK_SEMANTICS["scarf_midpoint_single_drape_over_fixed_thick_line"], execution["text"])
+        self.assertIn("unrelated harmless sentence", execution["text"])
+        self.assertFalse(execution["caller_hard_invariants_are_lock_authority"])
 
     def test_cinematic_intent_cannot_mint_camera_physical_authority(self):
         orchestrator, _ = self.make_runtime()
