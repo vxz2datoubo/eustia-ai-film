@@ -1,78 +1,107 @@
-schema_version: "0.1.0"
+schema_version: "0.2.0"
 suite_id: EUSTIA_WORK_ITEM_CONTEXT_MATERIALIZATION_P0_REGRESSION
 status: candidate
 source_issue: 82
 
 cases:
-  - id: WIM-P0-CURRENT-KAIM-001
-    scenario: current_supported_work_item_with_fresh_fixed_github_context
-    work_item_id: KAIM-SCARF-CLOTHESLINE-TRAVERSE
+  - id: WIM-P0-CURRENT-KAIM-NO-BLOCK-001
+    scenario: current_Kaim_work_item_is_fixed_github_verified_but_canonical_continuity_has_no_structured_context_block
     expected:
-      status: CANDIDATE_READY
-      projection_only: true
+      status: STRUCTURED_CONTEXT_UNAVAILABLE
+      trusted_materialization_available: false
+      world_state_baseline: null
       execution_authorized: false
-      serialized_output_is_authority: false
-      world_baseline_entities: [kaim, scarf, clothesline, laundry]
-      adjacent_woman_in_entry_baseline: false
-      adjacent_woman_authorized_explicit_entry: true
-      lock_semantic_coverage: EXACT
+      static_proposal_used_as_authority: false
+
+  - id: WIM-P0-PROPOSAL-LAUNDER-001
+    scenario: repository_contains_complete_Kaim_PROPOSAL_ONLY_profile_but_canonical_continuity_has_no_structured_block
+    expected: STRUCTURED_CONTEXT_UNAVAILABLE
+    forbidden: [proposal_to_world_truth, proposal_to_LOCK_authority, proposal_unlocks_Director_Runtime]
 
   - id: WIM-P0-CALLER-ROOT-001
     scenario: caller_passes_alternate_project_root
     expected: PYTHON_CALL_SURFACE_REJECTS_ARGUMENT
 
   - id: WIM-P0-CALLER-WORK-ITEM-001
-    scenario: caller_passes_work_item_id
+    scenario: caller_passes_work_item_id_or_structured_context_payload
     expected: PYTHON_CALL_SURFACE_REJECTS_ARGUMENT
 
-  - id: WIM-P0-UNSUPPORTED-WORK-ITEM-001
-    scenario: fixed_github_current_work_item_changes_to_unreviewed_id
-    expected_error: WORK_ITEM_MATERIALIZER_UNSUPPORTED_WORK_ITEM
+  - id: WIM-P0-VERIFIED-BLOCK-001
+    scenario: canonical_current_continuity_contains_VERIFIED_structured_block_matching_active_work_item_story_scope_checkpoint_and_LOCK_set
+    expected:
+      status: STRUCTURED_CONTEXT_READY
+      trusted_materialization_available: true
+      serialized_output_is_authority: false
+      fresh_readback_required_before_consumption: true
+      nested_authority_objects_immutable: true
 
-  - id: WIM-P0-STORY-SCOPE-DRIFT-001
-    scenario: current_work_item_id_same_but_story_scope_ref_changes
-    expected_error: WORK_ITEM_MATERIALIZER_STORY_SCOPE_MISMATCH
+  - id: WIM-P0-WORK-ITEM-MISMATCH-001
+    scenario: structured_block_work_item_id_differs_from_current_ACTIVE_WORK_ITEM_STATE
+    expected_error: WORK_ITEM_STRUCTURED_CONTEXT_WORK_ITEM_MISMATCH
 
-  - id: WIM-P0-SUMMARY-DRIFT-001
-    scenario: current_work_item_summary_loses_required_material_tokens
-    expected_error: WORK_ITEM_MATERIALIZER_SUMMARY_DRIFT
+  - id: WIM-P0-STORY-SCOPE-MISMATCH-001
+    scenario: structured_block_story_scope_ref_differs_from_current_WorkItemContext
+    expected_error: WORK_ITEM_STRUCTURED_CONTEXT_STORY_SCOPE_MISMATCH
+
+  - id: WIM-P0-CHECKPOINT-STALE-001
+    scenario: structured_block_source_checkpoint_ref_is_not_current_applied_checkpoint
+    expected_error: WORK_ITEM_STRUCTURED_CONTEXT_CHECKPOINT_MISMATCH
+
+  - id: WIM-P0-STATUS-001
+    scenario: structured_block_is_CANDIDATE_or_PROPOSAL_instead_of_VERIFIED
+    expected_error: WORK_ITEM_STRUCTURED_CONTEXT_STATUS_INVALID
 
   - id: WIM-P0-LOCK-MISSING-001
-    scenario: one_canonical_LOCK_removed
-    expected_error: WORK_ITEM_MATERIALIZER_LOCK_SET_MISMATCH
+    scenario: one_current_canonical_LOCK_has_no_semantic_entry
+    expected_error: WORK_ITEM_STRUCTURED_CONTEXT_LOCK_COVERAGE_MISMATCH
 
   - id: WIM-P0-LOCK-EXTRA-001
-    scenario: unreviewed_new_LOCK_added_to_same_work_item
-    expected_error: WORK_ITEM_MATERIALIZER_LOCK_SET_MISMATCH
+    scenario: structured_block_contains_semantic_for_noncanonical_extra_LOCK
+    expected_error: WORK_ITEM_STRUCTURED_CONTEXT_LOCK_COVERAGE_MISMATCH
 
-  - id: WIM-P0-PRESERVED-MISSING-001
-    scenario: adjacent_woman_opens_window_is_no_longer_preserved
-    expected_error: WORK_ITEM_MATERIALIZER_PRESERVED_CONSTRAINT_MISSING
+  - id: WIM-P0-PROVENANCE-ENTITY-001
+    scenario: one_baseline_entity_has_no_exact_provenance_coverage
+    expected_error: WORK_ITEM_MATERIALIZER_PROVENANCE_MISSING
 
-  - id: WIM-P0-UNVERIFIED-CONTEXT-001
-    scenario: context_verification_basis_is_not_fixed_github
-    expected_error: WORK_ITEM_MATERIALIZER_RESOLUTION_FAILED
+  - id: WIM-P0-PROVENANCE-INVARIANT-001
+    scenario: one_baseline_invariant_has_missing_or_duplicate_provenance_record
+    expected_error: WORK_ITEM_MATERIALIZER_PROVENANCE_MISSING
+
+  - id: WIM-P0-PROVENANCE-LOCK-001
+    scenario: one_LOCK_semantic_has_no_provenance_refs
+    expected_error: WORK_ITEM_MATERIALIZER_PROVENANCE_MISSING
+
+  - id: WIM-P0-EXPLICIT-ENTRY-OVERAUTH-001
+    scenario: later_entity_entry_claims_exact_entry_time_or_exact_entry_position_authority
+    expected_error: WORK_ITEM_STRUCTURED_CONTEXT_BLOCK_INVALID
 
   - id: WIM-P0-FUTURE-ENTITY-LAUNDER-001
-    scenario: future_adjacent_woman_is_added_to_entry_baseline_while_also_declared_as_explicit_entry
-    expected_error: WORK_ITEM_MATERIALIZER_PROFILE_INVALID
+    scenario: same_entity_is_present_in_entry_baseline_and_authorized_explicit_entries
+    expected_error: WORK_ITEM_STRUCTURED_CONTEXT_BLOCK_INVALID
 
-  - id: WIM-P0-PROVENANCE-001
-    scenario: baseline_entity_or_LOCK_semantic_has_empty_provenance
-    expected_error: WORK_ITEM_MATERIALIZER_PROVENANCE_MISSING
+  - id: WIM-P0-UNVERIFIED-CONTEXT-001
+    scenario: Active_Work_Item_context_verification_basis_is_not_fixed_github
+    expected_error: WORK_ITEM_MATERIALIZER_RESOLUTION_FAILED
+
+  - id: WIM-P0-MUTATION-001
+    scenario: caller_mutates_as_dict_projection_after_verified_readback
+    expected: IMMUTABLE_AUTHORITY_OBJECT_UNCHANGED
 
   - id: WIM-P0-ACTIVATION-001
     scenario: candidate_file_is_added_to_PROJECT_INDEX_read_sets_or_write_routes
     expected: FAIL_CANDIDATE_ISOLATION
 
   - id: WIM-P0-GENERATED-OUTPUT-001
-    scenario: generated_video_or_prompt_attempts_to_mutate_materialized_world_or_LOCK_semantics
+    scenario: generated_video_or_prompt_attempts_to_mutate_structured_world_or_LOCK_semantics
     expected: NO_INPUT_SURFACE_AND_NO_AUTHORITY
 
 metrics:
-  - unsupported_work_item_false_accept_rate
-  - canonical_lock_coverage
+  - proposal_laundering_rate
+  - canonical_block_false_accept_rate
+  - canonical_lock_exact_coverage
   - unsupported_entry_baseline_invention_rate
   - provenance_coverage
-  - stale_or_unverified_context_rejection_rate
+  - stale_checkpoint_rejection_rate
+  - unverified_context_rejection_rate
+  - serialized_projection_authority_rate
   - accidental_activation_rate
