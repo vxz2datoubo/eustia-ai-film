@@ -25,9 +25,14 @@ class DirectorOrchestratorHardeningTests(unittest.TestCase):
             fn()
         self.assertEqual(expected, ctx.exception.code)
 
-    def test_orchestrator_has_no_constructed_replaceable_learning_runtime_attribute(self):
-        runtime = DirectorRuntimeOrchestrator(PROJECT_ROOT)
+    def test_orchestrator_has_no_constructed_replaceable_learning_runtime_or_root(self):
+        runtime = DirectorRuntimeOrchestrator()
         self.assertFalse(hasattr(runtime, "learning_runtime"))
+        self.assertFalse(hasattr(runtime, "_project_root"))
+
+    def test_python_constructor_has_no_caller_project_root_port(self):
+        with self.assertRaises(TypeError):
+            DirectorRuntimeOrchestrator(PROJECT_ROOT)  # type: ignore[call-arg]
 
     def test_world_invariant_cannot_disappear_by_omission(self):
         packet = {
@@ -70,6 +75,66 @@ class DirectorOrchestratorHardeningTests(unittest.TestCase):
         self.assert_code(
             "DIRECTOR_WORLD_ENTITY_INVALID",
             lambda: _validate_world_state(packet),
+        )
+
+    def test_caller_entry_must_exactly_match_trusted_world_baseline(self):
+        trusted = {
+            "entities": {
+                "kaim": entity("character", "roof", "moving"),
+                "scarf": entity("object", "line", "held"),
+            },
+            "invariants": ["closed_world"],
+        }
+        packet = {
+            "world_state": {
+                "entry": {
+                    "entities": {
+                        "kaim": entity("character", "roof", "moving"),
+                        "ghost": entity("character", "roof", "invented"),
+                    },
+                    "invariants": ["closed_world"],
+                },
+                "exit": {
+                    "entities": {
+                        "kaim": entity("character", "roof", "moving"),
+                        "ghost": entity("character", "roof", "invented"),
+                    },
+                    "invariants": ["closed_world"],
+                },
+                "explicit_exits_or_removals": [],
+                "state_changes": [],
+            }
+        }
+        self.assert_code(
+            "DIRECTOR_WORLD_ENTRY_BASELINE_MISMATCH",
+            lambda: _validate_world_state(packet, canonical_entry_baseline=trusted),
+        )
+
+    def test_omitting_real_entity_from_both_entry_and_exit_fails_baseline_match(self):
+        trusted = {
+            "entities": {
+                "kaim": entity("character", "roof", "moving"),
+                "scarf": entity("object", "line", "held"),
+            },
+            "invariants": ["closed_world"],
+        }
+        packet = {
+            "world_state": {
+                "entry": {
+                    "entities": {"kaim": entity("character", "roof", "moving")},
+                    "invariants": ["closed_world"],
+                },
+                "exit": {
+                    "entities": {"kaim": entity("character", "roof", "moving")},
+                    "invariants": ["closed_world"],
+                },
+                "explicit_exits_or_removals": [],
+                "state_changes": [],
+            }
+        }
+        self.assert_code(
+            "DIRECTOR_WORLD_ENTRY_BASELINE_MISMATCH",
+            lambda: _validate_world_state(packet, canonical_entry_baseline=trusted),
         )
 
     def test_blocking_support_contact_value_must_bind_world_entity(self):
