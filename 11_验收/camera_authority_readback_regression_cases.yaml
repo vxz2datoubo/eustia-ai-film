@@ -1,0 +1,70 @@
+schema_version: "0.1.0"
+suite_id: EUSTIA_CAMERA_AUTHORITY_READBACK_REGRESSION
+status: candidate
+source_issue: 80
+
+cases:
+  - id: CAM-AUTH-001
+    scenario: current_kaim_work_item_has_no_materialized_shot_camera_binding
+    work_item_id: KAIM-SCARF-CLOTHESLINE-TRAVERSE
+    expected: CAMERA_AUTHORITY_UNBOUND
+    forbidden: [choose_default_view, infer_from_prompt, infer_from_filename]
+
+  - id: CAM-AUTH-002
+    scenario: caller_names_existing_camera_and_view_without_continuity_binding
+    expected: CAMERA_AUTHORITY_UNBOUND
+
+  - id: CAM-AUTH-003
+    scenario: binding_view_belongs_to_different_camera_anchor
+    expected: CAMERA_IDENTITY_CHAIN_INVALID
+
+  - id: CAM-AUTH-004
+    scenario: binding_asset_belongs_to_different_view
+    expected: CAMERA_IDENTITY_CHAIN_INVALID
+
+  - id: CAM-AUTH-005
+    scenario: valid_perspective_binding_has_facing_cardinal_but_no_exact_transform_or_lens
+    expected: CAMERA_AUTHORITY_BOUND_VERIFIED
+    must_return:
+      orientation_from_view: true
+      exact_transform: null
+      focal_length_mm: null
+      lens_intent: null
+      pixels_seen: false
+
+  - id: CAM-AUTH-006
+    scenario: display_name_or_storage_filename_contains_direction_but_view_direction_metadata_missing
+    expected: CAMERA_ORIENTATION_METADATA_INVALID
+
+  - id: CAM-AUTH-007
+    scenario: writeback_verified_commit_is_not_ancestor_of_current_main
+    expected: CAMERA_BINDING_MATERIALIZATION_INVALID
+
+  - id: CAM-AUTH-008
+    scenario: declared_materialization_commit_does_not_contain_same_binding
+    expected: CAMERA_BINDING_MATERIALIZATION_INVALID
+
+  - id: CAM-AUTH-009
+    scenario: binding_status_is_candidate_or_proposed
+    expected: CAMERA_BINDING_STATUS_NOT_AUTHORITATIVE
+
+  - id: CAM-AUTH-010
+    scenario: multiple_bindings_match_same_selector
+    expected: CAMERA_BINDING_AMBIGUOUS
+
+  - id: CAM-AUTH-011
+    scenario: AI_camera_proposal_attempts_to_become_binding
+    expected: NO_PUBLIC_BINDING_INJECTION_SURFACE
+
+  - id: CAM-AUTH-012
+    scenario: media_version_is_not_pinned
+    expected: RESOLVE_ASSET_CURRENT_VERSION_METADATA_ONLY
+    must_not_claim_pixels_seen: true
+
+metrics:
+  - false_camera_authority_rate
+  - unbound_fail_closed_rate
+  - identity_chain_validation_rate
+  - stale_materialization_rejection_rate
+  - inferred_position_or_lens_rate
+  - caller_authority_injection_rate
