@@ -1,0 +1,97 @@
+schema_version: "0.1.0"
+suite_id: EUSTIA_DIRECTOR_RUNTIME_ORCHESTRATOR_REGRESSION
+source_issue: 78
+status: candidate
+
+cases:
+  - id: DR-P0-KAIM-SCARF-POSITIVE
+    title: 当前凯姆围巾晾衣绳横移可编译为非执行候选
+    work_item_id: KAIM-SCARF-CLOTHESLINE-TRAVERSE
+    expectation:
+      status: CANDIDATE_READY
+      execution_authorized: false
+      locked_constraints_preserved: true
+      persistent_entities_preserved: true
+      cinematic_intent_reused: true
+
+  - id: DR-P0-AUTHORITY-FORGE-001
+    title: Creative packet 不得自带 work item 或 canonical receipt
+    attack:
+      field: work_item_id
+      value: FORGED-WORK-ITEM
+    expected_error: DIRECTOR_PACKET_AUTHORITY_VIOLATION
+
+  - id: DR-P0-PERSISTENCE-001
+    title: Prompt omission 不能让 live persistent entity 消失
+    attack:
+      entry_entities: [kaim, scarf, clothesline]
+      exit_entities: [kaim, clothesline]
+      explicit_exits_or_removals: []
+    expected_error: DIRECTOR_WORLD_ENTITY_DROPPED
+
+  - id: DR-P0-EVENT-BINDING-001
+    title: EventGraph agent target instrument support 必须绑定世界实体
+    attack:
+      event:
+        event_id: E-FORGE
+        agent: nonexistent_actor
+        action: pull
+        result: impossible
+    expected_error: DIRECTOR_EVENT_ENTITY_UNBOUND
+
+  - id: DR-P0-BLOCKING-BINDING-001
+    title: Blocking 不得移动未声明实体
+    attack:
+      movement_paths:
+        ghost_actor: roof_A_to_roof_B
+    expected_error: DIRECTOR_BLOCKING_ENTITY_UNBOUND
+
+  - id: DR-P0-PERFORMANCE-BINDING-001
+    title: Performance actor 必须是声明过的 character entity
+    attack:
+      actor: scarf
+    expected_error: DIRECTOR_PERFORMANCE_ACTOR_UNBOUND
+
+  - id: DR-P0-CAMERA-AUTHORITY-001
+    title: P0 shot camera 只能是 proposal 不能自铸 LOCKED authority
+    attack:
+      camera_proposal:
+        authority_status: LOCKED
+        shot_size: medium
+    expected_error: DIRECTOR_CAMERA_AUTHORITY_MINT_ATTEMPT
+
+  - id: DR-P0-TRANSITION-001
+    title: next entry 必须与 world exit state 一致
+    attack:
+      exit_entities: [kaim, scarf, clothesline]
+      next_entry_entities: [kaim, scarf]
+    expected_error: DIRECTOR_TRANSITION_STATE_MISMATCH
+
+  - id: DR-P0-LOCK-001
+    title: 当前 work item LOCK 不能因执行稿省略而消失
+    required_locked_constraint: scarf_midpoint_single_drape_over_fixed_thick_line
+    attack:
+      locked_constraints_preserved: []
+    expected_error: DIRECTOR_LOCKED_CONSTRAINT_DROPPED
+
+  - id: DR-P0-CINEMATIC-INTENT-001
+    title: CinematicIntent 必须复用现有 contract 且不能自铸 camera authority
+    attack:
+      cinematic_intent:
+        contract_id: forged-camera
+        intent:
+          capture_intent:
+            camera_physical_position: roof_absolute_anchor
+        provenance:
+          capture_intent:
+            source: ai_proposal
+        context:
+          material_fields: [capture_intent]
+    expected_error: DIRECTOR_CINEMATIC_INTENT_REJECTED
+
+  - id: DR-P0-NO-AUTO-EXECUTION-001
+    title: Director Runtime P0 输出不得直接取得模型执行资格
+    expectation:
+      execution_authorized: false
+      deliverable: false
+      downstream_gate_required: true
