@@ -1,0 +1,143 @@
+schema_version: "0.2.0"
+component_id: EUSTIA_WORK_ITEM_CONTEXT_MATERIALIZATION_P0
+status: candidate
+source_issue: 82
+scope: fixed_github_current_work_item_structured_context_readback_only
+
+purpose:
+  - 为 Director Runtime 提供可机器验证的 world_state_baseline 与 LOCK material semantics 读取候选接口
+  - 只有已经写入 canonical continuity 的正式机器块才能产生 trusted structured context
+  - 将候选推导与正式物化严格分离，避免 reasonable inference 被洗成 world truth
+
+not_a_new_authority:
+  screenplay_authority: false
+  map_authority: false
+  continuity_authority: false
+  character_authority: false
+  asset_authority: false
+  director_authority: false
+  output_is_readback_projection_only: true
+  generated_output_can_mutate_projection: false
+
+trust_boundary:
+  fixed_repository: vxz2datoubo/eustia-ai-film
+  fixed_branch: main
+  public_materializer_arguments: []
+  caller_project_root_supported: false
+  caller_work_item_id_supported: false
+  caller_structured_context_supported: false
+  caller_entities_supported: false
+  caller_lock_semantics_supported: false
+  caller_authority_booleans_supported: false
+  static_proposal_can_satisfy_trusted_readback: false
+  current_work_item_resolution_runtime: learning_retriever.active_work_item.resolve_work_item
+  context_projection_runtime: learning_retriever.active_work_item.build_work_item_context_packet
+  required_verification_basis_prefix: canonical_github_readback_
+
+canonical_block_contract:
+  target_document: 07_连续性与生产状态/连续性与当前生产状态.md
+  marker_begin: "<!-- WORK_ITEM_STRUCTURED_CONTEXT_BEGIN -->"
+  marker_end: "<!-- WORK_ITEM_STRUCTURED_CONTEXT_END -->"
+  root_key: work_item_structured_context
+  required_fields:
+    - work_item_id
+    - story_scope_ref
+    - source_checkpoint_ref
+    - materialization_status
+    - world_state_baseline
+    - authorized_explicit_entries
+    - locked_constraint_semantics
+    - provenance
+  materialization_status_required: VERIFIED
+  work_item_must_equal_current_active_work_item: true
+  story_scope_must_equal_current_WorkItemContext: true
+  checkpoint_must_equal_current_applied_checkpoint: true
+
+world_state_baseline_contract:
+  shape_matches_Director_Runtime:
+    entities:
+      value_fields: [kind, position, state]
+      allowed_kinds: [character, object, environment_anchor, group]
+      non_empty_required: true
+    invariants:
+      type: list_of_non_empty_strings
+      duplicate_forbidden: true
+  uncertain_entry_state_behavior: omit_and_keep_unknown
+  prompt_or_generated_output_can_supply_missing_baseline: false
+
+explicit_entry_contract:
+  fields: [kind, entry_condition, exact_entry_time_authorized, exact_entry_position_authorized]
+  exact_entry_time_authorized_must_be: false
+  exact_entry_position_authorized_must_be: false
+  may_not_duplicate_baseline_entity: true
+  purpose: authorize_that_an_entity_may_enter_later_without_inventing_when_or_where
+
+locked_constraint_semantics_contract:
+  exact_key_set_equals_current_canonical_LOCK_ids: true
+  missing_lock_semantic: fail_closed
+  extra_lock_semantic: fail_closed
+  each_value: non_empty_string
+  caller_hard_invariants_are_not_lock_authority: true
+
+provenance_contract:
+  required_sections:
+    - world_state_entities
+    - world_state_invariants
+    - authorized_explicit_entries
+    - locked_constraint_semantics
+  exact_entity_coverage_required: true
+  exact_invariant_coverage_required: true
+  exact_explicit_entry_coverage_required: true
+  exact_LOCK_coverage_required: true
+  every_item_requires_non_empty_refs: true
+
+runtime_states:
+  STRUCTURED_CONTEXT_UNAVAILABLE:
+    trusted_materialization_available: false
+    meaning: canonical continuity contains no reviewed structured-context block for current work item
+    behavior: do_not_infer_or_use_static_proposal
+  STRUCTURED_CONTEXT_READY:
+    trusted_materialization_available: true
+    meaning: current canonical block passed work-item/scope/checkpoint/schema/provenance/LOCK validation
+
+output_contract:
+  schema: WORK_ITEM_STRUCTURED_CONTEXT_READBACK/v1
+  serialized_output_is_authority: false
+  fresh_readback_required_before_consumption: true
+  execution_authorized: false
+  canonical_write_authorized: false
+  learning_writeback_authorized: false
+  maturity_promotion_authorized: false
+  nested_authority_objects_are_frozen: true
+  as_dict_is_detached_serialization_only: true
+
+proposal_boundary:
+  proposal_registry: 09_资料证据/当前工作项结构化上下文物化候选提案.yaml
+  proposal_status_required: PROPOSAL_ONLY
+  proposal_may_help_prepare_reviewed_materialization: true
+  proposal_is_runtime_authority: false
+  proposal_can_unlock_Director_Runtime: false
+  proposal_can_be_written_to_continuity_without_separate_governed_transaction: false
+
+activation:
+  PROJECT_INDEX_registration: absent
+  read_sets_registration: absent
+  write_routes_registration: absent
+  current_mode: CANDIDATE_READBACK_ONLY
+  merge_does_not_activate_runtime_consumption: true
+  independent_T3_required: true
+  runtime_integration_requires_separate_slice: true
+  canonical_materialization_write_requires_separate_governed_transaction: true
+
+fail_codes:
+  - WORK_ITEM_MATERIALIZER_GOVERNED_ROOT_INVALID
+  - WORK_ITEM_MATERIALIZER_POLICY_INVALID
+  - WORK_ITEM_MATERIALIZER_CANONICAL_MAIN_INVALID
+  - WORK_ITEM_MATERIALIZER_RESOLUTION_FAILED
+  - WORK_ITEM_STRUCTURED_CONTEXT_BLOCK_INVALID
+  - WORK_ITEM_STRUCTURED_CONTEXT_WORK_ITEM_MISMATCH
+  - WORK_ITEM_STRUCTURED_CONTEXT_STATUS_INVALID
+  - WORK_ITEM_STRUCTURED_CONTEXT_STORY_SCOPE_MISMATCH
+  - WORK_ITEM_STRUCTURED_CONTEXT_CHECKPOINT_MISMATCH
+  - WORK_ITEM_STRUCTURED_CONTEXT_LOCK_COVERAGE_MISMATCH
+  - WORK_ITEM_MATERIALIZER_PROVENANCE_MISSING

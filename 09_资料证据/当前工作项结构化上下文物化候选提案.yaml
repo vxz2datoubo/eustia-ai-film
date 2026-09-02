@@ -1,0 +1,110 @@
+schema_version: "0.1.0"
+proposal_id: KAIM-SCARF-STRUCTURED-CONTEXT-PROPOSAL-001
+proposal_status: PROPOSAL_ONLY
+source_issue: 82
+work_item_id: KAIM-SCARF-CLOTHESLINE-TRAVERSE
+runtime_authority: false
+canonical_write_authority: false
+may_unlock_director_runtime: false
+requires_separate_governed_materialization_transaction: true
+
+purpose:
+  - 保存从当前 canonical summary / LOCK / preserved constraints 推导出的结构化候选，供人工与后续物化事务审查
+  - 不让候选推导直接成为 world_state_baseline 或 LOCK semantic authority
+
+candidate_world_state_baseline:
+  entities:
+    kaim:
+      kind: character
+      position: rooftop_traverse_start_screen_right
+      state: skilled_traverse_active
+      provenance:
+        - continuity.active_work_item.current_effective_state_summary
+        - continuity.active_work_item.locked_constraints.screen_right_to_screen_left_side_on_traverse
+      epistemic_status: CANDIDATE_INFERENCE_NOT_CANONICAL_STRUCTURED_FACT
+    scarf:
+      kind: object
+      position: midpoint_draped_over_fixed_thick_clothesline
+      state: ends_separate_one_end_per_hand
+      provenance:
+        - continuity.active_work_item.locked_constraints.scarf_midpoint_single_drape_over_fixed_thick_line
+        - continuity.active_work_item.locked_constraints.scarf_ends_separate_and_one_end_per_hand
+      epistemic_status: CANDIDATE_INFERENCE_NOT_CANONICAL_STRUCTURED_FACT
+    clothesline:
+      kind: environment_anchor
+      position: fixed_rooftop_span
+      state: fixed_not_translating
+      provenance:
+        - continuity.active_work_item.locked_constraints.scarf_clothesline_geometry
+        - continuity.active_work_item.locked_constraints.scarf_and_kaim_co_translate_while_clothesline_stays_fixed
+      epistemic_status: CANDIDATE_INFERENCE_NOT_CANONICAL_STRUCTURED_FACT
+    laundry:
+      kind: group
+      position: distributed_on_clothesline_path
+      state: hanging_before_collision
+      provenance:
+        - continuity.active_work_item.preserved_constraints.mass_laundry_collision
+        - continuity.active_work_item.current_effective_state_summary
+      epistemic_status: CANDIDATE_INFERENCE_NOT_CANONICAL_STRUCTURED_FACT
+  invariants:
+    - description: 凯姆与围巾可横向移动但固定晾衣绳本体不随之平移
+      provenance: [continuity.active_work_item.locked_constraints.scarf_and_kaim_co_translate_while_clothesline_stays_fixed]
+      epistemic_status: CANDIDATE_SEMANTIC_PROJECTION
+    - description: 横移期间凯姆身体与双手保持在固定晾衣绳下方
+      provenance: [continuity.active_work_item.locked_constraints.kaim_body_and_hands_remain_below_fixed_line]
+      epistemic_status: CANDIDATE_SEMANTIC_PROJECTION
+    - description: 当前监牢城市空间保持封闭感，不打开成自由开放天空
+      provenance: [continuity.active_work_item.locked_constraints.no_open_sky_prison_city_enclosure]
+      epistemic_status: CANDIDATE_SEMANTIC_PROJECTION
+
+candidate_authorized_explicit_entries:
+  adjacent_woman:
+    kind: character
+    entry_condition: adjacent_woman_opens_window_event
+    exact_entry_time_authorized: false
+    exact_entry_position_authorized: false
+    provenance:
+      - continuity.active_work_item.current_effective_state_summary
+      - continuity.active_work_item.preserved_constraints.adjacent_woman_opens_window
+  final_crowd_group:
+    kind: group
+    entry_condition: final_crowd_reaction_layer
+    exact_entry_time_authorized: false
+    exact_entry_position_authorized: false
+    provenance: [continuity.active_work_item.preserved_constraints.final_crowd_faces_bell_tower]
+  one_attention_breaking_child:
+    kind: character
+    entry_condition: final_falling_laundry_attention_event
+    exact_entry_time_authorized: false
+    exact_entry_position_authorized: false
+    provenance: [continuity.active_work_item.preserved_constraints.only_one_child_breaks_attention_upward]
+
+candidate_locked_constraint_semantics:
+  scarf_clothesline_geometry: 围巾与固定粗晾衣绳的承重接触关系保持为围巾搭过固定线，不把固定晾衣绳改成随凯姆移动的绳索或交换二者角色。
+  scarf_midpoint_single_drape_over_fixed_thick_line: 围巾只以中点单次搭过一根固定粗晾衣绳，不改成多圈缠绕、多支点或整条绳索替代。
+  scarf_ends_separate_and_one_end_per_hand: 围巾两端保持分离，凯姆左右手各握一端。
+  kaim_body_and_hands_remain_below_fixed_line: 横移期间凯姆身体与双手保持在固定晾衣绳下方。
+  scarf_and_kaim_co_translate_while_clothesline_stays_fixed: 凯姆与围巾共同从右向左横移，固定晾衣绳保持世界位置不平移。
+  screen_right_to_screen_left_side_on_traverse: 主横移动作保持侧面关系可读，并以画面右侧到画面左侧为运动方向。
+  no_open_sky_prison_city_enclosure: 当前监牢城市空间保持封闭围困感，不生成改变世界空间属性的大面积自由开放天空。
+  disappearance_reveal_return_to_same_master_with_kaim_already_absent: 凯姆在 reaction cutaway 遮蔽期间离开，回到同一 master 时凯姆已经不在画面中。
+
+material_unknowns_before_canonicalization:
+  - exact_entry_world_position_labels_are_not_yet_canonical_structured_facts
+  - exact_entry_state_labels_are_not_yet_canonical_structured_facts
+  - laundry_precise_distribution_is_not_a_canonical_geometry_record
+  - camera_state_is_not_materialized_and_must_remain_separate_from_camera_authority_readback
+  - semantic_wording_must_be_checked_for_no_relaxation_or_scope_expansion_against_each_LOCK
+
+promotion_boundary:
+  proposal_may_be_reviewed_and_edited: true
+  direct_runtime_consumption: forbidden
+  direct_copy_to_continuity_without_reviewed_transaction: forbidden
+  canonical_materialization_requires:
+    - fresh_current_active_work_item_readback
+    - exact_LOCK_set_reconcile
+    - story_scope_reconcile
+    - provenance_review
+    - unresolved_fact_separation
+    - independent_or_user_gate_when_material_fact_is_uncertain
+    - FETCH_EDIT_COMMIT_FETCH_VERIFY
