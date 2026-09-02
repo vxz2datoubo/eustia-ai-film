@@ -93,10 +93,18 @@ function Get-LegacyReferenceClassification {
     $referenceText = [string]::Join("`n", $referenceLines)
     $explicitRejectionPattern = '(?i)(?:must\s+not|do\s+not|not\s+be\s+used|\u4e0d\u5f97|\u7981\u6b62|\u4e0d\u518d).{0,120}(?:active|canonical|rule|\u6d3b\u52a8|\u4e3b\u6863|\u89c4\u5219)'
     $explicitMigrationPattern = '(?i)(?:\u5df2(?:\u7ecf)?\u8fc1\u79fb(?:\u8fdb\u5165|\u81f3|\u5230)|migrat(?:ed|ion).{0,120}(?:into|to)|superseded\s+by|replaced\s+by|\u5df2\u88ab\u53d6\u4ee3).{0,120}(?:current|github|project_index|\u5f53\u524d|\u73b0\u884c|AI\u7535\u5f71\u7cfb\u7edf)'
-    $isExplicitHistorical = (($Text -match $explicitRejectionPattern) -or ($Text -match $explicitMigrationPattern))
-    # A clear negation has to be allowed even though it names the forbidden
-    # active role. Otherwise an explicit "must not be an active rule" sentence
-    # would paradoxically fail. In every other case activity wins.
+    # Issue #6: a legacy locator may be followed by a narrowly scoped identity
+    # statement saying it is historical migration evidence and explicitly NOT
+    # current canonical.  This is historical provenance, not an allow-list.
+    # The legacy-bearing line itself is still checked first for active language,
+    # so "must read old file" remains fail_active even if a nearby note says it
+    # is historical.
+    $explicitHistoricalIdentityPattern = '(?i)(?:\u5386\u53f2(?:\u8fc1\u79fb)?\u8bc1\u636e|\u5386\u53f2\u8bb0\u5f55|historical(?:\s+migration)?\s+evidence|legacy\s+evidence).{0,80}(?:\u4e0d\u662f|\u5e76\u975e|\u4e0d\u5c5e\u4e8e|is\s+not|not\s+(?:the\s+)?current).{0,40}(?:\u5f53\u524d|current)?\s*(?:canonical|\u4e3b\u6863|authority|\u89c4\u5219\u6e90)'
+    $isExplicitHistorical = (($Text -match $explicitRejectionPattern) -or ($Text -match $explicitMigrationPattern) -or ($Text -match $explicitHistoricalIdentityPattern))
+    # A clear historical statement may explain an ambiguous locator on its
+    # immediate next non-empty line.  Positive activity on the legacy-bearing
+    # line still wins, preventing contextual history from laundering an active
+    # route or "must read" instruction.
     if ($referenceText -match $activePattern) { return 'fail_active' }
     if ($isExplicitHistorical) { return 'pass_historical' }
     return 'fail_ambiguous'
