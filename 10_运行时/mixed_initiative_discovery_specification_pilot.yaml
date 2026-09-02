@@ -1,0 +1,294 @@
+schema_version: "0.1.0"
+component_id: EUSTIA_MIDS_DISCOVERY_SPECIFICATION_PILOT
+name: MIDS-001
+status: candidate_shadow
+source_issue: 67
+scope: upstream_mixed_initiative_discovery_and_specification_before_existing_director_feature_compiler
+
+purpose:
+  - 当用户只有模糊方向感觉例子局部想法或未完成的创作意图时主动发现真正影响设计的未知与取舍
+  - 用少量高信息价值问题和明确标注的AI提案扩展设计空间再逐步收敛
+  - 把共同发现压缩成可追溯的DiscoverySpecCandidate再交给现有DirectorFeatureCompiler
+  - 降低规格遗漏导致的后期返工同时保持用户创意控制权
+
+architecture_position:
+  upstream_context:
+    - PROJECT_INDEX_and_source_authority
+    - relevant_canonical_project_context
+    - active_work_item_resolution_when_continuation_or_referent_binding_is_required
+  this_component:
+    - discovery_state_and_epistemic_ledger
+    - high_value_question_selection
+    - QOC_and_example_mapping_style_rationale
+    - AI_proposal_accept_reject_tracking
+    - handoff_readiness
+  downstream_existing_authorities:
+    - 10_运行时/director_feature_compiler.yaml
+    - 10_运行时/director_route_index.yaml
+    - 10_运行时/learning_application_gate.yaml
+    - 10_运行时/learning_recall_index.yaml
+    - 01_AI电影系统/AI电影系统.md
+    - 10_运行时/proactive_execution_opportunity_router.yaml
+  fixed_flow_when_discovery_is_needed:
+    - canonical_context_and_work_item_binding
+    - MIDS_shadow_discovery
+    - DiscoverySpecCandidate
+    - existing_Director_Feature_Compiler
+    - existing_Hard_Route
+    - existing_Learning_Recall_and_Application_Gate
+    - existing_director_or_execution_flow
+    - existing_Opportunity_Router_when_next_step_is_clear
+
+opportunity_router_boundary:
+  MIDS_question: 用户现在甚至还没有完全决定下一步设计应该是什么
+  proactive_execution_opportunity_router_question: 下一步已经比较明确后怎样主动减少用户操作并路由到正确执行环境
+  MIDS_may_not:
+    - duplicate_next_step_execution_router
+    - choose_tool_or_model_for_user_without_existing_router_or_adapter
+    - emit_native_deliverables_as_its_primary_role
+  opportunity_router_may_not_be_replaced_by_MIDS: true
+
+authority_boundary:
+  this_component_is_not:
+    - screenplay_authority
+    - character_authority
+    - scene_or_map_authority
+    - asset_authority
+    - continuity_or_active_work_item_authority
+    - director_method_authority
+    - natural_language_director_feature_authority
+    - hard_route_authority
+    - learning_or_maturity_authority
+    - generation_or_model_adapter_authority
+  may_not_resolve_work_item_identity: true
+  may_accept_only_trusted_existing_work_item_projection_or_NEW_UNBOUND: true
+  may_not_persist_full_conversation: true
+  may_not_write_canonical: true
+  may_not_mint_feature_compiler_receipt: true
+  may_not_mint_hard_routes: true
+  may_not_promote_inference_to_user_fact: true
+  may_not_reintroduce_rejected_alternative: true
+  external_research_is_candidate_evidence_only: true
+
+activation:
+  current_mode: SHADOW_CANDIDATE
+  PROJECT_INDEX_registration: absent_until_independent_accept
+  directing_always_read_set: absent_until_independent_accept
+  live_director_flow_mandatory: false
+  one_success_auto_promotion: forbidden
+  activation_after_review_must_be_separate_bounded_slice: true
+
+epistemic_coverage_matrix:
+  USER_EXPLICIT_CONFIRMED:
+    maps_to_existing_EDCM: K0_explicit_known
+    source_requirement: user_provenance
+    may_enter_confirmed_spec: true
+  USER_TACIT_CANDIDATE:
+    maps_to_existing_EDCM: K1_implicit_known
+    requirements: [inference_provenance, confidence, boundary]
+    default_status: INFERRED
+    may_enter_confirmed_spec: only_after_explicit_user_confirmation
+  AI_DISCOVERABLE_OPTION:
+    maps_to_existing_EDCM: K2_adjacent_unknown
+    default_status: AI_PROPOSAL
+    requirements: [rationale, expected_effect, risks_or_tradeoffs_when_material]
+    may_enter_confirmed_spec: only_after_explicit_user_acceptance
+    origin_must_remain_traceable_after_acceptance: true
+  EXPERT_BLIND_ZONE:
+    maps_to_existing_EDCM: K2_or_K3_based_on_evidence_and_explainability
+    user_should_not_be_forced_to_answer_low_level_parameter_question: true
+    default_behavior:
+      - AI_researches_or_uses_existing_professional_knowledge
+      - translate_to_user_comprehensible_effect_risk_cost_choice_when_user_decision_is_material
+      - unresolved_frontier_or_opaque_item_routes_to_existing_UNKNOWN_or_research_process
+
+session_contract:
+  schema: MIDS_DISCOVERY_SESSION/v1
+  persistence_default: ephemeral
+  required_state:
+    - raw_user_intent
+    - raw_user_intent_provenance
+    - current_understanding
+    - confirmed_decisions
+    - inferred_preferences
+    - open_questions
+    - unknowns
+    - candidate_directions
+    - rejected_alternatives
+    - qoc
+    - assumptions
+    - counterexamples
+    - non_goals
+    - success_criteria
+    - downstream_dependencies
+    - spec_delta_candidates
+    - examples
+    - decision_rationale
+  optional_state_machine:
+    - DISCOVERING
+    - DIVERGING
+    - CONVERGING
+    - SPEC_CANDIDATE
+    - READY_FOR_HANDOFF
+    - DEFERRED
+
+question_policy:
+  default_round_budget: 3
+  preferred_round_budget: 1_to_3
+  hard_round_max: 3
+  question_must_resolve_any:
+    - material_decision
+    - material_unknown
+    - consequential_tradeoff
+    - dependency_central_blocker
+    - high_novelty_design_space_gap
+  question_priority_principle:
+    numerator:
+      - decision_impact
+      - uncertainty_reduction
+      - dependency_centrality
+      - irreversibility
+      - novelty_potential
+    denominator:
+      - user_cognitive_load
+      - interruption_cost
+    implementation_note: ordinal_heuristic_not_scientific_probability
+  suppress_when:
+    - reliable_canonical_answer_already_exists
+    - already_resolved_in_current_session
+    - non_material_to_current_design
+    - requires_untranslated_programmer_camera_engineer_or_model_engineer_jargon
+  user_language_priority:
+    - desired_story_effect
+    - desired_audience_understanding
+    - desired_character_behavior
+    - desired_pixel_sound_timing_result
+    - production_cost_risk_or_reversibility_tradeoff
+  technical_parameter_translation: AI_owned_unless_user_explicitly_wants_parameter_control
+
+creative_divergence:
+  divergence_allowed_before_convergence: true
+  AI_may_propose_user_unmentioned_options: true
+  AI_proposal_label_required: true
+  proposed_option_should_include_when_material:
+    - rationale
+    - expected_effect
+    - tradeoff
+    - risk_or_failure_case
+    - criteria_affected
+  strongest_counterargument_or_failure_case_should_be_considered: true
+  cross_domain_analogy_allowed_as_reasoning_aid_not_authority: true
+  early_single_solution_lock_forbidden_when_material_design_space_is_still_open: true
+
+QOC_contract:
+  Questions: material_design_issues_not_a_questionnaire_dump
+  Options: user_options_and_AI_proposals_with_origin
+  Criteria: story_character_audience_production_cost_risk_acceptance_dimensions
+  rejected_option_status_must_survive_for_leak_prevention: true
+  rationale_record_is_design_trace_not_canonical_truth: true
+
+example_contract:
+  concrete_examples_preferred_over_abstract_rules: true
+  technical_details_not_required_from_user: true
+  positive_example_role: clarify_success_behavior
+  counterexample_role: clarify_boundary_and_failure
+  unresolved_outcome_is_question_not_fake_example: true
+
+handoff_readiness:
+  output_schema: MIDS_DISCOVERY_SPEC_CANDIDATE/v1
+  ready_status: READY_FOR_FEATURE_COMPILER
+  must_have:
+    - material_director_intent_with_user_provenance
+    - at_least_one_confirmed_material_decision
+    - success_criteria
+    - positive_example_when_material_behavior_is_ambiguous
+    - counterexample_or_non_goal_when_boundary_ambiguity_can_cause_rework
+    - downstream_dependency_or_task_class
+    - no_unresolved_material_contradiction
+    - no_unresolved_HIGH_or_material_blocking_unknown
+    - rejected_alternatives_excluded
+    - unconfirmed_tacit_inference_excluded
+  work_item_binding:
+    TRUSTED_EXISTING:
+      source: existing_Active_Work_Item_Resolution_only
+      trusted_bases:
+        - canonical_github_readback_verified_snapshot
+        - canonical_github_readback_historical_binding
+    NEW_UNBOUND:
+      canonical_work_item_id_must_be_null: true
+      role: discovery_target_only_not_canonical_identity
+  director_intent_text:
+    role: minimum_sufficient_handoff_to_existing_feature_compiler
+    may_contain:
+      - confirmed_user_intent
+      - user_confirmed_tacit_decisions
+      - user_accepted_AI_proposals_with_origin_kept_in_receipt
+      - success_boundaries_and_non_goals
+    may_not_contain:
+      - unconfirmed_inference
+      - rejected_alternative
+      - fake_feature_compiler_receipt
+      - fake_hard_route
+      - hidden_chain_of_thought
+
+persistence_and_privacy:
+  full_discovery_transcript_persisted_by_default: false
+  raw_user_intent_persistence_required: false
+  confirmed_project_decision: existing_write_routes_only_when_user_intends_persistence
+  inferred_preference: existing_feedback_learning_route_candidate_only
+  material_unknown: existing_UNKNOWN_route_when_long_lived_persistence_is_justified
+  replay_and_protocol_evidence: repository_eval_or_evidence_surface
+  AI_proposal_or_rejection: ephemeral_by_default_unless_needed_for_material_rationale_or_regression
+  sensitive_personal_information_should_not_be_persisted_for_project_discovery_without_material_need: true
+
+replay_eval:
+  suite: 11_验收/mids_discovery_replay_cases.yaml
+  hidden_answer_policy:
+    - discovery_question_selection_does_not_receive_hidden_critical_targets
+    - scorer_may_use_hidden_targets_after_selection
+    - reconstructed_initial_prompt_must_be_labeled_RECONSTRUCTED_FROM_PROJECT_TRACE
+    - reconstruction_must_not_be_reported_as_verbatim_user_quote
+  minimum_cases:
+    - KAIM_SCARF_CLOTHESLINE
+    - MOTIVE_FIRST_CROWD
+    - EXPOSITION_MEDIA_DISTANCE
+    - ACTIVE_WORK_ITEM_NO_REDUNDANT_IDENTITY_QUESTION
+  metrics:
+    - useful_decisions_per_question
+    - critical_unknown_discovery
+    - redundant_question_rate
+    - novel_direction_acceptance
+    - contradiction_leakage
+    - post_spec_rework
+    - user_interruption_cognitive_cost
+    - authority_violation
+    - traceability_coverage
+
+maturity:
+  current: candidate
+  promotion_requires:
+    - exact_head_engineering_tests
+    - independent_architecture_review
+    - shadow_replay_results
+    - live_project_pilot_with_user_feedback
+    - no_material_authority_violation
+    - no_rejected_direction_leakage
+    - evidence_of_reduced_post_spec_rework_or_improved_critical_unknown_discovery
+  one_live_success_is_not_enough: true
+
+fail_codes:
+  - MIDS_SESSION_SCHEMA_INVALID
+  - MIDS_MODE_MUST_REMAIN_SHADOW_CANDIDATE
+  - MIDS_WORK_ITEM_BINDING_MODE_INVALID
+  - MIDS_WORK_ITEM_TRUST_BASIS_INVALID
+  - MIDS_UNBOUND_WORK_ITEM_CANNOT_CLAIM_CANONICAL_ID
+  - MIDS_EPISTEMIC_CLASS_INVALID
+  - MIDS_USER_EXPLICIT_MUST_BE_CONFIRMED
+  - MIDS_TACIT_CONFIRMATION_MUST_BE_USER
+  - MIDS_AI_PROPOSAL_ACCEPTANCE_MUST_BE_USER
+  - MIDS_QUESTION_BUDGET_INVALID
+  - MIDS_QUESTION_WITHOUT_MATERIAL_TARGET
+  - MIDS_EXPERT_BLIND_ZONE_REQUIRES_TRANSLATION_OR_RESEARCH_ACTION
+  - MIDS_DIRECTOR_INTENT_REQUIRES_USER_PROVENANCE
+  - MIDS_HANDOFF_NOT_READY
+  - MIDS_INFERENCE_LEAKED_AS_CONFIRMED
