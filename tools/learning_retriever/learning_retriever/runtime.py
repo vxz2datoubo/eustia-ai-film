@@ -327,16 +327,17 @@ class DirectorLearningRuntime:
                 "WORK_ITEM_OUTPUT_CONTENT_INVALID",
                 details={"reason": "output_content_must_be_mapping"},
             )
-        forbidden_paths = sorted(set(_collect_forbidden_keys(output_content)))
+
+        # Materialize the caller-controlled Mapping exactly once into a runtime-owned
+        # plain JSON-domain snapshot. Every authority scan, digest and executable use
+        # below consumes this same snapshot, closing behavioral Mapping TOCTOU.
+        payload = _detached_output_snapshot(output_content)
+        forbidden_paths = sorted(set(_collect_forbidden_keys(payload)))
         if forbidden_paths:
             raise ActiveWorkItemResolutionError(
                 "WORK_ITEM_OUTPUT_CALLER_AUTHORITY_FORBIDDEN",
                 details={"forbidden_paths": forbidden_paths},
             )
-
-        # Snapshot before any trusted work-item work is performed. The runtime never
-        # stores caller-owned containers in an executable packet.
-        payload = _detached_output_snapshot(output_content)
 
         retrieval_result, resolution, loaded_work_item_id = self._retrieve_bound(
             description,
@@ -393,6 +394,7 @@ class DirectorLearningRuntime:
             "caller_builder_callback_accepted": False,
             "caller_scope_claims_accepted_as_authority": False,
             "caller_payload_aliases_detached": True,
+            "caller_mapping_materialized_once_before_authority_scan": True,
             "packet_constructed_by_canonical_runtime": True,
             "canonical_payload_digest": payload_digest,
             "prompt_or_payload_semantics_inspected_by_guard": False,
