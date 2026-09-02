@@ -1,5 +1,5 @@
 suite_id: EUSTIA_ASSET_RETRIEVAL_REGRESSION
-version: 1.0.0
+version: 1.1.0
 status: active
 policy: 10_运行时/asset_retrieval_policy.yaml
 resolver: 10_运行时/scene_media_resolver_manifest.yaml
@@ -83,6 +83,61 @@ cases:
     expect:
       - external_storage_hard_gap_gate=NOT_CANDIDATE
       - no cloud provisioning or media replication is authorized
+
+runtime_observations:
+  - observation_id: ASSET-NATIVE-OBS-2026-09-02-001
+    observed_at: 2026-09-02
+    environment: fresh_project_conversation_File_Library_native_search
+    purpose: validate_U-ASSET-RETRIEVAL-001_with_current_registered_media_versions
+    authority_basis:
+      resolver_manifest: 10_运行时/scene_media_resolver_manifest.yaml
+      retrieval_policy: 10_运行时/asset_retrieval_policy.yaml
+      identity_registry: 06_视觉资产/视觉资产登记库.md
+    targets:
+      - asset_id: EUS-AST-000002
+        media_version_id: EUS-VER-000002
+        expected_hash: sha256:2fe51963d592a2189e6390ab92a3173d00b3a9d9af0cd4e56162ba01360a3828
+        expected_dimensions: [1448, 1086]
+        native_locators_attempted:
+          - {type: chatgpt_file_id, value: file_00000000e9ac81fdb734e021f5bcb5df}
+        search_outcome: TARGET_IMAGE_CARD_NOT_RETURNED
+        pixel_open: NOT_REACHED
+      - asset_id: EUS-AST-000011
+        media_version_id: EUS-VER-000011
+        expected_hash: sha256:7ade2b22ef371b510b92fbc0f3cb5c3048ee4887915f09f38c1f7f9d809c14ce
+        expected_dimensions: [1672, 941]
+        native_locators_attempted:
+          - {type: chatgpt_file_id, value: file_00000000592881fdbeb206fb3b668940}
+          - {type: historical_filename_locator_check, value: 4439ec95-1976-4783-af86-ed79e91a780d.png}
+        search_outcome: TARGET_IMAGE_CARD_NOT_RETURNED
+        pixel_open: NOT_REACHED
+      - asset_id: EUS-AST-000008
+        media_version_id: EUS-VER-000008
+        expected_hash: sha256:abb31820580e02d8b3abe7b44fd73a75e01bd74ba2e5824c7376022e9c1b706b
+        expected_dimensions: [1672, 941]
+        native_locators_attempted:
+          - {type: file_library_title, value: 200贫民区-后街.png}
+          - {type: chatgpt_file_id, value: file_00000000e3a881fd8ae4afc022e5dd4f}
+        search_outcome: METADATA_OR_HISTORICAL_EVIDENCE_ONLY_TARGET_IMAGE_CARD_NOT_RETURNED
+        pixel_open: NOT_REACHED
+    aggregate_result:
+      asset_resolution: PASS
+      media_version_resolution: PASS
+      pixel_access: ASSET_FOUND_PIXELS_UNAVAILABLE
+      binary_retrieved: false
+      pixels_opened: false
+      pixels_verified_current_invocation: false
+      generation_reference_bound: false
+      external_fallback_attempted: false
+      semantic_substitution_used: false
+    interpretation:
+      - 当前 invocation 再次证明 identity/version/locator metadata 与 actual binary/pixel access 必须分层。
+      - exact File ID 或历史 title 出现在文字登记/验证材料中不能 false-green 为正式媒体已取得。
+      - 当前结果支持继续保持 U-ASSET-RETRIEVAL-001 为 open_native_capability_observation，而非 resolved。
+      - 当前证据尚不足以触发 external_storage_hard_gap_gate；未进行 GitHub binary、Cloudflare、R2 或 external_uri fallback。
+    regression_mapping:
+      - REG-ASSET-NATIVE-FIRST-002
+      - REG-ASSET-NATIVE-FIRST-006
 
 runtime_evidence_policy:
   current_chat_success_must_record_actual_tool_or_media_evidence: true
