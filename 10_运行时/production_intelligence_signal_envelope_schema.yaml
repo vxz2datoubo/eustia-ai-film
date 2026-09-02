@@ -1,0 +1,238 @@
+schema_version: "0.1.0"
+schema_id: EUSTIA_PRODUCTION_INTELLIGENCE_SIGNAL_ENVELOPE
+status: candidate_unvalidated
+source_issue: 59
+scope: stage_aware_provenance_preserving_information_transfer_between_existing_runtime_and_production_departments
+
+purpose:
+  - distinguish_identical_problem_labels_emitted_at_different_production_stages
+  - preserve_work_item_authority_materiality_and_provenance_across_capability_handoffs
+  - prevent_evaluation_reentry_infinite_loops_and_backward_authority_escalation
+  - connect_existing_Director_Feature_Compiler_SOAC_generation_eval_repair_learning_and_infrastructure_without_new_semantic_authority
+
+non_goals:
+  - free_text_director_parsing
+  - new_hard_route_authority
+  - new_expected_observed_evaluator
+  - new_targeted_repair_router
+  - new_learning_gate
+  - automatic_canonical_writeback
+
+required_fields:
+  - signal_id
+  - signal_type
+  - source_stage
+  - producer
+  - work_item_id_when_required
+  - materiality
+  - epistemic_zone
+  - authority_refs
+  - payload
+  - provenance_chain
+
+signal_types:
+  USER_EXPLICIT_CONSTRAINT:
+    valid_source_stages: [CURRENT_USER_INPUT]
+    next_system_role: capability_or_existing_director_runtime_according_to_task
+  WORK_ITEM_CONTEXT:
+    valid_source_stages: [WORK_ITEM_RESOLVED]
+    next_system_role: current_director_runtime_and_handoff
+  DIRECTOR_FEATURE_RECEIPT:
+    valid_source_stages: [DIRECTOR_FEATURE_COMPILED]
+    next_system_role: existing_hard_route_then_capability_mapping
+  HARD_ROUTE_RECEIPT:
+    valid_source_stages: [HARD_ROUTE_RESOLVED]
+    next_system_role: existing_semantic_recall_and_capability_mapping
+  SOAC_STATIC_CHECK:
+    valid_source_stages: [EXECUTION_IR_COMPILED]
+    next_system_role: responsible_capability_or_execution_gate
+  EXECUTION_HANDOFF:
+    valid_source_stages: [PRE_EXECUTION]
+    next_system_role: model_adapter_or_generation_service
+  GENERATION_RESULT:
+    valid_source_stages: [GENERATED]
+    next_system_role: existing_reverse_observation
+  REVERSE_OBSERVATION:
+    valid_source_stages: [REVERSE_OBSERVED]
+    next_system_role: existing_expected_vs_observed
+  EVAL_DIMENSION_RESULT:
+    valid_source_stages: [EVALUATED]
+    next_system_role: existing_targeted_repair_and_failed_dimension_owner
+  TARGETED_REPAIR_HANDOFF:
+    valid_source_stages: [REPAIR_PLANNED]
+    next_system_role: failed_dimension_owner
+  LEARNING_EVIDENCE:
+    valid_source_stages: [LEARNING_CAPTURED]
+    next_system_role: existing_learning_application_gate
+  INFRASTRUCTURE_STATUS:
+    valid_source_stages: [INFRASTRUCTURE]
+    next_system_role: infrastructure_and_production_cycle_only_unless_direct_dependency_is_proven
+  RESEARCH_CANDIDATE:
+    valid_source_stages: [RESEARCH]
+    next_system_role: research_intake_and_candidate_evidence_only
+
+source_stages:
+  - CURRENT_USER_INPUT
+  - WORK_ITEM_RESOLVED
+  - DIRECTOR_FEATURE_COMPILED
+  - HARD_ROUTE_RESOLVED
+  - EXECUTION_IR_COMPILED
+  - PRE_EXECUTION
+  - GENERATED
+  - REVERSE_OBSERVED
+  - EVALUATED
+  - REPAIR_PLANNED
+  - LEARNING_CAPTURED
+  - INFRASTRUCTURE
+  - RESEARCH
+
+producer_contract:
+  allowed:
+    - USER_CREATIVE_AUTHORITY
+    - Active_Work_Item_Resolution
+    - Director_Feature_Compiler
+    - director_route_index_runtime
+    - SOAC_or_CinematicIntent_runtime
+    - Production_Handoff_Compiler
+    - Model_Adapter
+    - Generation_Service
+    - Reverse_Observation
+    - Expected_vs_Observed
+    - Targeted_Repair
+    - Learning_Capture
+    - Infrastructure_Tooling
+    - Research_Intake
+  rule: producer_identity_does_not_grant_authority_beyond_existing_source_contract
+
+work_item_id_when_required:
+  rule: must_match_trusted_upstream_WorkItemContext_for_continuation_bound_tasks
+  downstream_may_change: false
+  mismatch_error: SIGNAL_WORK_ITEM_IDENTITY_MISMATCH
+
+materiality:
+  values: [HARD, MATERIAL, DIAGNOSTIC, INFORMATIONAL]
+  rule:
+    HARD: cannot_be_silently_dropped
+    MATERIAL: must_reach_declared_consumer_or_be_explicitly_resolved
+    DIAGNOSTIC: may_be_used_for_causal_discrimination_but_not_as_hard_constraint
+    INFORMATIONAL: must_not_expand_departments_by_itself
+
+epistemic_zone:
+  values: [K1_EXPLICIT_USER, K2_TACIT_OR_IMPLICIT, K3_ADJACENT_EXPERT, K4_FRONTIER_OR_OPAQUE]
+  rule: zone_does_not_define_truth_authority
+
+authority_refs:
+  type: list
+  rule: references_sources_that_authorize_or_bound_the_signal_not_the_sources_the_signal_wishes_were_true
+
+payload:
+  rule: minimum_sufficient_structured_payload
+  common_fields:
+    - problem_signatures
+    - feature_receipt_ref
+    - hard_routes
+    - eval_dimension
+    - expected
+    - observed
+    - failure_category
+    - failed_dimension_owner
+    - reference_or_asset_refs
+    - model_and_version
+    - infrastructure_error_class
+    - research_claim_ref
+  full_internal_reasoning_forbidden: true
+
+provenance_chain:
+  item_fields: [stage, producer, signal_or_packet_ref, action]
+  actions: [CREATED, REFINED, ROUTED, CONSUMED, REPAIRED, SUPERSEDED, REVALIDATED]
+  rules:
+    - append_only_for_current_signal_lineage
+    - prior_entry_cannot_be_rewritten_to_hide_failure_or_source
+    - provenance_is_evidence_not_truth_authority
+
+routing_rules:
+  - signal_type: GENERATION_RESULT
+    allowed_consumers: [Reverse_Observation]
+    forbidden_consumers: [Targeted_Repair, Learning_Application_Gate]
+    reason: observation_must_exist_before_eval_or_learning
+
+  - signal_type: REVERSE_OBSERVATION
+    allowed_consumers: [Expected_vs_Observed]
+    forbidden_consumers: [Generation_Service]
+
+  - signal_type: EVAL_DIMENSION_RESULT
+    allowed_consumers: [Targeted_Repair, FAILED_DIMENSION_OWNER, Learning_Capture_as_evidence]
+    forbidden_consumers: [Reverse_Observation]
+    reason: already_observed_and_evaluated_do_not_reenter_observation
+
+  - signal_type: TARGETED_REPAIR_HANDOFF
+    allowed_consumers: [FAILED_DIMENSION_OWNER]
+    forbidden_consumers: [Expected_vs_Observed]
+    reason: repair_plan_executes_before_next_generation_and_reobservation
+
+  - signal_type: LEARNING_EVIDENCE
+    allowed_consumers: [Learning_Application_Gate]
+    forbidden_consumers: [Generation_Service]
+    reason: learning_evidence_must_be_adjudicated_before_future_application
+
+  - signal_type: INFRASTRUCTURE_STATUS
+    allowed_consumers: [CAP-INFRASTRUCTURE-TRANSPORT, CAP-PRODUCTION-CYCLE]
+    forbidden_consumers: [CAP-MODEL-REFERENCE, CAP-STORY-DIRECTOR-INTENT]
+    exception: direct_dependency_evidence_may_inform_but_not_mint_model_or_director_failure
+
+  - signal_type: RESEARCH_CANDIDATE
+    allowed_consumers: [Research_Intake, Candidate_Evidence]
+    forbidden_consumers: [Generation_Service, Canonical_Writeback, Learning_Maturity_Promotion]
+
+loop_prevention:
+  signal_instance_identity:
+    fields: [signal_id, work_item_id_when_required, source_stage]
+  rules:
+    - same_signal_instance_cannot_be_consumed_twice_by_same_consumer_without_new_iteration_or_superseding_signal
+    - EVALUATED_signal_cannot_route_back_to_REVERSE_OBSERVED
+    - REPAIR_PLANNED_signal_cannot_route_back_to_EVALUATED_without_new_generation_result
+    - LEARNING_CAPTURED_signal_cannot_route_directly_to_generation
+    - research_candidate_cannot_skip_candidate_validation
+  new_iteration_requires_any:
+    - new_generation_result
+    - new_user_decision
+    - changed_controlled_factor
+    - new_external_evidence
+    - version_change
+
+signal_expiry_and_revalidation:
+  model_version_bound:
+    expires_when: model_or_mode_version_changes
+    next_status: needs_revalidation
+  infrastructure_status:
+    expires_when: runtime_or_connection_state_changes
+  user_K1_current_constraint:
+    expires_when: user_revokes_or_scope_closes
+  K2_inference:
+    expires_when: contradictory_user_evidence_or_context_shift
+
+static_checks:
+  ERROR:
+    - SIGNAL_TYPE_STAGE_MISMATCH
+    - SIGNAL_WORK_ITEM_IDENTITY_MISMATCH
+    - SIGNAL_AUTHORITY_ESCALATION
+    - EVALUATED_SIGNAL_REENTERS_REVERSE_OBSERVATION
+    - REPAIR_SIGNAL_REENTERS_EVAL_WITHOUT_NEW_GENERATION
+    - LEARNING_EVIDENCE_BYPASSES_LEARNING_GATE
+    - RESEARCH_CANDIDATE_BECOMES_EXECUTION_RULE
+    - MATERIAL_SIGNAL_DROPPED_WITHOUT_RESOLUTION
+  WARNING:
+    - DUPLICATE_SIGNAL_CONSUMPTION
+    - INFORMATIONAL_SIGNAL_CAUSES_DEPARTMENT_EXPANSION
+    - SIGNAL_PAYLOAD_TOO_VERBOSE
+    - MODEL_BOUND_SIGNAL_VERSION_STALE
+    - INFRASTRUCTURE_SIGNAL_MISATTRIBUTED_TO_GENERATOR
+
+maturity:
+  current: candidate_unvalidated
+  promotion_requires:
+    - independent_review
+    - real_pipeline_pilot_from_director_or_eval_signal_to_downstream_department
+    - no_stage_reentry_loop
+    - work_item_identity_preserved
+    - material_unknown_and_failure_signals_not_dropped

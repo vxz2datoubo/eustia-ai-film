@@ -1,0 +1,308 @@
+schema_version: "0.1.0"
+policy_id: EUSTIA_PRODUCTION_INTELLIGENCE_EPISTEMIC_CYCLE_POLICY
+status: candidate_unvalidated
+source_issue: 59
+scope: epistemic_axis_tacit_knowledge_elicitation_iteration_coupling_validation_and_information_value
+
+purpose:
+  - keep_epistemic_source_knowledge_abstraction_and_validation_maturity_as_independent_axes
+  - extract_high_value_tacit_user_judgment_without_masquerading_inference_as_explicit_preference
+  - organize_nested_production_iterations_so_local_repairs_cannot_silently_rewrite_outer_authorities
+  - distinguish_verification_from_validation
+  - prioritize_experiments_by_decision_relevant_information_not_only_lowest_cost
+  - distinguish_productive_iteration_from_avoidable_rework
+
+authority_boundary:
+  user_current_intent: current_user_explicit_instruction
+  learning_abstraction: 10_运行时/learning_application_gate.yaml#knowledge_abstraction_ladder
+  maturity: 10_运行时/maturity_model.yaml
+  revision_series: 08_系统学习/反馈反推与系统反哺引擎.md
+  capability_graph: 10_运行时/production_intelligence_capability_graph.yaml
+  handoff_packet: 10_运行时/production_handoff_packet_schema.yaml
+  evidence: 09_资料证据/AI电影生产认知与迭代优化证据.md
+  rules:
+    - this_policy_cannot_create_user_confirmed_preference
+    - this_policy_cannot_promote_maturity
+    - this_policy_cannot_redefine_L0_L5
+    - this_policy_cannot_override_project_canonical_facts
+    - this_policy_cannot_auto_trigger_expensive_generation
+
+knowledge_coordinate_system:
+  axes_are_orthogonal: true
+  axes:
+    epistemic_relationship:
+      values: [K1_EXPLICIT_USER, K2_TACIT_OR_IMPLICIT, K3_ADJACENT_EXPERT, K4_FRONTIER_OR_OPAQUE]
+      question: how_did_this_knowledge_enter_the_current_problem_and_how_should_it_be_treated
+    abstraction_level:
+      authority: 10_运行时/learning_application_gate.yaml#knowledge_abstraction_ladder
+      values: [L0_observation, L1_surface_tactic, L2_director_intent, L3_causal_mechanism, L4_contextual_policy, L5_transferable_principle]
+      question: what_kind_of_knowledge_claim_is_this
+    validation_maturity:
+      authority: 10_运行时/maturity_model.yaml
+      values: [candidate, scene_verified, project_verified, general_stable, conflicted, needs_revalidation, deprecated]
+      question: how_well_has_this_claim_been_validated_within_its_scope
+  forbidden_collapses:
+    - high_epistemic_confidence_does_not_equal_high_maturity
+    - K1_user_feedback_does_not_prove_L3_causality
+    - K3_top_paper_does_not_equal_project_verified
+    - K4_unknown_does_not_equal_low_quality_knowledge_it_means_unresolved
+    - L5_abstraction_does_not_mean_general_stable_without_validation
+    - repeated_frequency_does_not_equal_user_confirmation
+  example_coordinates:
+    user_says_output_is_dirty:
+      epistemic_relationship: K1_EXPLICIT_USER
+      abstraction_level: L0_observation
+      validation_maturity: scene_verified_if_media_and_scope_are_verified_otherwise_candidate_observation
+    reference_contamination_hypothesis:
+      epistemic_relationship: K2_TACIT_OR_IMPLICIT
+      abstraction_level: L3_causal_mechanism
+      validation_maturity: candidate
+    ASC_FDL_framing_handoff:
+      epistemic_relationship: K3_ADJACENT_EXPERT
+      abstraction_level: L4_contextual_policy
+      validation_maturity: candidate
+    current_model_negation_semantics_unknown:
+      epistemic_relationship: K4_FRONTIER_OR_OPAQUE
+      abstraction_level: L3_causal_mechanism
+      validation_maturity: needs_revalidation
+
+tacit_elicitation:
+  capability_id: TACIT-ELICITATION-001
+  maturity: candidate_unvalidated
+  research_basis:
+    - Applied_Cognitive_Task_Analysis
+    - Critical_Decision_Method
+    - pairwise_preference_learning
+  trigger_when_any:
+    - user_explicitly_prefers_one_real_variant_over_another_and_the_reason_is_not_yet_structured
+    - repeated_revision_feedback_shows_a_recurring_judgment_pattern_with_future_reuse_value
+    - user_can_reliably_recognize_good_bad_but_current_system_only_has_surface_labels
+  do_not_trigger_when_any:
+    - preference_is_already_explicit_and_sufficient
+    - issue_is_low_reuse_or_one_off
+    - question_would_interrupt_high_flow_creation_without_material_gain
+    - evidence_can_be_recovered_from_existing_revision_trace_without_user_question
+  pipeline:
+    - locate_real_decision_event
+    - bind_compared_variants_and_context
+    - separate_observed_differences_from_interpretation
+    - identify_candidate_critical_cues
+    - identify_user_expectation_or_value_priority_when_supported
+    - generate_alternative_explanations
+    - identify_tradeoff_and_counterexample
+    - decide_whether_existing_evidence_is_sufficient
+    - if_not_sufficient_choose_one_high_information_probe_or_pairwise_question
+    - record_K2_candidate_with_confidence_and_falsification_signal
+    - route_to_existing_learning_gate
+  candidate_fields:
+    - decision_event_ref
+    - context
+    - compared_variants
+    - selected_variant
+    - rejected_variant
+    - observed_differences
+    - user_explanation_when_explicit
+    - inferred_critical_cues
+    - inferred_value_priority
+    - tradeoff
+    - counterexample
+    - negative_retrieval_examples
+    - confidence_vector
+    - falsification_signal
+    - user_confirmation_status
+  critical_decision_probe_library:
+    use_only_when_material_and_unresolved: true
+    probes:
+      earliest_decisive_cue: what_was_the_earliest_observable_difference_that_made_the_variant_feel_wrong_or_right
+      one_change_counterfactual: if_only_one_difference_could_change_which_one_would_flip_the_judgment
+      near_miss: what_similar_version_would_still_be_acceptable
+      attention_expectation: what_should_the_viewer_notice_or_feel_first
+      severity_ranking: which_failure_is_fatal_and_which_is_only_polish
+      surprise: what_did_the_output_do_that_you_did_not_expect
+  pairwise_preference:
+    allowed_outcomes: [A_PREFERRED, B_PREFERRED, TIE, CONTEXT_DEPENDENT, CANNOT_JUDGE]
+    required_context_binding: true
+    may_learn_global_total_order_by_default: false
+    inconsistent_cycles_are_not_auto_error: true
+    explanation: aesthetic_preferences_may_be_multidimensional_contextual_and_intransitive
+  static_errors:
+    - TACIT_INFERENCE_WRITTEN_AS_EXPLICIT_USER_QUOTE
+    - SINGLE_PAIRWISE_RESULT_PROMOTED_TO_GLOBAL_PREFERENCE
+    - CONTEXT_DEPENDENT_PREFERENCE_FLATTENED_TO_TOTAL_ORDER
+
+production_cycles:
+  nested: true
+  cycles:
+    C0_PERCEPTUAL_MOMENT:
+      scope: subshot_seconds
+      owns: [performance_microchange, contact_phase, attention_shift, av_sync_event]
+      may_mutate_outer_canonical: false
+    C1_SHOT_PRODUCTION:
+      scope: one_generation_unit
+      flow: [director_contract, reference_or_previs, model_execution, reverse_observation, expected_vs_observed, targeted_repair]
+      exit_when: material_dimensions_pass_or_creative_authority_accepts_explicit_deviation
+      may_mutate_outer_canonical: false
+    C2_REVISION_SEQUENCE:
+      scope: revision_series_or_sequence
+      flow: [constraint_ledger, revision, transition_continuity, checkpoint, trajectory_final_delta]
+      may_update_continuity_via_existing_write_route: true
+      may_promote_general_skill_directly: false
+    C3_SCENE_PROJECT:
+      scope: cross_scene_project
+      flow: [asset_character_scene_map_continuity_alignment, repeated_evidence, regression, maturity_consideration]
+      high_impact_existing_human_gate_required: true
+    C4_MODEL_TOOL_LIFECYCLE:
+      scope: model_api_software_version
+      flow: [version_change_detection, capability_refresh, needs_revalidation, bounded_retest]
+      may_override_director_method: false
+    C5_PROJECT_ARCHITECTURE:
+      scope: source_authority_runtime_contracts_schemas_governance
+      cadence: slow_relative_to_production_loops
+      independent_review_required_for_material_changes: true
+  containment_rules:
+    - inner_cycle_fix_cannot_silently_rewrite_outer_cycle_truth
+    - C1_model_workaround_cannot_change_C3_map_story_or_formal_asset_identity
+    - C2_revision_success_cannot_directly_become_C3_or_L5_stable_rule
+    - C4_model_capability_change_cannot_rewrite_director_story_fact
+    - C5_architecture_must_not_be_changed_to_force_one_shot_to_pass
+
+iteration_classification:
+  PRODUCTIVE_ITERATION:
+    criteria:
+      - changes_are_traceable
+      - uncertainty_or_failure_dimension_is_reduced
+      - new_evidence_is_produced
+      - preserved_dimensions_are_not_repeatedly_broken
+    action: continue_within_bounded_cycle
+  AVOIDABLE_REWORK:
+    examples:
+      - wrong_asset_or_version
+      - stale_work_item
+      - missing_authority_read
+      - handoff_dropped_hard_constraint
+      - uncontrolled_multifactor_prompt_rewrite
+      - evaluator_sampling_error_misdiagnosed_as_generator_failure
+    action:
+      - repair_process_or_handoff_cause_before_more_generation
+      - record_rework_cause_when_recurrent
+  CREATIVE_EXPLORATION:
+    criteria:
+      - alternatives_are_intentionally_competing_valid_options
+      - user_or_director_is_exploring_value_tradeoff_not_fixing_a_defect
+    action: preserve_as_variants_not_failure_rework
+
+verification_vs_validation:
+  VERIFICATION:
+    question: did_the_output_or_packet_meet_the_declared_contract
+    examples:
+      - correct_work_item_identity
+      - correct_asset_and_reference_version
+      - required_camera_or_framing_contract
+      - event_order
+      - topology_contact
+      - format_and_duration
+      - handoff_completeness
+    owner: technical_or_domain_evaluator_according_to_dimension
+  VALIDATION:
+    question: does_the_result_fulfill_the_intended_creative_use_for_the_viewer_and_user
+    examples:
+      - dramatic_function
+      - audience_knowledge_change
+      - emotional_or_relationship_effect
+      - performance_credibility
+      - rhythm_and_aesthetic_fit
+      - user_director_acceptance
+    owner: DIRECTOR_and_USER_CREATIVE_AUTHORITY_when_material
+  rules:
+    - verification_pass_does_not_imply_validation_pass
+    - validation_success_may_accept_a_known_noncritical_verification_deviation_only_with_explicit_creative_decision
+    - hard_canonical_verification_failure_cannot_be_overridden_by_aesthetic_preference_without_existing_high_impact_change_gate
+
+coupling_and_dependency_management:
+  method: temporary_design_structure_matrix_when_complexity_warrants
+  activate_when_any:
+    - three_or_more_capabilities_are_mutually_dependent
+    - same_work_item_repeatedly_bounces_between_departments
+    - late_information_causes_rework
+    - complex_one_take_or_multi_subject_scene_requires_synchronized_design
+  node: active_task_or_capability
+  edges: [CONSUMES, INFORMS, CONSTRAINS, VALIDATES, HANDOFF_TO]
+  interpretation:
+    strong_bidirectional_cluster: iterate_as_microcycle_or_joint_design_block
+    stable_one_way_dependency: lock_upstream_contract_then_handoff
+    independent_nodes: parallelize_when_resources_allow
+    weak_nonmaterial_edge: remove_from_current_dependency_set
+  anti_bloat: do_not_build_DSM_for_simple_single_capability_task
+
+information_value_routing:
+  maturity: candidate_research_supported
+  principle: choose_next_information_action_for_decision_value_not_only_low_cost
+  qualitative_priority_components:
+    - expected_decision_relevant_information_gain
+    - future_reuse_value
+    - failure_cost_avoided
+    - uncertainty_reduction
+    - ability_to_discriminate_competing_hypotheses
+    - generation_cost
+    - user_effort
+    - latency
+    - interruption_cost
+  no_fake_precision: true
+  high_priority_when:
+    - result_can_eliminate_multiple_future_failed_generations
+    - result_discriminates_two_high_impact_competing_mechanisms
+    - result_validates_cross_fidelity_transfer_for_repeated_workflow
+  low_priority_when:
+    - result_only_confirms_an_already_obvious_nonmaterial_detail
+    - test_does_not_change_any_decision
+    - cost_or_interruptions_exceed_reuse_value
+
+multi_fidelity_ledger:
+  fidelity_axes:
+    - model_or_service
+    - duration
+    - resolution
+    - reference_complexity
+    - number_of_shots
+    - previs_vs_photoreal
+    - sample_count
+  per_fidelity_fields:
+    - fidelity_id
+    - cost_class
+    - latency_class
+    - dimensions_supported_for_screening
+    - dimensions_not_transferable
+    - evidence_refs
+    - last_revalidated
+  rules:
+    - cheapest_is_not_automatically_first
+    - proxy_must_have_dimension_level_transfer_evidence
+    - final_fidelity_still_checks_final_visual_quality_and_model_specific_behavior
+    - cross_fidelity_transfer_is_learned_from_real_project_results
+    - version_change_triggers_revalidation
+
+static_checks:
+  ERROR:
+    - KNOWLEDGE_AXES_COLLAPSED
+    - K1_OBSERVATION_TREATED_AS_CAUSAL_PROOF
+    - K3_EXTERNAL_SOURCE_AUTO_PROMOTED
+    - TACIT_INFERENCE_WRITTEN_AS_EXPLICIT_USER_FACT
+    - INNER_CYCLE_MUTATES_OUTER_CANONICAL_WITHOUT_GATE
+    - VERIFICATION_AND_VALIDATION_COLLAPSED
+    - PROXY_FIDELITY_CLAIMS_UNSUPPORTED_FINAL_DIMENSION
+  WARNING:
+    - HIGH_REWORK_WITHOUT_PROCESS_CAUSE_ANALYSIS
+    - TIGHT_COUPLING_NOT_ITERATED_TOGETHER
+    - LOW_VALUE_PROBE_SELECTED_OVER_HIGH_INFORMATION_PROBE
+    - USER_INTERRUPTED_FOR_LOW_VALUE_TACIT_QUESTION
+    - GLOBAL_PREFERENCE_RANKING_ASSUMED_FROM_CONTEXTUAL_PAIRS
+    - VERSION_SENSITIVE_FIDELITY_LEDGER_STALE
+
+maturity:
+  current: candidate_unvalidated
+  promotion_requires:
+    - independent_architecture_review
+    - at_least_three_real_tacit_elicitation_or_pairwise_cases_without_false_user_attribution
+    - at_least_three_real_iteration_cycles_showing_rework_reduction_or_information_gain
+    - no_cross_cycle_authority_leak
+    - verification_validation_split_proves_useful_in_real_generation_review
