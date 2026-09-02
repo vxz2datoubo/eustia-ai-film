@@ -1,15 +1,16 @@
 """Read-only canonical camera authority adapter candidate.
 
-This module never chooses a camera. It reads a materialized ShotCameraBinding from the
-fixed GitHub canonical continuity document, verifies Scene -> Camera Anchor -> View ->
-Media Asset identity against the canonical visual registry and resolver, and returns a
-non-mintable readback result. Absence of a binding is a first-class fail-closed state.
+P1a is intentionally narrow: it can read camera authority only for the current
+canonical active work item. It never chooses a camera, never accepts a caller-supplied
+binding/receipt/root, and never promotes an AI camera proposal into authority.
+Historical work items require a later canonical historical-resolution integration.
 """
 from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
 import re
+from types import MappingProxyType
 from typing import Any, Mapping
 
 import yaml
@@ -56,51 +57,70 @@ class CameraAuthorityError(ValueError):
         super().__init__(code)
 
 
+def _fail(code: str, **details: Any) -> CameraAuthorityError:
+    return CameraAuthorityError(code, details=details or None)
+
+
+def _freeze(value: Any) -> Any:
+    if isinstance(value, Mapping):
+        return MappingProxyType({str(key): _freeze(item) for key, item in value.items()})
+    if isinstance(value, list):
+        return tuple(_freeze(item) for item in value)
+    if isinstance(value, tuple):
+        return tuple(_freeze(item) for item in value)
+    return value
+
+
+def _thaw(value: Any) -> Any:
+    if isinstance(value, Mapping):
+        return {str(key): _thaw(item) for key, item in value.items()}
+    if isinstance(value, tuple):
+        return [_thaw(item) for item in value]
+    return value
+
+
 @dataclass(frozen=True)
 class CameraAuthorityReceipt:
     status: str
     work_item_id: str
     shot_id: str | None
     camera_authority_available: bool
-    binding: dict[str, Any] | None
-    scene: dict[str, Any] | None
-    camera_anchor: dict[str, Any] | None
-    view: dict[str, Any] | None
-    media_asset: dict[str, Any] | None
+    binding: Mapping[str, Any] | None
+    scene: Mapping[str, Any] | None
+    camera_anchor: Mapping[str, Any] | None
+    view: Mapping[str, Any] | None
+    media_asset: Mapping[str, Any] | None
     current_media_version_id: str | None
-    orientation: dict[str, Any] | None
-    physical_position: dict[str, Any] | None
-    lens: dict[str, Any] | None
+    orientation: Mapping[str, Any] | None
+    physical_position: Mapping[str, Any] | None
+    lens: Mapping[str, Any] | None
     canonical_main_sha: str
     pixels_seen: bool = False
     caller_camera_proposal_accepted_as_authority: bool = False
     camera_choice_performed: bool = False
 
     def as_dict(self) -> dict[str, Any]:
+        """Return a detached serialization projection, never the authority object itself."""
         return {
             "status": self.status,
             "work_item_id": self.work_item_id,
             "shot_id": self.shot_id,
             "camera_authority_available": self.camera_authority_available,
-            "binding": dict(self.binding or {}) if self.binding else None,
-            "scene": dict(self.scene or {}) if self.scene else None,
-            "camera_anchor": dict(self.camera_anchor or {}) if self.camera_anchor else None,
-            "view": dict(self.view or {}) if self.view else None,
-            "media_asset": dict(self.media_asset or {}) if self.media_asset else None,
+            "binding": _thaw(self.binding) if self.binding is not None else None,
+            "scene": _thaw(self.scene) if self.scene is not None else None,
+            "camera_anchor": _thaw(self.camera_anchor) if self.camera_anchor is not None else None,
+            "view": _thaw(self.view) if self.view is not None else None,
+            "media_asset": _thaw(self.media_asset) if self.media_asset is not None else None,
             "current_media_version_id": self.current_media_version_id,
-            "orientation": dict(self.orientation or {}) if self.orientation else None,
-            "physical_position": dict(self.physical_position or {}) if self.physical_position else None,
-            "lens": dict(self.lens or {}) if self.lens else None,
+            "orientation": _thaw(self.orientation) if self.orientation is not None else None,
+            "physical_position": _thaw(self.physical_position) if self.physical_position is not None else None,
+            "lens": _thaw(self.lens) if self.lens is not None else None,
             "canonical_main_sha": self.canonical_main_sha,
-            "pixels_seen": self.pixels_seen,
+            "pixels_seen": False,
             "caller_camera_proposal_accepted_as_authority": False,
             "camera_choice_performed": False,
-            "authority_boundary": "fixed_github_readback_only",
+            "authority_boundary": "fixed_github_current_active_work_item_readback_only",
         }
-
-
-def _fail(code: str, **details: Any) -> CameraAuthorityError:
-    return CameraAuthorityError(code, details=details or None)
 
 
 def _full_sha(value: Any) -> str:
@@ -118,13 +138,19 @@ def _current_main_sha() -> str:
     return _full_sha(sha)
 
 
-def _load_project_index(ref: str) -> dict[str, Any]:
-    text = _remote._github_file_text(PROJECT_INDEX_PATH, ref)
+def _parse_yaml(text: str, *, code: str) -> dict[str, Any]:
     try:
         parsed = yaml.safe_load(text) or {}
     except yaml.YAMLError as exc:
-        raise _fail("CAMERA_CANONICAL_INDEX_INVALID") from exc
-    if not isinstance(parsed, Mapping) or parsed.get("project_id") != "EUSTIA_AI_FILM":
+        raise _fail(code) from exc
+    if not isinstance(parsed, Mapping):
+        raise _fail(code)
+    return dict(parsed)
+
+
+def _load_project_index(ref: str) -> dict[str, Any]:
+    parsed = _parse_yaml(_remote._github_file_text(PROJECT_INDEX_PATH, ref), code="CAMERA_CANONICAL_INDEX_INVALID")
+    if parsed.get("project_id") != "EUSTIA_AI_FILM":
         raise _fail("CAMERA_CANONICAL_INDEX_INVALID")
     canonical = parsed.get("canonical")
     if not isinstance(canonical, Mapping):
@@ -138,7 +164,26 @@ def _load_project_index(ref: str) -> dict[str, Any]:
     for key, path in required.items():
         if canonical.get(key) != path:
             raise _fail("CAMERA_CANONICAL_INDEX_INVALID", field=key, expected=path)
-    return dict(parsed)
+    return parsed
+
+
+def _load_identity_schema(ref: str) -> dict[str, Any]:
+    schema = _parse_yaml(
+        _remote._github_file_text(IDENTITY_SCHEMA_PATH, ref),
+        code="CAMERA_IDENTITY_SCHEMA_INVALID",
+    )
+    if schema.get("schema_id") != "EUSTIA_SCENE_ASSET_IDENTITY" or schema.get("status") != "active":
+        raise _fail("CAMERA_IDENTITY_SCHEMA_INVALID")
+    source_authority = schema.get("source_authority")
+    if not isinstance(source_authority, Mapping):
+        raise _fail("CAMERA_IDENTITY_SCHEMA_INVALID")
+    if source_authority.get("formal_logical_asset_registry") != ASSET_REGISTRY_PATH.as_posix():
+        raise _fail("CAMERA_IDENTITY_SCHEMA_INVALID", field="formal_logical_asset_registry")
+    if source_authority.get("media_version_and_locator_resolver") != RESOLVER_PATH.as_posix():
+        raise _fail("CAMERA_IDENTITY_SCHEMA_INVALID", field="media_version_and_locator_resolver")
+    if source_authority.get("current_binding_state") != CONTINUITY_PATH.as_posix():
+        raise _fail("CAMERA_IDENTITY_SCHEMA_INVALID", field="current_binding_state")
+    return schema
 
 
 def _extract_binding_payload(continuity_text: str) -> list[dict[str, Any]]:
@@ -155,12 +200,7 @@ def _extract_binding_payload(continuity_text: str) -> list[dict[str, Any]]:
             break
     if raw.endswith("```"):
         raw = raw[:-3].strip()
-    try:
-        parsed = yaml.safe_load(raw) or {}
-    except yaml.YAMLError as exc:
-        raise _fail("CAMERA_BINDING_BLOCK_INVALID") from exc
-    if not isinstance(parsed, Mapping):
-        raise _fail("CAMERA_BINDING_BLOCK_INVALID")
+    parsed = _parse_yaml(raw, code="CAMERA_BINDING_BLOCK_INVALID")
     bindings = parsed.get("shot_camera_bindings")
     if not isinstance(bindings, list):
         raise _fail("CAMERA_BINDING_BLOCK_INVALID")
@@ -181,7 +221,14 @@ def _extract_binding_payload(continuity_text: str) -> list[dict[str, Any]]:
         for key in _REQUIRED_BINDING_FIELDS - {"provenance"}:
             if not str(record.get(key) or "").strip():
                 raise _fail("CAMERA_BINDING_RECORD_INVALID", index=index, field=key)
-        if not record.get("provenance"):
+        provenance = record.get("provenance")
+        if isinstance(provenance, str):
+            if not provenance.strip():
+                raise _fail("CAMERA_BINDING_RECORD_INVALID", index=index, field="provenance")
+        elif isinstance(provenance, Mapping):
+            if not provenance:
+                raise _fail("CAMERA_BINDING_RECORD_INVALID", index=index, field="provenance")
+        else:
             raise _fail("CAMERA_BINDING_RECORD_INVALID", index=index, field="provenance")
         if str(record["binding_status"]).upper() not in {"CONFIRMED", "LOCKED"}:
             raise _fail("CAMERA_BINDING_STATUS_NOT_AUTHORITATIVE", index=index)
@@ -190,20 +237,19 @@ def _extract_binding_payload(continuity_text: str) -> list[dict[str, Any]]:
 
 
 def _identity_graph(registry_text: str) -> dict[str, Any]:
-    match = re.search(
-        r"(?s)# 5\. 新体系正式场景身份图\s*```ya?ml\s*(.*?)\s*```",
-        registry_text,
-    )
+    match = re.search(r"(?s)# 5\. 新体系正式场景身份图\s*```ya?ml\s*(.*?)\s*```", registry_text)
     if not match:
         raise _fail("CAMERA_IDENTITY_GRAPH_MISSING")
-    try:
-        parsed = yaml.safe_load(match.group(1)) or {}
-    except yaml.YAMLError as exc:
-        raise _fail("CAMERA_IDENTITY_GRAPH_INVALID") from exc
+    parsed = _parse_yaml(match.group(1), code="CAMERA_IDENTITY_GRAPH_INVALID")
     required = {"scenes", "camera_anchors", "views", "media_assets"}
-    if not isinstance(parsed, Mapping) or not required.issubset(parsed):
+    if not required.issubset(parsed):
         raise _fail("CAMERA_IDENTITY_GRAPH_INVALID")
-    return dict(parsed)
+    for key in required:
+        if not isinstance(parsed.get(key), Mapping):
+            raise _fail("CAMERA_IDENTITY_GRAPH_INVALID", field=key)
+    if "relations" in parsed and not isinstance(parsed.get("relations"), Mapping):
+        raise _fail("CAMERA_IDENTITY_GRAPH_INVALID", field="relations")
+    return parsed
 
 
 def _verify_materialization(binding: Mapping[str, Any], *, main_sha: str) -> str:
@@ -238,10 +284,8 @@ def _verify_materialization(binding: Mapping[str, Any], *, main_sha: str) -> str
     return declared
 
 
-def _select_binding(
-    bindings: list[dict[str, Any]], *, work_item_id: str, shot_id: str | None
-) -> dict[str, Any] | None:
-    matches = [item for item in bindings if str(item.get("work_item_id")) == work_item_id]
+def _select_binding(bindings: list[dict[str, Any]], *, active_work_item_id: str, shot_id: str | None) -> dict[str, Any] | None:
+    matches = [item for item in bindings if str(item.get("work_item_id")) == active_work_item_id]
     if shot_id is not None:
         matches = [item for item in matches if str(item.get("shot_id")) == shot_id]
     if not matches:
@@ -249,75 +293,112 @@ def _select_binding(
     if len(matches) > 1:
         raise _fail(
             "CAMERA_BINDING_AMBIGUOUS",
-            work_item_id=work_item_id,
+            work_item_id=active_work_item_id,
             shot_id=shot_id,
             count=len(matches),
         )
     return matches[0]
 
 
-def read_camera_authority(
-    *,
-    work_item_id: str | None = None,
-    shot_id: str | None = None,
-) -> CameraAuthorityReceipt:
-    """Read camera authority from fixed GitHub canonical state only.
+def _active_record(graph: Mapping[str, Any], group: str, record_id: str, *, node: str) -> Mapping[str, Any]:
+    records = graph.get(group)
+    record = records.get(record_id) if isinstance(records, Mapping) else None
+    if not isinstance(record, Mapping) or record.get("status") != "active":
+        raise _fail("CAMERA_IDENTITY_CHAIN_INVALID", node=node, record_id=record_id)
+    return record
 
-    ``work_item_id`` and ``shot_id`` are selectors, never authority claims. No caller
-    document, callback, binding object or verified boolean is accepted.
+
+def _resolve_media_version(resolver: Mapping[str, Any], binding: Mapping[str, Any], asset_id: str) -> str:
+    assets = resolver.get("assets")
+    resolver_asset = assets.get(asset_id) if isinstance(assets, Mapping) else None
+    if not isinstance(resolver_asset, Mapping):
+        raise _fail("CAMERA_MEDIA_RESOLVER_INVALID", asset_id=asset_id)
+    versions = resolver_asset.get("versions")
+    if not isinstance(versions, list):
+        raise _fail("CAMERA_MEDIA_RESOLVER_INVALID", asset_id=asset_id, reason="versions_missing")
+    pinned = str(binding.get("media_version_id") or "").strip() or None
+    selected = pinned or (str(resolver_asset.get("current_version_id") or "").strip() or None)
+    if selected is None:
+        raise _fail("CAMERA_MEDIA_RESOLVER_INVALID", asset_id=asset_id, reason="current_version_missing")
+    version = next(
+        (
+            item
+            for item in versions
+            if isinstance(item, Mapping)
+            and item.get("version_id") == selected
+            and item.get("asset_id") == asset_id
+        ),
+        None,
+    )
+    if not isinstance(version, Mapping):
+        code = "CAMERA_MEDIA_VERSION_PIN_INVALID" if pinned else "CAMERA_MEDIA_RESOLVER_INVALID"
+        raise _fail(code, asset_id=asset_id, media_version_id=selected)
+    if version.get("lifecycle_status") == "rejected":
+        raise _fail("CAMERA_MEDIA_VERSION_PIN_INVALID", asset_id=asset_id, media_version_id=selected, reason="rejected")
+    return selected
+
+
+def _unbound_receipt(*, work_item_id: str, shot_id: str | None, main_sha: str) -> CameraAuthorityReceipt:
+    return CameraAuthorityReceipt(
+        status="CAMERA_AUTHORITY_UNBOUND",
+        work_item_id=work_item_id,
+        shot_id=shot_id,
+        camera_authority_available=False,
+        binding=None,
+        scene=None,
+        camera_anchor=None,
+        view=None,
+        media_asset=None,
+        current_media_version_id=None,
+        orientation=None,
+        physical_position=None,
+        lens=None,
+        canonical_main_sha=main_sha,
+    )
+
+
+def read_camera_authority(*, shot_id: str | None = None) -> CameraAuthorityReceipt:
+    """Read camera authority for the current canonical active work item only.
+
+    P1a exposes no ``work_item_id`` selector. Historical camera readback requires a
+    separately reviewed canonical historical work-item resolver rather than a raw ID.
+    ``shot_id`` only narrows bindings already present under the canonical active item.
     """
     main_sha = _current_main_sha()
     _load_project_index(main_sha)
+    _load_identity_schema(main_sha)
     continuity_text = _remote._github_file_text(CONTINUITY_PATH, main_sha)
     active_state = _remote._extract_state_payload(continuity_text)
     active_work_item = str(active_state.get("work_item_id") or "").strip()
-    requested_work_item = str(work_item_id or active_work_item).strip()
+    if not active_work_item:
+        raise _fail("CAMERA_ACTIVE_WORK_ITEM_UNAVAILABLE")
     requested_shot = str(shot_id).strip() if shot_id is not None else None
-    if not requested_work_item:
-        raise _fail("CAMERA_WORK_ITEM_SELECTOR_INVALID")
+    if shot_id is not None and not requested_shot:
+        raise _fail("CAMERA_SHOT_SELECTOR_INVALID")
 
-    bindings = _extract_binding_payload(continuity_text)
-    binding = _select_binding(bindings, work_item_id=requested_work_item, shot_id=requested_shot)
+    binding = _select_binding(
+        _extract_binding_payload(continuity_text),
+        active_work_item_id=active_work_item,
+        shot_id=requested_shot,
+    )
     if binding is None:
-        return CameraAuthorityReceipt(
-            status="CAMERA_AUTHORITY_UNBOUND",
-            work_item_id=requested_work_item,
-            shot_id=requested_shot,
-            camera_authority_available=False,
-            binding=None,
-            scene=None,
-            camera_anchor=None,
-            view=None,
-            media_asset=None,
-            current_media_version_id=None,
-            orientation=None,
-            physical_position=None,
-            lens=None,
-            canonical_main_sha=main_sha,
-        )
+        return _unbound_receipt(work_item_id=active_work_item, shot_id=requested_shot, main_sha=main_sha)
 
     _verify_materialization(binding, main_sha=main_sha)
-    registry_text = _remote._github_file_text(ASSET_REGISTRY_PATH, main_sha)
-    graph = _identity_graph(registry_text)
-    resolver_text = _remote._github_file_text(RESOLVER_PATH, main_sha)
-    try:
-        resolver = yaml.safe_load(resolver_text) or {}
-    except yaml.YAMLError as exc:
-        raise _fail("CAMERA_MEDIA_RESOLVER_INVALID") from exc
-    if not isinstance(resolver, Mapping):
-        raise _fail("CAMERA_MEDIA_RESOLVER_INVALID")
+    graph = _identity_graph(_remote._github_file_text(ASSET_REGISTRY_PATH, main_sha))
+    resolver = _parse_yaml(
+        _remote._github_file_text(RESOLVER_PATH, main_sha),
+        code="CAMERA_MEDIA_RESOLVER_INVALID",
+    )
 
     scene_id = str(binding["scene_id"])
     camera_id = str(binding["camera_anchor_id"])
     view_id = str(binding["view_id"])
     asset_id = str(binding["asset_id"])
-    scene = (graph.get("scenes") or {}).get(scene_id)
-    camera = (graph.get("camera_anchors") or {}).get(camera_id)
-    view = (graph.get("views") or {}).get(view_id)
-    asset = (graph.get("media_assets") or {}).get(asset_id)
-    for label, record in (("scene", scene), ("camera_anchor", camera), ("view", view), ("media_asset", asset)):
-        if not isinstance(record, Mapping) or record.get("status") != "active":
-            raise _fail("CAMERA_IDENTITY_CHAIN_INVALID", node=label)
+    scene = _active_record(graph, "scenes", scene_id, node="scene")
+    camera = _active_record(graph, "camera_anchors", camera_id, node="camera_anchor")
+    view = _active_record(graph, "views", view_id, node="view")
+    asset = _active_record(graph, "media_assets", asset_id, node="media_asset")
     if camera.get("scene_id") != scene_id:
         raise _fail("CAMERA_IDENTITY_CHAIN_INVALID", node="camera_anchor_scene")
     if view.get("scene_id") != scene_id or view.get("camera_anchor_id") != camera_id:
@@ -325,19 +406,14 @@ def read_camera_authority(
     if asset.get("view_id") != view_id:
         raise _fail("CAMERA_IDENTITY_CHAIN_INVALID", node="asset_view")
 
-    resolver_asset = (resolver.get("assets") or {}).get(asset_id)
-    if not isinstance(resolver_asset, Mapping):
-        raise _fail("CAMERA_MEDIA_RESOLVER_INVALID", asset_id=asset_id)
-    current_version = str(resolver_asset.get("current_version_id") or "").strip() or None
-    pinned_version = str(binding.get("media_version_id") or "").strip() or None
-    if pinned_version:
-        versions = resolver_asset.get("versions") or []
-        if not any(isinstance(item, Mapping) and item.get("version_id") == pinned_version for item in versions):
-            raise _fail("CAMERA_MEDIA_VERSION_PIN_INVALID", media_version_id=pinned_version)
-        selected_version = pinned_version
-    else:
-        selected_version = current_version
+    relation_id = str(binding.get("relation_id") or "").strip() or None
+    if relation_id:
+        relation = _active_record(graph, "relations", relation_id, node="relation")
+        members = relation.get("member_view_ids")
+        if not isinstance(members, list) or view_id not in {str(item) for item in members}:
+            raise _fail("CAMERA_IDENTITY_CHAIN_INVALID", node="relation_view")
 
+    selected_version = _resolve_media_version(resolver, binding, asset_id)
     view_class = str(view.get("view_class") or "")
     if view_class == "perspective":
         facing = view.get("facing_cardinal")
@@ -376,17 +452,17 @@ def read_camera_authority(
 
     return CameraAuthorityReceipt(
         status="CAMERA_AUTHORITY_BOUND_VERIFIED",
-        work_item_id=requested_work_item,
+        work_item_id=active_work_item,
         shot_id=str(binding["shot_id"]),
         camera_authority_available=True,
-        binding=dict(binding),
-        scene=dict(scene),
-        camera_anchor=dict(camera),
-        view=dict(view),
-        media_asset=dict(asset),
+        binding=_freeze(binding),
+        scene=_freeze(scene),
+        camera_anchor=_freeze(camera),
+        view=_freeze(view),
+        media_asset=_freeze(asset),
         current_media_version_id=selected_version,
-        orientation=orientation,
-        physical_position=physical_position,
-        lens=lens,
+        orientation=_freeze(orientation),
+        physical_position=_freeze(physical_position),
+        lens=_freeze(lens),
         canonical_main_sha=main_sha,
     )
