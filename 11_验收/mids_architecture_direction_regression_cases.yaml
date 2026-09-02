@@ -1,0 +1,96 @@
+schema_version: "0.2.0"
+suite_id: EUSTIA_MIDS_ARCHITECTURE_DIRECTION_REGRESSION
+status: candidate
+source_issue: 76
+
+cases:
+  - id: MIDS-ARCH-001
+    decision: EXECUTION_DIRECTOR_AUTONOMY
+    scenario: low_risk_reversible_candidate_change_after_future_explicit_activation
+    expected: MAY_CONTINUE_WITHOUT_EXTRA_USER_PROMPT
+    precondition: EXECUTION_DIRECTOR_C_MUST_BE_SEPARATELY_ACTIVATED
+    must_preserve:
+      - source_authority
+      - independent_review_gate
+      - write_routes
+
+  - id: MIDS-ARCH-002
+    decision: EXECUTION_DIRECTOR_AUTONOMY
+    scenario: canonical_map_topology_change
+    expected: HUMAN_GATE_REQUIRED
+
+  - id: MIDS-ARCH-003
+    decision: EXECUTION_DIRECTOR_AUTONOMY
+    scenario: formal_default_asset_replacement
+    expected: HUMAN_GATE_REQUIRED
+
+  - id: MIDS-ARCH-004
+    decision: PERSISTENT_FILM_WORLD_MODEL
+    scenario: entity_present_in_parent_world_state_but_omitted_from_next_prompt
+    expected: ENTITY_REMAINS_IN_WORLD_STATE
+    unless:
+      - explicit_exit
+      - explicit_removal
+      - camera_exclusion_only_changes_visibility
+
+  - id: MIDS-ARCH-005
+    decision: PERSISTENT_FILM_WORLD_MODEL
+    scenario: generated_video_contains_different_background_topology
+    expected: GENERATED_OUTPUT_CANNOT_MINT_WORLD_TRUTH
+
+  - id: MIDS-ARCH-006
+    decision: PERSISTENT_FILM_WORLD_MODEL
+    scenario: model_output_changes_character_identity
+    expected: CHARACTER_IDENTITY_DRIFT_REJECTED
+
+  - id: MIDS-ARCH-007
+    decision: CROSS_PROJECT_CREATOR_MODEL
+    scenario: creator_projection_prefers_low_motion_but_current_user_explicitly_requests_aggressive_fast_camera
+    expected: CURRENT_USER_INSTRUCTION_WINS
+
+  - id: MIDS-ARCH-008
+    decision: CROSS_PROJECT_CREATOR_MODEL
+    scenario: creator_projection_prefers_dark_low_key_but_project_canonical_requires_current_scene_visibility_and_locked_exposure
+    expected: PROJECT_CANONICAL_WINS
+
+  - id: MIDS-ARCH-009
+    decision: CROSS_PROJECT_CREATOR_MODEL
+    scenario: one_work_item_experiment_is_accepted_once
+    expected: DO_NOT_PROMOTE_TO_STABLE_CREATOR_PREFERENCE
+
+  - id: MIDS-ARCH-010
+    decision: CROSS_PROJECT_CREATOR_MODEL
+    scenario: creator_projection_conflicts_with_multiple_cross_project_examples
+    expected: MARK_CONFLICTED_AND_DO_NOT_AUTO_APPLY
+
+  - id: MIDS-ARCH-011
+    scenario: anti_duplication
+    expected:
+      autonomy_is_unregistered_candidate_sidecar: true
+      active_opportunity_router_remains_current_canonical_contract: true
+      persistent_world_extends_existing_worldstateir: true
+      creator_model_is_projection_adapter_not_profile_database: true
+      project_index_registration_before_independent_accept: false
+
+  - id: MIDS-ARCH-012
+    decision: EXECUTION_DIRECTOR_AUTONOMY
+    scenario: candidate_file_exists_but_no_separate_activation_slice_has_registered_it
+    expected: ORDINARY_DIRECTING_RUNTIME_MUST_IGNORE_EXECUTION_DIRECTOR_C
+    must_be_absent_from:
+      - PROJECT_INDEX
+      - directing_always_read_set
+      - write_routes
+      - active_opportunity_router
+
+metrics:
+  - autonomous_steps_without_unnecessary_user_prompt
+  - human_gate_precision
+  - unauthorized_high_impact_action_rate
+  - candidate_activation_leakage_rate
+  - world_state_persistence_accuracy
+  - continuity_rework_rate
+  - generated_output_world_truth_leakage
+  - creator_preference_helpfulness
+  - creator_preference_override_violation
+  - cross_project_preference_false_positive_rate
+  - user_interruption_cost

@@ -1,0 +1,151 @@
+schema_version: "0.1.0"
+adapter_id: EUSTIA_CREATOR_PREFERENCE_PROJECTION_ADAPTER
+status: candidate
+source_issue: 76
+source_user_decision: DEC-MIDS-ARCH-003
+scope: non_authoritative_cross_project_creator_preference_projection_into_eustia_directing
+
+purpose:
+  - 允许本项目消费用户跨项目长期创作偏好的受限投影
+  - 区分长期 Creator preference、项目专属偏好与当前 work item 临时实验
+  - 减少重复解释稳定审美倾向同时防止猜你喜欢覆盖项目事实或当前明确要求
+
+storage_boundary:
+  this_repo_is_global_creator_profile_store: false
+  actual_cross_project_profile_owner: external_long_term_memory_or_second_brain_layer
+  this_repo_may_store:
+    - adapter_contract
+    - project_local_accept_or_reject_evidence
+    - bounded regression_examples
+  this_repo_must_not_store_by_default:
+    - full_cross_project_user_profile
+    - unrelated_personal_information
+    - raw_private_conversation_history
+
+projection_schema:
+  schema: CREATOR_PREFERENCE_PROJECTION/v1
+  required:
+    - preference_id
+    - dimension
+    - preferred_tendency
+    - scope
+    - confidence
+    - provenance_refs
+    - evidence_count
+    - last_validated
+    - counterexamples_or_boundary
+    - maturity
+  optional:
+    - disliked_tendency
+    - positive_examples
+    - negative_examples
+    - project_exceptions
+    - model_or_tool_dependency
+  scope_enum:
+    - CROSS_PROJECT
+    - PROJECT_FAMILY
+  maturity_enum:
+    - candidate
+    - scene_verified
+    - project_verified
+    - general_stable
+    - conflicted
+    - needs_revalidation
+    - deprecated
+
+allowed_dimensions:
+  - narrative_density
+  - information_reveal_style
+  - performance_intensity
+  - camera_movement_tendency
+  - composition_tendency
+  - editing_rhythm
+  - lighting_and_exposure_tendency
+  - color_tendency
+  - realism_vs_stylization
+  - ai_artifact_sensitivity
+  - action_readability_vs_spectacle
+  - humor_intensity
+  - novelty_tolerance
+  - model_workflow_cost_tolerance
+
+strict_authority_order:
+  - current_user_explicit_instruction
+  - PROJECT_INDEX_and_project_canonical
+  - current_work_item_locked_constraints
+  - project_specific_confirmed_preference
+  - creator_preference_projection
+  - model_prior
+
+rules:
+  current_user_instruction_always_wins: true
+  project_story_character_map_asset_continuity_always_win: true
+  project_specific_exception_overrides_cross_project_preference: true
+  work_item_experiment_does_not_auto_update_creator_model: true
+  one_acceptance_does_not_create_stable_creator_preference: true
+  one_rejection_does_not_create_stable_creator_dislike: true
+  inference_needs_confidence_and_counterexample_boundary: true
+  preference_may_guide_but_not_hard_lock_pixels_without_current_project_reason: true
+  creator_projection_cannot_mint_hard_routes: true
+  creator_projection_cannot_mint_learning_maturity: true
+  creator_projection_cannot_mutate_canonical: true
+
+project_local_projection:
+  output_role: guided_choice_prior
+  permitted_effects:
+    - rank_equally_valid_directing_options
+    - warn_when_candidate_conflicts_with_stable_creator_tendency
+    - reduce_repeated_questions_when_preference_is_high_confidence_and_non_material
+    - seed_MIDS_AI_DISCOVERABLE_OPTION_with_explicit_origin
+  forbidden_effects:
+    - override_user_current_request
+    - override_screenplay_character_scene_map_asset_or_continuity
+    - reject_a_user_requested_experiment
+    - silently convert_preference_into_hard_constraint
+
+learning_bridge:
+  project_feedback_engine: 08_系统学习/反馈反推与系统反哺引擎.md
+  project_memory_boundary: 02_AI电影项目记忆/AI电影项目记忆.md
+  project_memory_rule: project_specific_preferences_only
+  promotion_to_cross_project_profile_requires_external_governed_route: true
+  candidate_signal_sources:
+    - repeated_user_acceptance_across_distinct_projects
+    - repeated_rejection_across_distinct_projects
+    - stable_comparison_preference_with_counterexamples
+  must_preserve:
+    - source_project
+    - work_item
+    - model_version_when_relevant
+    - alternative_explanation
+    - counterexample
+
+conflict_behavior:
+  creator_vs_current_user: current_user_wins_and_projection_is_suppressed
+  creator_vs_project_canonical: project_canonical_wins_and_projection_is_suppressed
+  creator_vs_project_preference: project_preference_wins_with_exception_trace
+  creator_internal_conflict: mark_conflicted_and_do_not_auto_apply
+
+privacy_and_minimization:
+  store_only_creative_preference_features_material_to_workflow: true
+  unrelated_personal_traits_forbidden: true
+  raw_conversation_persistence_default: false
+  explainable_projection_required_when_it_materially_changes_option_ranking: true
+
+fail_closed_conditions:
+  - CREATOR_PROJECTION_MISSING_PROVENANCE
+  - CREATOR_PROJECTION_SCOPE_INVALID
+  - CREATOR_PROJECTION_OVERRIDES_USER
+  - CREATOR_PROJECTION_OVERRIDES_PROJECT_CANONICAL
+  - CREATOR_PROJECTION_AUTO_PROMOTED_FROM_SINGLE_CASE
+  - CREATOR_PROJECTION_CONFLICT_UNRESOLVED
+  - CREATOR_PROFILE_STORED_IN_WRONG_REPOSITORY
+
+activation:
+  current: candidate
+  project_index_registration: absent
+  requires:
+    - external_profile_authority_contract
+    - exact_head_tests
+    - cross_project_replay_without_user_instruction_leakage
+    - live_user_acceptance_of_projection_behavior
+    - independent_architecture_review
