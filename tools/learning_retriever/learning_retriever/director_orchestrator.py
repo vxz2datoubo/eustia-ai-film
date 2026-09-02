@@ -1,16 +1,19 @@
 """Bounded Director Runtime Orchestrator P0.
 
 Creative directing judgment remains AI-owned and method authority remains in
-``01_AI电影系统/AI电影系统.md``. This runtime is mechanical: it binds a creative
-decision packet to the existing canonical directing/learning runtime, validates
-state/entity/transition invariants, reuses the existing CinematicIntent contract,
-and emits a non-executable minimum-sufficient execution candidate.
+``01_AI电影系统/AI电影系统.md``.  This runtime only binds an AI-authored creative
+packet to already-canonical directing context, validates structural/world/continuity
+constraints, and emits a non-executable execution candidate.
 
-Trust-bearing inputs are never caller-selected. The governed project root is derived
-from this module's checked-out repository location on every compile call. For a bound
-work item, world entry state and material LOCK semantics must already exist in the
-trusted WorkItemContext. Missing trusted structure fails closed rather than letting a
-creative packet mint canonical world or constraint truth.
+Production trust is deliberately not dependency-injectable.  Repository location,
+DirectorLearningRuntime identity/methods, CinematicIntent compiler identity, and the
+core compilation function are captured when this module is imported and revalidated
+before any trust-bearing receipt is consumed.  Mutable module-global substitution
+therefore fails closed instead of minting a new authority root.
+
+Tests that need synthetic WorkItemContext use the explicit untrusted fixture seam.
+That seam can exercise the same structural validators, but its result is permanently
+marked non-authoritative and can never represent production trust.
 """
 
 from __future__ import annotations
@@ -18,6 +21,7 @@ from __future__ import annotations
 from hashlib import sha256
 import json
 from pathlib import Path
+import sys
 from typing import Any, Mapping
 
 from .cinematic_intent import (
@@ -30,7 +34,13 @@ from .runtime import DirectorLearningRuntime
 class DirectorRuntimeError(ValueError):
     """Fail-closed Director Runtime contract error."""
 
-    def __init__(self, code: str, message: str, *, details: Mapping[str, Any] | None = None) -> None:
+    def __init__(
+        self,
+        code: str,
+        message: str,
+        *,
+        details: Mapping[str, Any] | None = None,
+    ) -> None:
         super().__init__(f"{code}: {message}")
         self.code = code
         self.message = message
@@ -66,6 +76,8 @@ _FORBIDDEN_TOP_LEVEL = {
     "project_root",
     "world_state_baseline",
     "locked_constraint_semantics",
+    "runtime_override",
+    "verification_callback",
 }
 _SCENE_FIELDS = {
     "dramatic_purpose",
@@ -143,24 +155,6 @@ _PROVENANCE_LAYERS = {
 }
 
 
-def _governed_project_root() -> Path:
-    """Return the repository root determined by executable source location only."""
-    root = Path(__file__).resolve().parents[3]
-    required = (
-        root / "PROJECT_INDEX.yaml",
-        root / "10_运行时" / "active_work_item_resolution_gate.yaml",
-        root / "10_运行时" / "director_feature_compiler.yaml",
-    )
-    missing = [str(path.relative_to(root)) for path in required if not path.is_file()]
-    if missing:
-        raise DirectorRuntimeError(
-            "DIRECTOR_GOVERNED_PROJECT_ROOT_INVALID",
-            "governed repository root is missing required canonical anchors",
-            details={"missing": missing},
-        )
-    return root
-
-
 def _mapping(value: Any, *, field: str) -> dict[str, Any]:
     if not isinstance(value, Mapping):
         raise DirectorRuntimeError("DIRECTOR_PACKET_SCHEMA_INVALID", f"{field} must be a mapping")
@@ -201,6 +195,57 @@ def _stable_digest(value: Any) -> str:
         separators=(",", ":"),
     ).encode("utf-8")
     return sha256(encoded).hexdigest()
+
+
+def _file_digest(path: Path) -> str:
+    try:
+        return sha256(path.read_bytes()).hexdigest()
+    except OSError as exc:
+        raise DirectorRuntimeError(
+            "DIRECTOR_RUNTIME_PROVENANCE_INVALID",
+            f"cannot read production trust source {path}",
+            details={"error": str(exc)},
+        ) from exc
+
+
+def _build_governed_root_resolver(source_path: Path):
+    captured_source = source_path.resolve()
+
+    def resolve() -> Path:
+        observed = globals().get("__file__")
+        try:
+            observed_path = Path(str(observed)).resolve()
+        except Exception as exc:  # pragma: no cover - defensive only
+            raise DirectorRuntimeError(
+                "DIRECTOR_RUNTIME_PROVENANCE_SUBSTITUTED",
+                "module source identity is not resolvable",
+            ) from exc
+        if observed_path != captured_source:
+            raise DirectorRuntimeError(
+                "DIRECTOR_RUNTIME_PROVENANCE_SUBSTITUTED",
+                "module __file__ no longer matches the import-time production source",
+                details={"expected": str(captured_source), "observed": str(observed_path)},
+            )
+        root = captured_source.parents[3]
+        required = (
+            root / "PROJECT_INDEX.yaml",
+            root / "10_运行时" / "active_work_item_resolution_gate.yaml",
+            root / "10_运行时" / "director_feature_compiler.yaml",
+        )
+        missing = [str(path.relative_to(root)) for path in required if not path.is_file()]
+        if missing:
+            raise DirectorRuntimeError(
+                "DIRECTOR_GOVERNED_PROJECT_ROOT_INVALID",
+                "governed repository root is missing required canonical anchors",
+                details={"missing": missing},
+            )
+        return root
+
+    return resolve
+
+
+_governed_project_root = _build_governed_root_resolver(Path(__file__))
+del _build_governed_root_resolver
 
 
 def _validate_provenance(packet: Mapping[str, Any]) -> dict[str, Any]:
@@ -272,9 +317,7 @@ def _parse_state(raw: Any, *, field: str) -> tuple[dict[str, Any], set[str]]:
     _strict(state, allowed={"entities", "invariants"}, required={"entities", "invariants"}, field=field)
     entities_raw = _mapping(state["entities"], field=f"{field}.entities")
     entities = {
-        str(entity_id): _validate_entity(
-            str(entity_id), value, field=f"{field}.entities.{entity_id}"
-        )
+        str(entity_id): _validate_entity(str(entity_id), value, field=f"{field}.entities.{entity_id}")
         for entity_id, value in entities_raw.items()
     }
     invariants = set(_text_list(state["invariants"], field=f"{field}.invariants"))
@@ -289,20 +332,14 @@ def _validate_world_state(
     world = _mapping(packet.get("world_state"), field="world_state")
     required = {"entry", "exit", "explicit_exits_or_removals", "state_changes"}
     _strict(world, allowed=required, required=required, field="world_state")
-
-    caller_entry_entities, caller_entry_invariants = _parse_state(
-        world["entry"], field="world_state.entry"
-    )
+    caller_entry_entities, caller_entry_invariants = _parse_state(world["entry"], field="world_state.entry")
     exit_entities, exit_invariants = _parse_state(world["exit"], field="world_state.exit")
 
     if canonical_entry_baseline is not None:
         baseline_entities, baseline_invariants = _parse_state(
             canonical_entry_baseline, field="trusted_work_item_context.world_state_baseline"
         )
-        if (
-            caller_entry_entities != baseline_entities
-            or caller_entry_invariants != baseline_invariants
-        ):
+        if caller_entry_entities != baseline_entities or caller_entry_invariants != baseline_invariants:
             raise DirectorRuntimeError(
                 "DIRECTOR_WORLD_ENTRY_BASELINE_MISMATCH",
                 "creative world entry does not exactly match trusted canonical entry baseline",
@@ -321,14 +358,12 @@ def _validate_world_state(
         raise DirectorRuntimeError(
             "DIRECTOR_WORLD_ENTITY_INVALID", "world_state.entry.entities cannot be empty"
         )
-
     new_entities = set(exit_entities) - set(entry_entities)
     if new_entities:
         raise DirectorRuntimeError(
             "DIRECTOR_WORLD_ENTITY_INVALID",
             f"P0 does not permit implicit new world entities: {sorted(new_entities)}",
         )
-
     explicit_exits = set(
         _text_list(world["explicit_exits_or_removals"], field="world_state.explicit_exits_or_removals")
     )
@@ -338,7 +373,6 @@ def _validate_world_state(
             "DIRECTOR_WORLD_ENTITY_INVALID",
             f"explicit exits reference unknown entry entities: {sorted(unknown_exits)}",
         )
-
     dropped = set(entry_entities) - set(exit_entities) - explicit_exits
     if dropped:
         raise DirectorRuntimeError(
@@ -351,7 +385,6 @@ def _validate_world_state(
             "DIRECTOR_WORLD_ENTITY_INVALID",
             f"explicitly exited entities remain in exit state: {sorted(retained_exits)}",
         )
-
     if entry_invariants != exit_invariants:
         raise DirectorRuntimeError(
             "DIRECTOR_WORLD_INVARIANT_DROPPED",
@@ -361,7 +394,6 @@ def _validate_world_state(
                 "exit_only": sorted(exit_invariants - entry_invariants),
             },
         )
-
     _text_list(world["state_changes"], field="world_state.state_changes")
     return entry_entities, exit_entities, explicit_exits
 
@@ -372,7 +404,6 @@ def _validate_events(
     events = _list(packet.get("events"), field="events")
     if not events:
         raise DirectorRuntimeError("DIRECTOR_PACKET_SCHEMA_INVALID", "events cannot be empty")
-
     compiled: list[dict[str, Any]] = []
     event_ids: set[str] = set()
     for index, item in enumerate(events):
@@ -389,13 +420,11 @@ def _validate_events(
         if event_id in event_ids:
             raise DirectorRuntimeError("DIRECTOR_PACKET_SCHEMA_INVALID", f"duplicate event_id {event_id!r}")
         event_ids.add(event_id)
-
         agent = str(event["agent"])
         if agent not in entity_ids:
             raise DirectorRuntimeError(
                 "DIRECTOR_EVENT_ENTITY_UNBOUND", f"event {event_id} agent {agent!r} is unbound"
             )
-
         target = event.get("target")
         target_kind = str(event.get("target_kind") or ("NONE" if target in (None, "") else "")).upper()
         if target_kind not in _TARGET_KINDS:
@@ -413,7 +442,6 @@ def _validate_events(
             raise DirectorRuntimeError(
                 "DIRECTOR_PACKET_SCHEMA_INVALID", f"event {event_id} has target while target_kind=NONE"
             )
-
         instrument = event.get("instrument")
         if instrument not in (None, ""):
             instrument_id = _text(instrument, field=f"events[{index}].instrument")
@@ -422,7 +450,6 @@ def _validate_events(
                     "DIRECTOR_EVENT_ENTITY_UNBOUND",
                     f"event {event_id} instrument {instrument_id!r} is unbound",
                 )
-
         contacts = event.get("support_or_contact")
         if contacts not in (None, ""):
             values = contacts if isinstance(contacts, list) else [contacts]
@@ -457,7 +484,6 @@ def _validate_blocking(
                 "DIRECTOR_BLOCKING_ENTITY_UNBOUND",
                 f"blocking.{key} references unknown entities: {sorted(unknown_owners)}",
             )
-
     for owner, contacts in maps["support_contacts"].items():
         values = contacts if isinstance(contacts, list) else [contacts]
         for contact in values:
@@ -467,7 +493,6 @@ def _validate_blocking(
                     "DIRECTOR_BLOCKING_ENTITY_UNBOUND",
                     f"blocking support/contact target {contact_id!r} is unbound",
                 )
-
     for entity_id, position in maps["initial_positions"].items():
         declared = entry_entities.get(str(entity_id), {}).get("position")
         if isinstance(declared, str) and isinstance(position, str) and declared.strip() != position.strip():
@@ -497,12 +522,7 @@ def _validate_performance(
                 f"performance actor {actor_id!r} is not a declared character entity",
             )
         actor = _mapping(value, field=f"performance.{actor_id}")
-        _strict(
-            actor,
-            allowed=_PERFORMANCE_FIELDS,
-            required=_PERFORMANCE_FIELDS,
-            field=f"performance.{actor_id}",
-        )
+        _strict(actor, allowed=_PERFORMANCE_FIELDS, required=_PERFORMANCE_FIELDS, field=f"performance.{actor_id}")
         _text(actor["objective"], field=f"performance.{actor_id}.objective")
         _text(actor["subtext"], field=f"performance.{actor_id}.subtext")
         behavior = actor["observable_behavior"]
@@ -523,7 +543,6 @@ def _validate_shot_plan(packet: Mapping[str, Any], *, event_ids: set[str]) -> li
     shots = _list(packet.get("shot_plan"), field="shot_plan")
     if not shots:
         raise DirectorRuntimeError("DIRECTOR_PACKET_SCHEMA_INVALID", "shot_plan cannot be empty")
-
     compiled: list[dict[str, Any]] = []
     shot_ids: set[str] = set()
     required = _SHOT_FIELDS - {"camera_proposal"}
@@ -536,7 +555,6 @@ def _validate_shot_plan(packet: Mapping[str, Any], *, event_ids: set[str]) -> li
         if shot_id in shot_ids:
             raise DirectorRuntimeError("DIRECTOR_PACKET_SCHEMA_INVALID", f"duplicate shot_id {shot_id!r}")
         shot_ids.add(shot_id)
-
         refs = _text_list(shot["events"], field=f"shot_plan[{index}].events")
         if not refs:
             raise DirectorRuntimeError(
@@ -548,7 +566,6 @@ def _validate_shot_plan(packet: Mapping[str, Any], *, event_ids: set[str]) -> li
                 "DIRECTOR_SHOT_EVENT_UNBOUND",
                 f"shot {shot_id} references unknown events: {sorted(unknown_refs)}",
             )
-
         camera_raw = shot.get("camera_proposal")
         if camera_raw not in (None, {}):
             camera = _mapping(camera_raw, field=f"shot_plan[{index}].camera_proposal")
@@ -582,7 +599,6 @@ def _validate_transition(
 ) -> dict[str, Any]:
     transition = _mapping(packet.get("transition"), field="transition")
     _strict(transition, allowed=_TRANSITION_FIELDS, required=_TRANSITION_FIELDS, field="transition")
-
     inherited = set(_text_list(transition["inherited_entities"], field="transition.inherited_entities"))
     changed = set(_text_list(transition["changed_entities"], field="transition.changed_entities"))
     transition_exits = set(
@@ -593,25 +609,19 @@ def _validate_transition(
             "DIRECTOR_TRANSITION_STATE_MISMATCH",
             "transition explicit exits/removals do not match world_state",
         )
-
     overlap = (inherited & changed) | (inherited & transition_exits) | (changed & transition_exits)
     if overlap:
         raise DirectorRuntimeError(
             "DIRECTOR_TRANSITION_STATE_MISMATCH",
             f"transition entity classes overlap: {sorted(overlap)}",
         )
-
     classified = inherited | changed | transition_exits
     if classified != entry_ids:
         raise DirectorRuntimeError(
             "DIRECTOR_TRANSITION_STATE_MISMATCH",
             "every entry entity must be classified exactly once as inherited, changed, or exited",
-            details={
-                "missing": sorted(entry_ids - classified),
-                "unknown": sorted(classified - entry_ids),
-            },
+            details={"missing": sorted(entry_ids - classified), "unknown": sorted(classified - entry_ids)},
         )
-
     next_entry = _mapping(transition["next_entry_state"], field="transition.next_entry_state")
     _strict(next_entry, allowed={"entities"}, required={"entities"}, field="transition.next_entry_state")
     next_ids = set(_text_list(next_entry["entities"], field="transition.next_entry_state.entities"))
@@ -631,12 +641,8 @@ def _validate_constraints(
 ) -> tuple[dict[str, Any], list[str]]:
     contract = _mapping(packet.get("constraint_autonomy"), field="constraint_autonomy")
     _strict(contract, allowed=_CONSTRAINT_FIELDS, required=_CONSTRAINT_FIELDS, field="constraint_autonomy")
-
     preserved = set(
-        _text_list(
-            contract["locked_constraints_preserved"],
-            field="constraint_autonomy.locked_constraints_preserved",
-        )
+        _text_list(contract["locked_constraints_preserved"], field="constraint_autonomy.locked_constraints_preserved")
     )
     missing = set(canonical_locked) - preserved
     if missing:
@@ -644,26 +650,17 @@ def _validate_constraints(
             "DIRECTOR_LOCKED_CONSTRAINT_DROPPED",
             f"canonical locked constraints were omitted: {sorted(missing)}",
         )
-
     _text_list(contract["hard_invariants"], field="constraint_autonomy.hard_invariants")
     _text_list(contract["guided_choices"], field="constraint_autonomy.guided_choices")
     _text_list(contract["free_model_space"], field="constraint_autonomy.free_model_space")
     _text(contract["final_state"], field="constraint_autonomy.final_state")
-
     canonical_hard = [canonical_lock_semantics[item] for item in canonical_locked]
     return contract, canonical_hard
 
 
 def _canonical_context(
     retrieval: Mapping[str, Any],
-) -> tuple[
-    str | None,
-    list[str],
-    dict[str, str],
-    Mapping[str, Any] | None,
-    str | None,
-    dict[str, Any],
-]:
+) -> tuple[str | None, list[str], dict[str, str], Mapping[str, Any] | None, str | None, dict[str, Any]]:
     receipt = _mapping(retrieval.get("canonical_runtime_receipt"), field="canonical_runtime_receipt")
     resolution = _mapping(
         receipt.get("active_work_item_resolution"),
@@ -672,24 +669,17 @@ def _canonical_context(
     work_item_id = resolution.get("resolved_work_item_id")
     if work_item_id is not None:
         work_item_id = _text(work_item_id, field="resolved_work_item_id")
-
     context_raw = receipt.get("work_item_context_packet")
     context_map: dict[str, Any] = {}
     if context_raw is not None:
-        context_map = _mapping(
-            context_raw, field="canonical_runtime_receipt.work_item_context_packet"
-        )
-
+        context_map = _mapping(context_raw, field="canonical_runtime_receipt.work_item_context_packet")
     locked: list[str] = []
     if context_map:
-        constraints = _mapping(
-            context_map.get("constraints") or {}, field="work_item_context_packet.constraints"
-        )
+        constraints = _mapping(context_map.get("constraints") or {}, field="work_item_context_packet.constraints")
         locked = [
             _text(value, field="work_item_context_packet.constraints.locked[]")
             for value in list(constraints.get("locked") or [])
         ]
-
     semantics: dict[str, str] = {}
     baseline: Mapping[str, Any] | None = None
     semantics_digest: str | None = None
@@ -707,7 +697,6 @@ def _canonical_context(
                 details={"work_item_id": work_item_id},
             )
         baseline = dict(baseline_raw)
-
         semantics_raw = context_map.get("locked_constraint_semantics")
         if locked:
             if not isinstance(semantics_raw, Mapping):
@@ -726,7 +715,6 @@ def _canonical_context(
                     )
                 semantics[lock_id] = value.strip()
             semantics_digest = _stable_digest(semantics)
-
     return work_item_id, locked, semantics, baseline, semantics_digest, receipt
 
 
@@ -774,7 +762,6 @@ def _render_execution_candidate(
     if caller_hard:
         lines.append("候选附加硬约束（非LOCK authority）：" + "；".join(map(str, caller_hard)))
     lines.append(f"最终状态：{constraints['final_state']}")
-
     return {
         "schema": "GENERIC_DIRECTOR_EXECUTION_CANDIDATE/v1",
         "text": "\n".join(lines),
@@ -787,24 +774,34 @@ def _render_execution_candidate(
     }
 
 
-class DirectorRuntimeOrchestrator:
-    """Public P0 orchestrator with no caller-selectable authority root."""
+def _build_core_compiler():
+    mapping = _mapping
+    text = _text
+    validate_provenance = _validate_provenance
+    validate_scene_and_intent = _validate_scene_and_intent
+    validate_world_state = _validate_world_state
+    validate_events = _validate_events
+    validate_blocking = _validate_blocking
+    validate_performance = _validate_performance
+    validate_shot_plan = _validate_shot_plan
+    validate_transition = _validate_transition
+    validate_constraints = _validate_constraints
+    canonical_context = _canonical_context
+    render_execution_candidate = _render_execution_candidate
+    cinematic_compiler = compile_cinematic_intent_contract
+    cinematic_error_type = CinematicIntentContractError
 
-    def __init__(self) -> None:
-        # Deliberately store no project-root authority on the instance.
-        pass
-
-    def compile(
-        self,
+    def compile_from_retrieval(
         description: str,
         creative_packet: Mapping[str, Any],
+        retrieval: Mapping[str, Any],
         *,
-        task_id: str = "DIRECTOR_RUNTIME_P0",
-        top_k: int | None = None,
+        project_root: Path,
+        trust_mode: str,
+        trust_provenance: Mapping[str, Any],
     ) -> dict[str, Any]:
-        _text(description, field="description")
-        packet = _mapping(creative_packet, field="creative_packet")
-
+        text(description, field="description")
+        packet = mapping(creative_packet, field="creative_packet")
         authority_attempt = set(packet) & _FORBIDDEN_TOP_LEVEL
         if authority_attempt:
             raise DirectorRuntimeError(
@@ -818,16 +815,8 @@ class DirectorRuntimeOrchestrator:
                 "DIRECTOR_PACKET_SCHEMA_INVALID",
                 f"creative packet unknown={sorted(unknown)} missing={sorted(missing)}",
             )
-        _text(packet["packet_id"], field="packet_id")
-        provenance = _validate_provenance(packet)
-
-        project_root = _governed_project_root()
-        retrieval = DirectorLearningRuntime(project_root).retrieve(
-            description,
-            task_id=task_id,
-            top_k=top_k,
-            expand=True,
-        )
+        text(packet["packet_id"], field="packet_id")
+        provenance = validate_provenance(packet)
         (
             work_item_id,
             canonical_locked,
@@ -835,28 +824,22 @@ class DirectorRuntimeOrchestrator:
             canonical_world_entry,
             canonical_lock_semantics_digest,
             canonical_receipt,
-        ) = _canonical_context(retrieval)
-
-        scene, intent = _validate_scene_and_intent(packet)
-        entry_entities, exit_entities, explicit_exits = _validate_world_state(
+        ) = canonical_context(retrieval)
+        scene, intent = validate_scene_and_intent(packet)
+        entry_entities, exit_entities, explicit_exits = validate_world_state(
             packet,
             canonical_entry_baseline=canonical_world_entry,
         )
         all_entity_ids = set(entry_entities) | set(exit_entities)
-        events, event_ids = _validate_events(packet, entity_ids=all_entity_ids)
-        blocking = _validate_blocking(
-            packet,
-            entry_entities=entry_entities,
-            exit_entities=exit_entities,
-        )
-        performance = _validate_performance(packet, entry_entities=entry_entities)
-
+        events, event_ids = validate_events(packet, entity_ids=all_entity_ids)
+        blocking = validate_blocking(packet, entry_entities=entry_entities, exit_entities=exit_entities)
+        performance = validate_performance(packet, entry_entities=entry_entities)
         try:
-            cinematic = compile_cinematic_intent_contract(
-                _mapping(packet["cinematic_intent"], field="cinematic_intent"),
+            cinematic = cinematic_compiler(
+                mapping(packet["cinematic_intent"], field="cinematic_intent"),
                 project_root=project_root,
             )
-        except CinematicIntentContractError as exc:
+        except cinematic_error_type as exc:
             raise DirectorRuntimeError(
                 "DIRECTOR_CINEMATIC_INTENT_REJECTED",
                 exc.message,
@@ -868,21 +851,19 @@ class DirectorRuntimeOrchestrator:
                 "existing CinematicIntent contract returned FAIL",
                 details={"diagnostics": cinematic.get("diagnostics")},
             )
-
-        shots = _validate_shot_plan(packet, event_ids=event_ids)
-        transition = _validate_transition(
+        shots = validate_shot_plan(packet, event_ids=event_ids)
+        transition = validate_transition(
             packet,
             entry_ids=set(entry_entities),
             exit_ids=set(exit_entities),
             explicit_exits=explicit_exits,
         )
-        constraints, canonical_hard = _validate_constraints(
+        constraints, canonical_hard = validate_constraints(
             packet,
             canonical_locked=canonical_locked,
             canonical_lock_semantics=canonical_lock_semantics,
         )
-
-        execution_candidate = _render_execution_candidate(
+        execution_candidate = render_execution_candidate(
             scene=scene,
             intent=intent,
             events=events,
@@ -895,28 +876,41 @@ class DirectorRuntimeOrchestrator:
             canonical_hard_invariants=canonical_hard,
             canonical_lock_semantics_digest=canonical_lock_semantics_digest,
         )
-
+        production_trusted = trust_mode == "PRODUCTION_VERIFIED"
         return {
             "schema": "DIRECTOR_RUNTIME_CANDIDATE/v1",
-            "status": "CANDIDATE_READY",
+            "status": "CANDIDATE_READY" if production_trusted else "UNTRUSTED_TEST_CANDIDATE",
             "packet_id": packet["packet_id"],
+            "trust_provenance": dict(trust_provenance),
+            "production_context_trusted": production_trusted,
             "work_item_binding": {
                 "work_item_id": work_item_id,
-                "binding_status": "TRUSTED_EXISTING" if work_item_id else "NEW_UNBOUND_CANDIDATE",
+                "binding_status": (
+                    "TRUSTED_EXISTING"
+                    if production_trusted and work_item_id
+                    else "NEW_UNBOUND_CANDIDATE"
+                    if production_trusted
+                    else "UNTRUSTED_TEST_FIXTURE"
+                ),
                 "caller_supplied_authority_accepted": False,
                 "world_entry_authority": (
-                    "trusted_work_item_context" if work_item_id else "candidate_only_not_world_truth"
+                    "trusted_work_item_context"
+                    if production_trusted and work_item_id
+                    else "candidate_only_not_world_truth"
+                    if production_trusted
+                    else "untrusted_test_fixture_not_world_truth"
                 ),
             },
             "runtime_flow": [
+                "verified_production_runtime_binding" if production_trusted else "untrusted_test_fixture_binding",
                 "governed_project_root_resolution",
-                "DirectorLearningRuntime.retrieve",
+                "DirectorLearningRuntime.retrieve" if production_trusted else "synthetic_retrieval_fixture",
                 "active_work_item_resolution",
                 "director_feature_compiler",
                 "hard_route",
                 "semantic_recall",
-                "trusted_world_entry_binding",
-                "trusted_lock_semantics_binding",
+                "trusted_world_entry_binding" if production_trusted else "fixture_world_entry_validation_only",
+                "trusted_lock_semantics_binding" if production_trusted else "fixture_lock_semantics_validation_only",
                 "creative_decision_contract",
                 "world_state_persistence",
                 "event_graph_binding",
@@ -929,10 +923,9 @@ class DirectorRuntimeOrchestrator:
             ],
             "learning_context": {
                 "hard_routes": list(canonical_receipt.get("hard_routes") or []),
-                "feature_compiler_receipt": dict(
-                    canonical_receipt.get("feature_compiler_receipt") or {}
-                ),
+                "feature_compiler_receipt": dict(canonical_receipt.get("feature_compiler_receipt") or {}),
                 "full_serialized_recall_receipt_accepted_from_caller": False,
+                "fixture_receipt_is_production_authority": False if not production_trusted else None,
             },
             "director_ir": {
                 "scene_diagnosis": scene,
@@ -957,3 +950,153 @@ class DirectorRuntimeOrchestrator:
             ),
             "authority_mutation_allowed": False,
         }
+
+    return compile_from_retrieval
+
+
+_core_compile = _build_core_compiler()
+del _build_core_compiler
+
+
+def _build_production_compile():
+    source_path = Path(__file__).resolve()
+    source_digest = _file_digest(source_path)
+    root_resolver = _governed_project_root
+    runtime_cls = DirectorLearningRuntime
+    runtime_init = DirectorLearningRuntime.__init__
+    runtime_retrieve = DirectorLearningRuntime.retrieve
+    runtime_module = sys.modules[DirectorLearningRuntime.__module__]
+    runtime_source_path = Path(str(runtime_module.__file__)).resolve()
+    runtime_source_digest = _file_digest(runtime_source_path)
+    cinematic_compiler = compile_cinematic_intent_contract
+    cinematic_error_type = CinematicIntentContractError
+    core_compile = _core_compile
+
+    def compile_production(
+        self: "DirectorRuntimeOrchestrator",
+        description: str,
+        creative_packet: Mapping[str, Any],
+        *,
+        task_id: str = "DIRECTOR_RUNTIME_P0",
+        top_k: int | None = None,
+    ) -> dict[str, Any]:
+        observed_source = Path(str(globals().get("__file__"))).resolve()
+        if observed_source != source_path:
+            raise DirectorRuntimeError(
+                "DIRECTOR_RUNTIME_PROVENANCE_SUBSTITUTED",
+                "orchestrator source locator was substituted after import",
+                details={"expected": str(source_path), "observed": str(observed_source)},
+            )
+        if globals().get("DirectorLearningRuntime") is not runtime_cls:
+            raise DirectorRuntimeError(
+                "DIRECTOR_RUNTIME_PROVENANCE_SUBSTITUTED",
+                "DirectorLearningRuntime module binding was substituted after import",
+            )
+        if runtime_cls.__init__ is not runtime_init or runtime_cls.retrieve is not runtime_retrieve:
+            raise DirectorRuntimeError(
+                "DIRECTOR_RUNTIME_PROVENANCE_SUBSTITUTED",
+                "DirectorLearningRuntime implementation methods were substituted after import",
+            )
+        if globals().get("compile_cinematic_intent_contract") is not cinematic_compiler:
+            raise DirectorRuntimeError(
+                "DIRECTOR_RUNTIME_PROVENANCE_SUBSTITUTED",
+                "CinematicIntent compiler binding was substituted after import",
+            )
+        if globals().get("CinematicIntentContractError") is not cinematic_error_type:
+            raise DirectorRuntimeError(
+                "DIRECTOR_RUNTIME_PROVENANCE_SUBSTITUTED",
+                "CinematicIntent error contract binding was substituted after import",
+            )
+        if globals().get("_core_compile") is not core_compile:
+            raise DirectorRuntimeError(
+                "DIRECTOR_RUNTIME_PROVENANCE_SUBSTITUTED",
+                "Director core compiler binding was substituted after import",
+            )
+        if _file_digest(source_path) != source_digest:
+            raise DirectorRuntimeError(
+                "DIRECTOR_RUNTIME_PROVENANCE_INVALID",
+                "orchestrator source changed after production trust binding",
+            )
+        observed_runtime_module = sys.modules.get(runtime_cls.__module__)
+        if observed_runtime_module is not runtime_module:
+            raise DirectorRuntimeError(
+                "DIRECTOR_RUNTIME_PROVENANCE_SUBSTITUTED",
+                "DirectorLearningRuntime module identity was substituted after import",
+            )
+        observed_runtime_path = Path(str(getattr(runtime_module, "__file__", ""))).resolve()
+        if observed_runtime_path != runtime_source_path:
+            raise DirectorRuntimeError(
+                "DIRECTOR_RUNTIME_PROVENANCE_SUBSTITUTED",
+                "DirectorLearningRuntime source locator was substituted after import",
+            )
+        if _file_digest(runtime_source_path) != runtime_source_digest:
+            raise DirectorRuntimeError(
+                "DIRECTOR_RUNTIME_PROVENANCE_INVALID",
+                "DirectorLearningRuntime source changed after production trust binding",
+            )
+
+        project_root = root_resolver()
+        if source_path.parents[3] != project_root or runtime_source_path.parents[3] != project_root:
+            raise DirectorRuntimeError(
+                "DIRECTOR_RUNTIME_PROVENANCE_INVALID",
+                "orchestrator and learning runtime are not bound to the same governed repository root",
+            )
+        runtime = runtime_cls.__new__(runtime_cls)
+        runtime_init(runtime, project_root)
+        retrieval = runtime_retrieve(
+            runtime,
+            description,
+            task_id=task_id,
+            top_k=top_k,
+            expand=True,
+        )
+        return core_compile(
+            description,
+            creative_packet,
+            retrieval,
+            project_root=project_root,
+            trust_mode="PRODUCTION_VERIFIED",
+            trust_provenance={
+                "status": "PRODUCTION_VERIFIED",
+                "repository_root": str(project_root),
+                "orchestrator_source_digest": source_digest,
+                "learning_runtime_source_digest": runtime_source_digest,
+                "caller_dependency_injection_supported": False,
+            },
+        )
+
+    return compile_production
+
+
+class DirectorRuntimeOrchestrator:
+    """P0 orchestrator with frozen production trust bindings and no caller authority port."""
+
+    __slots__ = ()
+
+    def __init__(self) -> None:
+        pass
+
+    def _compile_untrusted_test_fixture(
+        self,
+        description: str,
+        creative_packet: Mapping[str, Any],
+        retrieval_fixture: Mapping[str, Any],
+    ) -> dict[str, Any]:
+        """Exercise structural contracts without producing production-trusted output."""
+        project_root = _governed_project_root()
+        return _core_compile(
+            description,
+            creative_packet,
+            retrieval_fixture,
+            project_root=project_root,
+            trust_mode="UNTRUSTED_TEST_FIXTURE",
+            trust_provenance={
+                "status": "UNTRUSTED_TEST_FIXTURE",
+                "fixture_receipt_is_production_authority": False,
+                "execution_authority_possible": False,
+            },
+        )
+
+
+DirectorRuntimeOrchestrator.compile = _build_production_compile()  # type: ignore[attr-defined]
+del _build_production_compile
