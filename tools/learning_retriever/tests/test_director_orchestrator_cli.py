@@ -35,8 +35,6 @@ class DirectorOrchestratorCliTests(unittest.TestCase):
                 with redirect_stdout(output):
                     code = main(
                         [
-                            "--project-root",
-                            tmp,
                             "--description",
                             "继续当前镜头",
                             "--creative-packet",
@@ -44,6 +42,7 @@ class DirectorOrchestratorCliTests(unittest.TestCase):
                         ]
                     )
             self.assertEqual(0, code)
+            orchestrator_cls.assert_called_once_with()
             payload = json.loads(output.getvalue())
             self.assertEqual("DIRECTOR_RUNTIME_CANDIDATE/v1", payload["schema"])
             self.assertFalse(payload["execution_authorized"])
@@ -63,8 +62,6 @@ class DirectorOrchestratorCliTests(unittest.TestCase):
                 with redirect_stdout(output):
                     code = main(
                         [
-                            "--project-root",
-                            tmp,
                             "--description",
                             "继续当前镜头",
                             "--creative-packet",
@@ -90,8 +87,6 @@ class DirectorOrchestratorCliTests(unittest.TestCase):
                 with redirect_stdout(output):
                     code = main(
                         [
-                            "--project-root",
-                            tmp,
                             "--description",
                             "继续当前镜头",
                             "--creative-packet",
@@ -101,6 +96,22 @@ class DirectorOrchestratorCliTests(unittest.TestCase):
             self.assertEqual(2, code)
             payload = json.loads(output.getvalue())
             self.assertEqual("DIRECTOR_PACKET_SCHEMA_INVALID", payload["code"])
+
+    def test_cli_has_no_project_root_authority_flag(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            packet = self.write_packet(tmp)
+            with self.assertRaises(SystemExit) as ctx:
+                main(
+                    [
+                        "--project-root",
+                        tmp,
+                        "--description",
+                        "继续当前镜头",
+                        "--creative-packet",
+                        str(packet),
+                    ]
+                )
+            self.assertEqual(2, ctx.exception.code)
 
 
 if __name__ == "__main__":
