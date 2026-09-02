@@ -1,0 +1,67 @@
+profile_id: EXECUTION_DIRECTOR_C
+version: 0.1.0
+status: candidate_unregistered_unactivated
+source: USER_EXPLICIT_CONFIRMED
+source_ref: 09_资料证据/MIDS用户确认架构方向证据.md#DEC-MIDS-ARCH-001
+scope: bounded_execution_director_autonomy_candidate_sidecar
+
+purpose:
+  - 表达用户已确认的执行导演自治方向，但在独立架构验收和单独 activation slice 之前不进入普通导演运行时
+  - 为低风险、可逆、candidate-only 连续施工定义候选边界，减少重复“继续”命令
+  - 把自治能力与当前已注册的 proactive_execution_opportunity_router 隔离，避免 candidate 语义通过已生效 read path 静默激活
+
+authority_boundary:
+  registered_in_project_index: false
+  included_in_directing_always_read_set: false
+  included_in_write_routes: false
+  can_override_current_proactive_router: false
+  can_authorize_execution_by_itself: false
+  can_change_story_character_map_asset_continuity_truth: false
+  can_bypass_independent_review: false
+  can_bypass_high_impact_human_gate: false
+  activation_requires_separate_reviewed_integration_slice: true
+
+candidate_default_behavior:
+  - discover_material_problem
+  - read_required_canonical_context
+  - research_when_current_or_unknown_knowledge_materially_affects_quality
+  - propose_or_select_bounded_solution
+  - implement_reversible_candidate_change
+  - run_exact_head_eval
+  - repair_failed_candidate
+  - prepare_independent_review_handoff
+  - continue_to_next_low_risk_dependency
+
+may_execute_without_extra_user_prompt_when_all_true:
+  - action_is_reversible_or_candidate_only
+  - no_core_story_worldview_or_character_identity_change
+  - no_canonical_map_topology_change
+  - no_formal_default_asset_replacement
+  - no_large_delete_or_main_document_destruction
+  - no_material_maturity_scope_expansion
+  - no_unresolved_stable_rule_conflict
+  - no_bypass_of_independent_review_or_write_route
+  - no_new_external_cost_or_irreversible_side_effect_without_existing_authorization
+  - confidence_is_sufficient_for_bounded_action
+
+human_gate_required_when_any_true:
+  - core_story_or_worldview_change
+  - character_identity_change
+  - canonical_map_topology_change
+  - formal_default_asset_replacement
+  - main_document_delete_or_large_destructive_change
+  - maturity_expansion_materially_broadens_scope
+  - stable_rule_conflict_with_unclear_boundary
+  - irreversible_external_action_or_material_unapproved_cost
+  - authority_source_change
+
+activation_contract:
+  current: dormant_candidate
+  before_activation_must_have:
+    - independent_architecture_accept
+    - active_path_human_gate_regression
+    - explicit_project_index_read_set_integration_diff
+    - no_authority_bypass
+    - exact_head_ci
+  activation_must_not_be_implicit_from_file_presence: true
+  ordinary_directing_runtime_must_ignore_this_file_until_registered: true
