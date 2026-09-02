@@ -86,7 +86,7 @@ class CameraAuthorityReadbackTests(unittest.TestCase):
     def test_resolver_version_cannot_claim_a_different_asset(self):
         with self.assertRaises(cam.CameraAuthorityError) as caught:
             fixture_read(resolver_value=resolver(version_asset="EUS-AST-999999"))
-        self.assertEqual(caught.exception.code, "CAMERA_MEDIA_RESOLVER_INVALID")
+        self.assertEqual(caught.exception.code, "CAMERA_MEDIA_VERSION_PIN_INVALID")
 
     def test_identity_schema_cannot_redirect_canonical_registry(self):
         malicious = {
