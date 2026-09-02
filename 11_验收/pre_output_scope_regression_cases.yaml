@@ -1,0 +1,17 @@
+schema: PRE_OUTPUT_SCOPE_REGRESSION_CASES/v1
+cases:
+  - case_id: PREOUTPUT-001
+    title: stale output work-item identity fails closed
+    expected: WORK_ITEM_OUTPUT_SCOPE_MISMATCH
+  - case_id: PREOUTPUT-002
+    title: nested caller validation authority is rejected
+    expected: WORK_ITEM_OUTPUT_CALLER_AUTHORITY_FORBIDDEN
+  - case_id: PREOUTPUT-003
+    title: caller payload aliases are detached before executable handoff
+    expected: PASS_WITH_DETACHED_PAYLOAD
+  - case_id: PREOUTPUT-004
+    title: behavioral Mapping cannot change content between authority scan and use
+    attack: custom Mapping changes keys/values between traversals
+    expected: WORK_ITEM_OUTPUT_CONTENT_INVALID
+    required_reason: output_content_must_be_builtin_dict
+    security_property: behavioral_mapping_rejected_before_traversal
