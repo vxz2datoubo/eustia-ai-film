@@ -1,0 +1,280 @@
+schema_version: "0.1.0"
+policy_id: EUSTIA_PRODUCTION_INTELLIGENCE_RESEARCH_INTAKE_POLICY
+status: candidate_unvalidated
+source_issue: 59
+scope: problem_driven_external_research_master_case_ingestion_and_candidate_knowledge_integration
+
+purpose:
+  - turn_external_research_into_problem_bounded_project_candidates_instead_of_a_growing_link_dump
+  - route_official_model_docs_standards_papers_benchmarks_master_cases_and_engineering_reports_to_existing_unique_authorities
+  - preserve_source_claim_scope_version_failure_boundary_and_revalidation_needs
+  - prevent_novelty_from_becoming_project_authority
+
+authority_boundary:
+  project_registry: PROJECT_INDEX.yaml
+  research_evidence_authority: 09_资料证据/官方资料与证据索引.md
+  director_method_authority: 01_AI电影系统/AI电影系统.md
+  model_skill_authority: existing_model_specific_skill_or_adapter_only
+  golden_director_pull: 10_运行时/golden_case_director_pull_schema.yaml
+  learning_gate: 10_运行时/learning_application_gate.yaml
+  maturity: 10_运行时/maturity_model.yaml
+  unknowns: 12_未知项/UNKNOWN_REGISTRY.yaml
+  capability_graph: 10_运行时/production_intelligence_capability_graph.yaml
+  rules:
+    - external_research_cannot_override_project_story_character_scene_map_asset_or_continuity
+    - external_research_cannot_self_promote_maturity
+    - source_popularity_or_recency_does_not_define_authority
+    - master_case_surface_style_is_not_transferable_rule_by_default
+    - benchmark_score_is_not_project_aesthetic_authority
+    - vendor_marketing_claim_requires_official_or_real_project_evidence_before_operationalization
+
+research_trigger:
+  activate_when_any:
+    - user_explicitly_requests_research_or_validation
+    - K4_material_unknown
+    - model_api_or_software_capability_is_version_sensitive
+    - repeated_production_failure_has_no_supported_explanation
+    - needs_revalidation
+    - new_professional_knowledge_can_materially_reduce_cost_failure_or_quality_risk
+  do_not_activate_when_all:
+    - problem_is_already_resolved_by_current_canonical
+    - no_material_decision_changes
+    - research_would_only_add_background_information
+
+source_priority:
+  T1:
+    sources: [official_vendor_docs, official_research, standards_body, official_industry_specification]
+    examples: [ByteDance_Seed, MovieLabs, SMPTE, ASC_MITC, ACES, ASWF, C2PA, NASA, NIST]
+  T2:
+    sources: [peer_reviewed_top_conference_or_journal, original_author_research]
+    examples: [CVPR, ICCV, ECCV, SIGGRAPH, CHI, ICML, NeurIPS, Human_Factors, Ergonomics]
+  T3:
+    sources: [professional_institution, master_first_person_case, real_production_case]
+    examples: [ASC_American_Cinematographer, DGA, Academy, BAFTA, AES]
+  T4:
+    sources: [high_quality_reproducible_engineering_postmortem, maintained_open_source_project]
+  T5:
+    sources: [high_quality_review_or_synthesis]
+  clue_only:
+    sources: [forum, social_media, marketing_repost, unsourced_blog]
+    rule: may_generate_search_lead_but_not_project_rule
+
+research_unit:
+  required_fields:
+    - research_question
+    - production_problem_ref
+    - source_ref
+    - source_tier
+    - source_date_or_version
+    - source_claim
+    - evidence_strength
+    - project_translation
+    - applicable_when
+    - not_applicable_when
+    - failure_boundary
+    - conflicting_evidence
+    - version_scope
+    - maturity
+    - targeted_validation
+    - integration_route
+  optional_fields:
+    - code_or_dataset
+    - reproduced_result
+    - cost_implication
+    - negative_result
+    - related_project_cases
+
+integration_routes:
+  OFFICIAL_MODEL_OR_API:
+    destination: existing_model_specific_skill_or_adapter_and_evidence
+    required:
+      - exact_model_or_api_version
+      - supported_input_output_contract
+      - explicit_limitations
+      - revalidation_trigger
+    forbidden:
+      - universalizing_vendor_capability_to_other_models
+      - treating_marketing_demo_as_general_reliability
+
+  INDUSTRY_INTEROP_STANDARD:
+    destination: capability_or_handoff_compatibility_candidate
+    examples: [MovieLabs_OMC, OpenTimelineIO, OpenAssetIO, ASC_FDL, ACES_OCIO, C2PA, SMPTE_IMF]
+    rule: implement_only_when_real_interop_or_handoff_problem_exists
+    forbidden:
+      - full_standard_implementation_for_prestige_only
+      - importing_external_schema_as_project_truth_authority
+
+  GENERATIVE_MEDIA_PAPER:
+    destination: candidate_mechanism_or_frontier_track
+    required:
+      - task_match
+      - representation_or_control_mechanism
+      - benchmark_scope
+      - implementation_availability
+      - transfer_boundary_to_current_closed_model
+    forbidden:
+      - claiming_closed_model_supports_paper_interface_without_evidence
+      - replacing_current_workflow_only_because_paper_is_new
+
+  GENERATIVE_MEDIA_BENCHMARK:
+    destination: evaluation_dimension_candidate
+    rule: borrow_dimension_or_test_design_not_global_ranking_authority
+    forbidden:
+      - importing_one_aggregate_benchmark_score_as_aesthetic_score
+
+  MASTER_OR_PRODUCTION_CASE:
+    destination: existing_golden_case_director_pull
+    modes:
+      observed_media_available: observed_director_pull
+      documented_case_without_verified_project_media: prompt_or_case_prospective_analysis
+      source_case_plus_verified_output: hybrid_pull
+    extraction:
+      - problem
+      - creative_choice
+      - reason
+      - cost_or_tradeoff
+      - enabling_conditions
+      - failure_boundary
+      - observable_evidence
+      - transferable_mechanism
+      - non_transferable_surface_style
+    forbidden:
+      - copying_palette_lens_blocking_or_style_as_universal_recipe
+      - converting_master_reputation_into_causal_proof
+
+  HUMAN_FACTORS_OR_COGNITIVE_RESEARCH:
+    destination: audience_cognition_collaboration_or_tacit_elicitation_candidate
+    required:
+      - distinguish_descriptive_human_tendency_from_director_prescription
+      - preserve_population_task_and_experiment_scope
+
+  SYSTEMS_ENGINEERING_OR_EXPERIMENT_METHOD:
+    destination: production_cycle_experiment_or_measurement_candidate
+    required:
+      - state_what_problem_structure_it_solves
+      - avoid_fake_quantification
+      - preserve_creative_validation_authority
+
+claim_distillation_pipeline:
+  - define_current_production_problem
+  - establish_what_current_project_already_knows
+  - search_highest_tier_sources_first
+  - extract_source_claim_without_project_inference
+  - extract_scope_version_and_failure_boundary
+  - identify_conflicts_and_alternative_explanations
+  - translate_mechanism_to_existing_project_interfaces
+  - decide_merge_extend_new_candidate_or_no_action
+  - define_targeted_validation_before_activation
+  - write_evidence_only
+  - independent_review_if_architecture_or_high_impact_rule_changes
+  - real_production_pilot
+  - existing_learning_maturity_route
+
+merge_decision:
+  MERGE_EXISTING:
+    choose_when: same_mechanism_and_same_authority_already_exist
+    action: strengthen_evidence_scope_or_boundary_in_existing_entry
+  EXTEND_EXISTING:
+    choose_when: existing_skill_is_correct_but_scope_or_interface_is_missing
+    action: extend_existing_skill_in_place_with_regression
+  NEW_CANDIDATE_CAPABILITY:
+    choose_when:
+      - material_problem_is_not_owned_by_existing_capability
+      - new_layer_has_distinct_responsibility
+      - anti_duplication_review_passes
+    action: candidate_only_until_review_and_pilot
+  RESEARCH_ONLY:
+    choose_when: interesting_but_currently_not_actionable_or_interface_missing
+    action: evidence_or_K4_frontier_track_only
+  REJECT_OR_DEFER:
+    choose_when:
+      - source_quality_too_low
+      - no_material_project_problem
+      - claim_conflicts_with_stronger_evidence_without_resolution
+      - implementation_cost_exceeds_expected_value
+
+freshness_and_watch:
+  model_vendor_docs:
+    freshness: high
+    recheck_when: [version_change, behavior_anomaly, before_major_model_specific_workflow_change]
+  standards:
+    freshness: medium
+    recheck_when: [interop_implementation, major_revision]
+  foundational_film_cognition_principles:
+    freshness: low
+    recheck_when: [material_counterexample, new_strong_review]
+  active_research_frontier:
+    freshness: high
+    recommended_scan_topics:
+      - controllable_video_generation
+      - 3D_4D_world_consistency
+      - human_motion_and_interaction_control
+      - physics_and_contact_generation
+      - audio_video_generation_and_sync
+      - generative_media_evaluation
+      - multimodal_reference_control
+      - agentic_media_workflows
+      - media_provenance_and_interop
+  watch_output_rule: a_watch_hit_is_not_an_automatic_writeback
+
+paper_and_tool_scoring:
+  no_single_numeric_score_required: true
+  qualitative_dimensions:
+    - direct_problem_fit
+    - source_tier
+    - currentness_or_version_fit
+    - reproducibility
+    - code_or_data_availability
+    - effect_size_or_mechanism_clarity_when_supported
+    - failure_boundary_quality
+    - compatibility_with_existing_project_architecture
+    - expected_information_or_cost_value
+    - risk_of_cargo_culting
+
+cross_validation:
+  high_impact_new_rule:
+    default: seek_second_independent_high_quality_source_or_real_project_evidence
+    exceptions:
+      - official_api_schema_for_that_exact_service
+      - formal_standard_normative_requirement
+    still_requires_project_scope_check: true
+  master_case:
+    reputation_alone_is_not_cross_validation: true
+    prefer: [multiple_independent_cases, professional_theory, project_real_result]
+
+anti_patterns:
+  - LINK_DUMP
+  - NEW_PAPER_EQUALS_NEW_SKILL
+  - MASTER_NAME_EQUALS_AUTHORITY
+  - BENCHMARK_SCORE_EQUALS_FILM_QUALITY
+  - OFFICIAL_DEMO_EQUALS_RELIABLE_PRODUCTION
+  - RESEARCH_WITHOUT_CURRENT_PROBLEM
+  - FULL_STANDARD_IMPLEMENTATION_WITHOUT_INTEROP_NEED
+  - VERSION_SCOPE_DROPPED
+  - FAILURE_BOUNDARY_DROPPED
+  - PROJECT_INFERENCE_REWRITTEN_AS_SOURCE_CLAIM
+
+static_checks:
+  ERROR:
+    - EXTERNAL_SOURCE_OVERRIDES_CANONICAL
+    - PROJECT_INFERENCE_MASQUERADES_AS_SOURCE_CLAIM
+    - VERSION_SENSITIVE_CLAIM_WITHOUT_VERSION
+    - MASTER_CASE_BYPASSES_GOLDEN_DIRECTOR_PULL
+    - BENCHMARK_BECOMES_AESTHETIC_AUTHORITY
+    - EXTERNAL_RESEARCH_AUTO_PROMOTES_MATURITY
+  WARNING:
+    - SOURCE_TIER_TOO_LOW_FOR_IMPACT
+    - NO_FAILURE_BOUNDARY
+    - NO_TARGETED_VALIDATION
+    - RESEARCH_NOT_CONNECTED_TO_PRODUCTION_PROBLEM
+    - DUPLICATE_CAPABILITY_RISK
+    - CARGO_CULT_STANDARD_IMPLEMENTATION
+    - FRONTIER_WATCH_HIT_TREATED_AS_STABLE_RULE
+
+maturity:
+  current: candidate_unvalidated
+  promotion_requires:
+    - independent_review
+    - at_least_three_real_research_to_production_routes
+    - evidence_that_research_intake_reduces_duplicate_or_low_value_rules
+    - no_external_authority_leak

@@ -1,0 +1,120 @@
+schema_version: "0.1.0"
+policy_id: EUSTIA_PRODUCTION_INTELLIGENCE_TRUSTED_ADAPTER_V1
+status: candidate_unvalidated
+source_issue: 59
+scope: canonical_expected_observed_and_targeted_repair_reexecution_to_sparse_capability_coordination
+
+authority_boundary:
+  expected_observed_runtime: tools/learning_retriever/learning_retriever/expected_observed.py
+  targeted_repair_runtime: tools/learning_retriever/learning_retriever/targeted_repair.py
+  targeted_repair_policy: 10_运行时/targeted_repair_policy.yaml
+  capability_graph: 10_运行时/production_intelligence_capability_graph.yaml
+  serialized_signal_envelope_role: structural_lint_and_transport_metadata_only
+  serialized_signal_envelope_accepted_as_route_authority: false
+  caller_producer_label_grants_authority: false
+  caller_authority_refs_grant_authority: false
+  caller_problem_signatures_grant_capability_selection: false
+  raw_serialized_eval_result_accepted_as_authority: false
+  canonical_expected_observed_reexecution_required: true
+  canonical_targeted_repair_reexecution_required: true
+  atlas_may_not_change_failure_category_or_repair_surface: true
+  atlas_may_only_choose_declared_capability_consumers_within_existing_repair_surface: true
+  learning_writeback_authority: false
+  canonical_writeback_authority: false
+
+trusted_adapters:
+  EXPECTED_OBSERVED_TARGETED_REPAIR_V1:
+    source_signal_type: EVAL_DIMENSION_RESULT
+    source_stage: EVALUATED
+    source_runtime: learning_retriever.targeted_repair.plan_targeted_repair
+    source_binding_mode_required: canonical_expected_observed_reexecution
+    targeted_repair_policy_id_required: EUSTIA_TARGETED_REPAIR_ROUTING_V2
+    receipt_transport: in_process_opaque_object_only
+    serialized_receipt_rehydration: forbidden
+    work_item_identity_role: projection_only_not_authority
+    materiality:
+      FAIL: MATERIAL
+      UNKNOWN: DIAGNOSTIC
+      PASS: INFORMATIONAL
+
+repair_surface_capability_allowlist:
+  IDENTITY_OR_ASSET_BINDING_REVIEW:
+    - CAP-ASSET-REFERENCE-PROVENANCE
+  UPSTREAM_BLOCKING_OR_WORLD_REVIEW:
+    - CAP-BLOCKING-SPATIAL
+    - CAP-PREVIS-GEOMETRY
+    - CAP-PHYSICS-CONTACT
+  UPSTREAM_CAMERA_CONTRACT_REVIEW:
+    - CAP-CAMERA-FRAMING
+  CINEMATIC_INTENT_REVIEW:
+    - CAP-STORY-DIRECTOR-INTENT
+    - CAP-CAMERA-FRAMING
+    - CAP-LIGHT-COLOR
+  TRANSITION_EDIT_REVIEW:
+    - CAP-EDITORIAL-ATTENTION
+  REFERENCE_RESPONSIBILITY_REVIEW:
+    - CAP-ASSET-REFERENCE-PROVENANCE
+    - CAP-MODEL-REFERENCE
+  PERFORMANCE_OR_CROWD_REVIEW:
+    - CAP-PERFORMANCE
+  SOUND_OR_AV_REVIEW:
+    - CAP-SOUND
+  MODEL_ADAPTER_OR_GENERATION_REVIEW:
+    - CAP-MODEL-REFERENCE
+  EVIDENCE_ACQUISITION:
+    - CAP-REVERSE-EVAL
+
+failure_category_consumer_map:
+  identity: [CAP-ASSET-REFERENCE-PROVENANCE]
+  semantic_entity_drift: [CAP-ASSET-REFERENCE-PROVENANCE]
+  space: [CAP-BLOCKING-SPATIAL]
+  world_state: [CAP-BLOCKING-SPATIAL]
+  continuity_state: [CAP-BLOCKING-SPATIAL]
+  visibility: [CAP-BLOCKING-SPATIAL]
+  action_binding: [CAP-BLOCKING-SPATIAL]
+  contact: [CAP-BLOCKING-SPATIAL, CAP-PHYSICS-CONTACT]
+  body_mechanics: [CAP-PHYSICS-CONTACT, CAP-PREVIS-GEOMETRY]
+  event_order: [CAP-BLOCKING-SPATIAL]
+  performance: [CAP-PERFORMANCE]
+  crowd_behavior: [CAP-PERFORMANCE]
+  camera: [CAP-CAMERA-FRAMING]
+  aesthetic_composition: [CAP-STORY-DIRECTOR-INTENT]
+  attention_flow: [CAP-STORY-DIRECTOR-INTENT]
+  attention_handoff: [CAP-EDITORIAL-ATTENTION]
+  color_grounding: [CAP-LIGHT-COLOR]
+  visual_density: [CAP-CAMERA-FRAMING]
+  capture_motivation: [CAP-CAMERA-FRAMING]
+  reference_contamination: [CAP-ASSET-REFERENCE-PROVENANCE, CAP-MODEL-REFERENCE]
+  sequence_redundancy: [CAP-EDITORIAL-ATTENTION]
+  lighting: [CAP-LIGHT-COLOR]
+  dialogue: [CAP-SOUND]
+  audio_source: [CAP-SOUND]
+  AV_sync: [CAP-SOUND]
+  transition: [CAP-EDITORIAL-ATTENTION]
+  final_state: [CAP-BLOCKING-SPATIAL]
+
+unknown_outcome_consumer:
+  repair_surface_required: EVIDENCE_ACQUISITION
+  capability_consumers: [CAP-REVERSE-EVAL]
+  same_evaluated_signal_may_not_reenter_reverse_observation: true
+  new_evidence_or_new_generation_required_before_expected_observed_reentry: true
+  may_not_route_to_learning_as_success_or_failure_evidence: true
+
+consumer_rules:
+  - failure_category_must_first_match_current_targeted_repair_policy_surface
+  - selected_capability_must_be_in_that_surface_allowlist
+  - failure_category_consumer_map_is_coordination_only_and_cannot_change_repair_surface
+  - unknown_outcome_uses_evidence_acquisition_only
+  - pass_only_eval_emits_no_creative_department_expansion
+  - duplicate_capability_consumers_are_deduplicated_preserving_first_route_order
+  - CAP_LEARNING_is_forbidden_from_this_adapter
+  - CAP_PROACTIVE_COLLABORATION_is_forbidden_from_this_adapter
+  - CAP_INFRASTRUCTURE_TRANSPORT_is_forbidden_from_this_adapter
+
+validation:
+  policy_must_cover_every_current_targeted_repair_failure_category_exactly: true
+  repair_surface_allowlist_must_cover_every_declared_repair_surface_exactly: true
+  category_consumer_must_be_subset_of_its_canonical_repair_surface_allowlist: true
+  every_capability_consumer_must_exist_in_current_capability_graph: true
+  workflow_must_test_with_learning_retriever_and_production_intelligence_on_same_exact_head: true
+  current_maturity: candidate_unvalidated
