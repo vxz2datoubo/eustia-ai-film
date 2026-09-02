@@ -1,8 +1,8 @@
 """CLI for the bounded Director Runtime Orchestrator P0.
 
 This command reads a creative decision packet from JSON/YAML and emits a
-non-executable ``DIRECTOR_RUNTIME_CANDIDATE/v1``. It never grants model execution
-or canonical-write authority.
+non-executable ``DIRECTOR_RUNTIME_CANDIDATE/v1``. It never accepts a project-root
+authority override and never grants model execution or canonical-write authority.
 """
 
 from __future__ import annotations
@@ -28,10 +28,6 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Compile a CreativeDecisionPacket through Director Runtime P0"
     )
-    parser.add_argument(
-        "--project-root",
-        default=str(Path(__file__).resolve().parents[3]),
-    )
     parser.add_argument("--description", required=True)
     parser.add_argument("--creative-packet", required=True)
     parser.add_argument("--task-id", default="DIRECTOR_RUNTIME_P0_CLI")
@@ -45,7 +41,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     packet_path = Path(args.creative_packet)
     try:
         packet = _load_packet(packet_path)
-        result = DirectorRuntimeOrchestrator(args.project_root).compile(
+        result = DirectorRuntimeOrchestrator().compile(
             args.description,
             packet,
             task_id=args.task_id,
