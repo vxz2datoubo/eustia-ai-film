@@ -1,4 +1,4 @@
-schema_version: "0.2.0"
+schema_version: "0.3.0"
 suite_id: EUSTIA_DIRECTOR_RUNTIME_ORCHESTRATOR_REGRESSION
 source_issue: 78
 status: candidate
@@ -8,10 +8,12 @@ cases:
     title: 当前凯姆围巾晾衣绳横移在可信世界baseline与LOCK语义存在时可编译为非执行候选
     work_item_id: KAIM-SCARF-CLOTHESLINE-TRAVERSE
     preconditions:
+      production_runtime_binding_verified: true
       trusted_world_state_baseline_present: true
       trusted_locked_constraint_semantics_present: true
     expectation:
       status: CANDIDATE_READY
+      production_context_trusted: true
       execution_authorized: false
       locked_constraints_preserved: true
       canonical_lock_semantics_injected: true
@@ -29,6 +31,51 @@ cases:
     attack:
       argv: [--project-root, /tmp/forged-project]
     expected: ARGPARSE_REJECTION
+
+  - id: DR-P0-PROVENANCE-SOURCE-001
+    title: 同进程替换orchestrator模块__file__不得重定向canonical root
+    attack:
+      mutate_module_global: __file__
+      value: /tmp/forged-project/tools/learning_retriever/learning_retriever/director_orchestrator.py
+    expected_error: DIRECTOR_RUNTIME_PROVENANCE_SUBSTITUTED
+    must_fail_before_receipt_consumption: true
+
+  - id: DR-P0-PROVENANCE-RUNTIME-BINDING-001
+    title: 同进程替换DirectorLearningRuntime模块全局绑定不得提供伪造canonical receipt
+    attack:
+      mutate_module_global: DirectorLearningRuntime
+      replacement: fake_runtime_returning_attacker_work_item_context
+    expected_error: DIRECTOR_RUNTIME_PROVENANCE_SUBSTITUTED
+    must_fail_before_receipt_consumption: true
+
+  - id: DR-P0-PROVENANCE-RUNTIME-METHOD-001
+    title: 同进程替换DirectorLearningRuntime.retrieve实现不得提供伪造canonical receipt
+    attack:
+      mutate_runtime_method: DirectorLearningRuntime.retrieve
+      replacement: fake_retrieve_returning_attacker_work_item_context
+    expected_error: DIRECTOR_RUNTIME_PROVENANCE_SUBSTITUTED
+    must_fail_before_receipt_consumption: true
+
+  - id: DR-P0-PROVENANCE-CINEMATIC-001
+    title: 同进程替换CinematicIntent compiler绑定不得铸造camera authority
+    attack:
+      mutate_module_global: compile_cinematic_intent_contract
+      replacement: fake_pass_compiler
+    expected_error: DIRECTOR_RUNTIME_PROVENANCE_SUBSTITUTED
+    must_fail_before_creative_packet_validation: true
+
+  - id: DR-P0-TEST-SEAM-001
+    title: 合成WorkItemContext只能走明确untrusted test fixture路径且永远不能成为生产authority
+    preconditions:
+      synthetic_retrieval_fixture: true
+    expectation:
+      status: UNTRUSTED_TEST_CANDIDATE
+      production_context_trusted: false
+      binding_status: UNTRUSTED_TEST_FIXTURE
+      world_entry_authority: untrusted_test_fixture_not_world_truth
+      execution_authorized: false
+      deliverable: false
+      fixture_receipt_is_production_authority: false
 
   - id: DR-P0-AUTHORITY-FORGE-001
     title: Creative packet 不得自带 work item 或 canonical receipt
