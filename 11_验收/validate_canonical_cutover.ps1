@@ -116,7 +116,7 @@ function Test-LegacyAuthorityReferences {
             if ($line -match '^([A-Za-z_][A-Za-z0-9_]*):') { $section = $Matches[1] }
             if ($line -notmatch $LegacyPattern) { continue }
             $relative = $file.FullName.Substring($Root.Length).TrimStart('\', '/')
-            # Machine-readable route files are strict.  The only exception is the
+            # Machine-readable route files are strict. The only exception is the
             # explicit deny-list itself: it documents retired names in order to
             # reject them, rather than selecting them as a source.
             $isExplicitRejectList = (($file.Name -eq 'PROJECT_INDEX.yaml') -and ($section -eq 'legacy_policy')) -or
@@ -208,11 +208,24 @@ $assets = Get-DocumentContent -MetadataPattern 'document_id: EUSTIA-VISUAL-ASSET
 $screenplay = Get-DocumentContent -MetadataPattern 'document_id: EUSTIA-CURRENT-ADAPTED-SCRIPT'
 $system = Get-DocumentContent -MetadataPattern 'system_id: DIRECTOR-CINEMA-SYSTEM'
 $memory = Get-DocumentContent -MetadataPattern 'document_id: EUSTIA-PROJECT-MEMORY'
-Require-Content -Label 'map' -Content $map -Pattern 'SCN-CHURCH-BELLTOWER-SOUTH-001'
+
+# Current scene/camera/view/asset cutover assertions use the canonical EUS identity
+# system. Retired SCN camera/view asset IDs are history/migration evidence and must
+# not be required as proof that cutover is healthy.
+Require-Content -Label 'map' -Content $map -Pattern 'EUS-SCN-000003'
+Require-Content -Label 'map' -Content $map -Pattern 'EUS-CAM-000006'
+Require-Content -Label 'map' -Content $map -Pattern 'EUS-VIEW-000007'
+Require-Content -Label 'map' -Content $map -Pattern 'EUS-SCN-000005'
+Require-Content -Label 'map' -Content $map -Pattern 'EUS-VIEW-000010'
+# This one remains an explicitly acknowledged legacy textual node in the current map;
+# keeping the assertion prevents the validator from falsely claiming that migration is
+# complete for the checkpoint node before a formal visual identity exists.
 Require-Content -Label 'map' -Content $map -Pattern 'SCN-CHECKPOINT-MIDDLE-GATE-001'
-Require-Content -Label 'map' -Content $map -Pattern 'SCN-BRIDGE-SOUTH-FACE-001'
-Require-Content -Label 'assets' -Content $assets -Pattern 'SCN-CHURCH-BELLTOWER-LEFT-001'
-Require-Content -Label 'assets' -Content $assets -Pattern 'SCN-CHURCH-BELLTOWER-RIGHT-001'
+Require-Content -Label 'assets' -Content $assets -Pattern 'EUS-AST-000007'
+Require-Content -Label 'assets' -Content $assets -Pattern 'EUS-AST-000010'
+Require-Content -Label 'assets' -Content $assets -Pattern 'EUS-AST-000011'
+Require-Content -Label 'assets' -Content $assets -Pattern 'EUS-AST-000012'
+
 Require-Content -Label 'screenplay' -Content $screenplay -Pattern 'CONFIRMED / CURRENT_PRODUCTION'
 Require-Content -Label 'screenplay' -Content $screenplay -Pattern 'target_confirmed: false'
 Require-Content -Label 'system' -Content $system -Pattern 'Character Autonomous Life Continuity'
@@ -261,4 +274,4 @@ if ($failures.Count -gt 0) {
     exit 1
 }
 
-Write-Output "PASS canonical existence, source authority, handoff YAML, map, asset, screenplay, CALC, director full output, write routes, and migration unknown closure"
+Write-Output "PASS canonical existence, source authority, handoff YAML, current EUS scene/camera/view/asset identity, screenplay, CALC, director full output, write routes, and migration unknown closure"

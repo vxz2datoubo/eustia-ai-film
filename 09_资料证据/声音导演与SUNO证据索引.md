@@ -2,7 +2,7 @@
 title: 声音导演与SUNO证据索引
 status: active
 canonical_role: sound_domain_evidence_annex
-last_updated: 2026-08-13
+last_updated: 2026-09-01
 ---
 
 # 声音导演与 SUNO 证据索引
@@ -17,7 +17,7 @@ last_updated: 2026-08-13
 
 ### E-SOUND-LEGACY-001｜旧版长段落电影配乐协议
 - 来源：ChatGPT File Library `00_项目长期外部记忆与系统演化总文档_v1.0.35_更新补丁.md`。
-- 身份：历史迁移证据，不是当前 canonical。
+- 身份：历史迁移证据；不得作为当前 canonical 规则、active source 或运行时 authority 使用。
 - 支持内容：underscore / incidental music / background score；Spotting 与 Cue；低显著度、dialogue-safe underscore；4–15 秒视频生成与约 1–3 分钟长 Cue 分层；少量同步点；Suno Style/Exclude；后期 Crop/Extend/Replace/Stem/Automation。
 - 边界：旧文件自称“最高优先级”不能覆盖 GitHub `PROJECT_INDEX.yaml`；其中模型特定能力必须按当前 Suno 版本重验。
 - 当前处置：保留有效概念作为候选迁移输入，与专业资料及当前 Suno 官方能力重新对齐。
