@@ -73,7 +73,7 @@ class MIDSTransitionAuthorityTests(unittest.TestCase):
                 user_rejection_provenance=[{"source": "AI", "ref": "self"}],
                 reason="self rejection",
             )
-        self.assertEqual(ctx.exception.code, "MIDS_USER_PROVENANCE_REQUIRED")
+        self.assertEqual(ctx.exception.code, "MIDS_TRUSTED_USER_RECEIPT_REQUIRED")
 
     def test_open_rejection_preserves_unrelated_user_decision(self):
         session = add_ai_proposal(
