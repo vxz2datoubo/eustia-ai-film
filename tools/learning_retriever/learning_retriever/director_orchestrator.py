@@ -3,17 +3,20 @@
 Creative directing judgment remains AI-owned and method authority remains in
 ``01_AI电影系统/AI电影系统.md``. This runtime is mechanical: it binds a creative
 decision packet to the existing canonical directing/learning runtime, validates
-SOAC-shaped state/entity/transition invariants, reuses the existing
-CinematicIntent contract, and emits a non-executable minimum-sufficient
-execution candidate.
+state/entity/transition invariants, reuses the existing CinematicIntent contract,
+and emits a non-executable minimum-sufficient execution candidate.
 
-The public entrypoint never accepts caller-supplied Active Work Item or learning
-receipts. It instantiates ``DirectorLearningRuntime`` inside each compile call so
-there is no replaceable public runtime attribute that can mint trusted receipts.
+Trust-bearing inputs are never caller-selected. The governed project root is derived
+from this module's checked-out repository location on every compile call. For a bound
+work item, world entry state and material LOCK semantics must already exist in the
+trusted WorkItemContext. Missing trusted structure fails closed rather than letting a
+creative packet mint canonical world or constraint truth.
 """
 
 from __future__ import annotations
 
+from hashlib import sha256
+import json
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -60,6 +63,9 @@ _FORBIDDEN_TOP_LEVEL = {
     "continuity_override",
     "authority_verified",
     "execution_authorized",
+    "project_root",
+    "world_state_baseline",
+    "locked_constraint_semantics",
 }
 _SCENE_FIELDS = {
     "dramatic_purpose",
@@ -67,12 +73,7 @@ _SCENE_FIELDS = {
     "audience_knowledge_after",
     "material_problem",
 }
-_INTENT_FIELDS = {
-    "audience_effect",
-    "character_goal",
-    "subtext",
-    "success_condition",
-}
+_INTENT_FIELDS = {"audience_effect", "character_goal", "subtext", "success_condition"}
 _ENTITY_FIELDS = {"kind", "position", "state"}
 _ENTITY_KINDS = {"character", "object", "environment_anchor", "group"}
 _TARGET_KINDS = {"ENTITY", "ABSTRACT", "NONE"}
@@ -142,6 +143,24 @@ _PROVENANCE_LAYERS = {
 }
 
 
+def _governed_project_root() -> Path:
+    """Return the repository root determined by executable source location only."""
+    root = Path(__file__).resolve().parents[3]
+    required = (
+        root / "PROJECT_INDEX.yaml",
+        root / "10_运行时" / "active_work_item_resolution_gate.yaml",
+        root / "10_运行时" / "director_feature_compiler.yaml",
+    )
+    missing = [str(path.relative_to(root)) for path in required if not path.is_file()]
+    if missing:
+        raise DirectorRuntimeError(
+            "DIRECTOR_GOVERNED_PROJECT_ROOT_INVALID",
+            "governed repository root is missing required canonical anchors",
+            details={"missing": missing},
+        )
+    return root
+
+
 def _mapping(value: Any, *, field: str) -> dict[str, Any]:
     if not isinstance(value, Mapping):
         raise DirectorRuntimeError("DIRECTOR_PACKET_SCHEMA_INVALID", f"{field} must be a mapping")
@@ -171,8 +190,17 @@ def _strict(raw: Mapping[str, Any], *, allowed: set[str], required: set[str], fi
 
 
 def _text_list(value: Any, *, field: str) -> list[str]:
-    items = _list(value, field=field)
-    return [_text(item, field=f"{field}[]") for item in items]
+    return [_text(item, field=f"{field}[]") for item in _list(value, field=field)]
+
+
+def _stable_digest(value: Any) -> str:
+    encoded = json.dumps(
+        value,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return sha256(encoded).hexdigest()
 
 
 def _validate_provenance(packet: Mapping[str, Any]) -> dict[str, Any]:
@@ -239,41 +267,61 @@ def _validate_entity(entity_id: str, raw: Any, *, field: str) -> dict[str, Any]:
     return entity
 
 
+def _parse_state(raw: Any, *, field: str) -> tuple[dict[str, Any], set[str]]:
+    state = _mapping(raw, field=field)
+    _strict(state, allowed={"entities", "invariants"}, required={"entities", "invariants"}, field=field)
+    entities_raw = _mapping(state["entities"], field=f"{field}.entities")
+    entities = {
+        str(entity_id): _validate_entity(
+            str(entity_id), value, field=f"{field}.entities.{entity_id}"
+        )
+        for entity_id, value in entities_raw.items()
+    }
+    invariants = set(_text_list(state["invariants"], field=f"{field}.invariants"))
+    return entities, invariants
+
+
 def _validate_world_state(
     packet: Mapping[str, Any],
+    *,
+    canonical_entry_baseline: Mapping[str, Any] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any], set[str]]:
     world = _mapping(packet.get("world_state"), field="world_state")
     required = {"entry", "exit", "explicit_exits_or_removals", "state_changes"}
     _strict(world, allowed=required, required=required, field="world_state")
 
-    def state(name: str) -> tuple[dict[str, Any], set[str]]:
-        raw_state = _mapping(world[name], field=f"world_state.{name}")
-        _strict(
-            raw_state,
-            allowed={"entities", "invariants"},
-            required={"entities", "invariants"},
-            field=f"world_state.{name}",
-        )
-        entities_raw = _mapping(raw_state["entities"], field=f"world_state.{name}.entities")
-        invariants = set(_text_list(raw_state["invariants"], field=f"world_state.{name}.invariants"))
-        entities = {
-            str(entity_id): _validate_entity(
-                str(entity_id), value, field=f"world_state.{name}.entities.{entity_id}"
-            )
-            for entity_id, value in entities_raw.items()
-        }
-        return entities, invariants
+    caller_entry_entities, caller_entry_invariants = _parse_state(
+        world["entry"], field="world_state.entry"
+    )
+    exit_entities, exit_invariants = _parse_state(world["exit"], field="world_state.exit")
 
-    entry_entities, entry_invariants = state("entry")
-    exit_entities, exit_invariants = state("exit")
+    if canonical_entry_baseline is not None:
+        baseline_entities, baseline_invariants = _parse_state(
+            canonical_entry_baseline, field="trusted_work_item_context.world_state_baseline"
+        )
+        if (
+            caller_entry_entities != baseline_entities
+            or caller_entry_invariants != baseline_invariants
+        ):
+            raise DirectorRuntimeError(
+                "DIRECTOR_WORLD_ENTRY_BASELINE_MISMATCH",
+                "creative world entry does not exactly match trusted canonical entry baseline",
+                details={
+                    "invented_entities": sorted(set(caller_entry_entities) - set(baseline_entities)),
+                    "missing_entities": sorted(set(baseline_entities) - set(caller_entry_entities)),
+                    "baseline_invariants_missing": sorted(baseline_invariants - caller_entry_invariants),
+                    "caller_only_invariants": sorted(caller_entry_invariants - baseline_invariants),
+                },
+            )
+        entry_entities, entry_invariants = baseline_entities, baseline_invariants
+    else:
+        entry_entities, entry_invariants = caller_entry_entities, caller_entry_invariants
+
     if not entry_entities:
         raise DirectorRuntimeError(
             "DIRECTOR_WORLD_ENTITY_INVALID", "world_state.entry.entities cannot be empty"
         )
 
-    # P0 is intentionally conservative. Entry of brand-new entities will gain a
-    # dedicated explicit-entry contract in a later slice; implicit appearance is
-    # rejected now rather than silently creating world truth.
     new_entities = set(exit_entities) - set(entry_entities)
     if new_entities:
         raise DirectorRuntimeError(
@@ -304,8 +352,6 @@ def _validate_world_state(
             f"explicitly exited entities remain in exit state: {sorted(retained_exits)}",
         )
 
-    # Until a later explicit invariant-change contract exists, current world
-    # invariants must survive the unit exactly. Prompt omission cannot retire one.
     if entry_invariants != exit_invariants:
         raise DirectorRuntimeError(
             "DIRECTOR_WORLD_INVARIANT_DROPPED",
@@ -331,7 +377,12 @@ def _validate_events(
     event_ids: set[str] = set()
     for index, item in enumerate(events):
         event = _mapping(item, field=f"events[{index}]")
-        _strict(event, allowed=_EVENT_FIELDS, required={"event_id", "agent", "action", "result"}, field=f"events[{index}]")
+        _strict(
+            event,
+            allowed=_EVENT_FIELDS,
+            required={"event_id", "agent", "action", "result"},
+            field=f"events[{index}]",
+        )
         for key in ("event_id", "agent", "action", "result"):
             _text(event[key], field=f"events[{index}].{key}")
         event_id = str(event["event_id"])
@@ -395,7 +446,6 @@ def _validate_blocking(
     blocking = _mapping(packet.get("blocking"), field="blocking")
     _strict(blocking, allowed=_BLOCKING_FIELDS, required=_BLOCKING_FIELDS, field="blocking")
     entity_ids = set(entry_entities) | set(exit_entities)
-
     maps = {
         key: _mapping(blocking[key], field=f"blocking.{key}")
         for key in sorted(_BLOCKING_FIELDS)
@@ -408,8 +458,6 @@ def _validate_blocking(
                 f"blocking.{key} references unknown entities: {sorted(unknown_owners)}",
             )
 
-    # Support/contact is a relation, so validating only the owner key is not
-    # enough. Every referenced counterpart must also exist in the world state.
     for owner, contacts in maps["support_contacts"].items():
         values = contacts if isinstance(contacts, list) else [contacts]
         for contact in values:
@@ -449,7 +497,12 @@ def _validate_performance(
                 f"performance actor {actor_id!r} is not a declared character entity",
             )
         actor = _mapping(value, field=f"performance.{actor_id}")
-        _strict(actor, allowed=_PERFORMANCE_FIELDS, required=_PERFORMANCE_FIELDS, field=f"performance.{actor_id}")
+        _strict(
+            actor,
+            allowed=_PERFORMANCE_FIELDS,
+            required=_PERFORMANCE_FIELDS,
+            field=f"performance.{actor_id}",
+        )
         _text(actor["objective"], field=f"performance.{actor_id}.objective")
         _text(actor["subtext"], field=f"performance.{actor_id}.subtext")
         behavior = actor["observable_behavior"]
@@ -570,7 +623,12 @@ def _validate_transition(
     return transition
 
 
-def _validate_constraints(packet: Mapping[str, Any], *, canonical_locked: list[str]) -> dict[str, Any]:
+def _validate_constraints(
+    packet: Mapping[str, Any],
+    *,
+    canonical_locked: list[str],
+    canonical_lock_semantics: Mapping[str, str],
+) -> tuple[dict[str, Any], list[str]]:
     contract = _mapping(packet.get("constraint_autonomy"), field="constraint_autonomy")
     _strict(contract, allowed=_CONSTRAINT_FIELDS, required=_CONSTRAINT_FIELDS, field="constraint_autonomy")
 
@@ -587,19 +645,25 @@ def _validate_constraints(packet: Mapping[str, Any], *, canonical_locked: list[s
             f"canonical locked constraints were omitted: {sorted(missing)}",
         )
 
-    hard_invariants = _text_list(contract["hard_invariants"], field="constraint_autonomy.hard_invariants")
-    if canonical_locked and not hard_invariants:
-        raise DirectorRuntimeError(
-            "DIRECTOR_LOCKED_CONSTRAINT_DROPPED",
-            "bound work item has locked constraints but execution candidate has no hard invariants",
-        )
+    _text_list(contract["hard_invariants"], field="constraint_autonomy.hard_invariants")
     _text_list(contract["guided_choices"], field="constraint_autonomy.guided_choices")
     _text_list(contract["free_model_space"], field="constraint_autonomy.free_model_space")
     _text(contract["final_state"], field="constraint_autonomy.final_state")
-    return contract
+
+    canonical_hard = [canonical_lock_semantics[item] for item in canonical_locked]
+    return contract, canonical_hard
 
 
-def _canonical_context(retrieval: Mapping[str, Any]) -> tuple[str | None, list[str], dict[str, Any]]:
+def _canonical_context(
+    retrieval: Mapping[str, Any],
+) -> tuple[
+    str | None,
+    list[str],
+    dict[str, str],
+    Mapping[str, Any] | None,
+    str | None,
+    dict[str, Any],
+]:
     receipt = _mapping(retrieval.get("canonical_runtime_receipt"), field="canonical_runtime_receipt")
     resolution = _mapping(
         receipt.get("active_work_item_resolution"),
@@ -609,10 +673,15 @@ def _canonical_context(retrieval: Mapping[str, Any]) -> tuple[str | None, list[s
     if work_item_id is not None:
         work_item_id = _text(work_item_id, field="resolved_work_item_id")
 
+    context_raw = receipt.get("work_item_context_packet")
+    context_map: dict[str, Any] = {}
+    if context_raw is not None:
+        context_map = _mapping(
+            context_raw, field="canonical_runtime_receipt.work_item_context_packet"
+        )
+
     locked: list[str] = []
-    context = receipt.get("work_item_context_packet")
-    if context is not None:
-        context_map = _mapping(context, field="canonical_runtime_receipt.work_item_context_packet")
+    if context_map:
         constraints = _mapping(
             context_map.get("constraints") or {}, field="work_item_context_packet.constraints"
         )
@@ -620,7 +689,45 @@ def _canonical_context(retrieval: Mapping[str, Any]) -> tuple[str | None, list[s
             _text(value, field="work_item_context_packet.constraints.locked[]")
             for value in list(constraints.get("locked") or [])
         ]
-    return work_item_id, locked, receipt
+
+    semantics: dict[str, str] = {}
+    baseline: Mapping[str, Any] | None = None
+    semantics_digest: str | None = None
+    if work_item_id:
+        if not context_map:
+            raise DirectorRuntimeError(
+                "DIRECTOR_WORLD_BASELINE_UNAVAILABLE",
+                "bound work item has no trusted WorkItemContext packet",
+            )
+        baseline_raw = context_map.get("world_state_baseline")
+        if not isinstance(baseline_raw, Mapping):
+            raise DirectorRuntimeError(
+                "DIRECTOR_WORLD_BASELINE_UNAVAILABLE",
+                "bound work item has no trusted structured world_state_baseline",
+                details={"work_item_id": work_item_id},
+            )
+        baseline = dict(baseline_raw)
+
+        semantics_raw = context_map.get("locked_constraint_semantics")
+        if locked:
+            if not isinstance(semantics_raw, Mapping):
+                raise DirectorRuntimeError(
+                    "DIRECTOR_LOCK_SEMANTICS_UNAVAILABLE",
+                    "bound work item LOCKs lack trusted semantic materialization",
+                    details={"work_item_id": work_item_id, "locked": list(locked)},
+                )
+            for lock_id in locked:
+                value = semantics_raw.get(lock_id)
+                if not isinstance(value, str) or not value.strip():
+                    raise DirectorRuntimeError(
+                        "DIRECTOR_LOCK_SEMANTICS_UNAVAILABLE",
+                        "trusted LOCK semantic coverage is incomplete",
+                        details={"work_item_id": work_item_id, "missing_lock": lock_id},
+                    )
+                semantics[lock_id] = value.strip()
+            semantics_digest = _stable_digest(semantics)
+
+    return work_item_id, locked, semantics, baseline, semantics_digest, receipt
 
 
 def _render_execution_candidate(
@@ -633,6 +740,9 @@ def _render_execution_candidate(
     cinematic_overlay: Mapping[str, Any],
     shots: list[Mapping[str, Any]],
     constraints: Mapping[str, Any],
+    canonical_locked: list[str],
+    canonical_hard_invariants: list[str],
+    canonical_lock_semantics_digest: str | None,
 ) -> dict[str, Any]:
     event_lines = [
         f"{event['event_id']}: {event['agent']} {event['action']} -> {event['result']}"
@@ -657,27 +767,32 @@ def _render_execution_candidate(
     ]
     if cinematic_overlay:
         lines.append("当前物化电影意图：" + str(dict(cinematic_overlay)))
-    lines.extend(
-        [
-            "镜头方案：" + "；".join(shot_lines),
-            "硬不变量：" + "；".join(map(str, constraints["hard_invariants"])),
-            f"最终状态：{constraints['final_state']}",
-        ]
-    )
+    lines.append("镜头方案：" + "；".join(shot_lines))
+    if canonical_hard_invariants:
+        lines.append("Canonical LOCK硬不变量：" + "；".join(canonical_hard_invariants))
+    caller_hard = list(constraints["hard_invariants"])
+    if caller_hard:
+        lines.append("候选附加硬约束（非LOCK authority）：" + "；".join(map(str, caller_hard)))
+    lines.append(f"最终状态：{constraints['final_state']}")
+
     return {
         "schema": "GENERIC_DIRECTOR_EXECUTION_CANDIDATE/v1",
         "text": "\n".join(lines),
-        "hard_invariant_refs": list(constraints["locked_constraints_preserved"]),
+        "hard_invariant_refs": list(canonical_locked),
+        "canonical_hard_invariants": list(canonical_hard_invariants),
+        "canonical_lock_semantics_digest": canonical_lock_semantics_digest,
+        "caller_hard_invariants_are_lock_authority": False,
         "execution_authorized": False,
         "deliverable": False,
     }
 
 
 class DirectorRuntimeOrchestrator:
-    """Public trust-bound P0 orchestrator."""
+    """Public P0 orchestrator with no caller-selectable authority root."""
 
-    def __init__(self, project_root: str | Path) -> None:
-        self._project_root = Path(project_root)
+    def __init__(self) -> None:
+        # Deliberately store no project-root authority on the instance.
+        pass
 
     def compile(
         self,
@@ -706,18 +821,27 @@ class DirectorRuntimeOrchestrator:
         _text(packet["packet_id"], field="packet_id")
         provenance = _validate_provenance(packet)
 
-        # Trust root is constructed inside the call. There is intentionally no
-        # public runtime/callback/receipt injection surface on this orchestrator.
-        retrieval = DirectorLearningRuntime(self._project_root).retrieve(
+        project_root = _governed_project_root()
+        retrieval = DirectorLearningRuntime(project_root).retrieve(
             description,
             task_id=task_id,
             top_k=top_k,
             expand=True,
         )
-        work_item_id, canonical_locked, canonical_receipt = _canonical_context(retrieval)
+        (
+            work_item_id,
+            canonical_locked,
+            canonical_lock_semantics,
+            canonical_world_entry,
+            canonical_lock_semantics_digest,
+            canonical_receipt,
+        ) = _canonical_context(retrieval)
 
         scene, intent = _validate_scene_and_intent(packet)
-        entry_entities, exit_entities, explicit_exits = _validate_world_state(packet)
+        entry_entities, exit_entities, explicit_exits = _validate_world_state(
+            packet,
+            canonical_entry_baseline=canonical_world_entry,
+        )
         all_entity_ids = set(entry_entities) | set(exit_entities)
         events, event_ids = _validate_events(packet, entity_ids=all_entity_ids)
         blocking = _validate_blocking(
@@ -730,7 +854,7 @@ class DirectorRuntimeOrchestrator:
         try:
             cinematic = compile_cinematic_intent_contract(
                 _mapping(packet["cinematic_intent"], field="cinematic_intent"),
-                project_root=self._project_root,
+                project_root=project_root,
             )
         except CinematicIntentContractError as exc:
             raise DirectorRuntimeError(
@@ -752,7 +876,11 @@ class DirectorRuntimeOrchestrator:
             exit_ids=set(exit_entities),
             explicit_exits=explicit_exits,
         )
-        constraints = _validate_constraints(packet, canonical_locked=canonical_locked)
+        constraints, canonical_hard = _validate_constraints(
+            packet,
+            canonical_locked=canonical_locked,
+            canonical_lock_semantics=canonical_lock_semantics,
+        )
 
         execution_candidate = _render_execution_candidate(
             scene=scene,
@@ -763,6 +891,9 @@ class DirectorRuntimeOrchestrator:
             cinematic_overlay=dict(cinematic.get("execution_overlay") or {}),
             shots=shots,
             constraints=constraints,
+            canonical_locked=canonical_locked,
+            canonical_hard_invariants=canonical_hard,
+            canonical_lock_semantics_digest=canonical_lock_semantics_digest,
         )
 
         return {
@@ -773,13 +904,19 @@ class DirectorRuntimeOrchestrator:
                 "work_item_id": work_item_id,
                 "binding_status": "TRUSTED_EXISTING" if work_item_id else "NEW_UNBOUND_CANDIDATE",
                 "caller_supplied_authority_accepted": False,
+                "world_entry_authority": (
+                    "trusted_work_item_context" if work_item_id else "candidate_only_not_world_truth"
+                ),
             },
             "runtime_flow": [
+                "governed_project_root_resolution",
                 "DirectorLearningRuntime.retrieve",
                 "active_work_item_resolution",
                 "director_feature_compiler",
                 "hard_route",
                 "semantic_recall",
+                "trusted_world_entry_binding",
+                "trusted_lock_semantics_binding",
                 "creative_decision_contract",
                 "world_state_persistence",
                 "event_graph_binding",
