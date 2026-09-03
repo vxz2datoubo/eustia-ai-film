@@ -1,112 +1,57 @@
-schema_version: "4.0"
-suite_id: ACTIVE_WORK_ITEM_CHECKPOINT_COMPILER_REGRESSION
-status: candidate
-source_issue: 38
-
-cases:
-  - id: AWIC-P1-01-FORGED-LOCAL-VERIFIED
-    class: caller_local_continuity_cannot_mint_trusted_baseline
-    attack:
-      local_active_state_self_declares_checkpoint_writeback_status: verified
-      caller_supplies_continuity_markdown: true
-    expected:
-      public_raw_continuity_input_exists: false
-      fixed_github_baseline_required: true
-
-  - id: AWIC-P1-01-LOCAL-REMOTE-DRIFT
-    class: local_projection_must_match_fixed_github
-    expected_error: CHECKPOINT_CONTINUITY_DRIFT_FROM_FIXED_GITHUB
-
-  - id: AWIC-P1-01-MATERIALIZATION-INVALID
-    class: baseline_materialization_must_reuse_v3_remote_proof
-    expected:
-      commit_must_exist: true
-      commit_must_be_canonical_ancestor: true
-      snapshot_identity_must_match: true
-
-  - id: AWIC-P1-02-SERIALIZED-RECEIPT-FORBIDDEN
-    class: caller_dict_cannot_mint_second_phase_verified_state
-    attack:
-      receipt_schema: ACTIVE_WORK_ITEM_CHECKPOINT_WRITE_VERIFICATION/v2
-      status: VERIFIED_FIXED_GITHUB_MATERIALIZATION
-      arbitrary_40_hex: true
-    expected:
-      public_finalizer_receipt_input_exists: false
-      actual_fixed_repository_materialization_reexecution_required: true
-
-  - id: AWIC-P1-03-CLOSED-NO-OUTGOING
-    class: lifecycle_delegates_to_canonical_v3
-    input:
-      baseline_status: CLOSED
-      terminal_event: CHECKPOINT
-    expected_error: CHECKPOINT_LIFECYCLE_TRANSITION_INVALID
-
-  - id: AWIC-P1-03-RESOLVED-UNVERIFIED-NO-CHECKPOINT
-    class: illegal_lifecycle_jump_fails_closed
-    input:
-      baseline_status: RESOLVED_UNVERIFIED
-      terminal_event: CHECKPOINT
-    expected_error: CHECKPOINT_LIFECYCLE_TRANSITION_INVALID
-
-  - id: AWIC-P1-03-ACTIVE-REVISION-CHECKPOINT
-    class: canonical_valid_transition_preserved
-    input:
-      baseline_status: ACTIVE_REVISION
-      terminal_event: CHECKPOINT
-    expected:
-      proposed_status: CHECKPOINTED
-
-  - id: AWIC-P1-04-ARBITRARY-CHECKPOINT-ID-FORBIDDEN
-    class: caller_cannot_supply_second_checkpoint_identity
-    expected:
-      public_proposed_checkpoint_ref_input_exists: false
-      identity_source: terminal_revision_source_ref
-
-  - id: AWIC-P1-04-LIVE-STRUCTURED-IDENTITY
-    class: terminal_source_ref_must_exist_and_be_structured
-    expected:
-      source_issue_fixed_from_trusted_baseline: true
-      exact_comment_exists: true
-      structured_revision_classifier_reused_from_v3: true
-      must_be_latest_structured_comment: true
-
-  - id: AWIC-P1-04-ROUNDTRIP
-    class: finalized_checkpoint_remains_v3_compatible
-    expected:
-      latest_applied_checkpoint_ref_numeric_comment_id: true
-      checkpoint_writeback_status: verified
-      writeback_verified_commit_is_materialization_commit: true
-      next_v3_trusted_read_can_validate_identity: true
-
-  - id: AWIC-OMISSION-NOT-REVOKE
-    class: revision_ledger_semantics_preserved
-    expected:
-      omitted_constraints_preserved: true
-      only_explicit_revoke_removes: true
-
-  - id: AWIC-REJECTED-REINTRODUCTION
-    class: revoked_constraint_requires_explicit_add_or_lock
-    expected_error: CHECKPOINT_REINTRODUCTION_REQUIRES_ADD_OR_LOCK
-
-  - id: AWIC-NO-RUNTIME-WRITE
-    class: candidate_has_read_validation_only
-    expected:
-      git_push: false
-      github_write: false
-      branch_mutation: false
-      canonical_reporting_before_external_ref_confirmation: false
-
+schema_version: "1.3"
+regression_suite_id: EUSTIA_ACTIVE_WORK_ITEM_CHECKPOINT_COMPILER_REGRESSIONS
+status: candidate_eval_only
+runtime_contract: 10_运行时/active_work_item_checkpoint_compiler.yaml
+registration_status: UNREGISTERED_UNACTIVATED_CANDIDATE
 authority_boundary:
   eval_fixture_only: true
   proposal_is_not_persistence: true
   finalization_proposal_is_not_persistence: true
-  source_issue_is_revision_identity_trace_not_story_authority: true
+  source_issue_revision_trace_is_not_canonical_truth: true
+  registration_is_not_activation: true
+  project_index_activation_forbidden_in_this_slice: true
+  read_sets_activation_forbidden_in_this_slice: true
+  canonical_continuity_write_forbidden_in_this_slice: true
+
+cases:
+  - {case_id: AWCP-ISSUE19-TRAJECTORY-001, class: revision_trajectory_to_pending_snapshot, expected: PENDING_WRITE}
+  - {case_id: AWCP-OMISSION-PRESERVE-001, class: omission_is_not_revocation, expected: baseline_constraints_preserved}
+  - {case_id: AWCP-EXPLICIT-REVOKE-001, class: explicit_revoke_only, expected: named_constraint_removed_only}
+  - {case_id: AWCP-REINTRODUCE-MODIFY-NEG-001, class: revoked_constraint_cannot_return_through_modify, expected_error: CHECKPOINT_REINTRODUCTION_REQUIRES_ADD_OR_LOCK}
+  - {case_id: AWCP-REINTRODUCE-ADD-001, class: revoked_constraint_explicit_add_reactivation, expected: restored_to_preserved}
+  - {case_id: AWCP-REINTRODUCE-LOCK-001, class: revoked_constraint_explicit_lock_reactivation, expected: restored_to_locked}
+  - {case_id: AWCP-REINTRODUCE-EXPERIMENT-001, class: revoked_constraint_experiment_without_effective_reactivation, expected: remains_revoked}
+  - {case_id: AWCP-PRESERVE-REVOKED-NEG-001, class: preserved_field_cannot_resurrect_revoked, expected_error: CHECKPOINT_PRESERVE_REVOKED_CONFLICT}
+  - {case_id: AWCP-SAME-EVENT-ADD-REVOKE-NEG-001, class: same_event_constraint_conflict, expected_error: CHECKPOINT_EVENT_CONSTRAINT_CONFLICT}
+  - {case_id: AWCP-AUTHORITY-STORY-SCOPE-NEG-001, class: source_issue_revision_cannot_mint_story_scope, expected_error: CHECKPOINT_EVENT_AUTHORITY_FIELD_FORBIDDEN}
+  - {case_id: AWCP-AUTHORITY-STATE-NEG-001, class: source_issue_revision_cannot_mint_persistence_state, expected_error: CHECKPOINT_EVENT_AUTHORITY_FIELD_FORBIDDEN}
+  - {case_id: AWCP-UNKNOWN-FIRST-PARENT-001, class: unverified_initial_parent_fails_closed, expected_error: CHECKPOINT_PARENT_BASELINE_UNKNOWN}
+  - {case_id: AWCP-VERIFIED-FIRST-PARENT-001, class: verified_parent_allows_chain_start, expected: parent_matches}
+  - {case_id: AWCP-LOCK-CONFLICT-001, class: lock_conflict_fail_closed, expected_error: CHECKPOINT_LOCK_CONFLICT}
+  - {case_id: AWCP-DUPLICATE-REVISION-001, class: duplicate_revision_identity_fail_closed, expected_error: CHECKPOINT_REVISION_DUPLICATE}
+  - {case_id: AWCP-PARENT-CHAIN-001, class: broken_parent_chain_fail_closed, expected_error: CHECKPOINT_PARENT_CHAIN_BROKEN}
+  - {case_id: AWCP-WORK-ITEM-MISMATCH-001, class: cross_work_item_revision_fail_closed, expected_error: CHECKPOINT_WORK_ITEM_MISMATCH}
+  - {case_id: AWCP-STALE-BASELINE-001, class: stale_baseline_checkpoint_fail_closed, expected_error: CHECKPOINT_BASELINE_STALE}
+  - {case_id: AWCP-TERMINAL-REQUIRED-001, class: checkpoint_or_close_terminal_required, expected_error: CHECKPOINT_TERMINAL_EVENT_REQUIRED}
+  - {case_id: AWCP-OUTSIDE-MUTATION-001, class: post_write_unrelated_continuity_mutation_rejected, expected_error: CHECKPOINT_UNRELATED_CONTINUITY_MUTATION}
+  - {case_id: AWCP-COMMIT-SHA-001, class: concrete_commit_required_for_post_write_verification, expected_error: CHECKPOINT_VERIFIED_COMMIT_INVALID}
+  - {case_id: AWCP-NO-WRITER-001, class: runtime_persistence_authority_absent, expected: no_network_git_connector_writer}
+  - {case_id: AWCP-TWO-PHASE-BOUNDARY-001, class: materialization_verification_is_not_final_canonicalization, expected: second_governed_finalization_required}
+  - {case_id: AWCP-FINALIZATION-PROPOSAL-001, class: verified_materialization_to_second_pending_proposal, expected: PENDING_FINALIZATION_WRITE}
+  - {case_id: AWCP-FINALIZATION-RECEIPT-FINGERPRINT-NEG-001, class: finalization_requires_exact_first_write_receipt, expected_error: CHECKPOINT_FINALIZATION_RECEIPT_MISMATCH}
+  - {case_id: AWCP-FINALIZATION-STATE-NEG-001, class: finalization_only_accepts_pending_unstamped_state, expected_error: CHECKPOINT_FINALIZATION_STATE_NOT_PENDING}
+  - {case_id: AWCP-FINALIZATION-OUTSIDE-MUTATION-NEG-001, class: second_write_cannot_mutate_outside_active_block, expected_error: CHECKPOINT_FINALIZATION_UNRELATED_MUTATION}
+  - {case_id: AWCP-FINALIZATION-REF-BOUNDARY-001, class: finalizer_cannot_claim_governed_target_ref, expected: external_ref_confirmation_required}
+  - {case_id: AWCP-CANDIDATE-NOT-ACTIVE-001, class: candidate_registration_boundary, expected: project_index_and_read_sets_absent}
+  - {case_id: AWCP-SINGLE-WRITE-ROUTE-001, class: anti_duplication, expected: reuse_revision_checkpoint_current_state_only}
 
 acceptance:
-  trust_adapter_suite: tools/learning_retriever/tests/test_checkpoint_trust_adapter.py
-  compiler_suite: tools/learning_retriever/tests/test_checkpoint_trust_bound.py
-  finalizer_suite: tools/learning_retriever/tests/test_checkpoint_finalizer_trust_bound.py
-  full_learning_retriever_regression_required: true
-  learning_smart_recall_cross_platform_required: true
+  primary_machine_suite: tools/learning_retriever/tests/test_checkpoint_compiler.py
+  hardening_machine_suite: tools/learning_retriever/tests/test_checkpoint_compiler_hardening.py
+  candidate_boundary_machine_suite: tools/learning_retriever/tests/test_checkpoint_compiler_candidate_boundary.py
+  finalization_machine_suite: tools/learning_retriever/tests/test_checkpoint_finalizer.py
   exact_head_ci_required: true
-  independent_T3_required: true
+  current_main_reconcile_required: true
+  independent_t3_required: true
+  activation_requires_separate_reviewed_slice: true
+  real_two_phase_checkpoint_transaction_is_later_validation_gate: true
