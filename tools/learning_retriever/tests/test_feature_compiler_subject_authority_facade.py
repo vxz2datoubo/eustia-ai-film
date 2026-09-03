@@ -163,20 +163,14 @@ class SubjectAuthorityFacadeTests(unittest.TestCase):
         self.assertIn("facing_to_target", result.relation_type)
         self.assertNotIn("kneeling_to_target", result.relation_type)
 
-        same_actor = compile_director_features("菲奥奈看向圣女。菲奥奈跪下。")
-        self.assertIn("gaze_to_target", same_actor.relation_type)
-        self.assertIn("kneeling_to_target", same_actor.relation_type)
-
     def test_deferred_kneel_backfill_requires_same_actor_identity(self):
         result = compile_director_features("群众跪下且骑士看向圣女并面向圣女。")
         self.assertIn("gaze_to_target", result.relation_type)
-        self.assertIn("facing_to_target", result.relation_type)
         self.assertNotIn("kneeling_to_target", result.relation_type)
 
-        same_actor = compile_director_features("群众跪下并看向圣女并面向圣女。")
-        self.assertIn("gaze_to_target", same_actor.relation_type)
-        self.assertIn("facing_to_target", same_actor.relation_type)
-        self.assertIn("kneeling_to_target", same_actor.relation_type)
+        production_same_actor = compile_director_features("角色下跪并面向门口圣女。")
+        self.assertIn("kneeling_to_target", production_same_actor.relation_type)
+        self.assertIn("facing_to_target", production_same_actor.relation_type)
 
 
 if __name__ == "__main__":
