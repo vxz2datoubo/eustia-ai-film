@@ -21,9 +21,14 @@ def _fixture(case_id: str) -> dict:
 def _base_pair() -> tuple[dict, dict]:
     before = _fixture("EOE-EXPLICIT-FAIL-001")
     before["eval_id"] = "FD-MEASURE-BEFORE"
-    before.setdefault("context", {})["work_item_id"] = "FD-MEASURE-WORK-ITEM"
+    context = before.setdefault("context", {})
+    context["work_item_id"] = "FD-MEASURE-WORK-ITEM"
+    context["model"] = "C-DANCE"
+    context["model_version"] = "2.5"
+    context["generation_id"] = "GEN::FD-MEASURE-BEFORE"
     after = deepcopy(before)
     after["eval_id"] = "FD-MEASURE-AFTER"
+    after["context"]["generation_id"] = "GEN::FD-MEASURE-AFTER"
     return before, after
 
 
@@ -64,7 +69,6 @@ def _make_after_exact_pass(after: dict) -> None:
 class FinalDeltaMeasurementContractTests(unittest.TestCase):
     def test_same_observed_value_cannot_resolve_by_switching_comparison_mode(self):
         before, after = _base_pair()
-        # Keep the same physically contradictory observed value. Only the ruler changes.
         observation = after["reverse_observation"]["expectation_observations"]["capture_intent"]
         observation["comparison_mode"] = "explicit_observation_judgment"
         observation["match_state"] = "MATCH"
@@ -80,6 +84,7 @@ class FinalDeltaMeasurementContractTests(unittest.TestCase):
         self.assertFalse(result["regression_candidate_handoff"]["eligible"])
         self.assertEqual(result["causal_evidence"]["status"], "NOT_ELIGIBLE_NOT_COMPARABLE")
         self.assertFalse(result["measurement_contract_binding"]["matched"])
+        self.assertTrue(result["source_pair_identity_binding"]["matched"])
 
     def test_expectation_provenance_drift_blocks_real_pass_from_being_attributed(self):
         before, after = _base_pair()
@@ -112,6 +117,7 @@ class FinalDeltaMeasurementContractTests(unittest.TestCase):
         result = _compile(before, after)
         self.assertEqual(result["comparison_status"], "COMPARABLE")
         self.assertTrue(result["measurement_contract_binding"]["matched"])
+        self.assertTrue(result["source_pair_identity_binding"]["matched"])
         self.assertIn("capture_intent", result["repair_outcome"]["resolved_fields"])
         self.assertTrue(result["regression_candidate_handoff"]["eligible"])
         self.assertFalse(result["causal_evidence"]["causal_claim_authorized"])
