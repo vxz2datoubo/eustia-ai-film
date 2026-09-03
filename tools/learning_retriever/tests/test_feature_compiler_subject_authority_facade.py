@@ -26,7 +26,7 @@ class SubjectAuthorityFacadeTests(unittest.TestCase):
                 return None
             raise
 
-    def assert_no_actor_route(self, text: str) -> None:
+    def assert_no_actor_route(self, text: str) -> dict:
         task = compile_retrieval_task(
             text,
             route_data=ROUTE_DATA,
@@ -41,6 +41,11 @@ class SubjectAuthorityFacadeTests(unittest.TestCase):
             task["feature_compiler_receipt"]["actor_terms_source"],
             "PROJECT_INDEX.canonical.character_db",
         )
+        self.assertEqual(
+            task["feature_compiler_receipt"]["actor_subject_binding"],
+            "per_target_event_v2",
+        )
+        return task
 
     def test_public_compiler_has_no_actor_term_injection_surface(self):
         feature_params = inspect.signature(compile_director_features).parameters
@@ -85,8 +90,13 @@ class SubjectAuthorityFacadeTests(unittest.TestCase):
                 self.assertIn("kneeling_to_target", result.relation_type)
 
     def test_compound_noun_ending_di_is_not_manner_tail(self):
-        self.assert_no_actor_route("骑士训练基地面向圣女。")
-        self.assert_no_actor_route("祭司驻地面向教会。")
+        for text in (
+            "骑士训练基地面向圣女。",
+            "祭司驻地面向教会。",
+            "骑士出生地面向圣女。",
+        ):
+            with self.subTest(text=text):
+                self.assert_no_actor_route(text)
         result = compile_director_features("骑士十分郑重地面向圣女。")
         self.assertIn("facing_to_target", result.relation_type)
 
@@ -119,6 +129,33 @@ class SubjectAuthorityFacadeTests(unittest.TestCase):
 
         result = compile_director_features("菲奥奈看向圣女。")
         self.assertIn("gaze_to_target", result.relation_type)
+
+    def test_actor_support_is_bound_to_specific_target_bearing_event(self):
+        kneel = self.assert_no_actor_route("群众下跪，雕像朝着圣女跪下。")
+        self.assertIn("body_orientation", kneel.get("spatial_action_features") or [])
+
+        gaze = self.assert_no_actor_route("菲奥奈观察远处，雕像看向圣女。")
+        self.assertIn("gaze_direction", gaze.get("spatial_action_features") or [])
+
+    def test_possessive_actor_observable_is_bounded_positive(self):
+        for text in (
+            "菲奥奈的目光朝向圣女。",
+            "她的视线朝向圣女。",
+        ):
+            with self.subTest(text=text):
+                result = compile_director_features(text)
+                self.assertIn("gaze_to_target", result.relation_type)
+
+        self.assert_no_actor_route("英格兰的目光朝向圣女。")
+        self.assert_no_actor_route("雕像的视线朝向圣女。")
+
+    def test_scene_prefix_localizer_de_preserves_real_human_subject(self):
+        result = compile_director_features("礼拜堂中央的年轻祭司面向圣女。")
+        self.assertIn("facing_to_target", result.relation_type)
+
+    def test_intervening_nonagent_clause_invalidates_stale_agency(self):
+        self.assert_no_actor_route("菲奥奈看向远处，雕像闪现，随后面向圣女。")
+        self.assert_no_actor_route("菲奥奈看向远处，摄影机推进，随后面向圣女。")
 
 
 if __name__ == "__main__":
