@@ -102,13 +102,15 @@ class DirectorLearningRuntime:
             description, work_item_packet
         )
 
-        # The normal constructor caches the canonical character projection. Some
-        # adversarial/runtime harnesses deliberately bypass __init__; those paths
-        # must fail closed by rebuilding the same PROJECT_INDEX-bound projection,
-        # not by assuming caller-supplied actor terms.
+        # Normal construction caches the canonical character projection. Some
+        # adversarial harnesses deliberately bypass __init__ and may give a cwd-
+        # relative project_root that is not the repository root. In that narrow
+        # fallback, derive authority from this module's own governed checkout,
+        # never from the caller/cwd path.
         canonical_character_terms = getattr(self, "canonical_character_terms", None)
         if canonical_character_terms is None:
-            canonical_character_terms = load_canonical_character_terms(self.project_root)
+            module_project_root = Path(__file__).resolve().parents[3]
+            canonical_character_terms = load_canonical_character_terms(module_project_root)
 
         # Close the remote source-revision TOCTOU window at the first downstream
         # compiler boundary. If the source Issue changed after initial resolution,
