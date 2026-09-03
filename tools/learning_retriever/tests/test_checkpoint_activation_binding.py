@@ -8,6 +8,11 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 CHECKPOINT_POLICY = "10_运行时/active_work_item_checkpoint_compiler.yaml"
 CHECKPOINT_REGRESSION = "11_验收/active_work_item_checkpoint_compiler_regression_cases.yaml"
 CONTINUITY = "07_连续性与生产状态/连续性与当前生产状态.md"
+REQUIRED_FLAGS = [
+    "active_work_item_checkpoint_compiler_required_for_checkpoint_or_series_close",
+    "active_work_item_checkpoint_runtime_is_proposal_readback_only",
+    "active_work_item_checkpoint_runtime_cannot_write_or_confirm_governed_ref",
+]
 
 
 class CheckpointActivationBindingTests(unittest.TestCase):
@@ -15,12 +20,12 @@ class CheckpointActivationBindingTests(unittest.TestCase):
         self.project = yaml.safe_load((REPO_ROOT / "PROJECT_INDEX.yaml").read_text(encoding="utf-8"))
         self.read_sets = yaml.safe_load((REPO_ROOT / "10_运行时/read_sets.yaml").read_text(encoding="utf-8"))
         self.write_routes = yaml.safe_load((REPO_ROOT / "10_运行时/write_routes.yaml").read_text(encoding="utf-8"))
+        self.contract = yaml.safe_load((REPO_ROOT / CHECKPOINT_POLICY).read_text(encoding="utf-8"))
 
     def test_project_index_registers_accepted_checkpoint_candidate_once(self) -> None:
         policy = self.project["policy"]
-        self.assertTrue(policy["active_work_item_checkpoint_compiler_required_for_checkpoint_or_series_close"])
-        self.assertTrue(policy["active_work_item_checkpoint_runtime_is_proposal_readback_only"])
-        self.assertTrue(policy["active_work_item_checkpoint_runtime_cannot_write_or_confirm_governed_ref"])
+        for flag in REQUIRED_FLAGS:
+            self.assertTrue(policy[flag])
 
         canonical = self.project["canonical"]
         self.assertEqual(canonical["active_work_item_checkpoint_compiler"], CHECKPOINT_POLICY)
@@ -31,6 +36,30 @@ class CheckpointActivationBindingTests(unittest.TestCase):
         effective = self.project["effective_sources"]
         self.assertEqual(effective[CHECKPOINT_POLICY], "github_verified")
         self.assertEqual(effective[CHECKPOINT_REGRESSION], "github_verified")
+
+    def test_contract_requires_same_project_index_activation_tuple_at_runtime(self) -> None:
+        binding = self.contract["activation_binding"]
+        self.assertTrue(binding["fixed_github_readback_required"])
+        self.assertEqual(binding["required_policy_flags"], REQUIRED_FLAGS)
+        self.assertEqual(
+            binding["canonical_registration"],
+            {"key": "active_work_item_checkpoint_compiler", "value": CHECKPOINT_POLICY},
+        )
+        self.assertEqual(
+            binding["regression_registration"],
+            {
+                "key": "active_work_item_checkpoint_compiler_regression_cases",
+                "value": CHECKPOINT_REGRESSION,
+            },
+        )
+        self.assertEqual(binding["effective_source_required"][CHECKPOINT_POLICY], "github_verified")
+        self.assertEqual(binding["effective_source_required"][CHECKPOINT_REGRESSION], "github_verified")
+        self.assertFalse(binding["file_presence_or_importability_is_activation_authority"])
+        self.assertFalse(binding["local_branch_registration_is_activation_authority"])
+        self.assertEqual(
+            binding["missing_or_mismatched_tuple"],
+            "fail_closed_before_continuity_or_source_issue_consumption",
+        )
 
     def test_checkpoint_read_set_is_dedicated_and_not_always_on(self) -> None:
         read_sets = self.read_sets["read_sets"]
@@ -84,19 +113,18 @@ class CheckpointActivationBindingTests(unittest.TestCase):
         self.assertTrue(rules["revision_checkpoint_compiler_must_not_be_in_directing_always"])
         self.assertTrue(rules["revision_checkpoint_runtime_cannot_write_or_claim_persistence"])
 
-        contract = yaml.safe_load((REPO_ROOT / CHECKPOINT_POLICY).read_text(encoding="utf-8"))
-        boundary = contract["authority_boundary"]
+        boundary = self.contract["authority_boundary"]
         self.assertTrue(boundary["this_component_has_no_persistence_authority"])
         self.assertTrue(boundary["this_component_has_no_github_write_capability"])
         self.assertTrue(boundary["this_component_has_no_governed_ref_confirmation_authority"])
-        transaction = contract["write_transaction_external_contract"]
+        transaction = self.contract["write_transaction_external_contract"]
         self.assertFalse(transaction["runtime_writes"])
         self.assertEqual(transaction["steps"][-1], "external_confirm_governed_target_ref")
         self.assertEqual(
             transaction["second_write_finalization"]["canonical_reporting_before_external_ref_confirmation"],
             "forbidden",
         )
-        isolation = contract["candidate_isolation"]
+        isolation = self.contract["candidate_isolation"]
         self.assertEqual(isolation["ordinary_directing_always_read"], "forbidden")
         self.assertEqual(isolation["new_parallel_continuity_write_route"], "forbidden")
 
