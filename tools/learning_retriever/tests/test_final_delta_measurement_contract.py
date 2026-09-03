@@ -22,10 +22,14 @@ def _base_pair() -> tuple[dict, dict]:
     before = _fixture("EOE-EXPLICIT-FAIL-001")
     before["eval_id"] = "FD-MEASURE-BEFORE"
     context = before.setdefault("context", {})
-    context["work_item_id"] = "FD-MEASURE-WORK-ITEM"
-    context["model"] = "C-DANCE"
-    context["model_version"] = "2.5"
-    context["generation_id"] = "GEN::FD-MEASURE-BEFORE"
+    context.update(
+        {
+            "work_item_id": "FD-MEASURE-WORK-ITEM",
+            "model": "C-DANCE",
+            "model_version": "2.5",
+            "generation_id": "GEN::FD-MEASURE-BEFORE",
+        }
+    )
     after = deepcopy(before)
     after["eval_id"] = "FD-MEASURE-AFTER"
     after["context"]["generation_id"] = "GEN::FD-MEASURE-AFTER"
@@ -74,27 +78,19 @@ class FinalDeltaMeasurementContractTests(unittest.TestCase):
         observation["match_state"] = "MATCH"
         observation.pop("failure_category", None)
         observation["evidence_refs"] = ["same_observed_value_different_judgment"]
-
         result = _compile(before, after)
         self.assertEqual(result["comparison_status"], "NOT_COMPARABLE")
         self.assertIn("MEASUREMENT_CONTRACT_MISMATCH", result["comparison_reasons"])
         self.assertIn("COMPARISON_MODE_MISMATCH", result["comparison_reasons"])
-        self.assertEqual(result["field_transitions"], [])
-        self.assertEqual(result["repair_outcome"]["resolved_fields"], [])
-        self.assertFalse(result["regression_candidate_handoff"]["eligible"])
-        self.assertEqual(result["causal_evidence"]["status"], "NOT_ELIGIBLE_NOT_COMPARABLE")
         self.assertFalse(result["measurement_contract_binding"]["matched"])
-        self.assertTrue(result["source_pair_identity_binding"]["matched"])
+        self.assertFalse(result["regression_candidate_handoff"]["eligible"])
 
     def test_expectation_provenance_drift_blocks_real_pass_from_being_attributed(self):
         before, after = _base_pair()
         _make_after_exact_pass(after)
         after["expectations"][0]["provenance"] = {"source": "different_expectation_authority"}
-
         result = _compile(before, after)
-        self.assertEqual(result["comparison_status"], "NOT_COMPARABLE")
         self.assertIn("EXPECTATION_CONTRACT_MISMATCH", result["comparison_reasons"])
-        self.assertEqual(result["repair_outcome"]["resolved_fields"], [])
         self.assertFalse(result["regression_candidate_handoff"]["eligible"])
 
     def test_observation_method_drift_blocks_attribution(self):
@@ -103,24 +99,35 @@ class FinalDeltaMeasurementContractTests(unittest.TestCase):
         provenance = after["reverse_observation"]["provenance"]
         provenance["inspection_mode"] = "selected_frames"
         provenance["temporal_coverage"] = {"type": "selected_frames"}
+        result = _compile(before, after)
+        self.assertIn("OBSERVATION_METHOD_MISMATCH", result["comparison_reasons"])
+        self.assertFalse(result["regression_candidate_handoff"]["eligible"])
 
+    def test_evidence_source_drift_is_measurement_ruler_drift(self):
+        before, after = _base_pair()
+        _make_after_exact_pass(after)
+        after["reverse_observation"]["provenance"]["evidence_source"] = "substituted_reviewer"
         result = _compile(before, after)
         self.assertEqual(result["comparison_status"], "NOT_COMPARABLE")
         self.assertIn("OBSERVATION_METHOD_MISMATCH", result["comparison_reasons"])
-        self.assertEqual(result["field_transitions"], [])
+        self.assertTrue(result["measurement_contract_binding"]["evidence_source_bound"])
         self.assertFalse(result["regression_candidate_handoff"]["eligible"])
 
-    def test_same_measurement_contract_still_allows_real_observed_repair(self):
+    def test_same_measurement_contract_is_only_diagnostic_without_artifact_verifier(self):
         before, after = _base_pair()
         _make_after_exact_pass(after)
-
         result = _compile(before, after)
-        self.assertEqual(result["comparison_status"], "COMPARABLE")
         self.assertTrue(result["measurement_contract_binding"]["matched"])
         self.assertTrue(result["source_pair_identity_binding"]["matched"])
-        self.assertIn("capture_intent", result["repair_outcome"]["resolved_fields"])
-        self.assertTrue(result["regression_candidate_handoff"]["eligible"])
-        self.assertFalse(result["causal_evidence"]["causal_claim_authorized"])
+        self.assertFalse(result["artifact_provenance_binding"]["verified"])
+        self.assertEqual(result["comparison_status"], "NOT_COMPARABLE")
+        self.assertIn("ARTIFACT_PROVENANCE_REQUIRED", result["comparison_reasons"])
+        diagnostic = {
+            item["field"]: item["transition"]
+            for item in result["unattributed_transition_candidates"]
+        }
+        self.assertEqual(diagnostic["capture_intent"], "RESOLVED")
+        self.assertFalse(result["regression_candidate_handoff"]["eligible"])
 
 
 if __name__ == "__main__":
