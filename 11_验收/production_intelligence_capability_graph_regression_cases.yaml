@@ -1,0 +1,317 @@
+suite_id: EUSTIA_PRODUCTION_INTELLIGENCE_CAPABILITY_GRAPH_REGRESSION
+version: "0.1.0"
+status: candidate
+source_issue: 59
+
+principles:
+  - capability_graph_routes_but_does_not_replace_domain_authority
+  - epistemic_zone_is_not_truth_authority
+  - dependency_expansion_is_sparse_and_material
+  - handoff_preserves_identity_invariants_unknowns_and_reference_roles
+  - expected_observed_and_targeted_repair_remain_unique_downstream_authorities
+  - experiment_strategy_must_match_uncertainty_structure
+  - no_single_global_quality_score
+
+cases:
+  - id: REG-PICG-001
+    title: explicit_user_intent_beats_external_best_practice
+    input:
+      user_statement: "这一镜我明确要固定低机位，不要为了更容易生成改成平视。"
+      external_candidate: "coverage angle may improve subject readability"
+    expected:
+      epistemic_zone: K1_EXPLICIT_USER
+      selected_capabilities: [CAP-STORY-DIRECTOR-INTENT, CAP-CAMERA-FRAMING]
+      camera_constraint_class: hard_or_live_lock
+      external_candidate_may_override: false
+      errors: []
+
+  - id: REG-PICG-002
+    title: tacit_preference_remains_inference
+    input:
+      observations:
+        - user_repeatedly_rejects_global_color_filters
+        - user_prefers_motivated_light_sources_in_multiple_reviews
+      explicit_user_confirmation: false
+    expected:
+      epistemic_zone: K2_TACIT_OR_IMPLICIT
+      may_render_as_user_confirmed_quote: false
+      required_fields: [confidence, evidence]
+      behavior: guided_candidate_or_verify_when_material
+
+  - id: REG-PICG-003
+    title: adjacent_expert_knowledge_is_explainable_candidate
+    input:
+      problem: intended_framing_is_lost_between_previs_and_downstream_crop
+      external_source_class: T1_ASC_FDL
+    expected:
+      epistemic_zone: K3_ADJACENT_EXPERT
+      selected_capabilities: [CAP-CAMERA-FRAMING]
+      candidate_mechanism: framing_intent_receipt
+      source_scope_boundary_required: true
+      external_standard_becomes_project_authority: false
+
+  - id: REG-PICG-004
+    title: frontier_physics_unknown_does_not_become_prompt_skill
+    input:
+      problem: scarf_load_transfer_keeps_morphing_after_multiple_prompt_rewrites
+      evidence: insufficient_for_causal_model_claim
+    expected:
+      epistemic_zone: K4_FRONTIER_OR_OPAQUE
+      selected_capabilities: [CAP-BLOCKING-SPATIAL, CAP-PREVIS-GEOMETRY, CAP-PHYSICS-CONTACT, CAP-MODEL-REFERENCE, CAP-REVERSE-EVAL, CAP-EXPERIMENT-DESIGN]
+      forbidden:
+        - claim_model_can_never_do_it
+        - invent_stable_prompt_rule
+      next_strategy: SEQUENTIAL_PROBE
+
+  - id: REG-PICG-005
+    title: scarf_contact_failure_sparse_department_expansion
+    input:
+      problem_signatures: [support_contact_topology_failure, horizontal_trajectory_drift, reference_appearance_contamination_hypothesis]
+      sound_problem: false
+      color_problem: false
+    expected:
+      required_capabilities:
+        - CAP-BLOCKING-SPATIAL
+        - CAP-PREVIS-GEOMETRY
+        - CAP-PHYSICS-CONTACT
+        - CAP-ASSET-REFERENCE-PROVENANCE
+        - CAP-MODEL-REFERENCE
+        - CAP-REVERSE-EVAL
+        - CAP-EXPERIMENT-DESIGN
+      forbidden_capabilities: [CAP-SOUND, CAP-LIGHT-COLOR]
+      warning_absent: DEPARTMENT_OVEREXPANSION
+
+  - id: REG-PICG-006
+    title: exposition_problem_expands_representation_attention_sound_not_every_department
+    input:
+      problem_signatures: [exposition_stall, worldbuilding_information, dialogue_density]
+      camera_failure_reported: false
+      contact_failure_reported: false
+    expected:
+      required_domains: [SCRIPT_ADAPTATION, DIRECTOR, EDITORIAL, SOUND]
+      optional_domains: [CINEMATOGRAPHY_FRAMING]
+      forbidden_forced_domains: [PREVIS_GEOMETRY]
+      rule: camera_enters_only_if_representation_or_attention_plan_makes_it_material
+
+  - id: REG-PICG-007
+    title: seedance_reference_responsibility_split
+    input:
+      target_model: Seedance_2_5
+      references:
+        white_model: [geometry, trajectory, camera, blocking]
+        appearance_image: [identity, scene, material, lighting, color]
+    expected:
+      selected_capabilities: [CAP-ASSET-REFERENCE-PROVENANCE, CAP-PREVIS-GEOMETRY, CAP-MODEL-REFERENCE]
+      reference_conflict: false
+      model_version_bound: true
+      revalidation_on_model_change: true
+
+  - id: REG-PICG-008
+    title: strong_reference_owner_conflict_fails
+    input:
+      reference_responsibilities:
+        camera:
+          owners:
+            - WHITE_MODEL
+            - REFERENCE_VIDEO
+          both_declared_strong: true
+          compatibility_proven: false
+    expected:
+      error: STRONG_REFERENCE_RESPONSIBILITY_CONFLICT
+      executable_handoff: false
+
+  - id: REG-PICG-009
+    title: downstream_handoff_preserves_work_item_and_live_constraints
+    input:
+      upstream:
+        work_item_id: KAIM-SCARF-CLOTHESLINE-CURRENT
+        hard_invariants: [fixed_clothesline, body_below_line, no_open_sky]
+      downstream:
+        work_item_id: KAIM-SCARF-CLOTHESLINE-CURRENT
+    expected:
+      work_item_match: true
+      hard_invariants_preserved: true
+      executable_handoff: true
+
+  - id: REG-PICG-010
+    title: downstream_work_item_mismatch_fails
+    input:
+      upstream_work_item_id: KAIM-SCARF-CLOTHESLINE-CURRENT
+      downstream_work_item_id: KAIM-HIGH-SEARCH-OLD
+    expected:
+      error: WORK_ITEM_IDENTITY_MISMATCH
+      executable_handoff: false
+
+  - id: REG-PICG-011
+    title: failed_dimension_uses_existing_targeted_repair
+    input:
+      eval:
+        dimension: EDIT_ATTENTION_HANDOFF
+        result: FAIL
+    expected:
+      selected_capabilities: [CAP-REVERSE-EVAL, CAP-TARGETED-REPAIR]
+      create_new_repair_authority: false
+      repair_owner: existing_targeted_repair_policy
+
+  - id: REG-PICG-012
+    title: global_quality_score_cannot_hide_topology_failure
+    input:
+      dimensions:
+        aesthetic_quality: PASS
+        temporal_stability: PASS
+        support_contact_topology: FAIL
+      proposed_global_score: 0.87
+    expected:
+      final_status: FAIL_OR_TARGETED_REPAIR
+      warning_or_error: GLOBAL_SCORE_HIDES_MATERIAL_FAILURE
+      global_score_can_override_material_failure: false
+
+  - id: REG-PICG-013
+    title: multifactor_failure_routes_screening_not_prompt_pileup
+    input:
+      plausible_factors:
+        - dirty_motion_reference
+        - camera_depth_bias
+        - scarf_contact_underconstraint
+        - excessive_negative_constraints
+        - target_model_variance
+      primary_factor_known: false
+    expected:
+      selected_capabilities: [CAP-EXPERIMENT-DESIGN]
+      strategy: SCREENING
+      factor_ledger_required: true
+      uncontrolled_all_at_once_rewrite: forbidden
+
+  - id: REG-PICG-014
+    title: one_primary_factor_routes_comparative_ab
+    input:
+      hypothesis: dirty_motion_reference_causes_appearance_contamination
+      primary_factor_known: true
+      alternate_material_factors_locked: true
+    expected:
+      strategy: COMPARATIVE_AB
+      compare_same_story_goal: true
+      same_model_version: true
+      response_dimensions: [REFERENCE_RESPONSIBILITY, IDENTITY_ENTITY_SEMANTICS, TEMPORAL_STABILITY]
+
+  - id: REG-PICG-015
+    title: expensive_final_model_uses_sequential_probe_only_for_transferable_dimensions
+    input:
+      final_model_cost: HIGH
+      proxy_model_available: true
+      target_dimensions:
+        - event_order
+        - horizontal_trajectory
+        - final_visual_quality
+        - target_model_specific_reference_behavior
+      project_transfer_evidence:
+        event_order: supported
+        horizontal_trajectory: supported
+        final_visual_quality: unsupported
+        target_model_specific_reference_behavior: unsupported
+    expected:
+      strategy: SEQUENTIAL_PROBE
+      proxy_may_test: [event_order, horizontal_trajectory]
+      final_model_must_test: [final_visual_quality, target_model_specific_reference_behavior]
+      proxy_pass_equals_final_pass: false
+
+  - id: REG-PICG-016
+    title: evaluator_disagreement_routes_measurement_system_check
+    input:
+      same_output: true
+      reviewers:
+        - reviewer_A_topology: PASS
+        - reviewer_B_topology: FAIL
+      decision_impact: HIGH
+    expected:
+      selected_capabilities: [CAP-REVERSE-EVAL, CAP-EXPERIMENT-DESIGN]
+      strategy: MEASUREMENT_SYSTEM_CHECK
+      generator_failure_claim_before_check: forbidden
+      inspect: [repeatability, reproducibility, sampling_strategy]
+
+  - id: REG-PICG-017
+    title: version_sensitive_model_claim_revalidates
+    input:
+      knowledge: Seedance_2_5_white_model_behavior
+      stored_model_version: "2.5"
+      current_model_version: "future_changed_version"
+    expected:
+      maturity_transition: needs_revalidation
+      default_activation: false
+      external_official_refresh_or_real_generation_required: true
+
+  - id: REG-PICG-018
+    title: high_impact_story_change_still_requires_human_gate
+    input:
+      proposed_change: replace_core_character_identity
+      source: external_master_case
+    expected:
+      error: HIGH_IMPACT_GATE_BYPASS_if_silent
+      automatic_change: false
+      required_owner: USER_CREATIVE_AUTHORITY
+
+  - id: REG-PICG-019
+    title: event_segmentation_informs_cut_candidate_not_cut_command
+    input:
+      event_change:
+        actor_goal_change: true
+        prediction_error: plausible
+      current_director_plan_requires_hold: true
+    expected:
+      selected_capabilities: [CAP-EDITORIAL-ATTENTION, CAP-STORY-DIRECTOR-INTENT]
+      event_boundary_is_candidate: true
+      must_cut: false
+      director_intent_can_preserve_hold: true
+
+  - id: REG-PICG-020
+    title: master_case_mechanism_not_surface_style
+    input:
+      source_case: Deakins_Prisoners_location_light_staging
+      current_problem: lighting_prompt_keeps_failing_due_to_no_motivated_source
+    expected:
+      mechanism_transfer:
+        - revisit_location_or_scene_affordance
+        - motivated_source
+        - staging_interaction
+      forbidden_transfer:
+        - copy_exact_palette
+        - copy_exact_fixture_recipe
+        - claim_Deakins_style_as_universal
+      maturity: candidate
+
+  - id: REG-PICG-021
+    title: K4_unknown_survives_department_handoff
+    input:
+      unknown:
+        question: exact_negative_prompt_semantics_of_current_target_model
+        epistemic_zone: K4_FRONTIER_OR_OPAQUE
+        materiality: HIGH
+      handoff_to: MODEL_ADAPTER
+    expected:
+      unknown_preserved: true
+      safe_default_preserved: true
+      may_be_silently_dropped: false
+
+  - id: REG-PICG-022
+    title: packet_does_not_dump_full_internal_analysis
+    input:
+      downstream_task: COMPILE_MODEL_EXECUTION
+      proposed_packet_contains:
+        - full_research_notes
+        - all_rejected_director_options
+        - hidden_internal_reasoning
+        - current_hard_invariants
+        - reference_roles
+        - expected_observables
+    expected:
+      keep: [current_hard_invariants, reference_roles, expected_observables]
+      strip: [full_research_notes, all_rejected_director_options, hidden_internal_reasoning]
+      warning: HANDOFF_PACKET_TOO_VERBOSE
+
+acceptance:
+  - all_cases_preserve_existing_authorities
+  - no_case_requires_global_activation_of_candidate_knowledge
+  - no_case_collapses_material_dimensions_into_single_score
+  - K2_and_K4_boundaries_are_fail_closed
+  - dependency_expansion_is_sparse
+  - experiment_router_does_not_claim_statistical_significance_from_tiny_samples
