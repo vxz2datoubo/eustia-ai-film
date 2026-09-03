@@ -47,7 +47,7 @@ _TEMPORAL_GLUE = (
 _SIMPLE_MODIFIERS = (
     "突然", "缓缓", "慢慢", "迅速", "立刻", "马上", "纷纷", "共同", "一起", "一同",
     "全都", "都", "持续", "始终", "一直", "十分", "非常", "极其", "郑重", "恭敬",
-    "虔诚", "随后", "随即", "然后", "接着", "继而", "于是", "再", "又", "便",
+    "虔诚", "随后", "随即", "然后", "接着", "继而", "于是", "再", "又", "便", "先",
 )
 _FACING_ACTIONS = (
     "转过身朝向", "转过身面向", "转身朝向", "转身面向", "回身朝向", "回身面向",
@@ -58,6 +58,7 @@ _GAZE_ACTIONS = (
 )
 _KNEEL_ACTIONS = ("伏地跪拜", "跪着朝", "跪向", "下跪", "跪拜", "拜下", "拜倒", "跪下")
 _DIRECTION_MARKERS = ("面朝", "朝着", "对着", "向着", "朝", "向")
+_DIRECTION_PATTERN = re.compile("面朝|朝着|对着|向着|朝|向")
 _TARGET_RELATIONS = {
     "gaze_to_target",
     "facing_to_target",
@@ -182,15 +183,18 @@ def _first_action(clause: str, actions: tuple[str, ...]) -> tuple[int, str] | No
 
 
 def _last_direction_marker(prefix: str) -> tuple[int, str] | None:
-    hits: list[tuple[int, int, str]] = []
-    for marker in _DIRECTION_MARKERS:
-        pos = prefix.rfind(marker)
-        if pos >= 0:
-            hits.append((pos, -len(marker), marker))
-    if not hits:
+    """Return the last non-overlapping directional marker.
+
+    Regex alternation is longest-first, so ``面朝`` is one marker rather than an
+    outer ``面朝`` plus a later overlapping bare ``朝``. The same boundary keeps
+    ``朝着``/``向着`` intact before subject validation.
+    """
+
+    matches = list(_DIRECTION_PATTERN.finditer(prefix))
+    if not matches:
         return None
-    pos, _, marker = max(hits, key=lambda item: (item[0], -item[1]))
-    return pos, marker
+    match = matches[-1]
+    return match.start(), match.group(0)
 
 
 def _resolve_agent_class(
@@ -212,9 +216,6 @@ def _resolve_agent_class(
         return classified, True
     if last_agent in {"ACTOR", "CAMERA"}:
         return last_agent, False
-    # A bare first-clause directive such as “朝向圣女” is a legitimate
-    # character-blocking imperative. The same ellipsis after a camera clause is
-    # not, because camera agency is inherited above.
     if first_clause:
         return "ACTOR", False
     return "UNKNOWN", False
@@ -274,13 +275,6 @@ def _scan_actor_subject_support(
                 last_agent=last_agent,
                 first_clause=first_clause,
             )
-
-            # Once this clause has proven ACTOR/CAMERA agency, a later action may
-            # inherit it even if its prefix contains the already-consumed action
-            # material (“角色下跪并面向…”, “群众看到圣女后跪拜”). This does not
-            # create target semantics; it only prevents the facade from deleting
-            # a relation the core already emitted. A newly explicit ACTOR/CAMERA
-            # still replaces the carried class below.
             if seen_event and agent_class == "OTHER" and clause_agent in {"ACTOR", "CAMERA"}:
                 agent_class = clause_agent
                 explicit = False
@@ -336,14 +330,9 @@ def _sanitize_actor_target_relations(
 
     if not any(value in _BODY_RELATIONS for value in relation):
         failure = [value for value in failure if value != "body_orientation_target_fail"]
-        # Preserve genuine non-target actor orientation (e.g. 人物转向左侧).
-        # Remove body_orientation only when an invalid facing/kneel relation was
-        # filtered and no actor-facing observable survives the authority scan.
         if (removed_facing or removed_kneel) and not support["facing"]:
             spatial = [value for value in spatial if value != "body_orientation"]
 
-    # Same rule for non-target gaze: “角色看向远处” remains observable, while a
-    # statue/guitar/camera cannot mint actor gaze_direction through target syntax.
     if removed_gaze and not support["gaze"]:
         spatial = [value for value in spatial if value != "gaze_direction"]
 
