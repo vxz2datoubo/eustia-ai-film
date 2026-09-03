@@ -1,0 +1,96 @@
+suite_id: BINARY_ARTIFACT_EVIDENCE_BRIDGE_V1
+status: candidate
+source_issue: 107
+runtime: tools/learning_retriever/learning_retriever/binary_artifact_evidence.py
+policy: 10_运行时/binary_artifact_evidence_bridge_candidate.yaml
+
+invariants:
+  actual_bytes_must_be_read_by_runtime: true
+  caller_digest_never_authoritative: true
+  serialized_receipt_never_verifier_input: true
+  locator_never_content_identity: true
+  same_bytes_under_different_locators_are_same_content: true
+  distinct_bytes_only_prove_distinct_content: true
+  distinct_content_does_not_prove_distinct_generation_event: true
+  receipt_does_not_register_formal_asset: true
+  receipt_does_not_prove_pixels_opened: true
+  runtime_has_no_write_authority: true
+  candidate_is_unregistered_unactivated: true
+
+cases:
+  - id: BAE-SINGLE-BYTES-001
+    input: readable_regular_file
+    expected_byte_verification_state: BYTE_VERIFIED
+    expected_hash_source: runtime_streamed_actual_bytes
+    expected_generation_binding_state: UNVERIFIED
+    expected_formal_asset_state: UNVERIFIED
+
+  - id: BAE-COPIED-SAME-CONTENT-001
+    before_locator: file_A
+    after_locator: separately_copied_file_B
+    bytes_equal: true
+    expected_same_content: true
+    expected_distinct_content_verified: false
+    expected_distinct_generation_events_verified: false
+
+  - id: BAE-RENAMED-SAME-CONTENT-001
+    before_locator: original_name
+    after_locator: renamed_copy
+    bytes_equal: true
+    expected_same_content: true
+    expected_locator_fingerprints_equal: false
+    expected_content_identity_equal: true
+
+  - id: BAE-ONE-BYTE-DIFFERENCE-001
+    before_bytes: abcdef
+    after_bytes: abcdeg
+    expected_same_content: false
+    expected_distinct_content_verified: true
+    expected_claim_scope: BYTE_CONTENT_IDENTITY_ONLY
+    expected_generation_binding_state: UNVERIFIED
+
+  - id: BAE-EMPTY-FILE-001
+    bytes: empty
+    expected_byte_length: 0
+    expected_sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+    expected_byte_verification_state: BYTE_VERIFIED
+
+  - id: BAE-FORGED-DIGEST-NO-SURFACE-001
+    caller_attempts:
+      - sha256
+      - byte_length
+      - verified_boolean
+    expected_public_verifier_parameters: [artifact_path, chunk_size]
+    expected_behavior: no_caller_digest_authority_surface
+
+  - id: BAE-SERIALIZED-RECEIPT-REPLAY-001
+    mutation: pass_serialized_receipt_mapping_as_artifact_input
+    expected_error_code: ARTIFACT_LOCATOR_INVALID
+
+  - id: BAE-MISSING-FILE-001
+    mutation: nonexistent_path
+    expected_error_code: ARTIFACT_NOT_FOUND
+
+  - id: BAE-DIRECTORY-LOCATOR-001
+    mutation: directory_path
+    expected_error_code: ARTIFACT_NOT_REGULAR_FILE
+
+  - id: BAE-SYMLINK-LOCATOR-001
+    mutation: symlink_path
+    expected_error_code: ARTIFACT_LOCATOR_INDIRECTION_FORBIDDEN
+
+  - id: BAE-DISTINCT-BYTES-NOT-GENERATION-PROOF-001
+    before_after_distinct_content: true
+    expected_distinct_content_verified: true
+    expected_distinct_generation_events_verified: false
+    expected_generation_binding_state: UNVERIFIED
+    final_delta_attribution_authorized: false
+
+isolation_gates:
+  project_index_must_not_register_component: true
+  read_sets_must_not_activate_component: true
+  write_routes_must_not_contain_component: true
+  asset_registry_must_not_be_modified_by_runtime: true
+  continuity_must_not_be_modified_by_runtime: true
+  final_delta_must_not_import_or_activate_candidate_in_this_slice: true
+  no_subprocess_git_network_or_file_write_capability: true
