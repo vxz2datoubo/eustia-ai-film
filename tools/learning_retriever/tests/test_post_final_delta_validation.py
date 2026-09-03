@@ -4,7 +4,7 @@ import unittest
 
 import yaml
 
-from learning_retriever.post_final_delta import (
+from learning_retriever._post_final_delta_core_v3 import (
     STRUCTURAL_GATE_CODES,
     PostFinalDeltaValidationError,
     assess_post_final_delta_validation,
@@ -169,6 +169,8 @@ class PostFinalDeltaValidationTests(unittest.TestCase):
         self.assertTrue(principles["contradictions_must_remain_visible"])
         self.assertTrue(principles["maturity_promotion_forbidden"])
         self.assertTrue(principles["regression_proposal_is_not_regression_write"])
+        self.assertTrue(principles["final_delta_artifact_gate_cannot_be_relaxed_downstream"])
+        self.assertTrue(principles["diagnostic_transition_is_not_attributed_repair"])
 
     def test_same_version_same_exact_lesson_forms_one_supporting_cohort(self):
         result = _assess(
@@ -348,8 +350,13 @@ class PostFinalDeltaValidationTests(unittest.TestCase):
         self.assertEqual(ctx.exception.code, "POST_FD_INVALID_SHAPE")
 
     def test_regression_registry_keeps_all_governance_gates(self):
-        self.assertEqual(REGRESSION["suite_id"], "POST_FINAL_DELTA_VALIDATION_REGRESSION_V1")
+        self.assertEqual(REGRESSION["suite_id"], "POST_FINAL_DELTA_VALIDATION_REGRESSION_V2_ARTIFACT_GATED")
         gates = REGRESSION["gates"]
+        self.assertTrue(gates["public_source_packages_are_reexecuted"])
+        self.assertTrue(gates["serialized_final_delta_never_authoritative"])
+        self.assertTrue(gates["artifact_unverified_is_inconclusive"])
+        self.assertTrue(gates["unattributed_diagnostic_resolved_never_supporting"])
+        self.assertTrue(gates["unattributed_diagnostic_resolved_never_regression_proposal"])
         self.assertTrue(gates["no_semantic_auto_clustering"])
         self.assertTrue(gates["no_cross_model_version_pooling"])
         self.assertTrue(gates["conflict_cannot_be_silently_resolved"])
@@ -358,6 +365,7 @@ class PostFinalDeltaValidationTests(unittest.TestCase):
         self.assertTrue(gates["project_verified_not_auto_promoted"])
         self.assertTrue(gates["general_stable_not_auto_promoted"])
         self.assertTrue(gates["no_second_learning_authority"])
+        self.assertTrue(gates["no_final_delta_authority_restoration"])
 
 
 if __name__ == "__main__":
