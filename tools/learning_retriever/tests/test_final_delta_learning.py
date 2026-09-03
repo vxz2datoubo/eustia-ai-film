@@ -139,6 +139,13 @@ def _controlled_payload(*, eval_id: str, density_pass: bool, composition_pass: b
     }
 
 
+def _diagnostic_transitions(result: dict) -> dict[str, str]:
+    return {
+        item["field"]: item["transition"]
+        for item in result.get("unattributed_transition_candidates") or []
+    }
+
+
 class FinalDeltaSourceBoundTests(unittest.TestCase):
     def test_policy_keeps_final_delta_non_promoting(self):
         principles = POLICY["principles"]
@@ -147,7 +154,7 @@ class FinalDeltaSourceBoundTests(unittest.TestCase):
         self.assertTrue(principles["automatic_maturity_promotion_forbidden"])
         self.assertTrue(principles["automatic_canonical_writeback_forbidden"])
 
-    def test_kaim_production_repair_resolves_from_source_inputs_only(self):
+    def test_kaim_repair_is_diagnostic_until_artifact_identity_is_verified(self):
         before = _case_payload("EOE-PROD-KAIM-DISAPPEARANCE-001")
         before.setdefault("context", {}).update(
             {
@@ -182,19 +189,16 @@ class FinalDeltaSourceBoundTests(unittest.TestCase):
                 boundaries=["only sampled production repair is evidenced"],
             ),
         )
-        transitions = {item["field"]: item["transition"] for item in result["field_transitions"]}
-        self.assertEqual(transitions["attention_handoff"], "RESOLVED")
-        self.assertEqual(result["causal_evidence"]["status"], "OBSERVATIONAL_ONLY")
-        self.assertFalse(result["causal_evidence"]["causal_claim_authorized"])
-        self.assertTrue(result["regression_candidate_handoff"]["eligible"])
-        self.assertTrue(result["source_pair_identity_binding"]["matched"])
+        self.assertEqual(_diagnostic_transitions(result)["attention_handoff"], "RESOLVED")
+        self.assertEqual(result["comparison_status"], "NOT_COMPARABLE")
+        self.assertIn("ARTIFACT_PROVENANCE_UNVERIFIED", result["comparison_reasons"])
+        self.assertFalse(result["artifact_provenance_binding"]["verified"])
+        self.assertEqual(result["field_transitions"], [])
+        self.assertFalse(result["regression_candidate_handoff"]["eligible"])
         binding = result["source_binding"]
         self.assertFalse(binding["before_eval"]["serialized_eval_result_accepted"])
         self.assertFalse(binding["after_eval"]["serialized_eval_result_accepted"])
         self.assertFalse(binding["repair_plan"]["serialized_repair_plan_accepted"])
-        self.assertEqual(
-            binding["repair_plan"]["mode"], "canonical_targeted_repair_reexecution"
-        )
 
     def test_legacy_serialized_eval_and_repair_plan_are_rejected_even_if_consistent(self):
         before_input = _controlled_payload(eval_id="FD-LEGACY-BEFORE", density_pass=False)
@@ -215,23 +219,22 @@ class FinalDeltaSourceBoundTests(unittest.TestCase):
             )
         self.assertEqual(ctx.exception.code, "FINAL_DELTA_UNKNOWN_FIELD")
 
-    def test_joint_tampering_of_serialized_result_cannot_suppress_source_failure(self):
+    def test_joint_tampering_cannot_suppress_source_failure_but_remains_unattributed(self):
         before_input = _controlled_payload(eval_id="FD-JOINT-BEFORE", density_pass=False)
         after_input = _controlled_payload(eval_id="FD-JOINT-AFTER", density_pass=True)
         forged_result = evaluate_expected_vs_observed(before_input, project_root=REPO_ROOT)
         forged_result["results"][0]["outcome"] = "PASS"
         forged_result["status"] = "PASS"
         forged_result["targeted_repair_handoff"]["items"] = []
-        forged_result["targeted_repair_handoff"]["requires_director_or_targeted_repair_step"] = False
         result = _compile(
             before_input,
             after_input,
             _change("FD-JOINT-TAMPER", ["reference_signal_decoupling"]),
         )
-        transitions = {item["field"]: item["transition"] for item in result["field_transitions"]}
-        self.assertEqual(transitions["visual_density"], "RESOLVED")
+        self.assertEqual(_diagnostic_transitions(result)["visual_density"], "RESOLVED")
         self.assertEqual(result["source_repair_plan_id"], "TARGETED_REPAIR::FD-JOINT-BEFORE")
         self.assertNotEqual(forged_result["status"], "FAIL")
+        self.assertFalse(result["regression_candidate_handoff"]["eligible"])
 
     def test_joint_tampering_of_serialized_repair_plan_has_no_input_surface(self):
         before_input = _controlled_payload(eval_id="FD-PLAN-BEFORE", density_pass=False)
@@ -265,15 +268,24 @@ class FinalDeltaSourceBoundTests(unittest.TestCase):
             _compile(before, after, _change("FD-SAME-ID-CHANGE", ["reference_signal_decoupling"]))
         self.assertEqual(ctx.exception.code, "FINAL_DELTA_EVAL_ID_COLLISION")
 
-    def test_distinct_eval_ids_cannot_reuse_same_generation_artifact(self):
+    def test_distinct_eval_ids_cannot_reuse_same_generation_label(self):
         before = _controlled_payload(eval_id="FD-SAME-GEN-BEFORE", density_pass=False)
         after = _controlled_payload(eval_id="FD-SAME-GEN-AFTER", density_pass=True)
         after["context"]["generation_id"] = before["context"]["generation_id"]
         result = _compile(before, after, _change("FD-SAME-GEN", ["reference_signal_decoupling"]))
         self.assertEqual(result["comparison_status"], "NOT_COMPARABLE")
         self.assertIn("SOURCE_ARTIFACT_IDENTITY_COLLISION", result["comparison_reasons"])
-        self.assertEqual(result["field_transitions"], [])
         self.assertFalse(result["source_pair_identity_binding"]["matched"])
+        self.assertFalse(result["regression_candidate_handoff"]["eligible"])
+
+    def test_distinct_generation_labels_are_not_artifact_proof(self):
+        before = _controlled_payload(eval_id="FD-ARTIFACT-BEFORE", density_pass=False)
+        after = _controlled_payload(eval_id="FD-ARTIFACT-AFTER", density_pass=True)
+        result = _compile(before, after, _change("FD-ARTIFACT", ["reference_signal_decoupling"]))
+        self.assertTrue(result["source_pair_identity_binding"]["matched"])
+        self.assertFalse(result["artifact_provenance_binding"]["verified"])
+        self.assertEqual(result["comparison_status"], "NOT_COMPARABLE")
+        self.assertIn("ARTIFACT_PROVENANCE_REQUIRED", result["comparison_reasons"])
         self.assertFalse(result["regression_candidate_handoff"]["eligible"])
 
     def test_missing_comparison_identity_fails_closed(self):
@@ -283,79 +295,95 @@ class FinalDeltaSourceBoundTests(unittest.TestCase):
         result = _compile(before, after, _change("FD-MISSING-ID", ["reference_signal_decoupling"]))
         self.assertEqual(result["comparison_status"], "NOT_COMPARABLE")
         self.assertIn("AFTER_MODEL_VERSION_MISSING", result["comparison_reasons"])
-        self.assertEqual(result["field_transitions"], [])
         self.assertFalse(result["regression_candidate_handoff"]["eligible"])
 
     def test_model_version_mismatch_is_not_comparable(self):
         before = _controlled_payload(eval_id="FD-VERSION-BEFORE", density_pass=False)
         after = _controlled_payload(eval_id="FD-VERSION-AFTER", density_pass=True)
         after["context"]["model_version"] = "2.6"
-        result = _compile(
-            before,
-            after,
-            _change("FD-VERSION", ["reference_signal_decoupling"]),
-        )
+        result = _compile(before, after, _change("FD-VERSION", ["reference_signal_decoupling"]))
         self.assertEqual(result["comparison_status"], "NOT_COMPARABLE")
         self.assertIn("MODEL_VERSION_MISMATCH", result["comparison_reasons"])
-        self.assertEqual(result["field_transitions"], [])
 
-    def test_pass_regression_blocks_regression_candidate(self):
-        before = _controlled_payload(
-            eval_id="FD-REG-BEFORE", density_pass=False, composition_pass=True
-        )
-        after = _controlled_payload(
-            eval_id="FD-REG-AFTER", density_pass=True, composition_pass=False
-        )
+    def test_pass_regression_is_preserved_as_diagnostic_and_blocks_candidate(self):
+        before = _controlled_payload(eval_id="FD-REG-BEFORE", density_pass=False, composition_pass=True)
+        after = _controlled_payload(eval_id="FD-REG-AFTER", density_pass=True, composition_pass=False)
         result = _compile(
             before,
             after,
             _change("FD-PASS-REGRESSION", ["reference_signal_decoupling"], ["composition"]),
         )
-        transitions = {item["field"]: item["transition"] for item in result["field_transitions"]}
-        self.assertEqual(transitions["visual_density"], "RESOLVED")
-        self.assertEqual(transitions["composition"], "REGRESSED")
+        diagnostic = _diagnostic_transitions(result)
+        self.assertEqual(diagnostic["visual_density"], "RESOLVED")
+        self.assertEqual(diagnostic["composition"], "REGRESSED")
+        self.assertFalse(result["preserved_pass_gate"]["passed"])
         self.assertFalse(result["regression_candidate_handoff"]["eligible"])
 
     def test_prior_pass_evidence_loss_blocks_candidate_without_erasing_diagnosis(self):
-        before = _controlled_payload(
-            eval_id="FD-EVIDENCE-LOSS-BEFORE", density_pass=False, composition_pass=True
-        )
-        after = _controlled_payload(
-            eval_id="FD-EVIDENCE-LOSS-AFTER", density_pass=True, composition_pass=True
-        )
+        before = _controlled_payload(eval_id="FD-EVIDENCE-LOSS-BEFORE", density_pass=False, composition_pass=True)
+        after = _controlled_payload(eval_id="FD-EVIDENCE-LOSS-AFTER", density_pass=True, composition_pass=True)
         composition = after["reverse_observation"]["expectation_observations"]["composition"]
         composition.pop("observed_value")
         composition.pop("failure_category", None)
         composition["evidence_refs"] = []
-
         result = _compile(
             before,
             after,
             _change("FD-EVIDENCE-LOSS", ["reference_signal_decoupling"], ["composition"]),
         )
-        transitions = {item["field"]: item["transition"] for item in result["field_transitions"]}
-        self.assertEqual(result["comparison_status"], "COMPARABLE")
-        self.assertEqual(transitions["visual_density"], "RESOLVED")
-        self.assertEqual(transitions["composition"], "EVIDENCE_LOST")
+        diagnostic = _diagnostic_transitions(result)
+        self.assertEqual(diagnostic["visual_density"], "RESOLVED")
+        self.assertEqual(diagnostic["composition"], "EVIDENCE_LOST")
         self.assertFalse(result["preserved_pass_gate"]["passed"])
-        self.assertEqual(result["preserved_pass_gate"]["lost_pass_evidence_fields"], ["composition"])
+        self.assertEqual(result["preserved_pass_gate"]["violated_prior_pass_fields"], ["composition"])
         self.assertFalse(result["regression_candidate_handoff"]["eligible"])
-        self.assertEqual(result["regression_candidate_handoff"]["reason"], "prior_pass_evidence_lost")
-        self.assertFalse(result["causal_evidence"]["eligible_for_causal_analysis"])
 
-    def test_caller_declared_complete_controls_cannot_mint_clean_or_causality(self):
-        before = _controlled_payload(eval_id="FD-CONTROL-BEFORE", density_pass=False)
-        after = _controlled_payload(eval_id="FD-CONTROL-AFTER", density_pass=True)
+    def test_prior_pass_becoming_not_applicable_also_blocks_candidate(self):
+        before = _controlled_payload(eval_id="FD-SCOPE-BEFORE", density_pass=False, composition_pass=True)
+        after = _controlled_payload(eval_id="FD-SCOPE-AFTER", density_pass=True, composition_pass=True)
+        composition = after["reverse_observation"]["expectation_observations"]["composition"]
+        composition.pop("observed_value", None)
+        composition["comparison_mode"] = "explicit_observation_judgment"
+        composition["match_state"] = "NOT_APPLICABLE"
+        composition.pop("failure_category", None)
         result = _compile(
             before,
             after,
-            _change("FD-CONTROL", ["reference_signal_decoupling"]),
+            _change("FD-SCOPE-LOSS", ["reference_signal_decoupling"], ["composition"]),
         )
+        # comparison-mode drift itself is a stronger fail-closed reason in this
+        # fixture, but the diagnostic transition must still record the prior PASS
+        # as non-preserved when core evaluation is re-executed.
+        gate = result["preserved_pass_gate"]
+        self.assertFalse(gate["passed"])
+        self.assertIn("composition", gate["violated_prior_pass_fields"])
+        self.assertFalse(result["regression_candidate_handoff"]["eligible"])
+
+    def test_caller_declared_complete_controls_still_cannot_mint_causality(self):
+        before = _controlled_payload(eval_id="FD-CONTROL-BEFORE", density_pass=False)
+        after = _controlled_payload(eval_id="FD-CONTROL-AFTER", density_pass=True)
+        result = _compile(before, after, _change("FD-CONTROL", ["reference_signal_decoupling"]))
         self.assertEqual(result["causal_evidence"]["before_control_status"], "UNVERIFIED_CONTROL")
         self.assertEqual(result["causal_evidence"]["after_control_status"], "UNVERIFIED_CONTROL")
-        self.assertEqual(result["causal_evidence"]["status"], "CONTROL_NOT_VERIFIED")
+        self.assertEqual(result["causal_evidence"]["status"], "NOT_ELIGIBLE_NOT_COMPARABLE")
         self.assertFalse(result["causal_evidence"]["eligible_for_causal_analysis"])
         self.assertFalse(result["candidate_learning_evidence"]["generalization_authorized"])
+
+    def test_final_delta_ids_include_source_pair_not_change_id_alone(self):
+        before_a = _controlled_payload(eval_id="FD-ID-A-BEFORE", density_pass=False)
+        after_a = _controlled_payload(eval_id="FD-ID-A-AFTER", density_pass=True)
+        before_b = _controlled_payload(eval_id="FD-ID-B-BEFORE", density_pass=False)
+        after_b = _controlled_payload(eval_id="FD-ID-B-AFTER", density_pass=True)
+        before_b["context"]["work_item_id"] = after_b["context"]["work_item_id"] = "FD-OTHER-WORK-ITEM"
+        change = _change("REUSED-CHANGE-ID", ["reference_signal_decoupling"])
+        first = _compile(before_a, after_a, change)
+        second = _compile(before_b, after_b, change)
+        self.assertNotEqual(first["final_delta_id"], second["final_delta_id"])
+        self.assertNotEqual(
+            first["candidate_learning_evidence"]["evidence_id"],
+            second["candidate_learning_evidence"]["evidence_id"],
+        )
+        self.assertTrue(first["identity_binding"]["source_pair_included"])
 
 
 if __name__ == "__main__":
