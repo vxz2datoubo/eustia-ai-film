@@ -1,8 +1,28 @@
-schema_version: "4.0"
+schema_version: "4.1"
 component_id: ACTIVE_WORK_ITEM_CHECKPOINT_COMPILER
-status: candidate
+status: project_index_gated_activation_candidate
 source_issue: 38
-activation: absent_until_independent_accept
+activation: fixed_github_project_index_tuple_required_at_runtime
+
+activation_binding:
+  authority_registry: PROJECT_INDEX.yaml
+  fixed_github_readback_required: true
+  required_policy_flags:
+    - active_work_item_checkpoint_compiler_required_for_checkpoint_or_series_close
+    - active_work_item_checkpoint_runtime_is_proposal_readback_only
+    - active_work_item_checkpoint_runtime_cannot_write_or_confirm_governed_ref
+  canonical_registration:
+    key: active_work_item_checkpoint_compiler
+    value: 10_运行时/active_work_item_checkpoint_compiler.yaml
+  regression_registration:
+    key: active_work_item_checkpoint_compiler_regression_cases
+    value: 11_验收/active_work_item_checkpoint_compiler_regression_cases.yaml
+  effective_source_required:
+    10_运行时/active_work_item_checkpoint_compiler.yaml: github_verified
+    11_验收/active_work_item_checkpoint_compiler_regression_cases.yaml: github_verified
+  file_presence_or_importability_is_activation_authority: false
+  local_branch_registration_is_activation_authority: false
+  missing_or_mismatched_tuple: fail_closed_before_continuity_or_source_issue_consumption
 
 dependency:
   active_work_item_authority: tools/learning_retriever/learning_retriever/_active_work_item_remote.py
@@ -26,6 +46,7 @@ trusted_baseline:
   repository_and_branch: inherited_only_from_canonical_active_work_item_v3
   fixed_github_readback_required: true
   project_index_registration_required: true
+  project_index_activation_tuple_must_validate_before_continuity_read: true
   local_projection_must_equal_fixed_github: true
   baseline_materialization_commit_must_exist: true
   baseline_materialization_must_be_canonical_ancestor: true
@@ -71,10 +92,11 @@ write_transaction_external_contract:
     canonical_reporting_before_external_ref_confirmation: forbidden
 
 candidate_isolation:
-  project_index_registration_before_accept: forbidden
+  project_index_registration_before_functional_accept: forbidden
   ordinary_directing_always_read: forbidden
   new_parallel_continuity_write_route: forbidden
   activation_requires_separate_bounded_slice: true
+  activation_slice_requires_independent_T3_before_merge: true
 
 maturity:
   current: candidate
