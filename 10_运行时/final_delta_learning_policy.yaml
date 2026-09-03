@@ -1,0 +1,211 @@
+policy_id: EUSTIA_FINAL_DELTA_LEARNING_EVIDENCE_V3_SOURCE_BOUND_ARTIFACT_FAIL_CLOSED
+status: candidate
+scope: repair_outcome_final_delta_candidate_learning_evidence
+
+canonical_authority:
+  feedback_learning: 08_系统学习/反馈反推与系统反哺引擎.md
+  maturity_model: 10_运行时/maturity_model.yaml
+  expected_observed_runtime: tools/learning_retriever/learning_retriever/expected_observed.py
+  targeted_repair_runtime: tools/learning_retriever/learning_retriever/targeted_repair.py
+  learning_application_gate: 10_运行时/learning_application_gate.yaml
+
+source_binding:
+  public_inputs:
+    - before_eval_input
+    - after_eval_input
+    - change_record
+    - learning_context
+  before_eval_execution: canonical_expected_observed_reexecution
+  after_eval_execution: canonical_expected_observed_reexecution
+  repair_plan_execution: canonical_targeted_repair_reexecution_from_before_source
+  serialized_before_eval_result_accepted: false
+  serialized_after_eval_result_accepted: false
+  serialized_repair_plan_accepted: false
+  caller_internal_consistency_is_not_source_authenticity: true
+  upstream_error_provenance_must_be_preserved: true
+
+source_pair_identity_binding:
+  required_for_repair_attribution: true
+  required_context_fields:
+    - work_item_id
+    - model
+    - model_version
+    - generation_id
+  required_fields_must_be_present_on_both_sides: true
+  work_item_identity_must_match: true
+  model_identity_must_match: true
+  model_version_identity_must_match: true
+  generation_labels_must_be_distinct: true
+  eval_id_is_evaluation_record_identity_not_generation_identity: true
+  same_generation_label_with_different_eval_ids_is_not_repair_evidence: true
+  distinct_generation_labels_do_not_prove_distinct_artifacts: true
+  missing_or_mismatched_identity_status: NOT_COMPARABLE
+  identity_failure_must_clear_repair_attribution: true
+  identity_failure_must_clear_regression_candidate_eligibility: true
+
+artifact_provenance_binding:
+  required_for_repair_attribution: true
+  canonical_artifact_to_generation_verifier_available: false
+  caller_generation_id_is_artifact_proof: false
+  caller_media_refs_are_artifact_proof: false
+  current_status: UNVERIFIED_NO_CANONICAL_ARTIFACT_VERIFIER
+  current_public_attribution_status: NOT_COMPARABLE
+  diagnostic_transitions_may_be_preserved_separately: true
+  diagnostic_transitions_field: unattributed_transition_candidates
+  formal_resolved_transition_authorized_without_verifier: false
+  regression_or_golden_candidate_authorized_without_verifier: false
+  causal_attribution_authorized_without_verifier: false
+  future_required_authority: canonical_artifact_to_generation_verifier
+  verifier_must_bind_real_artifact_or_media_bytes_to_generation_identity: true
+  final_delta_must_not_create_second_asset_authority: true
+
+measurement_contract_binding:
+  required_for_repair_attribution: true
+  comparison_mode_identity_required: true
+  expectation_declared_value_identity_required: true
+  expectation_provenance_identity_required: true
+  observation_evidence_source_identity_required: true
+  observation_inspection_mode_identity_required: true
+  observation_temporal_coverage_contract_identity_required: true
+  frame_by_frame_claim_identity_required: true
+  output_specific_media_refs_excluded_from_contract_identity: true
+  output_specific_evidence_refs_excluded_from_contract_identity: true
+  confidence_excluded_from_contract_identity: true
+  mismatch_status: NOT_COMPARABLE
+  mismatch_must_clear_resolved_and_regression_candidate_eligibility: true
+  changed_ruler_cannot_be_recorded_as_attributed_repair: true
+
+preserved_pass_gate:
+  required_for_regression_candidate: true
+  invariant: every_prior_PASS_must_remain_PRESERVED
+  pass_to_pass: preserved
+  pass_to_fail: blocks_candidate
+  pass_to_unknown_evidence_loss: blocks_candidate
+  pass_to_not_applicable_or_scope_changed: blocks_candidate
+  any_other_prior_pass_transition: blocks_candidate
+  violating_transition_remains_diagnostic: true
+  pass_loss_cannot_be_laundered_by_another_resolved_field: true
+  pass_loss_blocks_causal_eligibility: true
+
+identity_contract:
+  caller_change_id_alone_is_not_final_delta_identity: true
+  final_delta_id_must_bind_source_pair: true
+  candidate_evidence_id_must_bind_source_pair: true
+  source_pair_digest_may_include:
+    - work_item_id
+    - before_eval_id
+    - after_eval_id
+    - before_generation_label
+    - after_generation_label
+    - change_id
+  source_pair_digest_is_collision_resistance_not_artifact_authenticity: true
+
+principles:
+  observation_is_not_causality: true
+  single_success_cannot_universalize: true
+  explicit_change_record_required: true
+  model_version_mismatch_not_aggregated: true
+  automatic_maturity_promotion_forbidden: true
+  automatic_canonical_writeback_forbidden: true
+  automatic_prompt_mutation_forbidden: true
+  generation_trigger_forbidden: true
+  camera_authority_mutation_forbidden: true
+  unseen_media_inference_forbidden: true
+  missing_alternative_explanations_remain_unknown: true
+  missing_counterfactuals_remain_unknown: true
+  candidate_lesson_must_not_be_invented_by_runtime: true
+  canonical_upstream_source_reexecution_required: true
+  serialized_upstream_artifact_cannot_define_truth: true
+  joint_tampering_of_result_and_handoff_must_not_suppress_repair: true
+  before_after_semantic_measurement_contract_must_match: true
+  measurement_contract_drift_is_not_outcome_improvement: true
+  before_after_source_pair_identity_must_be_complete: true
+  caller_generation_labels_are_not_artifact_authenticity: true
+  artifact_provenance_required_before_repair_attribution: true
+  prior_pass_any_non_preserved_transition_is_not_clean_repair: true
+  final_delta_identity_must_bind_source_pair: true
+
+comparison_status:
+  COMPARABLE:
+    meaning: reachable for repair attribution only after complete semantic identity, stable measurement contract, and trusted distinct-artifact proof all pass
+    current_runtime_reachable_for_attribution_without_artifact_verifier: false
+  COMPARABLE_WITH_GAPS:
+    meaning: private-core diagnostic only; public Final-Delta runtime downgrades missing required identity before attribution
+    repair_attribution_authorized: false
+  NOT_COMPARABLE:
+    meaning: missing/material identity, measurement-contract drift, or unverified distinct-artifact provenance prevents repair-effect attribution
+
+field_transition_vocabulary:
+  PRESERVED: PASS_to_PASS
+  REGRESSED: PASS_to_FAIL
+  RESOLVED: FAIL_to_PASS
+  PERSISTED: FAIL_to_FAIL
+  EVIDENCE_GAINED_PASS: UNKNOWN_to_PASS
+  EVIDENCE_GAINED_FAIL: UNKNOWN_to_FAIL
+  EVIDENCE_LOST: known_to_UNKNOWN
+  UNKNOWN: UNKNOWN_to_UNKNOWN
+  NOT_APPLICABLE: NOT_APPLICABLE_to_NOT_APPLICABLE
+  SCOPE_CHANGED: other_transition
+
+causal_evidence_status:
+  CONTROLLED_SINGLE_VARIABLE_CANDIDATE:
+    eligible_for_causal_analysis: true
+    causal_claim_authorized: false
+    current_public_reachability_without_artifact_verifier: false
+  HYPOTHESIS_ONLY_CONFOUNDED:
+    eligible_for_causal_analysis: false
+  CONTROL_NOT_VERIFIED:
+    eligible_for_causal_analysis: false
+  OBSERVATIONAL_ONLY:
+    eligible_for_causal_analysis: false
+  NOT_ELIGIBLE_NOT_COMPARABLE:
+    eligible_for_causal_analysis: false
+  CONTROL_TARGET_MISMATCH:
+    eligible_for_causal_analysis: false
+  CHANGE_RECORD_NOT_SINGLE_TARGET:
+    eligible_for_causal_analysis: false
+  TARGET_IMPROVED_WITH_REGRESSION:
+    eligible_for_causal_analysis: false
+  TARGET_IMPROVED_WITH_PRIOR_PASS_LOSS:
+    eligible_for_causal_analysis: false
+  CONTROLLED_BUT_NO_TARGET_RESOLUTION:
+    eligible_for_causal_analysis: false
+
+candidate_learning_contract:
+  emitted_maturity: candidate
+  maturity_effect: none
+  generalization_authorized: false
+  promotion_authorized: false
+  writeback_authorized: false
+  targeted_eval_required: true
+  regression_candidate_write_authorized: false
+  golden_candidate_write_authorized: false
+  scene_verified_requires_separate_maturity_gate: true
+  project_verified_requires_human_or_governed_promotion_gate: true
+  general_stable_requires_human_or_governed_promotion_gate: true
+
+allowed_scope:
+  - EPISODIC_WORK_ITEM
+  - SCENE_LOCAL
+  - CHARACTER_OR_RELATION
+  - PROJECT_CANONICAL
+  - MODEL_VERSION_BOUND
+  - TRANSFERABLE_METHOD
+
+output_contract:
+  final_delta_is_ephemeral_execution_artifact: true
+  candidate_learning_evidence_is_evidence_only: true
+  measurement_contract_receipt_required: true
+  source_pair_identity_receipt_required: true
+  artifact_provenance_receipt_required: true
+  preserved_pass_gate_receipt_required: true
+  id_source_pair_binding_receipt_required: true
+  unattributed_transition_candidates_are_diagnostic_only: true
+  canonical_write_target: null
+  prompt_mutation_authorized: false
+  generation_authorized: false
+  camera_authority_mutation_authorized: false
+  canonical_mutation_authorized: false
+  learning_writeback_authorized: false
+  maturity_promotion_authorized: false
+  causal_claim_authorized: false
