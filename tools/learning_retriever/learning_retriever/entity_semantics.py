@@ -5,6 +5,10 @@ read only through PROJECT_INDEX -> canonical.character_db inside the governed
 repository checkout. Open human roles are positive query-normalization evidence,
 not a second character database and not permission to infer arbitrary CJK nouns
 as people.
+
+The public compiler is responsible for loading canonical character terms. This
+module only evaluates bounded subject candidates that have already entered the
+compiler's internal parsing path.
 """
 
 from __future__ import annotations
@@ -24,10 +28,9 @@ class EntitySemanticError(ValueError):
     """Raised when canonical character typing cannot be read safely."""
 
 
-# Deliberately bounded human-role heads. We do not use productive suffixes such
-# as 人/士/师/员 as identity proof because compounds such as 稻草人/雪人/假人
-# would otherwise mint actor truth. This vocabulary is retrieval-normalization
-# evidence only; formal named identities still come from the canonical table.
+# Deliberately bounded human-role heads. Productive suffixes such as 人/士/师/员
+# are never identity proof because compounds such as 稻草人/雪人/假人 would then
+# mint actor truth. This vocabulary is query-normalization evidence only.
 HUMAN_ROLE_HEADS = (
     "贵族", "骑士", "医生", "调查员", "工程师", "研究者", "祭司", "警察",
     "士兵", "军官", "守卫", "护卫", "卫兵", "侍卫", "佣兵", "猎人",
@@ -41,9 +44,6 @@ HUMAN_ROLE_HEADS = (
 
 PRONOUN_AGENT_TERMS = ("他", "她", "他们", "她们")
 
-# High-confidence non-agent compounds that specifically attack the old productive
-# suffix defect. These are not a universal object ontology; they are a fail-closed
-# boundary for forms that superficially resemble human nouns.
 NON_AGENT_COMPOUNDS = (
     "稻草人", "假人", "雪人", "纸人", "木偶人", "机器人", "人偶", "木偶",
     "玩偶", "雕像", "石像", "蜡像", "傀儡", "人体模型",
@@ -58,6 +58,28 @@ NON_AGENT_SEMANTIC_SUFFIXES = (
 
 DYNASTY_WORLD_PREFIXES = ("王朝", "前朝", "本朝", "朝代")
 FAKE_OR_OBJECT_ROLE_PREFIXES = ("稻草", "木偶", "纸", "雪", "蜡", "石", "玩具", "假")
+
+# Scene prefixes may precede a real subject in compact Chinese directing prose,
+# e.g. “礼拜堂中央年轻祭司…”. They are not actor identity themselves.
+SCENE_PREFIX_ENDINGS = (
+    "中央", "附近", "门口", "街上", "巷口", "大厅", "走廊", "礼拜堂",
+    "广场", "街道", "屋内", "室内", "室外", "台上", "台下", "桥上",
+    "里", "内", "外", "上", "下", "前", "后", "旁", "边", "中",
+)
+SUBJECT_DESCRIPTORS = (
+    "一名", "一位", "那名", "这名", "那位", "这位", "几名", "数名", "几个",
+    "一群", "年轻", "年老", "受伤的", "受伤", "疲惫的", "疲惫", "警惕的",
+    "警惕", "慌张的", "慌张", "愤怒的", "愤怒", "庄严的", "庄严", "沉默的",
+    "沉默",
+)
+
+# These are ordinary noun/location forms ending in 地. They must never be stripped
+# as adverbial “...地” tails when trying to recover an actor token.
+NON_ADVERBIAL_DI_ENDINGS = (
+    "基地", "场地", "工地", "阵地", "营地", "墓地", "高地", "平地", "属地",
+    "领地", "腹地", "殖民地", "目的地", "所在地", "发源地", "聚集地", "驻地",
+    "土地",
+)
 
 
 def load_canonical_character_terms(project_root: str | Path) -> tuple[str, ...]:
@@ -144,12 +166,28 @@ def _explicitly_non_agent(value: str) -> bool:
     return False
 
 
-def _worldbuilding_prefix_blocks_actor(candidate: str, actor_term: str) -> bool:
-    normalized = candidate.strip().replace(" ", "")
-    if not normalized.endswith(actor_term):
+def _strip_trailing_subject_descriptors(value: str) -> str:
+    residual = value
+    changed = True
+    while changed and residual:
+        changed = False
+        for token in sorted(SUBJECT_DESCRIPTORS, key=len, reverse=True):
+            if residual.endswith(token):
+                residual = residual[: -len(token)]
+                changed = True
+                break
+    return residual
+
+
+def _prefix_can_precede_actor(prefix: str) -> bool:
+    """Bound non-actor material allowed before a real actor token."""
+
+    residual = _strip_trailing_subject_descriptors(prefix.strip().replace(" ", ""))
+    if not residual:
+        return True
+    if any(residual.endswith(token) for token in DYNASTY_WORLD_PREFIXES):
         return False
-    prefix = normalized[: -len(actor_term)] if actor_term else normalized
-    return any(prefix.endswith(token) for token in DYNASTY_WORLD_PREFIXES)
+    return any(residual.endswith(token) for token in SCENE_PREFIX_ENDINGS)
 
 
 def _fake_object_prefix_blocks_role(candidate: str, role: str) -> bool:
@@ -160,32 +198,61 @@ def _fake_object_prefix_blocks_role(candidate: str, role: str) -> bool:
     return any(prefix.endswith(token) for token in FAKE_OR_OBJECT_ROLE_PREFIXES)
 
 
-def _has_positive_human_semantics(value: str, *, known_actor_terms: Iterable[str]) -> bool:
+def _modifier_tail_semantically_safe(value: str) -> bool:
     normalized = value.strip().replace(" ", "")
+    if not normalized:
+        return True
+    if any(normalized.endswith(token) for token in NON_ADVERBIAL_DI_ENDINGS):
+        return False
+    if normalized.endswith(NON_AGENT_COMPOUNDS):
+        return False
+    if normalized.endswith(NON_AGENT_SEMANTIC_SUFFIXES):
+        return False
+    return True
+
+
+def _token_matches_actor(
+    candidate: str,
+    *,
+    known_actor_terms: Iterable[str],
+) -> bool:
+    """Match an actor token without arbitrary suffix collision.
+
+    Exact terms are always allowed. Embedded terms are allowed only when the
+    material before the term is a bounded scene/descriptor prefix. This prevents
+    “英格兰” -> “格兰” and “吉他” -> “他” while preserving compact prose such as
+    “礼拜堂中央年轻祭司”.
+    """
+
+    normalized = candidate.strip().replace(" ", "")
     if not normalized or _explicitly_non_agent(normalized):
         return False
 
-    known = tuple(
+    canonical = {
+        str(term).strip()
+        for term in known_actor_terms
+        if str(term).strip()
+    }
+    actor_terms = tuple(
         sorted(
-            {
-                str(term).strip()
-                for term in known_actor_terms
-                if str(term).strip()
-            }
-            | set(PRONOUN_AGENT_TERMS),
+            canonical | set(PRONOUN_AGENT_TERMS) | set(HUMAN_ROLE_HEADS),
             key=len,
             reverse=True,
         )
     )
-    for term in known:
-        if normalized.endswith(term):
-            if _worldbuilding_prefix_blocks_actor(normalized, term):
-                continue
-            return True
 
-    for role in sorted(HUMAN_ROLE_HEADS, key=len, reverse=True):
-        if normalized.endswith(role) and not _fake_object_prefix_blocks_role(normalized, role):
-            return True
+    for term in actor_terms:
+        plural_forms = (term, f"{term}们") if not term.endswith("们") else (term,)
+        for form in plural_forms:
+            if normalized == form:
+                return True
+            if not normalized.endswith(form):
+                continue
+            prefix = normalized[: -len(form)]
+            if term in HUMAN_ROLE_HEADS and _fake_object_prefix_blocks_role(normalized, term):
+                continue
+            if _prefix_can_precede_actor(prefix):
+                return True
     return False
 
 
@@ -201,6 +268,8 @@ def bounded_animate_agent_leader(
 
     ``action`` is intentionally not used as identity proof. A turn/body verb may
     describe motion, but cannot convert an unknown object or prop into a person.
+    Modifier stripping is additionally checked for noun/location semantics so
+    “骑士训练基地” cannot become actor “骑士” + fake adverb “训练基地”.
     """
 
     del action
@@ -212,10 +281,14 @@ def bounded_animate_agent_leader(
     for split_at in range(1, len(normalized)):
         leader = normalized[:split_at].strip()
         tail = normalized[split_at:].strip()
-        if leader and modifier_tail_validator(tail):
+        if (
+            leader
+            and modifier_tail_validator(tail)
+            and _modifier_tail_semantically_safe(tail)
+        ):
             actor_candidates.append(leader)
 
     return any(
-        _has_positive_human_semantics(candidate, known_actor_terms=known_actor_terms)
+        _token_matches_actor(candidate, known_actor_terms=known_actor_terms)
         for candidate in reversed(actor_candidates)
     )
