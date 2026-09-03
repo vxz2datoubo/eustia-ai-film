@@ -45,6 +45,25 @@ read_sets:
       golden_case_director_pull: golden_case_director_pull_schema#when_retrieving_or_using_a_golden_director_precedent
       soac_runtime: screen_observable_audible_ir_schema#only_if_full_directing_story_to_shot_AI_execution_observable_audible_diagnosis_reverse_evaluation_or_compiler_regression
 
+  revision_checkpoint_compilation:
+    activation: checkpoint_or_revision_series_close_or_work_item_switch_or_explicit_checkpoint_only
+    always:
+      - PROJECT_INDEX.yaml
+      - active_work_item_resolution_gate#constraint_ledger+lifecycle_transition+source_revision_boundary
+      - active_work_item_checkpoint_compiler#trust+proposal+materialization_readback+finalization_contract
+      - 连续性与当前生产状态#ACTIVE_WORK_ITEM_STATE_only
+      - 反馈反推与系统反哺引擎#revision_series+checkpoint+trajectory_final_delta_relevant_sections
+      - write_routes#revision_checkpoint_current_state+write_protocol
+    conditional:
+      active_work_item_resolution_evidence: 活动工作项解析与修订状态证据索引#revision_series_checkpoint_and_source_issue_semantics
+      screenplay: 当前改编剧本#only_if_story_scope_or_story_fact_changed
+      characters: 角色与表演设定库#only_if_character_constraint_changed
+      scenes: 场景与空间设定库#only_if_scene_constraint_changed
+      map: 00_项目地图文件#only_if_topology_direction_or_camera_movement_constraint_changed
+      assets: 视觉资产登记#only_if_formal_asset_binding_changed
+      regression: active_work_item_checkpoint_compiler_regression_cases#when_checkpoint_runtime_or_activation_boundary_is_under_test
+      maturity: maturity_model#only_if_checkpoint_closes_revision_series_into_learning_maturity_evidence
+
   sound_directing:
     always:
       - PROJECT_INDEX.yaml
@@ -215,6 +234,9 @@ rules:
   unresolved_continuation_must_fail_closed: true
   active_work_item_pointer_cannot_override_story_map_asset_authority: true
   active_work_item_runtime_trusts_canonical_snapshot_not_caller_callback: true
+  revision_checkpoint_compilation_must_use_checkpoint_compiler: true
+  revision_checkpoint_compiler_must_not_be_in_directing_always: true
+  revision_checkpoint_runtime_cannot_write_or_claim_persistence: true
   full_repository_injection_default: false
   local_targeted_retrieval_default: true
   global_expand_on_route_uncertainty: true
