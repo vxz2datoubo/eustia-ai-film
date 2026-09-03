@@ -15,7 +15,7 @@ CANONICAL_CHARACTER_TERMS = load_canonical_character_terms(REPO_ROOT)
 class AnimateAgentCompilerBoundaryTests(unittest.TestCase):
     def compile_or_none(self, text: str):
         try:
-            return compile_director_features(text, known_actor_terms=CANONICAL_CHARACTER_TERMS)
+            return compile_director_features(text)
         except FeatureCompilationError as exc:
             if str(exc) == "NO_RECOGNIZED_DIRECTOR_FEATURES":
                 return None
@@ -31,7 +31,7 @@ class AnimateAgentCompilerBoundaryTests(unittest.TestCase):
         self.assertNotIn("body_orientation_target_fail", result.failure_mechanism)
 
     def assert_character_facing(self, text: str) -> None:
-        result = compile_director_features(text, known_actor_terms=CANONICAL_CHARACTER_TERMS)
+        result = compile_director_features(text)
         self.assertIn("facing_to_target", result.relation_type)
         self.assertIn("target_oriented_action", result.dramatic_function)
         self.assertIn("body_orientation", result.spatial_action_features)
@@ -81,7 +81,6 @@ class AnimateAgentCompilerBoundaryTests(unittest.TestCase):
             "钟楼面向圣女。",
             route_data=ROUTE_DATA,
             strict=False,
-            known_actor_terms=CANONICAL_CHARACTER_TERMS,
         )
         self.assertNotIn("TARGET_ORIENTED_SPATIAL_BINDING", task.get("hard_routes") or [])
         self.assertNotIn("facing_to_target", task.get("relation_type") or [])
