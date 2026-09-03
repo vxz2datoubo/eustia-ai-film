@@ -32,7 +32,7 @@ class EntitySemanticError(ValueError):
 # are never identity proof because compounds such as 稻草人/雪人/假人 would then
 # mint actor truth. This vocabulary is query-normalization evidence only.
 HUMAN_ROLE_HEADS = (
-    "贵族", "骑士", "医生", "调查员", "工程师", "研究者", "祭司", "警察",
+    "角色", "人物", "贵族", "骑士", "医生", "调查员", "工程师", "研究者", "祭司", "警察",
     "士兵", "军官", "守卫", "护卫", "卫兵", "侍卫", "佣兵", "猎人",
     "商人", "摊贩", "店主", "工匠", "农民", "渔民", "居民", "平民",
     "信徒", "修女", "神父", "学者", "教师", "护士", "船员", "水手",
