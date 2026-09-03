@@ -4,7 +4,7 @@ import os
 import unittest
 from unittest import mock
 
-from learning_retriever.binary_artifact_evidence import ArtifactEvidenceError, observe_artifact_bytes
+from learning_retriever.binary_artifact_evidence import ArtifactEvidenceError, inspect_artifact_bytes
 
 
 class BinaryArtifactEvidenceBridgeTOCTOUTests(unittest.TestCase):
@@ -12,9 +12,9 @@ class BinaryArtifactEvidenceBridgeTOCTOUTests(unittest.TestCase):
         with TemporaryDirectory() as tmp:
             path = Path(tmp) / "stable.bin"
             path.write_bytes(b"stable")
-            receipt = observe_artifact_bytes(path)
-            self.assertEqual(receipt["byte_verification_state"], "BYTE_VERIFIED")
-            self.assertEqual(receipt["byte_length"], 6)
+            receipt = inspect_artifact_bytes(path)
+            self.assertEqual(receipt.byte_verification_state, "BYTE_VERIFIED")
+            self.assertEqual(receipt.byte_length, 6)
 
     def test_mutation_during_read_is_fail_closed(self):
         with TemporaryDirectory() as tmp:
@@ -36,9 +36,12 @@ class BinaryArtifactEvidenceBridgeTOCTOUTests(unittest.TestCase):
                     return Changed()
                 return st
 
-            with mock.patch("learning_retriever.binary_artifact_evidence.os.fstat", side_effect=changing_fstat):
+            with mock.patch(
+                "learning_retriever.binary_artifact_evidence.os.fstat",
+                side_effect=changing_fstat,
+            ):
                 with self.assertRaises(ArtifactEvidenceError) as ctx:
-                    observe_artifact_bytes(path)
+                    inspect_artifact_bytes(path)
             self.assertEqual(ctx.exception.code, "ARTIFACT_MUTATED_DURING_READ")
 
 
