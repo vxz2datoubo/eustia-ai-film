@@ -126,6 +126,35 @@ def _validated_chunk_size(value: int) -> int:
     return value
 
 
+def _preclassify_locator(path: Path) -> None:
+    """Reject obvious locator-type violations consistently across operating systems.
+
+    This lstat result is not content authority. The opened file descriptor is still
+    revalidated with fstat before and after reading so a path race cannot mint byte
+    identity from this precheck.
+    """
+
+    try:
+        observed = os.lstat(os.fspath(path))
+    except FileNotFoundError as exc:
+        raise ArtifactEvidenceError("ARTIFACT_NOT_FOUND", "artifact file does not exist") from exc
+    except OSError as exc:
+        if exc.errno in {errno.EACCES, errno.EPERM}:
+            raise ArtifactEvidenceError("ARTIFACT_READ_FAILED", "artifact locator cannot be inspected") from exc
+        raise ArtifactEvidenceError("ARTIFACT_READ_FAILED", "artifact locator precheck failed") from exc
+
+    if stat.S_ISLNK(observed.st_mode):
+        raise ArtifactEvidenceError(
+            "ARTIFACT_LOCATOR_INDIRECTION_FORBIDDEN",
+            "symbolic-link artifact locators are rejected by candidate v1",
+        )
+    if not stat.S_ISREG(observed.st_mode):
+        raise ArtifactEvidenceError(
+            "ARTIFACT_NOT_REGULAR_FILE",
+            "artifact locator must resolve to a regular file",
+        )
+
+
 def inspect_artifact_bytes(
     artifact_path: str | os.PathLike[str], *, chunk_size: int = _DEFAULT_CHUNK_SIZE
 ) -> ArtifactByteObservation:
@@ -133,6 +162,7 @@ def inspect_artifact_bytes(
 
     path = _locator_path(artifact_path)
     chunk_size = _validated_chunk_size(chunk_size)
+    _preclassify_locator(path)
 
     flags = os.O_RDONLY
     if hasattr(os, "O_CLOEXEC"):
@@ -140,21 +170,17 @@ def inspect_artifact_bytes(
     nofollow = getattr(os, "O_NOFOLLOW", 0)
     if nofollow:
         flags |= nofollow
-    elif path.is_symlink():
-        raise ArtifactEvidenceError(
-            "ARTIFACT_LOCATOR_INDIRECTION_FORBIDDEN",
-            "symbolic-link artifact locators are rejected by candidate v1",
-        )
 
     try:
         fd = os.open(os.fspath(path), flags)
     except FileNotFoundError as exc:
-        raise ArtifactEvidenceError("ARTIFACT_NOT_FOUND", "artifact file does not exist") from exc
+        # The file disappeared after lstat. This is a fail-closed race, not proof.
+        raise ArtifactEvidenceError("ARTIFACT_NOT_FOUND", "artifact file disappeared before read") from exc
     except OSError as exc:
         if exc.errno in {errno.ELOOP}:
             raise ArtifactEvidenceError(
                 "ARTIFACT_LOCATOR_INDIRECTION_FORBIDDEN",
-                "symbolic-link artifact locators are rejected by candidate v1",
+                "artifact locator became symbolic-link indirection before read",
             ) from exc
         if exc.errno in {errno.EACCES, errno.EPERM}:
             raise ArtifactEvidenceError("ARTIFACT_READ_FAILED", "artifact file is not readable") from exc
@@ -167,7 +193,7 @@ def inspect_artifact_bytes(
         if not stat.S_ISREG(before.st_mode):
             raise ArtifactEvidenceError(
                 "ARTIFACT_NOT_REGULAR_FILE",
-                "artifact locator must resolve to a regular file",
+                "opened artifact is no longer a regular file",
             )
         while True:
             try:
