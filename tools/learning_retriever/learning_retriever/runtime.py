@@ -7,6 +7,9 @@ After work-item identity binding, the runtime reconstructs compact retrieval
 context, performs one final fixed-source revision revalidation immediately
 before Director Feature Compiler use, then continues through Director Feature
 Compiler -> Hard Route -> existing LearningRetriever semantic recall.
+
+Actor identity is resolved inside the public Feature Compiler facade from this
+repository's PROJECT_INDEX. Runtime callers have no actor-term injection surface.
 """
 
 from __future__ import annotations
@@ -20,7 +23,6 @@ from .active_work_item import (
     revalidate_source_revision,
     resolve_work_item,
 )
-from .entity_semantics import load_canonical_character_terms
 from .feature_compiler import FEATURE_KEYS, compile_retrieval_task
 from .retriever import LearningRetriever
 
@@ -65,7 +67,6 @@ class DirectorLearningRuntime:
     def __init__(self, project_root: str | Path) -> None:
         self.project_root = Path(project_root)
         self.retriever = LearningRetriever(self.project_root)
-        self.canonical_character_terms = load_canonical_character_terms(self.project_root)
 
     def retrieve(
         self,
@@ -102,16 +103,6 @@ class DirectorLearningRuntime:
             description, work_item_packet
         )
 
-        # Normal construction caches the canonical character projection. Some
-        # adversarial harnesses deliberately bypass __init__ and may give a cwd-
-        # relative project_root that is not the repository root. In that narrow
-        # fallback, derive authority from this module's own governed checkout,
-        # never from the caller/cwd path.
-        canonical_character_terms = getattr(self, "canonical_character_terms", None)
-        if canonical_character_terms is None:
-            module_project_root = Path(__file__).resolve().parents[3]
-            canonical_character_terms = load_canonical_character_terms(module_project_root)
-
         # Close the remote source-revision TOCTOU window at the first downstream
         # compiler boundary. If the source Issue changed after initial resolution,
         # fail closed before Director Feature Compiler can observe stale context.
@@ -123,7 +114,6 @@ class DirectorLearningRuntime:
             base_task=merged_base,
             route_data=self.retriever.routes,
             strict=True,
-            known_actor_terms=canonical_character_terms,
         )
         result = self.retriever.retrieve(
             task, top_k=top_k, expand=expand, fail_closed=True
@@ -138,6 +128,7 @@ class DirectorLearningRuntime:
             ["director_feature_compiler", "hard_route", "semantic_recall"]
         )
 
+        compiler_receipt = dict(task.get("feature_compiler_receipt") or {})
         result["canonical_runtime_receipt"] = {
             "entrypoint": "DirectorLearningRuntime.retrieve",
             "flow": runtime_flow,
@@ -148,6 +139,7 @@ class DirectorLearningRuntime:
             "continuation_task_reconstructed": reconstructed,
             "serialized_work_item_authority_accepted": False,
             "caller_verification_callback_supported": False,
+            "caller_actor_terms_supported": False,
             "compiler_invoked": True,
             "work_item_resolution_authority": (
                 "07_连续性与生产状态/连续性与当前生产状态.md#ACTIVE_WORK_ITEM_STATE"
@@ -160,13 +152,13 @@ class DirectorLearningRuntime:
                 "tools/learning_retriever/learning_retriever/retriever.py"
             ),
             "entity_semantics_authority": "PROJECT_INDEX.canonical.character_db",
-            "canonical_character_term_count": len(canonical_character_terms),
+            "canonical_character_term_count": int(
+                compiler_receipt.get("known_actor_terms_count") or 0
+            ),
             "compiled_features": {
                 key: list(task.get(key) or []) for key in FEATURE_KEYS
             },
             "hard_routes": list(task.get("hard_routes") or []),
-            "feature_compiler_receipt": dict(
-                task.get("feature_compiler_receipt") or {}
-            ),
+            "feature_compiler_receipt": compiler_receipt,
         }
         return result
