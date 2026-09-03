@@ -69,12 +69,14 @@ class CheckpointActivationBindingTests(unittest.TestCase):
             ],
         )
 
-    def test_activation_does_not_create_second_continuity_write_route(self) -> None:
+    def test_activation_does_not_create_parallel_checkpoint_write_route(self) -> None:
         routes = self.write_routes["routes"]
         self.assertEqual(routes["revision_checkpoint_current_state"], CONTINUITY)
         matches = [name for name, target in routes.items() if target == CONTINUITY]
-        self.assertEqual(matches, ["current_production_state", "revision_checkpoint_current_state"])
+        self.assertEqual(matches, ["current_shot_production_state", "revision_checkpoint_current_state"])
         self.assertNotIn("active_work_item_checkpoint_current_state", routes)
+        checkpoint_routes = [name for name in routes if "checkpoint" in name]
+        self.assertEqual(checkpoint_routes, ["revision_checkpoint_current_state"])
 
     def test_read_set_rules_preserve_external_write_and_ref_gate(self) -> None:
         rules = self.read_sets["rules"]
@@ -83,12 +85,20 @@ class CheckpointActivationBindingTests(unittest.TestCase):
         self.assertTrue(rules["revision_checkpoint_runtime_cannot_write_or_claim_persistence"])
 
         contract = yaml.safe_load((REPO_ROOT / CHECKPOINT_POLICY).read_text(encoding="utf-8"))
-        hard = contract["hard_boundaries"]
-        self.assertTrue(hard["runtime_has_no_git_or_github_write_authority"])
-        self.assertTrue(hard["fixed_commit_readback_does_not_prove_governed_ref"])
-        self.assertTrue(hard["external_governed_ref_confirmation_required_before_canonical_claim"])
-        self.assertFalse(contract["canonicalization"]["runtime_may_claim_persistence"])
-        self.assertFalse(contract["canonicalization"]["runtime_may_confirm_governed_ref"])
+        boundary = contract["authority_boundary"]
+        self.assertTrue(boundary["this_component_has_no_persistence_authority"])
+        self.assertTrue(boundary["this_component_has_no_github_write_capability"])
+        self.assertTrue(boundary["this_component_has_no_governed_ref_confirmation_authority"])
+        transaction = contract["write_transaction_external_contract"]
+        self.assertFalse(transaction["runtime_writes"])
+        self.assertEqual(transaction["steps"][-1], "external_confirm_governed_target_ref")
+        self.assertEqual(
+            transaction["second_write_finalization"]["canonical_reporting_before_external_ref_confirmation"],
+            "forbidden",
+        )
+        isolation = contract["candidate_isolation"]
+        self.assertEqual(isolation["ordinary_directing_always_read"], "forbidden")
+        self.assertEqual(isolation["new_parallel_continuity_write_route"], "forbidden")
 
 
 if __name__ == "__main__":
