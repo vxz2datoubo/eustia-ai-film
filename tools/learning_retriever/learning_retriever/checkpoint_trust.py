@@ -3,6 +3,10 @@
 This module introduces no repository/branch/story authority of its own. Every
 remote read, identity classifier and materialization check delegates to the
 already-canonical ``_active_work_item_remote`` implementation.
+
+Checkpoint execution additionally requires a complete PROJECT_INDEX activation
+tuple from the same fixed GitHub readback. File presence or importability alone
+cannot authorize the checkpoint compiler.
 """
 from __future__ import annotations
 
@@ -30,6 +34,71 @@ def _full_sha(value: Any, *, code: str) -> str:
     if len(sha) != 40 or any(ch not in "0123456789abcdef" for ch in sha):
         raise _error(code, observed=value)
     return sha
+
+
+_CHECKPOINT_CONTRACT_PATH = "10_运行时/active_work_item_checkpoint_compiler.yaml"
+_CHECKPOINT_REGRESSION_PATH = "11_验收/active_work_item_checkpoint_compiler_regression_cases.yaml"
+_ACTIVATION_POLICY_FLAGS = (
+    "active_work_item_checkpoint_compiler_required_for_checkpoint_or_series_close",
+    "active_work_item_checkpoint_runtime_is_proposal_readback_only",
+    "active_work_item_checkpoint_runtime_cannot_write_or_confirm_governed_ref",
+)
+
+
+def _validate_checkpoint_activation(index: Mapping[str, Any]) -> None:
+    """Require the complete PROJECT_INDEX activation tuple before execution.
+
+    The checkpoint implementation may exist in the repository while inactive.
+    Therefore trusted execution cannot derive authority from importability,
+    contract-file presence, local branch state, or caller metadata. It requires
+    all activation registry fields from the same fixed canonical GitHub readback.
+    """
+
+    policy = index.get("policy")
+    canonical = index.get("canonical")
+    effective = index.get("effective_sources")
+    if not isinstance(policy, Mapping) or not isinstance(canonical, Mapping) or not isinstance(effective, Mapping):
+        raise _error("CHECKPOINT_ACTIVATION_REGISTRATION_INVALID", reason="PROJECT_INDEX_SECTIONS_MISSING")
+
+    missing_or_false = [flag for flag in _ACTIVATION_POLICY_FLAGS if policy.get(flag) is not True]
+    if missing_or_false:
+        raise _error(
+            "CHECKPOINT_ACTIVATION_REGISTRATION_INVALID",
+            reason="POLICY_FLAGS_MISSING_OR_FALSE",
+            fields=missing_or_false,
+        )
+
+    observed_contract = str(canonical.get("active_work_item_checkpoint_compiler") or "").strip()
+    if observed_contract != _CHECKPOINT_CONTRACT_PATH:
+        raise _error(
+            "CHECKPOINT_ACTIVATION_REGISTRATION_INVALID",
+            reason="CANONICAL_COMPILER_PATH_MISMATCH",
+            expected=_CHECKPOINT_CONTRACT_PATH,
+            observed=observed_contract,
+        )
+
+    observed_regression = str(
+        canonical.get("active_work_item_checkpoint_compiler_regression_cases") or ""
+    ).strip()
+    if observed_regression != _CHECKPOINT_REGRESSION_PATH:
+        raise _error(
+            "CHECKPOINT_ACTIVATION_REGISTRATION_INVALID",
+            reason="CANONICAL_REGRESSION_PATH_MISMATCH",
+            expected=_CHECKPOINT_REGRESSION_PATH,
+            observed=observed_regression,
+        )
+
+    bad_effective = {
+        path: effective.get(path)
+        for path in (_CHECKPOINT_CONTRACT_PATH, _CHECKPOINT_REGRESSION_PATH)
+        if effective.get(path) != "github_verified"
+    }
+    if bad_effective:
+        raise _error(
+            "CHECKPOINT_ACTIVATION_REGISTRATION_INVALID",
+            reason="EFFECTIVE_SOURCE_NOT_GITHUB_VERIFIED",
+            observed=bad_effective,
+        )
 
 
 @dataclass(frozen=True)
@@ -108,7 +177,6 @@ def load_trusted_checkpoint_baseline(project_root: str | Path) -> TrustedCheckpo
     )
 
     index_text = _remote._github_file_text(_remote.PROJECT_INDEX_PATH, sha)
-    continuity_text = _remote._github_file_text(_remote.CONTINUITY_PATH, sha)
     try:
         index = yaml.safe_load(index_text) or {}
     except yaml.YAMLError as exc:
@@ -116,6 +184,11 @@ def load_trusted_checkpoint_baseline(project_root: str | Path) -> TrustedCheckpo
     if not isinstance(index, Mapping):
         raise _error("CHECKPOINT_CANONICAL_PROJECT_INDEX_INVALID")
     _remote._validate_project_index(index)
+    _validate_checkpoint_activation(index)
+
+    # Authority-bearing continuity/source reads are forbidden until the fixed
+    # GitHub PROJECT_INDEX has proved the complete activation tuple above.
+    continuity_text = _remote._github_file_text(_remote.CONTINUITY_PATH, sha)
     state = _remote._extract_state_payload(continuity_text)
 
     root = Path(project_root)
@@ -139,6 +212,11 @@ def load_trusted_checkpoint_baseline(project_root: str | Path) -> TrustedCheckpo
         "repository": _remote.CANONICAL_REPOSITORY,
         "branch": _remote.CANONICAL_BRANCH,
         "canonical_sha": sha,
+        "checkpoint_activation": {
+            "contract": _CHECKPOINT_CONTRACT_PATH,
+            "regression": _CHECKPOINT_REGRESSION_PATH,
+            "policy_flags": list(_ACTIVATION_POLICY_FLAGS),
+        },
         "continuity_sha256": hashlib.sha256(continuity_text.encode("utf-8")).hexdigest(),
         "materialization": materialization,
         "applied_checkpoint": applied,
