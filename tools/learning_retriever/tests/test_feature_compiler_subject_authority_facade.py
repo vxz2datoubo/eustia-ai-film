@@ -43,7 +43,7 @@ class SubjectAuthorityFacadeTests(unittest.TestCase):
         )
         self.assertEqual(
             task["feature_compiler_receipt"]["actor_subject_binding"],
-            "per_target_event_v2",
+            "per_target_event_actor_identity_v3",
         )
         return task
 
@@ -156,6 +156,27 @@ class SubjectAuthorityFacadeTests(unittest.TestCase):
     def test_intervening_nonagent_clause_invalidates_stale_agency(self):
         self.assert_no_actor_route("菲奥奈看向远处，雕像闪现，随后面向圣女。")
         self.assert_no_actor_route("菲奥奈看向远处，摄影机推进，随后面向圣女。")
+
+    def test_cross_clause_target_carry_requires_same_actor_identity(self):
+        result = compile_director_features("菲奥奈看向圣女。骑士跪下。凯姆面向圣女。")
+        self.assertIn("gaze_to_target", result.relation_type)
+        self.assertIn("facing_to_target", result.relation_type)
+        self.assertNotIn("kneeling_to_target", result.relation_type)
+
+        same_actor = compile_director_features("菲奥奈看向圣女。菲奥奈跪下。")
+        self.assertIn("gaze_to_target", same_actor.relation_type)
+        self.assertIn("kneeling_to_target", same_actor.relation_type)
+
+    def test_deferred_kneel_backfill_requires_same_actor_identity(self):
+        result = compile_director_features("群众跪下且骑士看向圣女并面向圣女。")
+        self.assertIn("gaze_to_target", result.relation_type)
+        self.assertIn("facing_to_target", result.relation_type)
+        self.assertNotIn("kneeling_to_target", result.relation_type)
+
+        same_actor = compile_director_features("群众跪下并看向圣女并面向圣女。")
+        self.assertIn("gaze_to_target", same_actor.relation_type)
+        self.assertIn("facing_to_target", same_actor.relation_type)
+        self.assertIn("kneeling_to_target", same_actor.relation_type)
 
 
 if __name__ == "__main__":
