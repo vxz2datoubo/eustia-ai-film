@@ -24,6 +24,24 @@ source_binding:
   caller_internal_consistency_is_not_source_authenticity: true
   upstream_error_provenance_must_be_preserved: true
 
+source_pair_identity_binding:
+  required_for_repair_attribution: true
+  required_context_fields:
+    - work_item_id
+    - model
+    - model_version
+    - generation_id
+  required_fields_must_be_present_on_both_sides: true
+  work_item_identity_must_match: true
+  model_identity_must_match: true
+  model_version_identity_must_match: true
+  generation_id_must_be_distinct: true
+  eval_id_is_evaluation_record_identity_not_generation_identity: true
+  same_generation_with_different_eval_ids_is_not_repair_evidence: true
+  missing_or_mismatched_identity_status: NOT_COMPARABLE
+  identity_failure_must_clear_repair_attribution: true
+  identity_failure_must_clear_regression_candidate_eligibility: true
+
 measurement_contract_binding:
   required_for_repair_attribution: true
   comparison_mode_identity_required: true
@@ -38,6 +56,15 @@ measurement_contract_binding:
   mismatch_status: NOT_COMPARABLE
   mismatch_must_clear_resolved_and_regression_candidate_eligibility: true
   changed_ruler_cannot_be_recorded_as_repair: true
+
+preserved_pass_gate:
+  required_for_regression_candidate: true
+  pass_to_pass: preserved
+  pass_to_fail: blocks_candidate
+  pass_to_unknown_evidence_loss: blocks_candidate
+  evidence_loss_transition_remains_diagnostic: true
+  evidence_loss_cannot_be_laundered_by_another_resolved_field: true
+  pass_evidence_loss_blocks_causal_eligibility: true
 
 principles:
   observation_is_not_causality: true
@@ -58,14 +85,18 @@ principles:
   joint_tampering_of_result_and_handoff_must_not_suppress_repair: true
   before_after_semantic_measurement_contract_must_match: true
   measurement_contract_drift_is_not_outcome_improvement: true
+  before_after_source_pair_identity_must_be_complete: true
+  before_after_generated_artifacts_must_be_distinct: true
+  prior_pass_evidence_loss_is_not_clean_repair: true
 
 comparison_status:
   COMPARABLE:
-    meaning: work item/model/version, expectation contract and measurement contract are aligned
+    meaning: complete work item/model/version identity, distinct generated artifacts, expectation contract and measurement contract are aligned
   COMPARABLE_WITH_GAPS:
-    meaning: no material contradiction detected, but one or more identity fields are missing
+    meaning: private-core diagnostic only; public Final-Delta runtime must downgrade missing required source-pair identity to NOT_COMPARABLE before attribution
+    repair_attribution_authorized: false
   NOT_COMPARABLE:
-    meaning: material identity, expectation, or measurement-contract mismatch prevents repair-effect attribution
+    meaning: missing/material identity, expectation, source-artifact, or measurement-contract mismatch prevents repair-effect attribution
 
 field_transition_vocabulary:
   PRESERVED: PASS_to_PASS
@@ -97,6 +128,8 @@ causal_evidence_status:
     eligible_for_causal_analysis: false
   TARGET_IMPROVED_WITH_REGRESSION:
     eligible_for_causal_analysis: false
+  TARGET_IMPROVED_WITH_EVIDENCE_LOSS:
+    eligible_for_causal_analysis: false
   CONTROLLED_BUT_NO_TARGET_RESOLUTION:
     eligible_for_causal_analysis: false
 
@@ -124,6 +157,8 @@ output_contract:
   final_delta_is_ephemeral_execution_artifact: true
   candidate_learning_evidence_is_evidence_only: true
   measurement_contract_receipt_required: true
+  source_pair_identity_receipt_required: true
+  preserved_pass_gate_receipt_required: true
   canonical_write_target: null
   prompt_mutation_authorized: false
   generation_authorized: false
