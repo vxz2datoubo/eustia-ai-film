@@ -177,7 +177,6 @@ def load_trusted_checkpoint_baseline(project_root: str | Path) -> TrustedCheckpo
     )
 
     index_text = _remote._github_file_text(_remote.PROJECT_INDEX_PATH, sha)
-    continuity_text = _remote._github_file_text(_remote.CONTINUITY_PATH, sha)
     try:
         index = yaml.safe_load(index_text) or {}
     except yaml.YAMLError as exc:
@@ -186,6 +185,10 @@ def load_trusted_checkpoint_baseline(project_root: str | Path) -> TrustedCheckpo
         raise _error("CHECKPOINT_CANONICAL_PROJECT_INDEX_INVALID")
     _remote._validate_project_index(index)
     _validate_checkpoint_activation(index)
+
+    # Authority-bearing continuity/source reads are forbidden until the fixed
+    # GitHub PROJECT_INDEX has proved the complete activation tuple above.
+    continuity_text = _remote._github_file_text(_remote.CONTINUITY_PATH, sha)
     state = _remote._extract_state_payload(continuity_text)
 
     root = Path(project_root)
