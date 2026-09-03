@@ -16,6 +16,7 @@ from typing import Any
 
 import yaml
 
+from .entity_semantics import bounded_animate_agent_leader
 from .route_resolver import RouteResolutionError, resolve_hard_routes
 
 
@@ -68,7 +69,12 @@ class DirectorFeatures:
         return any(getattr(self, key) for key in FEATURE_KEYS)
 
 
-def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeatures:
+def compile_director_features(
+    task: str,
+    *,
+    strict: bool = True,
+    known_actor_terms: tuple[str, ...] = (),
+) -> DirectorFeatures:
     """Compile director language into retrieval-only mechanism features.
 
     Mechanism features require relational evidence. Surface nouns or verbs alone
@@ -110,10 +116,162 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
                 return True
         return False
 
+    def directional_object_precedes_action(
+        actions: tuple[str, ...],
+        objects: tuple[str, ...],
+        *,
+        subject_terms: tuple[str, ...],
+        max_chars: int = 16,
+    ) -> bool:
+        """Recognize bounded Chinese preposed direction such as `群众朝她跪下`.
+
+        Bare `朝/向` are accepted only when the material before the marker is
+        clause-start/continuation glue or ends in a known actor subject. Explicit
+        multi-character markers may bind a bounded target noun phrase containing
+        a known target head plus determiner/classifier or short proper name. A
+        following bounded `…地` manner adjunct is parsed separately from that NP,
+        so unseen manner wording does not need an adverb dictionary. The outer
+        bare-marker subject boundary still prevents lexical nouns such as
+        `王朝圣女/前朝圣女/本朝圣女` from becoming directional syntax.
+        """
+        separators = ("，", "。", "；", "！", "？", ",", ";", "!", "?")
+        markers = ("面朝", "朝着", "对着", "向着", "朝", "向")
+        trailing_simple_adverbs = ("缓缓", "慢慢", "纷纷", "共同", "一起", "一同", "都")
+        leading_glue = tuple(
+            sorted(
+                set(
+                    (
+                        "随后", "随即", "然后", "接着", "继而", "再", "又", "便", "于是", "立刻", "马上",
+                        "纷纷", "共同", "一起", "一同", "全都", "都", "转身", "转过身", "回身",
+                    )
+                ),
+                key=len,
+                reverse=True,
+            )
+        )
+        subject_forms = set(subject_terms) | {"她", "他", "他们", "她们"}
+        subject_forms.update(f"{subject}们" for subject in subject_terms if not subject.endswith("们"))
+        bounded_subjects = tuple(sorted(subject_forms, key=len, reverse=True))
+        object_candidates = tuple(sorted(set(objects), key=len, reverse=True))
+        target_determiners = (
+            "那位", "这位", "一位", "那名", "这名", "一名", "那个", "这个", "一个",
+            "那扇", "这扇", "一扇", "那座", "这座", "一座",
+        )
+        named_role_targets = {
+            "圣女", "敌人", "对手", "逃犯", "追兵", "同伴", "陌生人",
+            "孩子", "伤员", "平民", "队友",
+        }
+        disallowed_name_suffix_tokens = (
+            "的", "地", "得", "祈祷", "跪", "拜", "追", "逃", "看", "望", "朝", "向",
+            "缓缓", "慢慢", "纷纷", "共同", "一起", "一同", "现身", "出现", "降临", "到来",
+        )
+        manner_structural_forbidden = (
+            "跪", "拜", "追", "逃", "看", "望", "朝", "向", "门", "窗", "口", "台", "出口",
+        )
+
+        def strip_target_determiners(value: str) -> str:
+            normalized = value.strip()
+            changed = True
+            while changed and normalized:
+                changed = False
+                for determiner in target_determiners:
+                    if normalized.startswith(determiner):
+                        normalized = normalized[len(determiner):].strip()
+                        changed = True
+                        break
+            return normalized
+
+        def target_np_matches(candidate: str) -> bool:
+            normalized = strip_target_determiners(candidate)
+            if any(normalized == obj for obj in object_candidates):
+                return True
+
+            for obj in object_candidates:
+                if obj not in named_role_targets or not normalized.startswith(obj):
+                    continue
+                suffix = normalized[len(obj):]
+                if not 1 <= len(suffix) <= 4:
+                    continue
+                if not all("\u4e00" <= char <= "\u9fff" for char in suffix):
+                    continue
+                if any(token in suffix for token in disallowed_name_suffix_tokens):
+                    continue
+                return True
+            return False
+
+        def bounded_de_manner_adjunct(value: str) -> bool:
+            normalized = value.strip()
+            if not normalized.endswith("地"):
+                return False
+            stem = normalized[:-1]
+            if not 2 <= len(stem) <= 6:
+                return False
+            if not all("\u4e00" <= char <= "\u9fff" for char in stem):
+                return False
+            if any(token in stem for token in manner_structural_forbidden):
+                return False
+            if any(obj in stem for obj in object_candidates):
+                return False
+            return True
+
+        def target_phrase_matches(candidate: str) -> bool:
+            normalized = candidate.strip()
+            if target_np_matches(normalized):
+                return True
+
+            for split_at in range(1, len(normalized)):
+                target_part = normalized[:split_at].strip()
+                manner_part = normalized[split_at:].strip()
+                if target_np_matches(target_part) and bounded_de_manner_adjunct(manner_part):
+                    return True
+            return False
+
+        for action in actions:
+            search_from = 0
+            while True:
+                hit = text.find(action, search_from)
+                if hit < 0:
+                    break
+                prefix = text[max(0, hit - max_chars):hit]
+                for separator in separators:
+                    prefix = prefix.rsplit(separator, 1)[-1]
+                prefix = prefix.strip()
+
+                for marker in markers:
+                    marker_pos = prefix.rfind(marker)
+                    if marker_pos < 0:
+                        continue
+                    candidate = prefix[marker_pos + len(marker):].strip()
+                    changed = True
+                    while changed and candidate:
+                        changed = False
+                        for adverb in trailing_simple_adverbs:
+                            if candidate.endswith(adverb):
+                                candidate = candidate[:-len(adverb)].strip()
+                                changed = True
+                                break
+                    if not target_phrase_matches(candidate):
+                        continue
+
+                    if marker in {"朝", "向"}:
+                        leader = prefix[:marker_pos].strip()
+                        changed = True
+                        while changed and leader:
+                            changed = False
+                            for glue in leading_glue:
+                                if leader.endswith(glue):
+                                    leader = leader[:-len(glue)].strip()
+                                    changed = True
+                                    break
+                        if leader and not any(leader.endswith(subject) for subject in bounded_subjects):
+                            continue
+                    return True
+                search_from = hit + len(action)
+        return False
+
     def first_action_object_match(
         actions: tuple[str, ...], objects: tuple[str, ...], *, max_chars: int = 32
     ) -> dict[str, Any] | None:
-        """Return the earliest bounded action->object match with absolute positions."""
         object_candidates = sorted(set(objects), key=len, reverse=True)
         matches: list[dict[str, Any]] = []
         for action in actions:
@@ -175,15 +333,6 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
         continuation_adverbs: tuple[str, ...],
         target_followup_terms: tuple[str, ...],
     ) -> bool:
-        """Verify the complete inter-event chain before carrying the prior target.
-
-        Every punctuation-delimited segment between perception target and ritual
-        action is checked. A segment may contain only bounded temporal/adverbial
-        glue, an explicit repetition of the source actor, or (in the first
-        segment only) a bounded predicate that still belongs to the already
-        identified perception target. Any other lexical material represents an
-        unproven event-agent transition and fails closed.
-        """
         if not source_actor:
             return False
 
@@ -217,7 +366,7 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
                 matched = False
                 for token in allowed:
                     if stripped.startswith(token):
-                        residual = stripped[len(token):]
+                        residual = stripped[len(token):].strip()
                         matched = True
                         break
                 if not matched:
@@ -235,19 +384,168 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
                 return True
         return False
 
+    def bounded_facing_evidence(
+        actions: tuple[str, ...],
+        objects: tuple[str, ...],
+        *,
+        camera_terms: tuple[str, ...],
+        max_prefix_chars: int = 20,
+        max_target_chars: int = 16,
+    ) -> tuple[bool, bool, bool]:
+        """Parse facing predicates only after bounded animate-agent proof.
+
+        A syntactic clause leader is not automatically a character. Positive
+        evidence comes from known actor/pronoun semantics, productive human-role
+        morphology, or an explicit embodied turn transition for an otherwise
+        unseen bounded subject. Strong structure/object morphology remains
+        fail-closed. Camera/body and dynasty cross-token boundaries are preserved.
+        """
+        separators = ("，", "。", "；", "！", "？", ",", ";", "!", "?")
+        leading_glue = (
+            "随后", "随即", "然后", "接着", "继而", "于是", "立刻", "马上", "再", "又", "便",
+        )
+        simple_modifiers = (
+            "突然", "缓缓", "慢慢", "迅速", "立刻", "马上", "纷纷", "共同", "一起", "一同", "全都", "都",
+            "持续", "始终", "一直",
+        )
+        target_determiners = (
+            "那位", "这位", "一位", "那名", "这名", "一名", "那个", "这个", "一个",
+            "那扇", "这扇", "一扇", "那座", "这座", "一座",
+        )
+        bounded_cameras = tuple(sorted(set(camera_terms), key=len, reverse=True))
+        body_anchors = ("身体", "躯干", "上身")
+        object_candidates = tuple(sorted(set(objects), key=len, reverse=True))
+        dynasty_cross_token_leaders = (
+            "前", "本", "王", "这个王", "那个王", "一个王",
+        )
+
+        def strip_leading_glue(value: str) -> str:
+            normalized = value.strip()
+            changed = True
+            while changed and normalized:
+                changed = False
+                for glue in leading_glue:
+                    if normalized.startswith(glue):
+                        normalized = normalized[len(glue):].strip()
+                        changed = True
+                        break
+            return normalized
+
+        def bounded_modifier_tail(value: str) -> bool:
+            residual = value.strip()
+            if not residual:
+                return True
+            if residual.endswith("地"):
+                stem = residual[:-1]
+                if 2 <= len(stem) <= 8 and all("\u4e00" <= char <= "\u9fff" for char in stem):
+                    return True
+            changed = True
+            while changed and residual:
+                changed = False
+                for modifier in simple_modifiers:
+                    if residual.startswith(modifier):
+                        residual = residual[len(modifier):].strip()
+                        changed = True
+                        break
+            return not residual
+
+        def proven_actor_leader(value: str, action: str) -> bool:
+            return bounded_animate_agent_leader(
+                value,
+                action=action,
+                known_actor_terms=actor_terms,
+                modifier_tail_validator=bounded_modifier_tail,
+                max_chars=max_prefix_chars,
+            )
+
+        def classify_leader(value: str, action: str) -> str | None:
+            normalized = strip_leading_glue(value)
+            if not normalized:
+                return "ELLIPTICAL"
+            for camera in bounded_cameras:
+                if normalized.endswith(camera) or (
+                    normalized.startswith(camera)
+                    and bounded_modifier_tail(normalized[len(camera):])
+                ):
+                    return "CAMERA"
+            for body_anchor in body_anchors:
+                if normalized.endswith(body_anchor) or (
+                    normalized.startswith(body_anchor)
+                    and bounded_modifier_tail(normalized[len(body_anchor):])
+                ):
+                    return "BODY"
+            if action == "朝向" and normalized in dynasty_cross_token_leaders:
+                return None
+            if proven_actor_leader(normalized, action):
+                return "ACTOR"
+            return None
+
+        def target_follows(hit: int, action: str) -> bool:
+            tail = text[hit + len(action): hit + len(action) + max_target_chars]
+            for separator in separators:
+                tail = tail.split(separator, 1)[0]
+            tail = tail.strip()
+            changed = True
+            while changed and tail:
+                changed = False
+                for determiner in target_determiners:
+                    if tail.startswith(determiner):
+                        tail = tail[len(determiner):].strip()
+                        changed = True
+                        break
+            return any(tail.startswith(obj) for obj in object_candidates)
+
+        syntactic_facing = False
+        target_evidence = False
+        camera_agent = False
+        for action in actions:
+            search_from = 0
+            while True:
+                hit = text.find(action, search_from)
+                if hit < 0:
+                    break
+                prefix = text[max(0, hit - max_prefix_chars):hit]
+                for separator in separators:
+                    prefix = prefix.rsplit(separator, 1)[-1]
+                leader_class = classify_leader(prefix, action)
+                if leader_class is None:
+                    search_from = hit + len(action)
+                    continue
+                syntactic_facing = True
+                if leader_class == "CAMERA":
+                    camera_agent = True
+                elif target_follows(hit, action):
+                    target_evidence = True
+                search_from = hit + len(action)
+        return syntactic_facing, target_evidence, camera_agent
+
     gaze_terms = ("看向", "望向", "盯着", "注视", "视线朝", "目光朝", "观察")
     perception_terms = ("看到", "看见", "见到")
-    facing_terms = ("面向", "朝向", "转向", "身体朝", "正对")
-    ritual_kneel_terms = ("跪拜", "拜下", "拜倒", "伏地跪拜")
+    orientation_transition_terms = ("转身", "转过身", "回身")
+    facing_terms = tuple(
+        f"{transition}{predicate}"
+        for transition in orientation_transition_terms
+        for predicate in ("朝向", "面向")
+    ) + ("面向", "朝向", "转向", "身体朝", "正对")
+    ritual_kneel_terms = ("跪拜", "拜下", "拜倒", "伏地跪拜", "跪下")
     kneel_terms = ("下跪", "跪向", "跪着朝") + ritual_kneel_terms
     pursuit_terms = ("追逐", "追击", "追赶", "追捕", "追杀")
     escape_terms = ("逃离", "逃跑", "逃开", "撤离", "远离", "躲避", "摆脱")
     escape_source_terms = ("逃离", "逃开", "远离", "躲避", "摆脱")
     occlusion_terms = ("遮挡", "挡住", "挡在", "遮住")
     camera_actor_terms = ("摄影机", "摄像机", "镜头", "机位", "camera")
-    actor_terms = (
-        "群众", "人群", "百姓", "信徒", "灾民", "居民", "民众", "围观者", "人物", "角色", "男孩", "女孩",
-        "男人", "女人", "卫兵", "凯姆", "蒂娅", "圣女",
+    actor_terms = tuple(
+        dict.fromkeys(
+            (
+                "群众", "人群", "百姓", "信徒", "灾民", "居民", "民众", "围观者", "人物", "角色", "男孩", "女孩",
+                "男人", "女人", "卫兵", "凯姆", "蒂娅", "圣女",
+            )
+            + tuple(
+                str(term).strip()
+                for term in known_actor_terms
+                if str(term).strip()
+            )
+        )
     )
     target_object_terms = (
         "目标", "圣女", "教会", "敌人", "对手", "逃犯", "追兵", "同伴", "陌生人", "凯姆", "蒂娅",
@@ -262,7 +560,11 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
 
     has_gaze = _contains_any(text, gaze_terms)
     has_perception = _contains_any(text, perception_terms)
-    has_facing = _contains_any(text, facing_terms)
+    has_facing, facing_target_evidence, facing_camera_agent = bounded_facing_evidence(
+        facing_terms,
+        target_object_terms,
+        camera_terms=camera_actor_terms,
+    )
     has_kneel = _contains_any(text, kneel_terms)
     has_pursuit = _contains_any(text, pursuit_terms)
     has_escape = _contains_any(text, escape_terms)
@@ -270,7 +572,6 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
 
     gaze_camera_agent = camera_is_action_agent(gaze_terms, camera_actor_terms)
     perception_camera_agent = camera_is_action_agent(perception_terms, camera_actor_terms)
-    facing_camera_agent = camera_is_action_agent(facing_terms, camera_actor_terms)
     direct_gaze_target_evidence = has_gaze and not gaze_camera_agent and action_has_object(gaze_terms, target_object_terms)
     perception_target_match = (
         first_action_object_match(perception_terms, target_object_terms)
@@ -279,7 +580,6 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
     )
     perception_target_evidence = perception_target_match is not None
     gaze_target_evidence = direct_gaze_target_evidence or perception_target_evidence
-    facing_target_evidence = has_facing and not facing_camera_agent and action_has_object(facing_terms, target_object_terms)
 
     ritual_target_carry = False
     if perception_target_match:
@@ -317,8 +617,16 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
                 )
 
     direct_kneel_target_evidence = has_kneel and action_has_object(kneel_terms, target_object_terms)
+    preposed_kneel_target_evidence = has_kneel and directional_object_precedes_action(
+        ritual_kneel_terms,
+        target_object_terms,
+        subject_terms=actor_terms,
+    )
     kneel_target_evidence = has_kneel and (
-        direct_kneel_target_evidence or facing_target_evidence or ritual_target_carry
+        direct_kneel_target_evidence
+        or preposed_kneel_target_evidence
+        or facing_target_evidence
+        or ritual_target_carry
     )
     pursuit_target_evidence = has_pursuit and action_has_object(pursuit_terms, target_object_terms)
     escape_source_evidence = has_escape and action_has_object(escape_source_terms, target_object_terms)
@@ -337,7 +645,7 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
     )
     crowd_relation_cues = (
         "看向", "望向", "注视", "观察", "看到", "看见", "见到", "等待救济", "等待施粥", "聆听", "欢呼", "沉默",
-        "嘲笑", "反应", "态度", "跪向", "下跪", "跪拜", "拜下", "拜倒", "转向", "聚焦",
+        "嘲笑", "反应", "态度", "跪向", "下跪", "跪拜", "拜下", "拜倒", "跪下", "转向", "聚焦",
     )
     crowd_has_relation = (
         _contains_any(text, crowd_terms)
@@ -372,7 +680,10 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
             add(relation, "speaker_to_history")
         else:
             add(relation, "speaker_to_listener")
-        if _contains_any(text, ("拖慢", "停滞", "冗长", "啰嗦", "卡住", "节奏慢", "信息段")):
+        if _contains_any(
+            text,
+            ("拖慢", "停滞", "冗长", "啰嗦", "卡住", "节奏慢", "信息段", "停下来", "推进停", "不能推进", "推进不动"),
+        ):
             add(failure, "exposition_stall")
         trace(
             "exposition",
@@ -664,7 +975,10 @@ def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeat
             "VisibleIR.environmental_response",
         )
 
-    if _contains_any(text, ("先后顺序", "事件顺序", "先再", "先…再", "顺序不对", "动作顺序")):
+    if _contains_any(
+        text,
+        ("先后顺序", "事件顺序", "先再", "先…再", "顺序不对", "动作顺序", "动作先后"),
+    ):
         add(dramatic, "event_order")
         add(failure, "event_order_fail")
         trace("event_order", "EventGraphIR.temporal_relation", "EventGraphIR.precondition", "EventGraphIR.result")
@@ -700,14 +1014,13 @@ def compile_retrieval_task(
     base_task: dict[str, Any] | None = None,
     route_data: dict[str, Any] | None = None,
     strict: bool = True,
+    known_actor_terms: tuple[str, ...] = (),
 ) -> dict[str, Any]:
-    """Compile natural language, then resolve hard routes from route authority.
-
-    Natural-language retrieval fails closed when director_route_index data is not
-    supplied. This prevents callers from silently skipping the canonical hard
-    route stage.
-    """
-    features = compile_director_features(description, strict=strict)
+    features = compile_director_features(
+        description,
+        strict=strict,
+        known_actor_terms=known_actor_terms,
+    )
     task = dict(base_task or {})
     task["task_id"] = str(task.get("task_id") or task_id)
     for key, compiled in features.as_dict().items():
@@ -721,6 +1034,7 @@ def compile_retrieval_task(
         "status": "PASS" if features.recognized else "FAIL",
         "input_fingerprint": hashlib.sha256(description.encode("utf-8")).hexdigest()[:16],
         "compiled_feature_keys": [key for key in FEATURE_KEYS if getattr(features, key)],
+        "known_actor_terms_count": len({str(term).strip() for term in known_actor_terms if str(term).strip()}),
         "matched_rules": list(features.matched_rules),
         "semantic_trace": list(features.semantic_trace),
         "route_resolution": "director_route_index",
@@ -731,7 +1045,6 @@ def compile_retrieval_task(
 
 
 def validate_semantic_dependencies(project_root: str | Path) -> list[str]:
-    """Validate that compiler assumptions still bind to the canonical SOAC IR."""
     root = Path(project_root)
     path = root / SOAC_SCHEMA_PATH
     if not path.exists():

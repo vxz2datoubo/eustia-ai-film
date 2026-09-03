@@ -20,7 +20,8 @@ from .active_work_item import (
     revalidate_source_revision,
     resolve_work_item,
 )
-from .feature_compiler import compile_retrieval_task
+from .entity_semantics import load_canonical_character_terms
+from .feature_compiler import FEATURE_KEYS, compile_retrieval_task
 from .retriever import LearningRetriever
 
 
@@ -64,6 +65,7 @@ class DirectorLearningRuntime:
     def __init__(self, project_root: str | Path) -> None:
         self.project_root = Path(project_root)
         self.retriever = LearningRetriever(self.project_root)
+        self.canonical_character_terms = load_canonical_character_terms(self.project_root)
 
     def retrieve(
         self,
@@ -111,6 +113,7 @@ class DirectorLearningRuntime:
             base_task=merged_base,
             route_data=self.retriever.routes,
             strict=True,
+            known_actor_terms=self.canonical_character_terms,
         )
         result = self.retriever.retrieve(
             task, top_k=top_k, expand=expand, fail_closed=True
@@ -146,6 +149,11 @@ class DirectorLearningRuntime:
             "retriever_authority": (
                 "tools/learning_retriever/learning_retriever/retriever.py"
             ),
+            "entity_semantics_authority": "PROJECT_INDEX.canonical.character_db",
+            "canonical_character_term_count": len(self.canonical_character_terms),
+            "compiled_features": {
+                key: list(task.get(key) or []) for key in FEATURE_KEYS
+            },
             "hard_routes": list(task.get("hard_routes") or []),
             "feature_compiler_receipt": dict(
                 task.get("feature_compiler_receipt") or {}
