@@ -16,6 +16,16 @@ source_binding:
   jointly_tampered_result_status_handoff_cannot_define_truth: true
   jointly_tampered_repair_plan_cannot_define_truth: true
 
+source_pair_identity_binding:
+  required_fields: [work_item_id, model, model_version, generation_id]
+  missing_required_identity_is_not_comparable: true
+  same_work_item_required: true
+  same_model_required: true
+  same_model_version_required: true
+  distinct_generation_id_required: true
+  eval_id_is_not_generation_identity: true
+  same_generation_with_distinct_eval_ids_cannot_emit_repair_attribution: true
+
 measurement_contract_binding:
   comparison_mode_must_match: true
   expectation_provenance_must_match: true
@@ -34,6 +44,7 @@ policy:
   automatic_maturity_promotion_forbidden: true
   model_version_mismatch_not_aggregated: true
   pass_regression_blocks_clean_repair_claim: true
+  pass_evidence_loss_blocks_regression_candidate: true
   changed_ruler_cannot_become_repair_success: true
   missing_alternative_explanations_remain_unknown: true
   missing_counterfactuals_remain_unknown: true
@@ -42,6 +53,7 @@ policy:
 cases:
   - id: FD-PROD-KAIM-RESOLVED-SOURCE-BOUND-001
     source_before_eval_case: EOE-PROD-KAIM-DISAPPEARANCE-001
+    source_pair_identity_enrichment_required: true
     target_field: attention_handoff
     after_observation: PASS
     expected_transition: RESOLVED
@@ -66,11 +78,39 @@ cases:
     expected_regressed_transition: REGRESSED
     expected_regression_candidate_eligible: false
 
+  - id: FD-PASS-EVIDENCE-LOSS-001
+    target_field: visual_density
+    repaired_transition: RESOLVED
+    previously_passing_field: composition
+    after_observation_state: UNKNOWN
+    expected_preserved_pass_gate: false
+    expected_lost_pass_evidence_fields: [composition]
+    expected_regression_candidate_eligible: false
+    expected_causal_eligible: false
+    diagnostic_transition_must_remain: EVIDENCE_LOST
+
   - id: FD-MODEL-VERSION-SPLIT-001
     before_model_version: "2.5"
     after_model_version: "2.6"
     expected_comparison_status: NOT_COMPARABLE
     expected_reason: MODEL_VERSION_MISMATCH
+
+  - id: FD-MISSING-COMPARISON-IDENTITY-001
+    before_identity_complete: true
+    after_missing_field: model_version
+    expected_comparison_status: NOT_COMPARABLE
+    expected_reason: AFTER_MODEL_VERSION_MISSING
+    expected_resolved_fields: []
+    expected_regression_candidate_eligible: false
+
+  - id: FD-SAME-GENERATION-DISTINCT-EVAL-IDS-001
+    before_eval_id: FD-SAME-GEN-BEFORE
+    after_eval_id: FD-SAME-GEN-AFTER
+    generation_id_same: true
+    expected_comparison_status: NOT_COMPARABLE
+    expected_reason: SOURCE_ARTIFACT_IDENTITY_COLLISION
+    expected_resolved_fields: []
+    expected_regression_candidate_eligible: false
 
   - id: FD-MEASUREMENT-MODE-DRIFT-001
     before_comparison_mode: exact_value
@@ -134,6 +174,9 @@ gates:
   serialized_eval_result_never_authoritative: true
   serialized_repair_plan_never_authoritative: true
   caller_internal_consistency_is_not_source_authenticity: true
+  complete_source_pair_identity_required_for_attribution: true
+  distinct_generated_artifact_required_for_before_after: true
+  eval_id_cannot_substitute_for_generation_id: true
   measurement_contract_identity_required_for_attribution: true
   changed_measurement_contract_cannot_yield_resolved: true
   changed_measurement_contract_cannot_yield_regression_candidate: true
@@ -141,6 +184,7 @@ gates:
   source_eval_learning_handoff_must_be_non_promoting: true
   repair_plan_must_exactly_match_before_fail_unknown: true
   pass_dimensions_must_be_compared_for_regression: true
+  pass_to_unknown_evidence_loss_blocks_regression_candidate: true
   single_success_cannot_promote: true
   causal_claim_never_auto_authorized: true
   candidate_lesson_never_invented: true
