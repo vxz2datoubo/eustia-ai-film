@@ -78,7 +78,7 @@ SUBJECT_DESCRIPTORS = (
 NON_ADVERBIAL_DI_ENDINGS = (
     "基地", "场地", "工地", "阵地", "营地", "墓地", "高地", "平地", "属地",
     "领地", "腹地", "殖民地", "目的地", "所在地", "发源地", "聚集地", "驻地",
-    "土地",
+    "土地", "出生地",
 )
 
 
@@ -180,9 +180,15 @@ def _strip_trailing_subject_descriptors(value: str) -> str:
 
 
 def _prefix_can_precede_actor(prefix: str) -> bool:
-    """Bound non-actor material allowed before a real actor token."""
+    """Bound non-actor material allowed before a real actor token.
+
+    A single localizer ``的`` is allowed after a verified scene prefix, e.g.
+    ``礼拜堂中央的年轻祭司``. The localizer never becomes actor evidence itself.
+    """
 
     residual = _strip_trailing_subject_descriptors(prefix.strip().replace(" ", ""))
+    if residual.endswith("的"):
+        residual = residual[:-1]
     if not residual:
         return True
     if any(residual.endswith(token) for token in DYNASTY_WORLD_PREFIXES):
@@ -221,12 +227,19 @@ def _token_matches_actor(
     Exact terms are always allowed. Embedded terms are allowed only when the
     material before the term is a bounded scene/descriptor prefix. This prevents
     “英格兰” -> “格兰” and “吉他” -> “他” while preserving compact prose such as
-    “礼拜堂中央年轻祭司”.
+    “礼拜堂中央年轻祭司”. A single possessive ``的`` may follow an already-valid
+    actor token so ordinary forms such as ``菲奥奈的目光`` and ``她的视线`` remain
+    expressible without reopening productive suffix matching.
     """
 
     normalized = candidate.strip().replace(" ", "")
     if not normalized or _explicitly_non_agent(normalized):
         return False
+
+    if normalized.endswith("的") and len(normalized) > 1:
+        owner = normalized[:-1]
+        if _token_matches_actor(owner, known_actor_terms=known_actor_terms):
+            return True
 
     canonical = {
         str(term).strip()
@@ -253,6 +266,36 @@ def _token_matches_actor(
                 continue
             if _prefix_can_precede_actor(prefix):
                 return True
+    return False
+
+
+def obvious_non_agent_subject_prefix(
+    value: str,
+    *,
+    known_actor_terms: Iterable[str],
+    max_chars: int = 24,
+) -> bool:
+    """Detect an explicit non-agent subject at the start of an intervening clause.
+
+    This helper exists only to invalidate stale ACTOR/CAMERA inheritance across a
+    new subject boundary. It first searches bounded prefixes for a legitimate
+    actor form so scene-prefix + actor phrases are not mistaken for static scene
+    nouns. Only then may a shorter prefix prove an obvious non-agent object.
+    """
+
+    normalized = value.strip().replace(" ", "")
+    if not normalized:
+        return False
+    bounded = normalized[:max_chars]
+
+    for end in range(1, len(bounded) + 1):
+        if _token_matches_actor(bounded[:end], known_actor_terms=known_actor_terms):
+            return False
+
+    for end in range(1, len(bounded) + 1):
+        prefix = bounded[:end]
+        if prefix in NON_AGENT_COMPOUNDS or _explicitly_non_agent(prefix):
+            return True
     return False
 
 
