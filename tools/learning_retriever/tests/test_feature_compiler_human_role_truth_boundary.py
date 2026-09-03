@@ -36,7 +36,7 @@ def modifier_tail(value: str) -> bool:
 class HumanRoleTruthBoundaryTests(unittest.TestCase):
     def compile_or_none(self, text: str):
         try:
-            return compile_director_features(text, known_actor_terms=CANONICAL)
+            return compile_director_features(text)
         except FeatureCompilationError as exc:
             if str(exc) == "NO_RECOGNIZED_DIRECTOR_FEATURES":
                 return None
@@ -53,7 +53,6 @@ class HumanRoleTruthBoundaryTests(unittest.TestCase):
             text,
             route_data=ROUTE_DATA,
             strict=False,
-            known_actor_terms=CANONICAL,
         )
         self.assertNotIn("TARGET_ORIENTED_SPATIAL_BINDING", task.get("hard_routes") or [])
 
@@ -84,16 +83,13 @@ class HumanRoleTruthBoundaryTests(unittest.TestCase):
         for role in ("贵族", "骑士", "医生", "调查员", "工程师", "研究者", "祭司"):
             with self.subTest(role=role):
                 self.assertIn(role, HUMAN_ROLE_HEADS)
-                result = compile_director_features(
-                    f"{role}面向圣女。", known_actor_terms=CANONICAL
-                )
+                result = compile_director_features(f"{role}面向圣女。")
                 self.assertIn("facing_to_target", result.relation_type)
                 self.assertIn("locatable_target", result.spatial_action_features)
 
     def test_scene_prefix_and_manner_do_not_require_scene_dictionary(self):
         result = compile_director_features(
-            "礼拜堂中央年轻祭司十分郑重地面向圣女。",
-            known_actor_terms=CANONICAL,
+            "礼拜堂中央年轻祭司十分郑重地面向圣女。"
         )
         self.assertIn("facing_to_target", result.relation_type)
         self.assertIn("body_orientation", result.spatial_action_features)
@@ -113,6 +109,7 @@ class HumanRoleTruthBoundaryTests(unittest.TestCase):
         result = runtime.retrieve("菲奥奈面向圣女。", task_id="ENTITY-RUNTIME-FIONE")
         receipt = result["canonical_runtime_receipt"]
         self.assertEqual(receipt["entity_semantics_authority"], "PROJECT_INDEX.canonical.character_db")
+        self.assertFalse(receipt["caller_actor_terms_supported"])
         self.assertGreater(receipt["canonical_character_term_count"], 0)
         self.assertIn("facing_to_target", receipt["compiled_features"]["relation_type"])
         self.assertIn("TARGET_ORIENTED_SPATIAL_BINDING", receipt["hard_routes"])
