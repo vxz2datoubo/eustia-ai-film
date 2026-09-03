@@ -168,9 +168,15 @@ class SubjectAuthorityFacadeTests(unittest.TestCase):
         self.assertIn("gaze_to_target", result.relation_type)
         self.assertNotIn("kneeling_to_target", result.relation_type)
 
-        production_same_actor = compile_director_features("角色下跪并面向门口圣女。")
-        self.assertIn("kneeling_to_target", production_same_actor.relation_type)
-        self.assertIn("facing_to_target", production_same_actor.relation_type)
+        production_same_actor = compile_retrieval_task(
+            "角色下跪并面向门口圣女。",
+            route_data=ROUTE_DATA,
+        )
+        self.assertIn("kneeling_to_target", production_same_actor.get("relation_type") or [])
+        self.assertIn(
+            "TARGET_ORIENTED_SPATIAL_BINDING",
+            production_same_actor.get("hard_routes") or [],
+        )
 
 
 if __name__ == "__main__":
