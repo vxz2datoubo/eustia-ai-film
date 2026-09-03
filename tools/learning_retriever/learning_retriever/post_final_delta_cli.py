@@ -6,22 +6,30 @@ from pathlib import Path
 
 import yaml
 
-from .post_final_delta import PostFinalDeltaValidationError, assess_post_final_delta_validation
+from .post_final_delta import PostFinalDeltaValidationError
+from .post_final_delta_source_bound import assess_source_bound_post_final_delta
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Assess Final-Delta evidence cohorts, regression proposals and maturity routing"
+        description=(
+            "Assess Post-Final-Delta evidence only from source packages that are "
+            "re-executed through the governed Final-Delta runtime"
+        )
     )
     parser.add_argument("--project-root", default=".")
-    parser.add_argument("--assessment", required=True, help="Assessment YAML/JSON")
+    parser.add_argument(
+        "--assessment",
+        required=True,
+        help="Source-bound assessment YAML/JSON containing final_delta_inputs, never serialized final_deltas",
+    )
     args = parser.parse_args()
 
     path = Path(args.assessment)
     text = path.read_text(encoding="utf-8")
     raw = json.loads(text) if path.suffix.lower() == ".json" else yaml.safe_load(text)
     try:
-        result = assess_post_final_delta_validation(raw, project_root=args.project_root)
+        result = assess_source_bound_post_final_delta(raw, project_root=args.project_root)
     except PostFinalDeltaValidationError as exc:
         print(
             json.dumps(
