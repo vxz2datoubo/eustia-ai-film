@@ -50,8 +50,8 @@ class BinaryArtifactEvidenceBridgeContractTests(unittest.TestCase):
         }
         public = {name for name in dir(bridge) if not name.startswith("_")}
         self.assertTrue(forbidden.isdisjoint(public))
-        self.assertTrue(callable(bridge.observe_artifact_bytes))
-        self.assertTrue(callable(bridge.compare_artifact_bytes))
+        self.assertTrue(callable(bridge.inspect_artifact_bytes))
+        self.assertTrue(callable(bridge.verify_distinct_artifact_pair))
 
 
 if __name__ == "__main__":
