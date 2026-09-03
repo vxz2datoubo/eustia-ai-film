@@ -8,7 +8,9 @@ This public module owns the trust boundary around that parser:
    repository checkout on every public compile;
 3. actor-only target relations are revalidated against bounded subject evidence
    before Hard Route resolution;
-4. camera agency is preserved across elliptical follow-up clauses.
+4. camera agency is preserved across elliptical follow-up clauses;
+5. already-proven same-clause agency may carry across coordinated actions, but
+   the facade never creates a target relation that the private parser did not emit.
 
 The component remains retrieval-query normalization only. It does not own story,
 character, route, learning, camera, map, asset, or continuity truth.
@@ -45,7 +47,7 @@ _TEMPORAL_GLUE = (
 _SIMPLE_MODIFIERS = (
     "突然", "缓缓", "慢慢", "迅速", "立刻", "马上", "纷纷", "共同", "一起", "一同",
     "全都", "都", "持续", "始终", "一直", "十分", "非常", "极其", "郑重", "恭敬",
-    "虔诚",
+    "虔诚", "随后", "随即", "然后", "接着", "继而", "于是", "再", "又", "便",
 )
 _FACING_ACTIONS = (
     "转过身朝向", "转过身面向", "转身朝向", "转身面向", "回身朝向", "回身面向",
@@ -223,6 +225,15 @@ def _scan_actor_subject_support(
     *,
     canonical_terms: tuple[str, ...],
 ) -> dict[str, bool]:
+    """Validate actor observables without reparsing target semantics.
+
+    The private core still decides whether a gaze/facing/kneel relation exists.
+    This scan answers only whether the relevant observable has a proven ACTOR
+    subject. A proven ACTOR/CAMERA may carry through later coordinated actions in
+    the same clause; across clauses only the last explicitly proven agency may be
+    inherited by an empty/temporal-glue leader.
+    """
+
     support = {"facing": False, "gaze": False, "kneel": False}
     last_agent: str | None = None
     first_clause = True
@@ -246,6 +257,8 @@ def _scan_actor_subject_support(
             first_clause = False
             continue
 
+        clause_agent: str | None = None
+        seen_event = False
         for pos, kind, action in sorted(event_hits, key=lambda item: item[0]):
             prefix = clause[:pos]
             leader = prefix
@@ -261,10 +274,27 @@ def _scan_actor_subject_support(
                 last_agent=last_agent,
                 first_clause=first_clause,
             )
+
+            # Once this clause has proven ACTOR/CAMERA agency, a later action may
+            # inherit it even if its prefix contains the already-consumed action
+            # material (“角色下跪并面向…”, “群众看到圣女后跪拜”). This does not
+            # create target semantics; it only prevents the facade from deleting
+            # a relation the core already emitted. A newly explicit ACTOR/CAMERA
+            # still replaces the carried class below.
+            if seen_event and agent_class == "OTHER" and clause_agent in {"ACTOR", "CAMERA"}:
+                agent_class = clause_agent
+                explicit = False
+
             if agent_class == "ACTOR":
                 support[kind] = True
+
+            if agent_class in {"ACTOR", "CAMERA"}:
+                clause_agent = agent_class
             if explicit and agent_class in {"ACTOR", "CAMERA"}:
                 last_agent = agent_class
+            elif not explicit and last_agent is None and agent_class in {"ACTOR", "CAMERA"}:
+                last_agent = agent_class
+            seen_event = True
 
         first_clause = False
     return support
@@ -285,25 +315,37 @@ def _sanitize_actor_target_relations(
     matched_rules = list(features.matched_rules)
     semantic_trace = list(features.semantic_trace)
     filtered = False
+    removed_facing = False
+    removed_gaze = False
+    removed_kneel = False
 
     if "facing_to_target" in relation and not support["facing"]:
         relation = [value for value in relation if value != "facing_to_target"]
+        removed_facing = True
         filtered = True
     if "gaze_to_target" in relation and not support["gaze"]:
         relation = [value for value in relation if value != "gaze_to_target"]
         failure = [value for value in failure if value != "gaze_target_spatial_binding_fail"]
+        removed_gaze = True
         filtered = True
     if "kneeling_to_target" in relation and not support["kneel"]:
         relation = [value for value in relation if value != "kneeling_to_target"]
         spatial = [value for value in spatial if value != "kneeling_to_target"]
+        removed_kneel = True
         filtered = True
 
     if not any(value in _BODY_RELATIONS for value in relation):
         failure = [value for value in failure if value != "body_orientation_target_fail"]
-        # A bare body_orientation may come from actor-facing/kneeling/pursuit.
-        # Preserve it only when a remaining target relation still needs it.
-        if not any(value in {"pursuit_to_target"} for value in relation):
+        # Preserve genuine non-target actor orientation (e.g. 人物转向左侧).
+        # Remove body_orientation only when an invalid facing/kneel relation was
+        # filtered and no actor-facing observable survives the authority scan.
+        if (removed_facing or removed_kneel) and not support["facing"]:
             spatial = [value for value in spatial if value != "body_orientation"]
+
+    # Same rule for non-target gaze: “角色看向远处” remains observable, while a
+    # statue/guitar/camera cannot mint actor gaze_direction through target syntax.
+    if removed_gaze and not support["gaze"]:
+        spatial = [value for value in spatial if value != "gaze_direction"]
 
     if not any(value in _TARGET_RELATIONS for value in relation):
         dramatic = [value for value in dramatic if value != "target_oriented_action"]
