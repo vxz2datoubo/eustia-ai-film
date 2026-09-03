@@ -102,6 +102,14 @@ class DirectorLearningRuntime:
             description, work_item_packet
         )
 
+        # The normal constructor caches the canonical character projection. Some
+        # adversarial/runtime harnesses deliberately bypass __init__; those paths
+        # must fail closed by rebuilding the same PROJECT_INDEX-bound projection,
+        # not by assuming caller-supplied actor terms.
+        canonical_character_terms = getattr(self, "canonical_character_terms", None)
+        if canonical_character_terms is None:
+            canonical_character_terms = load_canonical_character_terms(self.project_root)
+
         # Close the remote source-revision TOCTOU window at the first downstream
         # compiler boundary. If the source Issue changed after initial resolution,
         # fail closed before Director Feature Compiler can observe stale context.
@@ -113,7 +121,7 @@ class DirectorLearningRuntime:
             base_task=merged_base,
             route_data=self.retriever.routes,
             strict=True,
-            known_actor_terms=self.canonical_character_terms,
+            known_actor_terms=canonical_character_terms,
         )
         result = self.retriever.retrieve(
             task, top_k=top_k, expand=expand, fail_closed=True
@@ -150,7 +158,7 @@ class DirectorLearningRuntime:
                 "tools/learning_retriever/learning_retriever/retriever.py"
             ),
             "entity_semantics_authority": "PROJECT_INDEX.canonical.character_db",
-            "canonical_character_term_count": len(self.canonical_character_terms),
+            "canonical_character_term_count": len(canonical_character_terms),
             "compiled_features": {
                 key: list(task.get(key) or []) for key in FEATURE_KEYS
             },
