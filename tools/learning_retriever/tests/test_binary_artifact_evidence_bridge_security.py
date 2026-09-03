@@ -4,70 +4,64 @@ import unittest
 
 from learning_retriever.binary_artifact_evidence import (
     ArtifactEvidenceError,
-    compare_artifact_bytes,
-    observe_artifact_bytes,
+    inspect_artifact_bytes,
+    verify_distinct_artifact_pair,
 )
 
 
 class BinaryArtifactEvidenceBridgeSecurityTests(unittest.TestCase):
-    def test_path_text_difference_cannot_mint_distinct_content(self):
-        with TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            a = root / "a.bin"
-            b = root / "renamed-copy.data"
-            payload = b"same-content"
-            a.write_bytes(payload)
-            b.write_bytes(payload)
-            result = compare_artifact_bytes(a, b)
-            self.assertEqual(result["content_relation"], "SAME_CONTENT")
-            self.assertFalse(result["distinct_content_verified"])
-            self.assertEqual(result["generation_binding_state"], "UNVERIFIED")
+    def test_metadata_strings_cannot_mint_byte_verification(self):
+        for value in (
+            "sha256:" + "0" * 64,
+            "file_00000000000000000000000000000000",
+            "library://example",
+            "GEN::123",
+            "media::example",
+        ):
+            with self.subTest(value=value):
+                with self.assertRaises(ArtifactEvidenceError):
+                    inspect_artifact_bytes(value)
 
-    def test_one_byte_difference_is_content_distinct_but_not_generation_distinct(self):
-        with TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            a = root / "a.bin"
-            b = root / "b.bin"
-            a.write_bytes(b"abcdef")
-            b.write_bytes(b"abcdeg")
-            result = compare_artifact_bytes(a, b)
-            self.assertEqual(result["content_relation"], "DISTINCT_CONTENT")
-            self.assertTrue(result["distinct_content_verified"])
-            self.assertFalse(result["distinct_generation_event_verified"])
-            self.assertEqual(result["generation_binding_state"], "UNVERIFIED")
-            self.assertEqual(result["formal_asset_state"], "UNVERIFIED")
-
-    def test_serialized_receipt_mapping_is_not_an_authority_input(self):
+    def test_serialized_receipt_mapping_cannot_be_replayed_as_authority(self):
         forged = {
             "content_sha256": "0" * 64,
             "byte_length": 1,
             "byte_verification_state": "BYTE_VERIFIED",
+            "generation_binding_state": "VERIFIED",
         }
-        with self.assertRaises((ArtifactEvidenceError, TypeError)):
-            observe_artifact_bytes(forged)
-        with self.assertRaises((ArtifactEvidenceError, TypeError)):
-            compare_artifact_bytes(forged, forged)
+        with self.assertRaises(ArtifactEvidenceError) as ctx:
+            inspect_artifact_bytes(forged)
+        self.assertEqual(ctx.exception.code, "ARTIFACT_LOCATOR_INVALID")
+        with self.assertRaises(ArtifactEvidenceError) as ctx:
+            verify_distinct_artifact_pair(forged, forged)
+        self.assertEqual(ctx.exception.code, "ARTIFACT_LOCATOR_INVALID")
 
-    def test_caller_digest_string_is_not_a_locator_or_proof(self):
-        with self.assertRaises(ArtifactEvidenceError):
-            observe_artifact_bytes("sha256:" + "0" * 64)
-
-    def test_directory_and_missing_path_fail_closed(self):
+    def test_distinct_content_is_never_promoted_to_generation_event_identity(self):
         with TemporaryDirectory() as tmp:
             root = Path(tmp)
-            with self.assertRaises(ArtifactEvidenceError):
-                observe_artifact_bytes(root)
-            with self.assertRaises(ArtifactEvidenceError):
-                observe_artifact_bytes(root / "missing.bin")
+            before = root / "before.bin"
+            after = root / "after.bin"
+            before.write_bytes(b"before")
+            after.write_bytes(b"after")
+            pair = verify_distinct_artifact_pair(before, after)
+            self.assertTrue(pair.distinct_content_verified)
+            self.assertFalse(pair.same_content)
+            self.assertEqual(pair.claim_scope, "BYTE_CONTENT_IDENTITY_ONLY")
+            self.assertEqual(pair.generation_binding_state, "UNVERIFIED")
+            self.assertEqual(pair.formal_asset_binding_state, "UNVERIFIED")
+            diagnostic = pair.diagnostic_dict()
+            self.assertFalse(diagnostic["distinct_generation_events_verified"])
+            self.assertFalse(diagnostic["formal_assets_verified"])
 
-    def test_empty_file_has_real_byte_identity(self):
+    def test_actual_existing_regular_file_is_required(self):
         with TemporaryDirectory() as tmp:
-            path = Path(tmp) / "empty.bin"
-            path.write_bytes(b"")
-            receipt = observe_artifact_bytes(path)
-            self.assertEqual(receipt["byte_length"], 0)
-            self.assertEqual(receipt["byte_verification_state"], "BYTE_VERIFIED")
-            self.assertEqual(receipt["generation_binding_state"], "UNVERIFIED")
+            root = Path(tmp)
+            with self.assertRaises(ArtifactEvidenceError) as ctx:
+                inspect_artifact_bytes(root)
+            self.assertEqual(ctx.exception.code, "ARTIFACT_NOT_REGULAR_FILE")
+            with self.assertRaises(ArtifactEvidenceError) as ctx:
+                inspect_artifact_bytes(root / "missing.bin")
+            self.assertEqual(ctx.exception.code, "ARTIFACT_NOT_FOUND")
 
 
 if __name__ == "__main__":
