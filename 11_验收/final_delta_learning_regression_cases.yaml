@@ -1,4 +1,4 @@
-suite_id: FINAL_DELTA_LEARNING_EVIDENCE_REGRESSION_V3_SOURCE_BOUND_MEASUREMENT_LOCKED
+suite_id: FINAL_DELTA_LEARNING_EVIDENCE_REGRESSION_V3_ARTIFACT_FAIL_CLOSED
 status: candidate
 policy_authority: 10_运行时/final_delta_learning_policy.yaml
 learning_authority: 08_系统学习/反馈反推与系统反哺引擎.md
@@ -22,19 +22,43 @@ source_pair_identity_binding:
   same_work_item_required: true
   same_model_required: true
   same_model_version_required: true
-  distinct_generation_id_required: true
+  distinct_generation_label_required: true
   eval_id_is_not_generation_identity: true
-  same_generation_with_distinct_eval_ids_cannot_emit_repair_attribution: true
+  same_generation_label_with_distinct_eval_ids_cannot_emit_repair_attribution: true
+  distinct_generation_labels_do_not_prove_distinct_artifacts: true
+
+artifact_provenance_binding:
+  canonical_artifact_to_generation_verifier_available: false
+  caller_generation_id_authoritative: false
+  caller_media_refs_authoritative: false
+  public_repair_attribution_without_verifier: forbidden
+  current_status: UNVERIFIED_NO_CANONICAL_ARTIFACT_VERIFIER
+  diagnostic_transition_channel: unattributed_transition_candidates
+  regression_or_golden_candidate_without_verifier: forbidden
 
 measurement_contract_binding:
   comparison_mode_must_match: true
   expectation_provenance_must_match: true
+  evidence_source_must_match: true
   inspection_mode_must_match: true
   temporal_coverage_contract_must_match: true
   frame_by_frame_claim_must_match: true
   mismatch_is_not_comparable: true
-  mismatch_cannot_emit_resolved: true
+  mismatch_cannot_emit_attributed_resolved: true
   mismatch_cannot_emit_regression_candidate: true
+
+preserved_pass_binding:
+  every_prior_pass_must_remain_preserved: true
+  pass_to_fail_blocks_candidate: true
+  pass_to_unknown_blocks_candidate: true
+  pass_to_not_applicable_or_scope_changed_blocks_candidate: true
+  violating_transition_remains_diagnostic: true
+
+identity_binding:
+  change_id_alone_is_not_final_delta_identity: true
+  source_pair_must_participate_in_final_delta_id: true
+  source_pair_must_participate_in_candidate_evidence_id: true
+  source_pair_digest_is_collision_resistance_not_artifact_authenticity: true
 
 policy:
   observation_is_not_causality: true
@@ -43,51 +67,54 @@ policy:
   automatic_writeback_forbidden: true
   automatic_maturity_promotion_forbidden: true
   model_version_mismatch_not_aggregated: true
-  pass_regression_blocks_clean_repair_claim: true
-  pass_evidence_loss_blocks_regression_candidate: true
+  caller_generation_labels_are_not_artifact_authenticity: true
+  pass_loss_blocks_clean_repair_claim: true
   changed_ruler_cannot_become_repair_success: true
   missing_alternative_explanations_remain_unknown: true
   missing_counterfactuals_remain_unknown: true
   camera_authority_cannot_reappear: true
 
 cases:
-  - id: FD-PROD-KAIM-RESOLVED-SOURCE-BOUND-001
+  - id: FD-PROD-KAIM-DIAGNOSTIC-UNATTRIBUTED-001
     source_before_eval_case: EOE-PROD-KAIM-DISAPPEARANCE-001
     source_pair_identity_enrichment_required: true
     target_field: attention_handoff
     after_observation: PASS
-    expected_transition: RESOLVED
-    expected_causal_evidence_status: OBSERVATIONAL_ONLY
-    expected_maturity: candidate
+    expected_diagnostic_transition: RESOLVED
+    expected_diagnostic_channel: unattributed_transition_candidates
+    expected_artifact_provenance_verified: false
+    expected_comparison_status: NOT_COMPARABLE
+    expected_reason: ARTIFACT_PROVENANCE_UNVERIFIED
+    expected_regression_candidate_eligible: false
     expected_generalization_authorized: false
     expected_promotion_authorized: false
     expected_writeback_authorized: false
 
-  - id: FD-CALLER-CONTROL-UNVERIFIED-001
-    target_field: visual_density
-    caller_declares_complete_controls: true
-    expected_before_control_status: UNVERIFIED_CONTROL
-    expected_after_control_status: UNVERIFIED_CONTROL
-    expected_causal_evidence_status: CONTROL_NOT_VERIFIED
-    expected_causal_claim_authorized: false
-
-  - id: FD-PASS-REGRESSION-001
-    target_field: visual_density
-    regressed_field: composition
-    expected_target_transition: RESOLVED
-    expected_regressed_transition: REGRESSED
+  - id: FD-DISTINCT-GENERATION-LABELS-NOT-ARTIFACT-PROOF-001
+    before_generation_label: GEN-A
+    after_generation_label: GEN-B
+    labels_distinct: true
+    trusted_artifact_verifier: absent
+    expected_artifact_provenance_verified: false
+    expected_comparison_status: NOT_COMPARABLE
+    expected_reason: ARTIFACT_PROVENANCE_REQUIRED
+    expected_attributed_resolved_fields: []
     expected_regression_candidate_eligible: false
 
-  - id: FD-PASS-EVIDENCE-LOSS-001
-    target_field: visual_density
-    repaired_transition: RESOLVED
-    previously_passing_field: composition
-    after_observation_state: UNKNOWN
-    expected_preserved_pass_gate: false
-    expected_lost_pass_evidence_fields: [composition]
+  - id: FD-SAME-GENERATION-DISTINCT-EVAL-IDS-001
+    before_eval_id: FD-SAME-GEN-BEFORE
+    after_eval_id: FD-SAME-GEN-AFTER
+    generation_label_same: true
+    expected_comparison_status: NOT_COMPARABLE
+    expected_reason: SOURCE_ARTIFACT_IDENTITY_COLLISION
     expected_regression_candidate_eligible: false
-    expected_causal_eligible: false
-    diagnostic_transition_must_remain: EVIDENCE_LOST
+
+  - id: FD-MISSING-COMPARISON-IDENTITY-001
+    before_identity_complete: true
+    after_missing_field: model_version
+    expected_comparison_status: NOT_COMPARABLE
+    expected_reason: AFTER_MODEL_VERSION_MISSING
+    expected_regression_candidate_eligible: false
 
   - id: FD-MODEL-VERSION-SPLIT-001
     before_model_version: "2.5"
@@ -95,48 +122,70 @@ cases:
     expected_comparison_status: NOT_COMPARABLE
     expected_reason: MODEL_VERSION_MISMATCH
 
-  - id: FD-MISSING-COMPARISON-IDENTITY-001
-    before_identity_complete: true
-    after_missing_field: model_version
-    expected_comparison_status: NOT_COMPARABLE
-    expected_reason: AFTER_MODEL_VERSION_MISSING
-    expected_resolved_fields: []
+  - id: FD-PASS-REGRESSION-DIAGNOSTIC-001
+    target_field: visual_density
+    target_diagnostic_transition: RESOLVED
+    previously_passing_field: composition
+    prior_pass_transition: REGRESSED
+    expected_preserved_pass_gate: false
     expected_regression_candidate_eligible: false
 
-  - id: FD-SAME-GENERATION-DISTINCT-EVAL-IDS-001
-    before_eval_id: FD-SAME-GEN-BEFORE
-    after_eval_id: FD-SAME-GEN-AFTER
-    generation_id_same: true
-    expected_comparison_status: NOT_COMPARABLE
-    expected_reason: SOURCE_ARTIFACT_IDENTITY_COLLISION
-    expected_resolved_fields: []
+  - id: FD-PASS-EVIDENCE-LOSS-001
+    target_field: visual_density
+    target_diagnostic_transition: RESOLVED
+    previously_passing_field: composition
+    prior_pass_transition: EVIDENCE_LOST
+    expected_preserved_pass_gate: false
+    expected_violated_prior_pass_fields: [composition]
+    expected_regression_candidate_eligible: false
+    expected_causal_eligible: false
+
+  - id: FD-PASS-NOT-APPLICABLE-BLOCK-001
+    target_field: visual_density
+    previously_passing_field: composition
+    after_state: NOT_APPLICABLE
+    expected_prior_pass_transition: SCOPE_CHANGED
+    expected_preserved_pass_gate: false
     expected_regression_candidate_eligible: false
 
   - id: FD-MEASUREMENT-MODE-DRIFT-001
     before_comparison_mode: exact_value
     after_comparison_mode: explicit_observation_judgment
-    same_expected_value: true
-    same_observed_value: true
-    synthetic_outcome_without_gate: FAIL_to_PASS
     expected_comparison_status: NOT_COMPARABLE
     expected_reason: COMPARISON_MODE_MISMATCH
-    expected_resolved_fields: []
     expected_regression_candidate_eligible: false
 
   - id: FD-EXPECTATION-PROVENANCE-DRIFT-001
-    same_expected_value: true
     expectation_provenance_changes: true
     expected_comparison_status: NOT_COMPARABLE
     expected_reason: EXPECTATION_CONTRACT_MISMATCH
-    expected_resolved_fields: []
 
   - id: FD-INSPECTION-METHOD-DRIFT-001
-    same_expected_value: true
-    same_comparison_mode: true
     inspection_mode_changes: true
     expected_comparison_status: NOT_COMPARABLE
     expected_reason: OBSERVATION_METHOD_MISMATCH
-    expected_resolved_fields: []
+
+  - id: FD-EVIDENCE-SOURCE-DRIFT-001
+    before_evidence_source: canonical_reviewer_A
+    after_evidence_source: substituted_reviewer_B
+    other_measurement_fields_equal: true
+    expected_comparison_status: NOT_COMPARABLE
+    expected_reason: OBSERVATION_METHOD_MISMATCH
+    expected_regression_candidate_eligible: false
+
+  - id: FD-CHANGE-ID-REUSE-SOURCE-PAIR-BOUND-001
+    same_change_id: true
+    source_pair_differs: true
+    expected_final_delta_id_collision: false
+    expected_candidate_evidence_id_collision: false
+    source_pair_digest_is_artifact_proof: false
+
+  - id: FD-CALLER-CONTROL-UNVERIFIED-001
+    caller_declares_complete_controls: true
+    expected_before_control_status: UNVERIFIED_CONTROL
+    expected_after_control_status: UNVERIFIED_CONTROL
+    expected_final_public_causal_status: NOT_ELIGIBLE_NOT_COMPARABLE
+    expected_causal_claim_authorized: false
 
 structural_gate_cases:
   - id: FD-LEGACY-SERIALIZED-EVAL-INPUT-FORBIDDEN-001
@@ -150,7 +199,8 @@ structural_gate_cases:
   - id: FD-JOINT-RESULT-HANDOFF-TAMPER-CANNOT-SUPPRESS-001
     attack: jointly_change_FAIL_to_PASS_status_to_PASS_and_handoff_to_empty
     authoritative_input: original_before_eval_input
-    expected_behavior: canonical_reexecution_preserves_original_failure_and_repair_target
+    expected_behavior: canonical_reexecution_preserves_original_diagnostic_failure_and_repair_target
+    expected_public_attribution: forbidden_without_artifact_verifier
 
   - id: FD-JOINT-REPAIR-PLAN-TAMPER-CANNOT-MISROUTE-001
     attack: remove_or_change_serialized_repair_items
@@ -175,21 +225,23 @@ gates:
   serialized_repair_plan_never_authoritative: true
   caller_internal_consistency_is_not_source_authenticity: true
   complete_source_pair_identity_required_for_attribution: true
-  distinct_generated_artifact_required_for_before_after: true
-  eval_id_cannot_substitute_for_generation_id: true
+  distinct_generation_labels_do_not_prove_distinct_artifacts: true
+  canonical_artifact_provenance_required_for_attribution: true
+  current_runtime_has_no_canonical_artifact_verifier: true
+  current_matching_pairs_are_diagnostic_not_attributed: true
+  evidence_source_is_part_of_measurement_contract: true
   measurement_contract_identity_required_for_attribution: true
-  changed_measurement_contract_cannot_yield_resolved: true
-  changed_measurement_contract_cannot_yield_regression_candidate: true
+  every_prior_pass_must_remain_preserved: true
+  pass_to_unknown_blocks_candidate: true
+  pass_to_not_applicable_blocks_candidate: true
+  final_delta_id_must_bind_source_pair: true
+  source_pair_digest_is_not_artifact_authenticity: true
   joint_tampering_cannot_suppress_or_misroute_repair: true
   source_eval_learning_handoff_must_be_non_promoting: true
   repair_plan_must_exactly_match_before_fail_unknown: true
-  pass_dimensions_must_be_compared_for_regression: true
-  pass_to_unknown_evidence_loss_blocks_regression_candidate: true
-  single_success_cannot_promote: true
   causal_claim_never_auto_authorized: true
   candidate_lesson_never_invented: true
-  missing_alternatives_and_counterfactuals_are_unknown: true
-  model_version_split_is_fail_closed_for_attribution: true
   camera_authority_cannot_reappear: true
   regression_candidate_does_not_authorize_regression_write: true
+  no_second_asset_authority: true
   no_second_learning_authority: true
