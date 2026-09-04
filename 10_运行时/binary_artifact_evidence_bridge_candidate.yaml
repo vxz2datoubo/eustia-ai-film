@@ -1,4 +1,4 @@
-schema_version: "1.0"
+schema_version: "1.1"
 component_id: BINARY_ARTIFACT_EVIDENCE_BRIDGE
 status: candidate
 source_issue: 107
@@ -18,7 +18,7 @@ canonical_relationship:
 
 truth_layers:
   BYTE_VERIFIED:
-    meaning: 本次调用中 runtime 自己打开并完整读取了实际普通文件字节，并由这些字节计算内容哈希
+    meaning: 本次调用中 runtime 在具备受支持安全能力的平台上，通过逐路径组件 no-follow 打开普通文件、完整读取实际字节，并由这些字节计算内容哈希；读取前后文件稳定性签名一致
   DISTINCT_CONTENT_VERIFIED:
     meaning: 本次 pair 调用中 before/after 的 runtime-computed 内容身份不同
   GENERATION_BINDING_UNVERIFIED:
@@ -37,13 +37,42 @@ hard_invariants:
   distinct_bytes_do_not_prove_distinct_generation_events: true
   byte_receipt_does_not_register_formal_asset: true
   byte_receipt_does_not_prove_pixels_opened_or_semantically_verified: true
+  every_locator_component_must_be_no_follow: true
+  unsupported_platform_must_fail_before_artifact_filesystem_io: true
+  unc_and_device_namespaces_forbidden_before_artifact_io: true
+  read_stability_must_bind_dev_inode_type_size_mtime_ctime_and_link_count: true
+  same_size_mtime_restored_mutation_must_fail_if_ctime_changes: true
   final_delta_repair_attribution_not_activated_by_this_candidate: true
   no_second_asset_authority: true
   no_second_learning_authority: true
 
+platform_security_contract:
+  positive_byte_verification_requires:
+    os_family: posix
+    capabilities:
+      - O_NOFOLLOW
+      - O_DIRECTORY
+      - os_open_dir_fd
+      - os_stat_dir_fd
+      - os_stat_follow_symlinks_false
+      - nanosecond_mtime
+      - nanosecond_ctime
+  unsupported_platform_behavior:
+    state: FAIL_CLOSED
+    error_code: ARTIFACT_PLATFORM_SECURITY_UNSUPPORTED
+    artifact_filesystem_io_before_failure: forbidden
+  windows_current_state:
+    byte_verification: unsupported_fail_closed
+    reason: no reviewed Win32 no-reparse-point handle adapter exists in candidate v1
+    future_route: separate_governed_win32_secure_locator_adapter
+  network_backed_locator_policy:
+    unc_namespace: forbidden
+    device_namespace: forbidden
+    rejection_before_artifact_io: true
+
 input_contract:
   accepted_authority_input:
-    - actual_local_file_locator_readable_by_current_runtime
+    - actual_local_file_locator_readable_by_current_runtime_on_secure_supported_platform
   rejected_as_verification_authority:
     - serialized_receipt_mapping
     - caller_supplied_sha256
@@ -54,19 +83,34 @@ input_contract:
     - media_ref_string_without_actual_binary_resolution
     - generation_id_string
     - filename_or_extension
+    - unc_network_locator
+    - device_namespace_locator
 
 single_artifact_observation:
   algorithm: sha256
   runtime_read_mode: read_only_binary_stream
-  symlink_policy: reject_locator_indirection_for_v1
+  locator_traversal: component_by_component_pinned_dir_fd
+  symlink_policy: reject_every_locator_component_indirection
+  final_component_open: O_NOFOLLOW
+  intermediate_directory_open: O_DIRECTORY_plus_O_NOFOLLOW
   regular_file_required: true
   empty_file_allowed: true
+  stability_signature:
+    - st_dev
+    - st_ino
+    - file_type
+    - st_size
+    - st_mtime_ns
+    - st_ctime_ns
+    - st_nlink
   receipt_fields:
     - content_sha256
     - byte_length
     - locator_fingerprint
     - locator_class
     - byte_verification_state
+    - locator_security_state
+    - read_stability_state
     - generation_binding_state
     - formal_asset_state
   receipt_authority:
@@ -91,11 +135,14 @@ pair_verification:
 
 failure_codes:
   ARTIFACT_LOCATOR_INVALID: locator type/shape is unsupported
-  ARTIFACT_NOT_FOUND: target file does not exist at read time
-  ARTIFACT_LOCATOR_INDIRECTION_FORBIDDEN: symbolic-link style indirection is rejected in v1
-  ARTIFACT_NOT_REGULAR_FILE: locator resolves to directory/device/non-regular file
-  ARTIFACT_READ_FAILED: actual binary read could not complete
-  ARTIFACT_MUTATED_DURING_READ: underlying file identity/size/mtime changed during observation
+  ARTIFACT_NETWORK_OR_DEVICE_LOCATOR_FORBIDDEN: UNC/device/network-backed locator namespace is rejected before artifact I/O
+  ARTIFACT_PLATFORM_SECURITY_UNSUPPORTED: runtime platform lacks reviewed secure no-follow traversal semantics
+  ARTIFACT_NOT_FOUND: target file or path component does not exist at read time
+  ARTIFACT_PATH_COMPONENT_INVALID: intermediate path component is not a real directory
+  ARTIFACT_LOCATOR_INDIRECTION_FORBIDDEN: symbolic-link/reparse-style locator indirection is rejected
+  ARTIFACT_NOT_REGULAR_FILE: final locator is directory/device/non-regular file
+  ARTIFACT_READ_FAILED: actual binary read or secure traversal could not complete
+  ARTIFACT_MUTATED_DURING_READ: file dev/inode/type/size/mtime/ctime/link state changed during observation or byte count mismatched
 
 candidate_isolation:
   project_index_registration: forbidden
@@ -112,3 +159,4 @@ future_binding_requirements:
   - generation binding must not trust caller generation_id alone
   - consumer requiring byte authority must re-execute actual-byte verification in the trusted call path rather than accept serialized receipts
   - formal asset registration remains governed by existing asset registry/resolver write transaction
+  - Windows positive verification requires a separately reviewed Win32 no-reparse-point handle implementation before BYTE_VERIFIED can be emitted there
