@@ -29,7 +29,9 @@ READ_SETS = REPO_ROOT / "10_运行时/read_sets.yaml"
 WRITE_ROUTES = REPO_ROOT / "10_运行时/write_routes.yaml"
 
 
-def _controlled_payload(*, eval_id: str, density_pass: bool) -> dict:
+def _controlled_payload(
+    *, eval_id: str, density_pass: bool, composition_pass: bool = True
+) -> dict:
     density_expected = {"detail_budget": "selective"}
     composition_expected = {"primary_mechanism": "lateral_pressure"}
     return {
@@ -59,7 +61,16 @@ def _controlled_payload(*, eval_id: str, density_pass: bool) -> dict:
                 },
                 "composition": {
                     "comparison_mode": "exact_value",
-                    "observed_value": composition_expected,
+                    "observed_value": (
+                        composition_expected
+                        if composition_pass
+                        else {"primary_mechanism": "flat_centered"}
+                    ),
+                    **(
+                        {}
+                        if composition_pass
+                        else {"failure_category": "aesthetic_composition"}
+                    ),
                     "evidence_refs": [f"{eval_id}::composition"],
                 },
             },
@@ -93,9 +104,17 @@ def _controlled_payload(*, eval_id: str, density_pass: bool) -> dict:
     }
 
 
-def _source_package() -> dict:
-    before = _controlled_payload(eval_id="E2E-PROV-BEFORE", density_pass=False)
-    after = _controlled_payload(eval_id="E2E-PROV-AFTER", density_pass=True)
+def _source_package(*, after_composition_pass: bool = True) -> dict:
+    before = _controlled_payload(
+        eval_id="E2E-PROV-BEFORE",
+        density_pass=False,
+        composition_pass=True,
+    )
+    after = _controlled_payload(
+        eval_id="E2E-PROV-AFTER",
+        density_pass=True,
+        composition_pass=after_composition_pass,
+    )
     return {
         "before_eval_input": before,
         "after_eval_input": after,
@@ -119,6 +138,13 @@ def _source_package() -> dict:
     }
 
 
+def _diagnostic_transitions(result: dict) -> dict[str, str]:
+    return {
+        item["field"]: item["transition"]
+        for item in result.get("unattributed_transition_candidates") or []
+    }
+
+
 class ContinualLearningProvenanceFirewallE2ETests(unittest.TestCase):
     def test_distinct_bytes_cannot_cross_generation_provenance_firewall(self):
         provenance = assess_repo_only_generation_provenance(
@@ -137,10 +163,7 @@ class ContinualLearningProvenanceFirewallE2ETests(unittest.TestCase):
 
         source = _source_package()
         final_delta = compile_final_delta_learning_evidence(source, project_root=REPO_ROOT)
-        diagnostic = {
-            item["field"]: item["transition"]
-            for item in final_delta.get("unattributed_transition_candidates") or []
-        }
+        diagnostic = _diagnostic_transitions(final_delta)
         self.assertEqual(diagnostic["visual_density"], "RESOLVED")
         self.assertEqual(final_delta["comparison_status"], "NOT_COMPARABLE")
         self.assertFalse(final_delta["artifact_provenance_binding"]["verified"])
@@ -181,6 +204,82 @@ class ContinualLearningProvenanceFirewallE2ETests(unittest.TestCase):
         self.assertFalse(
             downstream["source_binding"]["unattributed_transition_candidates_consumed_as_attributed"]
         )
+
+    def test_distinct_bytes_plus_same_generation_label_still_cannot_prove_generation_identity(self):
+        provenance = assess_repo_only_generation_provenance(b"before-A", b"after-B")
+        self.assertTrue(provenance.byte_pair.distinct_content_observed)
+        self.assertFalse(provenance.distinct_generation_events_verified)
+
+        source = _source_package()
+        before_generation = source["before_eval_input"]["context"]["generation_id"]
+        source["after_eval_input"]["context"]["generation_id"] = before_generation
+        result = compile_final_delta_learning_evidence(source, project_root=REPO_ROOT)
+        self.assertEqual(result["comparison_status"], "NOT_COMPARABLE")
+        self.assertIn("SOURCE_ARTIFACT_IDENTITY_COLLISION", result["comparison_reasons"])
+        self.assertFalse(result["source_pair_identity_binding"]["matched"])
+        self.assertFalse(result["artifact_provenance_binding"]["verified"])
+        self.assertEqual(result["field_transitions"], [])
+        self.assertFalse(result["regression_candidate_handoff"]["eligible"])
+
+    def test_same_bytes_plus_distinct_generation_labels_still_cannot_prove_distinct_generations(self):
+        provenance = assess_repo_only_generation_provenance(b"identical-output", b"identical-output")
+        self.assertTrue(provenance.byte_pair.same_content)
+        self.assertFalse(provenance.byte_pair.distinct_content_observed)
+        self.assertFalse(provenance.distinct_generation_events_verified)
+
+        source = _source_package()
+        self.assertNotEqual(
+            source["before_eval_input"]["context"]["generation_id"],
+            source["after_eval_input"]["context"]["generation_id"],
+        )
+        result = compile_final_delta_learning_evidence(source, project_root=REPO_ROOT)
+        self.assertTrue(result["source_pair_identity_binding"]["matched"])
+        self.assertFalse(result["artifact_provenance_binding"]["verified"])
+        self.assertEqual(result["comparison_status"], "NOT_COMPARABLE")
+        self.assertIn("ARTIFACT_PROVENANCE_REQUIRED", result["comparison_reasons"])
+        self.assertEqual(result["field_transitions"], [])
+
+    def test_media_ref_labels_cannot_mint_source_artifact_or_generation_provenance(self):
+        source = _source_package()
+        trusted_looking_ref = "formal-media://supposedly-trusted-output"
+        source["before_eval_input"]["reverse_observation"]["provenance"]["media_refs"] = [
+            trusted_looking_ref
+        ]
+        source["after_eval_input"]["reverse_observation"]["provenance"]["media_refs"] = [
+            trusted_looking_ref + "-after"
+        ]
+        result = compile_final_delta_learning_evidence(source, project_root=REPO_ROOT)
+        self.assertFalse(result["artifact_provenance_binding"]["verified"])
+        self.assertEqual(result["comparison_status"], "NOT_COMPARABLE")
+        self.assertIn("ARTIFACT_PROVENANCE_UNVERIFIED", result["comparison_reasons"])
+        self.assertEqual(result["field_transitions"], [])
+        self.assertFalse(result["regression_candidate_handoff"]["eligible"])
+
+    def test_diagnostic_improvement_plus_regression_cannot_be_promoted_downstream(self):
+        source = _source_package(after_composition_pass=False)
+        final_delta = compile_final_delta_learning_evidence(source, project_root=REPO_ROOT)
+        diagnostic = _diagnostic_transitions(final_delta)
+        self.assertEqual(diagnostic["visual_density"], "RESOLVED")
+        self.assertEqual(diagnostic["composition"], "REGRESSED")
+        self.assertFalse(final_delta["preserved_pass_gate"]["passed"])
+        self.assertEqual(final_delta["comparison_status"], "NOT_COMPARABLE")
+        self.assertEqual(final_delta["field_transitions"], [])
+        self.assertFalse(final_delta["regression_candidate_handoff"]["eligible"])
+
+        downstream = assess_source_bound_post_final_delta(
+            {
+                "assessment_id": "E2E-PROVENANCE-REGRESSION-ASSESS",
+                "hypothesis_id": "E2E-PROVENANCE-REGRESSION-HYPOTHESIS",
+                "final_delta_inputs": [source],
+                "requested_maturity": "scene_verified",
+            },
+            project_root=REPO_ROOT,
+        )
+        self.assertEqual(downstream["cohorts"][0]["supporting_count"], 0)
+        self.assertEqual(downstream["regression_proposals"], [])
+        self.assertFalse(downstream["maturity_assessment"]["promotion_authorized"])
+        self.assertFalse(downstream["maturity_promotion_authorized"])
+        self.assertFalse(downstream["regression_write_authorized"])
 
     def test_caller_metadata_cannot_mint_positive_provenance_at_any_public_boundary(self):
         with self.assertRaises(TypeError):
