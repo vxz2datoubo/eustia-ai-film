@@ -7,6 +7,9 @@ After work-item identity binding, the runtime reconstructs compact retrieval
 context, performs one final fixed-source revision revalidation immediately
 before Director Feature Compiler use, then continues through Director Feature
 Compiler -> Hard Route -> existing LearningRetriever semantic recall.
+
+Actor identity is resolved inside the public Feature Compiler facade from this
+repository's PROJECT_INDEX. Runtime callers have no actor-term injection surface.
 """
 
 from __future__ import annotations
@@ -20,7 +23,7 @@ from .active_work_item import (
     revalidate_source_revision,
     resolve_work_item,
 )
-from .feature_compiler import compile_retrieval_task
+from .feature_compiler import FEATURE_KEYS, compile_retrieval_task
 from .retriever import LearningRetriever
 
 
@@ -125,6 +128,7 @@ class DirectorLearningRuntime:
             ["director_feature_compiler", "hard_route", "semantic_recall"]
         )
 
+        compiler_receipt = dict(task.get("feature_compiler_receipt") or {})
         result["canonical_runtime_receipt"] = {
             "entrypoint": "DirectorLearningRuntime.retrieve",
             "flow": runtime_flow,
@@ -135,6 +139,7 @@ class DirectorLearningRuntime:
             "continuation_task_reconstructed": reconstructed,
             "serialized_work_item_authority_accepted": False,
             "caller_verification_callback_supported": False,
+            "caller_actor_terms_supported": False,
             "compiler_invoked": True,
             "work_item_resolution_authority": (
                 "07_连续性与生产状态/连续性与当前生产状态.md#ACTIVE_WORK_ITEM_STATE"
@@ -146,9 +151,14 @@ class DirectorLearningRuntime:
             "retriever_authority": (
                 "tools/learning_retriever/learning_retriever/retriever.py"
             ),
-            "hard_routes": list(task.get("hard_routes") or []),
-            "feature_compiler_receipt": dict(
-                task.get("feature_compiler_receipt") or {}
+            "entity_semantics_authority": "PROJECT_INDEX.canonical.character_db",
+            "canonical_character_term_count": int(
+                compiler_receipt.get("known_actor_terms_count") or 0
             ),
+            "compiled_features": {
+                key: list(task.get(key) or []) for key in FEATURE_KEYS
+            },
+            "hard_routes": list(task.get("hard_routes") or []),
+            "feature_compiler_receipt": compiler_receipt,
         }
         return result
