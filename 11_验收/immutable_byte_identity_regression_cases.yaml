@@ -1,4 +1,4 @@
-suite_id: IMMUTABLE_BYTE_IDENTITY_PRIMITIVE_V1_1_EXACT_TYPE
+suite_id: IMMUTABLE_BYTE_IDENTITY_PRIMITIVE_V1
 status: candidate
 source_issue: 107
 runtime: tools/learning_retriever/learning_retriever/immutable_byte_identity.py
