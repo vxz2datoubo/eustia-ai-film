@@ -1,0 +1,125 @@
+schema_version: "1.0"
+component_id: GENERATION_PROVENANCE_HOST_BINDING
+status: candidate
+source_issue: 112
+activation: absent_until_independent_accept_and_separate_registration
+
+purpose:
+  - 在 accepted immutable-byte identity 与未来真实 host/tool provenance 之间定义 fail-closed trust seam
+  - repo-only 模式只证明 before/after byte-content identity，不证明 source artifact 或 generation event identity
+  - 阻止 caller generation_id/media_ref/hash/boolean/serialized receipt 被升级为 provenance authority
+
+canonical_relationship:
+  project_index: PROJECT_INDEX.yaml
+  asset_retrieval_policy: 10_运行时/asset_retrieval_policy.yaml
+  golden_media_evidence_schema: 10_运行时/golden_media_evidence_schema.yaml
+  learning_application_gate: 10_运行时/learning_application_gate.yaml
+  maturity_model: 10_运行时/maturity_model.yaml
+  accepted_upstream_byte_identity_pr: 108
+  accepted_upstream_byte_identity_head: de62266a04573cc59dcfc360fa9526a035756093
+  final_delta_candidate_pr: 104
+
+truth_layers:
+  BYTE_CONTENT_IDENTITY:
+    authority: immutable_byte_identity_primitive
+    repo_only_verifiable: true
+  SOURCE_ARTIFACT_BINDING:
+    repo_only_verifiable: false
+    default_state: UNVERIFIED
+  GENERATION_EVENT_BINDING:
+    repo_only_verifiable: false
+    default_state: UNVERIFIED
+  GENERATION_REFERENCE_BINDING:
+    repo_only_verifiable: false
+    default_state: UNVERIFIED
+  FORMAL_ASSET_BINDING:
+    repo_only_verifiable: false
+    default_state: UNVERIFIED
+
+public_runtime:
+  api: assess_repo_only_generation_provenance
+  accepted_parameters: [before, after]
+  parameter_contract:
+    before: exact_builtin_python_bytes
+    after: exact_builtin_python_bytes
+  host_attestation_parameter_present: false
+  metadata_parameter_present: false
+  positive_generation_verification_path_present: false
+  default_status: UNVERIFIED_HOST_ATTESTATION_REQUIRED
+
+hard_invariants:
+  exact_builtin_bytes_only: true
+  bytes_subclass_rejected_upstream: true
+  caller_generation_id_is_not_authority: true
+  caller_media_ref_is_not_authority: true
+  caller_digest_is_not_authority: true
+  caller_verified_boolean_is_not_authority: true
+  serialized_receipt_is_not_authority: true
+  ordinary_python_object_is_not_host_attestation: true
+  python_private_token_is_not_security_boundary: true
+  repo_embedded_secret_forbidden: true
+  filesystem_io_forbidden: true
+  network_io_forbidden: true
+  process_io_forbidden: true
+  generation_trigger_forbidden: true
+  asset_registration_forbidden: true
+  learning_writeback_forbidden: true
+  maturity_support_forbidden_without_verified_generation_provenance: true
+  regression_support_forbidden_without_verified_generation_provenance: true
+  causal_attribution_forbidden_without_verified_generation_provenance: true
+  project_index_registration_forbidden_in_candidate: true
+  read_set_registration_forbidden_in_candidate: true
+  write_route_registration_forbidden_in_candidate: true
+
+repo_only_output_claims:
+  byte_content_identity_verified: true
+  source_artifact_binding_verified: false
+  generation_event_binding_verified: false
+  distinct_generation_events_verified: false
+  formal_asset_binding_verified: false
+  generation_reference_binding_verified: false
+  causal_attribution_authorized: false
+  regression_support_authorized: false
+  maturity_support_authorized: false
+  writeback_authorized: false
+
+future_positive_host_attestation_requirements:
+  descriptive_only_not_current_input_schema: true
+  required_properties:
+    - host_or_generation_tool_originated
+    - ordinary_caller_cannot_mint_or_replay_as_authority
+    - binds_exact_output_bytes_or_content_identity
+    - binds_provider_or_tool_generation_event_identity
+    - binds_model_and_version_when_available
+    - binds_generation_mode_and_reference_inputs_when_relevant
+    - distinguishes_output_artifact_binding_from_reference_input_binding
+    - invocation_fresh_or_explicitly_revalidated
+  forbidden_shortcuts:
+    - caller_serialized_mapping_only
+    - caller_generation_id_only
+    - caller_media_ref_only
+    - content_hash_only
+    - filename_or_extension_only
+    - python_private_token_only
+    - repo_embedded_secret
+  positive_verifier_requires:
+    - fresh_independent_trust_boundary_review
+    - explicit_runtime_registration_transaction
+
+relationship_to_final_delta:
+  current_effect: no_upgrade
+  may_set_artifact_provenance_verified: false
+  may_authorize_field_transitions: false
+  may_authorize_regression_candidate: false
+  may_authorize_maturity_support: false
+  note: this candidate defines the missing seam but intentionally does not close PR 104 artifact-provenance gate
+
+candidate_isolation:
+  project_index_registration: forbidden
+  read_sets_registration: forbidden
+  write_routes_registration: forbidden
+  package_public_export_required: false
+  final_delta_activation: forbidden
+  post_final_delta_activation: forbidden
+  canonical_asset_write: forbidden
+  continuity_write: forbidden

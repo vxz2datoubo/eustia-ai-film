@@ -1,0 +1,144 @@
+suite_id: CONTINUAL_LEARNING_E2E_PROVENANCE_FIREWALL_V4
+status: candidate_integration_only
+source_issue: 114
+integration_test: tools/learning_retriever/tests/test_continual_learning_e2e_provenance_firewall.py
+
+stack_under_test:
+  final_delta:
+    source_pr: 104
+    accepted_head: ae224fb551231da4db9c9190f1d7faec5b88ecdc
+  post_final_delta:
+    source_pr: 111
+    integration_base_head: ab5ce90245a92ca1a72066e220a557340452bd95
+  immutable_byte_identity:
+    source_pr: 108
+    accepted_head: de62266a04573cc59dcfc360fa9526a035756093
+  repo_only_generation_provenance:
+    source_pr: 113
+    engineering_green_head: 3329f5f7f499c83ab33c85e57e2824f5303cf16c
+
+purpose:
+  - prove candidate composition remains fail_closed_without_real_host_generation_attestation
+  - prove diagnostic improvement cannot become attributed learning through downstream composition
+  - prove byte identity, caller labels, media references and outcome quality remain separate evidence axes
+  - prove integration topology itself creates no activation or write authority
+
+hard_invariants:
+  byte_content_difference_may_be_observed: true
+  byte_content_difference_does_not_prove_distinct_generation_events: true
+  generation_label_difference_does_not_prove_distinct_generation_events: true
+  same_generation_label_cannot_bind_distinct_content_to_one_verified_artifact: true
+  media_ref_labels_do_not_prove_source_artifact_or_generation_identity: true
+  repo_only_generation_provenance_remains_unverified: true
+  final_delta_artifact_provenance_remains_unverified: true
+  final_delta_formal_field_transitions_remain_empty: true
+  final_delta_unattributed_diagnostics_may_survive: true
+  preserved_pass_regression_blocks_candidate_even_when_target_improves: true
+  post_final_delta_must_not_consume_unattributed_diagnostics_as_attributed: true
+  post_final_delta_supporting_count_must_remain_zero: true
+  regression_proposal_must_remain_absent: true
+  scene_verified_maturity_request_must_not_promote: true
+  causal_attribution_must_remain_unauthorized: true
+  regression_write_must_remain_unauthorized: true
+  learning_writeback_must_remain_unauthorized: true
+  caller_metadata_must_not_mint_provenance: true
+  serialized_final_delta_must_not_be_public_authority_input: true
+  integration_stack_must_not_register_or_activate_itself: true
+
+cases:
+  - id: CL-E2E-PROV-DISTINCT-BYTES-NO-ATTRIBUTION-001
+    byte_before: before-generated-media-bytes
+    byte_after: after-generated-media-bytes-with-real-difference
+    expected_byte_distinct_content: true
+    expected_generation_event_binding_verified: false
+    expected_final_delta_comparison_status: NOT_COMPARABLE
+    expected_diagnostic_transition:
+      field: visual_density
+      transition: RESOLVED
+    expected_formal_field_transitions: []
+    expected_post_final_delta_classification: INCONCLUSIVE
+    expected_supporting_count: 0
+    expected_regression_proposals: []
+    requested_maturity: scene_verified
+    expected_maturity_route: INSUFFICIENT_SUPPORT_FOR_SCENE_VERIFICATION
+    expected_promotion_authorized: false
+
+  - id: CL-E2E-PROV-DISTINCT-BYTES-SAME-GENERATION-LABEL-001
+    byte_before: before-A
+    byte_after: after-B
+    generation_label_relation: same
+    expected_byte_distinct_content: true
+    expected_distinct_generation_events_verified: false
+    expected_final_delta_comparison_status: NOT_COMPARABLE
+    expected_reason: SOURCE_ARTIFACT_IDENTITY_COLLISION
+    expected_source_pair_identity_matched: false
+    expected_formal_field_transitions: []
+
+  - id: CL-E2E-PROV-SAME-BYTES-DISTINCT-GENERATION-LABELS-001
+    byte_before: identical-output
+    byte_after: identical-output
+    generation_label_relation: distinct
+    expected_same_content: true
+    expected_distinct_generation_events_verified: false
+    expected_source_pair_identity_matched: true
+    expected_artifact_provenance_verified: false
+    expected_final_delta_comparison_status: NOT_COMPARABLE
+    expected_reason: ARTIFACT_PROVENANCE_REQUIRED
+
+  - id: CL-E2E-PROV-MEDIA-REF-LABELS-NOT-PROOF-001
+    attack: caller_supplies_distinct_trusted_looking_media_ref_labels
+    expected_source_artifact_binding_verified: false
+    expected_generation_event_binding_verified: false
+    expected_final_delta_comparison_status: NOT_COMPARABLE
+    expected_reason: ARTIFACT_PROVENANCE_UNVERIFIED
+    expected_regression_candidate_eligible: false
+
+  - id: CL-E2E-PROV-IMPROVEMENT-PLUS-PRESERVED-PASS-REGRESSION-001
+    before:
+      visual_density: FAIL
+      composition: PASS
+    after:
+      visual_density: PASS
+      composition: FAIL
+    expected_diagnostic_transitions:
+      visual_density: RESOLVED
+      composition: REGRESSED
+    expected_preserved_pass_gate: false
+    expected_formal_field_transitions: []
+    expected_supporting_count: 0
+    expected_regression_proposals: []
+    requested_maturity: scene_verified
+    expected_promotion_authorized: false
+
+  - id: CL-E2E-PROV-HOST-ATTESTATION-KWARG-REJECT-001
+    attack: caller_passes_serialized_host_attestation_to_repo_only_provenance_api
+    expected_behavior: TypeError_no_parameter_surface
+
+  - id: CL-E2E-PROV-FINAL-DELTA-FORGED-BINDING-REJECT-001
+    attack: caller_adds_artifact_provenance_binding_verified_true_to_raw_final_delta_source
+    expected_error: FINAL_DELTA_UNKNOWN_FIELD
+
+  - id: CL-E2E-PROV-SERIALIZED-FINAL-DELTA-REJECT-001
+    attack: caller_supplies_serialized_final_deltas_to_source_bound_post_final_delta
+    expected_error: POST_FD_UNKNOWN_FIELD
+
+  - id: CL-E2E-PROV-SELF-ACTIVATION-ABSENT-001
+    forbidden_markers:
+      - immutable_byte_identity
+      - generation_provenance_host_binding
+      - continual_learning_e2e_provenance_firewall
+    must_be_absent_from:
+      - PROJECT_INDEX.yaml
+      - 10_运行时/read_sets.yaml
+      - 10_运行时/write_routes.yaml
+
+integration_isolation:
+  production_runtime_modified_by_e2e_slice: false
+  project_index_modified: false
+  read_sets_modified: false
+  write_routes_modified: false
+  asset_registry_modified: false
+  continuity_modified: false
+  learning_canonical_modified: false
+  maturity_model_modified: false
+  merge_or_activation_authority: false
