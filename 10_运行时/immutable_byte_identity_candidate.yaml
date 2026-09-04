@@ -1,0 +1,151 @@
+schema_version: "1.0"
+component_id: IMMUTABLE_BYTE_IDENTITY_PRIMITIVE
+status: candidate
+source_issue: 107
+activation: absent_until_independent_accept_and_separate_registration
+
+purpose:
+  - 对已经进入受信调用链的 immutable Python bytes 做确定性的内容身份计算
+  - 为 before/after 两段内存字节提供 same-content / distinct-content 事实
+  - 作为未来 governed artifact resolver 与 generation provenance adapter 之间的最小纯函数层
+
+explicit_non_purpose:
+  - 不读取文件
+  - 不解析路径或 locator
+  - 不访问 File Library / GitHub / 网络 / 设备
+  - 不证明 source artifact 身份
+  - 不证明 generation event 身份
+  - 不登记 formal asset
+  - 不做图像/视频/音频语义检查
+
+canonical_relationship:
+  project_index: PROJECT_INDEX.yaml
+  asset_registry: 06_视觉资产/视觉资产登记库.md
+  asset_retrieval_policy: 10_运行时/asset_retrieval_policy.yaml
+  final_delta_candidate: tools/learning_retriever/learning_retriever/final_delta.py
+
+truth_layers:
+  IMMUTABLE_BYTES_OBSERVED:
+    meaning: 本次调用对调用方实际传入的 Python bytes 值计算 SHA-256 与 byte length
+  SOURCE_ARTIFACT_BINDING_UNVERIFIED:
+    meaning: 不证明该 bytes 来自哪个路径、File ID、Library 对象、正式资产或媒体版本
+  GENERATION_BINDING_UNVERIFIED:
+    meaning: 不证明该 bytes 对应哪个模型 job / generation_id / vendor generation event
+  FORMAL_ASSET_UNVERIFIED:
+    meaning: 不证明该 bytes 已登记为项目正式 Asset / Media Version
+
+hard_invariants:
+  python_bytes_only: true
+  mutable_buffer_input_forbidden: true
+  string_or_path_locator_input_forbidden: true
+  mapping_or_serialized_receipt_input_forbidden: true
+  caller_hash_is_not_input_authority: true
+  caller_verified_boolean_is_not_authority: true
+  filesystem_io_forbidden: true
+  path_resolution_forbidden: true
+  os_mount_or_filesystem_classification_forbidden: true
+  network_io_forbidden: true
+  device_io_forbidden: true
+  content_hash_computed_only_from_supplied_bytes: true
+  same_bytes_are_same_content: true
+  distinct_bytes_do_not_prove_distinct_source_artifacts: true
+  distinct_bytes_do_not_prove_distinct_generation_events: true
+  byte_observation_does_not_register_formal_asset: true
+  byte_observation_does_not_prove_pixels_or_audio_semantics: true
+  serialized_receipt_is_not_reusable_identity_authority: true
+  final_delta_repair_attribution_not_activated_by_this_candidate: true
+  no_second_asset_authority: true
+  no_second_learning_authority: true
+
+input_contract:
+  accepted_value_input:
+    - immutable_python_bytes_already_materialized_by_upstream_caller
+  rejected_as_identity_input:
+    - str
+    - pathlib_Path_or_other_PathLike
+    - bytearray
+    - memoryview
+    - serialized_receipt_mapping
+    - ImmutableByteObservation_instance
+    - caller_supplied_sha256
+    - caller_supplied_byte_length
+    - caller_supplied_verified_boolean
+    - chatgpt_file_id_string
+    - file_library_title
+    - media_ref_string
+    - generation_id_string
+    - filename_or_extension
+  coercion_policy: forbidden
+  reason: coercion_would_reintroduce_source_locator_or_mutability_authority
+
+single_value_observation:
+  public_api: observe_immutable_bytes
+  algorithm: sha256
+  input_copy_performed: false
+  filesystem_access: false
+  network_access: false
+  receipt_fields:
+    - content_sha256
+    - byte_length
+    - content_identity
+    - observation_state
+    - input_contract
+    - source_artifact_binding_state
+    - generation_binding_state
+    - formal_asset_binding_state
+    - semantic_verification_state
+  receipt_authority:
+    supplied_byte_value_identity: true
+    source_artifact_identity: false
+    generation_event_identity: false
+    formal_asset_identity: false
+    pixel_or_audio_semantic_identity: false
+
+pair_comparison:
+  public_api: compare_immutable_byte_pair
+  public_value_input: two_immutable_python_bytes_values
+  serialized_receipt_pair_input: forbidden
+  same_content_when:
+    - same_content_sha256
+    - same_byte_length
+  distinct_content_when:
+    - content_identity_differs
+  output_claim_limit: in_memory_byte_content_identity_only
+  source_artifact_distinct_claim: forbidden
+  generation_event_distinct_claim: forbidden
+  formal_asset_distinct_claim: forbidden
+
+failure_codes:
+  BYTE_INPUT_NOT_IMMUTABLE_BYTES: input is not already-materialized Python bytes
+
+candidate_isolation:
+  project_index_registration: forbidden
+  read_set_registration: forbidden
+  write_route_registration: forbidden
+  package_public_export_required: false
+  asset_registry_write: forbidden
+  continuity_write: forbidden
+  final_delta_activation: forbidden
+  generation_trigger: forbidden
+
+reviewer_attack_retirement:
+  path_symlink_toctou_attacks:
+    state: structurally_removed
+    reason: runtime_has_no_path_or_filesystem_surface
+  nfs_cifs_sshfs_fuse_autofs_attacks:
+    state: structurally_removed
+    reason: runtime_never_opens_or_stats_files
+  ctime_mtime_change_version_attacks:
+    state: structurally_removed
+    reason: runtime_observes_one_already_materialized_immutable_bytes_value
+  windows_reparse_unc_device_attacks:
+    state: structurally_removed
+    reason: runtime_accepts_no_locator_or_path_input
+
+future_binding_requirements:
+  - separate governed artifact resolver must produce bytes and separately bind their source artifact identity
+  - source resolver must own filesystem/network/Library/media locator security; this primitive must not reacquire that responsibility
+  - separate generation provenance adapter must prove exact byte identity corresponds to exact generation provenance
+  - generation binding must not trust caller generation_id alone
+  - formal asset registration remains governed by existing asset registry/resolver write transaction
+  - downstream consumers must never reinterpret IMMUTABLE_BYTES_OBSERVED as artifact provenance
