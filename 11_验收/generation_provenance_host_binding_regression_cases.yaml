@@ -1,0 +1,88 @@
+suite_id: GENERATION_PROVENANCE_HOST_BINDING_V1
+status: candidate
+source_issue: 112
+runtime: tools/learning_retriever/learning_retriever/generation_provenance_host_binding.py
+policy: 10_运行时/generation_provenance_host_binding_candidate.yaml
+
+invariants:
+  exact_builtin_bytes_only: true
+  repo_only_positive_generation_verification_absent: true
+  caller_metadata_cannot_mint_provenance: true
+  serialized_receipt_cannot_mint_provenance: true
+  content_distinct_does_not_equal_generation_distinct: true
+  source_artifact_binding_remains_unverified: true
+  generation_reference_binding_remains_unverified: true
+  formal_asset_binding_remains_unverified: true
+  causal_regression_maturity_write_authority_absent: true
+  filesystem_network_process_surface_absent: true
+  candidate_is_unregistered_unactivated: true
+
+cases:
+  - id: GPHB-SAME-BYTES-001
+    before_bytes: same
+    after_bytes: same
+    expected_byte_same_content: true
+    expected_status: UNVERIFIED_HOST_ATTESTATION_REQUIRED
+    expected_generation_event_binding_verified: false
+
+  - id: GPHB-DISTINCT-BYTES-001
+    before_bytes: abc
+    after_bytes: abd
+    expected_byte_distinct_content: true
+    expected_distinct_generation_events_verified: false
+    expected_causal_attribution_authorized: false
+
+  - id: GPHB-NO-ATTESTATION-PARAMETER-001
+    caller_attempts:
+      - host_attestation
+      - generation_id
+      - media_ref
+      - sha256
+      - verified
+      - artifact_id
+    expected_public_parameters: [before, after]
+    expected_behavior: no_metadata_or_attestation_authority_surface
+
+  - id: GPHB-SERIALIZED-RECEIPT-REPLAY-001
+    attack: caller_replays_diagnostic_dict_as_attestation
+    expected_behavior: impossible_through_public_api
+
+  - id: GPHB-PYTHON-OBJECT-LAUNDERING-001
+    attack: caller_constructs_object_or_dataclass_claiming_host_origin
+    expected_behavior: impossible_through_public_api
+
+  - id: GPHB-GENERATION-ID-ONLY-001
+    attack: distinct_generation_id_strings_without_host_binding
+    expected_generation_event_binding_verified: false
+
+  - id: GPHB-MEDIA-REF-ONLY-001
+    attack: distinct_media_ref_strings_without_host_binding
+    expected_source_artifact_binding_verified: false
+
+  - id: GPHB-HASH-ONLY-001
+    attack: distinct_content_hashes_without_host_binding
+    expected_distinct_generation_events_verified: false
+
+  - id: GPHB-REFERENCE-BINDING-SEPARATION-001
+    attack: output_bytes_are_known_but_reference_input_binding_is_not_attested
+    expected_generation_reference_binding_verified: false
+
+  - id: GPHB-DOWNSTREAM-AUTHORITY-FIREWALL-001
+    distinct_byte_content: true
+    expected_causal_attribution_authorized: false
+    expected_regression_support_authorized: false
+    expected_maturity_support_authorized: false
+    expected_writeback_authorized: false
+
+  - id: GPHB-FUTURE-HOST-CONTRACT-DESCRIPTIVE-ONLY-001
+    expected_status: DESCRIPTIVE_ONLY_NOT_ACCEPTED_AS_INPUT
+    expected_positive_verifier_requires_fresh_independent_review: true
+
+isolation_gates:
+  project_index_must_not_register_component: true
+  read_sets_must_not_activate_component: true
+  write_routes_must_not_contain_component: true
+  runtime_source_must_not_import_os_pathlib_socket_subprocess_requests_urllib: true
+  runtime_source_must_not_call_open_read_stat_or_generation_tools: true
+  final_delta_must_not_be_modified_in_this_candidate: true
+  post_final_delta_must_not_be_modified_in_this_candidate: true
