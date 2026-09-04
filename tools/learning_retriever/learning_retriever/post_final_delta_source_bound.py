@@ -146,18 +146,58 @@ def _support_eligible_projection(
     return projected, True
 
 
-def _cohort_key(delta: Mapping[str, Any]) -> tuple[str, str, str]:
-    candidate = delta.get("candidate_learning_evidence") or {}
-    lesson = (
-        candidate.get("candidate_lesson")
-        if isinstance(candidate, Mapping)
-        else None
-    )
+def _required_partition_string(value: Any, *, field: str, index: int) -> str:
+    """Require an explicit non-empty exact cohort partition value.
+
+    Missing-value sentinels are intentionally forbidden. A literal business value
+    such as ``UNKNOWN_MODEL`` remains an ordinary string and can never collide
+    with absence because absence fails before cohort construction.
+    """
+
+    if not isinstance(value, str) or not value.strip():
+        raise PostFinalDeltaValidationError(
+            "POST_FD_COHORT_IDENTITY_INCOMPLETE",
+            f"final_delta_inputs[{index}] requires explicit non-empty cohort field {field}",
+        )
+    return value
+
+
+def _validated_cohort_key(delta: Mapping[str, Any], *, index: int) -> tuple[str, str, str]:
+    candidate = delta.get("candidate_learning_evidence")
+    if not isinstance(candidate, Mapping):
+        raise PostFinalDeltaValidationError(
+            "POST_FD_COHORT_IDENTITY_INCOMPLETE",
+            f"final_delta_inputs[{index}] requires candidate_learning_evidence mapping",
+        )
     return (
-        str(delta.get("model") or "UNKNOWN_MODEL"),
-        str(delta.get("model_version") or "UNKNOWN_VERSION"),
-        str(lesson or "UNKNOWN_LESSON_PAYLOAD"),
+        _required_partition_string(delta.get("model"), field="model", index=index),
+        _required_partition_string(
+            delta.get("model_version"), field="model_version", index=index
+        ),
+        _required_partition_string(
+            candidate.get("candidate_lesson"), field="candidate_lesson", index=index
+        ),
     )
+
+
+def _cohort_key(delta: Mapping[str, Any]) -> tuple[str, str, str]:
+    """Return exact already-validated cohort identity without missing sentinels."""
+
+    candidate = delta.get("candidate_learning_evidence")
+    if not isinstance(candidate, Mapping):
+        raise PostFinalDeltaValidationError(
+            "POST_FD_COHORT_IDENTITY_INCOMPLETE",
+            "validated evidence lost candidate_learning_evidence before cohort projection",
+        )
+    model = delta.get("model")
+    version = delta.get("model_version")
+    lesson = candidate.get("candidate_lesson")
+    if not all(isinstance(value, str) and value.strip() for value in (model, version, lesson)):
+        raise PostFinalDeltaValidationError(
+            "POST_FD_COHORT_IDENTITY_INCOMPLETE",
+            "validated evidence lost exact cohort partition identity before projection",
+        )
+    return model, version, lesson
 
 
 def _resolve_maturity_target(
@@ -197,11 +237,16 @@ def _resolve_maturity_target(
                 "POST_FD_INVALID_SHAPE",
                 f"maturity_target must contain exactly {sorted(_MATURITY_TARGET_KEYS)}",
             )
-        selected = (
-            str(target["model"]),
-            str(target["model_version"]),
-            str(target["exact_candidate_lesson_payload"]),
+        selected_values = tuple(
+            target[key]
+            for key in ("model", "model_version", "exact_candidate_lesson_payload")
         )
+        if not all(isinstance(value, str) and value.strip() for value in selected_values):
+            raise PostFinalDeltaValidationError(
+                "POST_FD_INVALID_SHAPE",
+                "maturity_target partition values must be explicit non-empty strings",
+            )
+        selected = selected_values
         if selected not in keys:
             raise PostFinalDeltaValidationError(
                 "POST_FD_MATURITY_TARGET_NOT_FOUND",
@@ -250,6 +295,9 @@ def assess_source_bound_post_final_delta(
             ) from exc
         _assert_upstream_artifact_and_attribution_gate(delta, index=index)
         safe_projection, downgraded = _support_eligible_projection(delta, index=index)
+        # Every evidence row must own a complete exact partition identity before
+        # *any* cohort summary or maturity projection. No UNKNOWN sentinels.
+        _validated_cohort_key(safe_projection, index=index)
         compiled.append(delta)
         projected.append(safe_projection)
         downgraded_support_count += int(downgraded)
@@ -290,6 +338,8 @@ def assess_source_bound_post_final_delta(
         "support_requires_formal_resolved_transition": True,
         "support_requires_upstream_regression_eligibility": True,
         "support_downgraded_to_inconclusive_count": downgraded_support_count,
+        "cohort_partition_requires_explicit_nonempty_values": True,
+        "missing_value_sentinels_used": False,
         "maturity_is_cohort_scoped": True,
         "maturity_target": maturity_target,
         "unattributed_transition_candidates_consumed_as_attributed": False,
