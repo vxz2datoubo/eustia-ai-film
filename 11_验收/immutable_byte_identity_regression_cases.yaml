@@ -1,4 +1,4 @@
-suite_id: IMMUTABLE_BYTE_IDENTITY_PRIMITIVE_V1
+suite_id: IMMUTABLE_BYTE_IDENTITY_PRIMITIVE_V1_1_EXACT_TYPE
 status: candidate
 source_issue: 107
 runtime: tools/learning_retriever/learning_retriever/immutable_byte_identity.py
@@ -6,6 +6,9 @@ policy: 10_运行时/immutable_byte_identity_candidate.yaml
 
 invariants:
   python_bytes_only: true
+  exact_builtin_bytes_type_required: true
+  bytes_subclass_input_forbidden: true
+  caller_defined_bytes_hooks_never_run_before_rejection: true
   mutable_buffer_input_forbidden: true
   path_or_locator_input_forbidden: true
   caller_digest_never_authoritative: true
@@ -23,7 +26,7 @@ invariants:
 
 cases:
   - id: IBI-SINGLE-BYTES-001
-    input_type: bytes
+    input_type: exact_builtin_bytes
     bytes: actual-media-bytes
     expected_observation_state: IMMUTABLE_BYTES_OBSERVED
     expected_hash_source: exact_supplied_bytes
@@ -50,6 +53,19 @@ cases:
     bytes: empty
     expected_byte_length: 0
     expected_sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+
+  - id: IBI-BYTES-SUBCLASS-HOOK-REJECT-001
+    input_type: bytes_subclass
+    hostile_overrides: [__len__]
+    expected_error_code: BYTE_INPUT_NOT_IMMUTABLE_BYTES
+    hostile_hook_calls_expected: 0
+    expected_behavior: fail_exact_type_check_before_any_identity_operation
+
+  - id: IBI-BYTES-SUBCLASS-PAIR-REJECT-001
+    before_or_after_type: bytes_subclass
+    expected_error_code: BYTE_INPUT_NOT_IMMUTABLE_BYTES
+    hostile_hook_calls_expected: 0
+    pair_observation_started: false
 
   - id: IBI-MUTABLE-BYTEARRAY-REJECT-001
     input_type: bytearray
@@ -102,7 +118,7 @@ cases:
   - id: IBI-CTIME-MTIME-SEMANTICS-ATTACK-REMOVED-001
     attack: coarse_or_restored_filesystem_timestamps
     expected_behavior: irrelevant_to_primitive
-    reason: one_already_materialized_immutable_bytes_value_is_observed
+    reason: one_already_materialized_exact_builtin_bytes_value_is_observed
 
   - id: IBI-DISTINCT-BYTES-NOT-PROVENANCE-001
     before_after_distinct_content: true
