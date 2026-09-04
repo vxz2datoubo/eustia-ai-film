@@ -3,12 +3,8 @@
 This module does not own character truth. Canonical project character identity is
 read only through PROJECT_INDEX -> canonical.character_db inside the governed
 repository checkout. Open human roles are positive query-normalization evidence,
-not a second character database and not permission to infer arbitrary CJK nouns
-as people.
-
-The public compiler is responsible for loading canonical character terms. This
-module only evaluates bounded subject candidates that have already entered the
-compiler's internal parsing path.
+not a second character database and not permission to infer arbitrary nouns as
+people.
 """
 
 from __future__ import annotations
@@ -59,8 +55,6 @@ NON_AGENT_SEMANTIC_SUFFIXES = (
 DYNASTY_WORLD_PREFIXES = ("王朝", "前朝", "本朝", "朝代")
 FAKE_OR_OBJECT_ROLE_PREFIXES = ("稻草", "木偶", "纸", "雪", "蜡", "石", "玩具", "假")
 
-# Scene prefixes may precede a real subject in compact Chinese directing prose,
-# e.g. “礼拜堂中央年轻祭司…”. They are not actor identity themselves.
 SCENE_PREFIX_ENDINGS = (
     "中央", "附近", "门口", "街上", "巷口", "大厅", "走廊", "礼拜堂",
     "广场", "街道", "屋内", "室内", "室外", "台上", "台下", "桥上",
@@ -73,8 +67,6 @@ SUBJECT_DESCRIPTORS = (
     "沉默",
 )
 
-# These are ordinary noun/location forms ending in 地. They must never be stripped
-# as adverbial “...地” tails when trying to recover an actor token.
 NON_ADVERBIAL_DI_ENDINGS = (
     "基地", "场地", "工地", "阵地", "营地", "墓地", "高地", "平地", "属地",
     "领地", "腹地", "殖民地", "目的地", "所在地", "发源地", "聚集地", "驻地",
@@ -82,9 +74,7 @@ NON_ADVERBIAL_DI_ENDINGS = (
 )
 
 
-def load_canonical_character_terms(project_root: str | Path) -> tuple[str, ...]:
-    """Read formal character names/aliases through PROJECT_INDEX only."""
-
+def _canonical_character_section(project_root: str | Path) -> str:
     root = Path(project_root).resolve()
     index_path = root / "PROJECT_INDEX.yaml"
     if not index_path.is_file():
@@ -92,7 +82,7 @@ def load_canonical_character_terms(project_root: str | Path) -> tuple[str, ...]:
 
     try:
         index = yaml.safe_load(index_path.read_text(encoding="utf-8")) or {}
-    except Exception as exc:  # pragma: no cover - bounded runtime error
+    except Exception as exc:  # pragma: no cover
         raise EntitySemanticError("PROJECT_INDEX_ENTITY_SEMANTICS_PARSE_FAILED") from exc
 
     if index.get("project_id") != EXPECTED_PROJECT_ID:
@@ -122,8 +112,19 @@ def load_canonical_character_terms(project_root: str | Path) -> tuple[str, ...]:
     section = content.split(marker, 1)[1]
     if "# 3." in section:
         section = section.split("# 3.", 1)[0]
+    return section
 
-    terms: set[str] = set()
+
+def load_canonical_character_identity_map(project_root: str | Path) -> dict[str, str]:
+    """Return canonical name/alias -> immutable character-row identity.
+
+    Alias equivalence is accepted only because the canonical character table says
+    those strings belong to the same row. No semantic or fuzzy alias inference is
+    performed here.
+    """
+
+    section = _canonical_character_section(project_root)
+    identity_map: dict[str, str] = {}
     for raw_line in section.splitlines():
         line = raw_line.strip()
         if not line.startswith("| CHARACTER-EUSTIA-"):
@@ -131,19 +132,33 @@ def load_canonical_character_terms(project_root: str | Path) -> tuple[str, ...]:
         cells = [cell.strip().strip("`") for cell in line.strip("|").split("|")]
         if len(cells) < 3:
             continue
+        row_id = cells[0].strip()
         formal_name = cells[1].strip()
         aliases = cells[2].strip()
+        terms: list[str] = []
         if formal_name:
-            terms.add(formal_name)
+            terms.append(formal_name)
         if aliases and aliases != "无":
-            for alias in re.split(r"[、，,;/]+", aliases):
-                alias = alias.strip()
-                if alias and alias != "无":
-                    terms.add(alias)
+            terms.extend(
+                alias.strip()
+                for alias in re.split(r"[、，,;/]+", aliases)
+                if alias.strip() and alias.strip() != "无"
+            )
+        for term in terms:
+            previous = identity_map.get(term)
+            if previous is not None and previous != row_id:
+                raise EntitySemanticError("CANONICAL_CHARACTER_ALIAS_COLLISION")
+            identity_map[term] = row_id
 
-    if not terms:
+    if not identity_map:
         raise EntitySemanticError("CANONICAL_CHARACTER_TABLE_EMPTY")
-    return tuple(sorted(terms, key=lambda value: (-len(value), value)))
+    return dict(sorted(identity_map.items(), key=lambda item: (-len(item[0]), item[0])))
+
+
+def load_canonical_character_terms(project_root: str | Path) -> tuple[str, ...]:
+    """Read formal character names/aliases through PROJECT_INDEX only."""
+
+    return tuple(load_canonical_character_identity_map(project_root).keys())
 
 
 def _bounded_cjk(value: str, *, max_chars: int) -> bool:
@@ -180,12 +195,6 @@ def _strip_trailing_subject_descriptors(value: str) -> str:
 
 
 def _prefix_can_precede_actor(prefix: str) -> bool:
-    """Bound non-actor material allowed before a real actor token.
-
-    A single localizer ``的`` is allowed after a verified scene prefix, e.g.
-    ``礼拜堂中央的年轻祭司``. The localizer never becomes actor evidence itself.
-    """
-
     residual = _strip_trailing_subject_descriptors(prefix.strip().replace(" ", ""))
     if residual.endswith("的"):
         residual = residual[:-1]
@@ -217,20 +226,8 @@ def _modifier_tail_semantically_safe(value: str) -> bool:
     return True
 
 
-def _token_matches_actor(
-    candidate: str,
-    *,
-    known_actor_terms: Iterable[str],
-) -> bool:
-    """Match an actor token without arbitrary suffix collision.
-
-    Exact terms are always allowed. Embedded terms are allowed only when the
-    material before the term is a bounded scene/descriptor prefix. This prevents
-    “英格兰” -> “格兰” and “吉他” -> “他” while preserving compact prose such as
-    “礼拜堂中央年轻祭司”. A single possessive ``的`` may follow an already-valid
-    actor token so ordinary forms such as ``菲奥奈的目光`` and ``她的视线`` remain
-    expressible without reopening productive suffix matching.
-    """
+def _token_matches_actor(candidate: str, *, known_actor_terms: Iterable[str]) -> bool:
+    """Match actor tokens without arbitrary suffix collisions."""
 
     normalized = candidate.strip().replace(" ", "")
     if not normalized or _explicitly_non_agent(normalized):
@@ -241,17 +238,9 @@ def _token_matches_actor(
         if _token_matches_actor(owner, known_actor_terms=known_actor_terms):
             return True
 
-    canonical = {
-        str(term).strip()
-        for term in known_actor_terms
-        if str(term).strip()
-    }
+    canonical = {str(term).strip() for term in known_actor_terms if str(term).strip()}
     actor_terms = tuple(
-        sorted(
-            canonical | set(PRONOUN_AGENT_TERMS) | set(HUMAN_ROLE_HEADS),
-            key=len,
-            reverse=True,
-        )
+        sorted(canonical | set(PRONOUN_AGENT_TERMS) | set(HUMAN_ROLE_HEADS), key=len, reverse=True)
     )
 
     for term in actor_terms:
@@ -275,12 +264,10 @@ def obvious_non_agent_subject_prefix(
     known_actor_terms: Iterable[str],
     max_chars: int = 24,
 ) -> bool:
-    """Detect an explicit non-agent subject at the start of an intervening clause.
+    """Detect high-confidence explicit non-agent prefixes.
 
-    This helper exists only to invalidate stale ACTOR/CAMERA inheritance across a
-    new subject boundary. It first searches bounded prefixes for a legitimate
-    actor form so scene-prefix + actor phrases are not mistaken for static scene
-    nouns. Only then may a shorter prefix prove an obvious non-agent object.
+    This helper remains for targeted object regressions, but stale-agency clearing
+    in the compiler no longer depends on this finite object vocabulary.
     """
 
     normalized = value.strip().replace(" ", "")
@@ -309,14 +296,23 @@ def bounded_animate_agent_leader(
 ) -> bool:
     """Return True only with bounded positive evidence of an animate agent.
 
-    ``action`` is intentionally not used as identity proof. A turn/body verb may
-    describe motion, but cannot convert an unknown object or prop into a person.
-    Modifier stripping is additionally checked for noun/location semantics so
-    “骑士训练基地” cannot become actor “骑士” + fake adverb “训练基地”.
+    Exact canonical terms are checked before the free-form CJK gate so names
+    containing canonical punctuation/digits (for example ``吉克弗里德·古拉德`` or
+    ``第29代圣女伊莲``) are not rejected merely by typography. Open free-form
+    parsing remains CJK-bounded and positive-only.
     """
 
     del action
     normalized = value.strip()
+    if not normalized:
+        return False
+
+    # Canonical/project terms and bounded scene-prefix + actor forms are already
+    # authority-bounded by the caller's canonical term projection. They may
+    # legitimately contain punctuation or digits.
+    if _token_matches_actor(normalized, known_actor_terms=known_actor_terms):
+        return True
+
     if not _bounded_cjk(normalized, max_chars=max_chars):
         return False
 
@@ -324,11 +320,7 @@ def bounded_animate_agent_leader(
     for split_at in range(1, len(normalized)):
         leader = normalized[:split_at].strip()
         tail = normalized[split_at:].strip()
-        if (
-            leader
-            and modifier_tail_validator(tail)
-            and _modifier_tail_semantically_safe(tail)
-        ):
+        if leader and modifier_tail_validator(tail) and _modifier_tail_semantically_safe(tail):
             actor_candidates.append(leader)
 
     return any(
