@@ -7,9 +7,9 @@ re-opening caller actor authority, cross-actor carry, or project truth surfaces.
 Public flow:
     original director text
       -> canonical character projection
-      -> shared bounded predicate grammar normalization for frozen core
+      -> bounded actor/target normalization for frozen core only
       -> frozen core parser
-      -> v5 actor/observable + shared target safety facade
+      -> v5 actor/observable + shared target safety facade on original text
       -> canonical director_route_index
 
 The wrapper remains retrieval-query-only. It creates no story, character, map,
@@ -23,7 +23,11 @@ from pathlib import Path
 from typing import Any
 
 from . import _feature_compiler_facade_v4 as _legacy
-from .entity_semantics import bounded_animate_agent_leader
+from .entity_semantics import (
+    HUMAN_ROLE_HEADS,
+    PRONOUN_AGENT_TERMS,
+    bounded_animate_agent_leader,
+)
 from .predicate_semantics import (
     TARGET_PREFIX_TOKENS,
     normalize_post_action_target_prefixes,
@@ -50,10 +54,12 @@ _FACING_ACTIONS = _legacy._FACING_ACTIONS
 _GAZE_ACTIONS = _legacy._GAZE_ACTIONS
 _KNEEL_ACTIONS = _legacy._KNEEL_ACTIONS
 _TARGET_OBJECT_TERMS = _legacy._TARGET_OBJECT_TERMS
+_TARGET_PREFIX_MODIFIERS = TARGET_PREFIX_TOKENS
 _GAZE_OBSERVABLE_TERMS = ("目光", "视线")
 _ALL_ACTOR_PREDICATE_ACTIONS = tuple(
     dict.fromkeys(_FACING_ACTIONS + _GAZE_ACTIONS + _KNEEL_ACTIONS)
 )
+_CORE_COORDINATION_TERMS = ("并且", "并", "且")
 
 # Freeze references before installing v5 callbacks into the private facade.
 _V4_BASE_ACTOR_IDENTITY = _legacy._base_actor_identity_key
@@ -62,7 +68,6 @@ _V4_BODY_LEADER = _legacy._body_leader
 _V4_MODIFIER_TAIL = _legacy._modifier_tail
 _V4_STRIP_LEADING_GLUE = _legacy._strip_leading_glue
 _V4_TARGET_TERMS = _legacy._target_terms
-_V4_DEDUPE = _legacy._dedupe
 _V4_MERGE = _legacy._merge
 
 
@@ -76,7 +81,6 @@ def _canonical_prefix_identity(
     canonical_identity_map: dict[str, str],
 ) -> str | None:
     """Resolve exact canonical term + validated modifier before free-form CJK gate."""
-
     normalized = _V4_STRIP_LEADING_GLUE(value)
     for term, row_id in sorted(
         canonical_identity_map.items(), key=lambda item: (-len(item[0]), item[0])
@@ -96,8 +100,6 @@ def _base_actor_identity_key_v5(
     canonical_identity_map: dict[str, str],
     action: str,
 ) -> str | None:
-    """Preserve v4 identity rules, adding canonical-prefix + modifier support."""
-
     canonical = _canonical_prefix_identity(
         value,
         canonical_identity_map=canonical_identity_map,
@@ -120,7 +122,6 @@ def _possessive_observable_owner_identity(
     action: str,
 ) -> str | None:
     """Bind ``<actor>的身体/目光/视线`` only through a proven actor owner."""
-
     normalized = _V4_STRIP_LEADING_GLUE(value)
     owned_terms = tuple(sorted(set(_BODY_TERMS + _GAZE_OBSERVABLE_TERMS), key=len, reverse=True))
     for observable in owned_terms:
@@ -207,7 +208,6 @@ def _direct_target_in_event_tail_v5(
     value: str, *, canonical_terms: tuple[str, ...]
 ) -> bool:
     """Use the same bounded target grammar consumed by legacy-core normalization."""
-
     return target_starts_after_bounded_prefix(
         value,
         _V4_TARGET_TERMS(canonical_terms),
@@ -219,21 +219,12 @@ def _normalize_canonical_actor_modifiers_for_core(
     *,
     canonical_identity_map: dict[str, str],
 ) -> tuple[str, bool]:
-    """Strip only validated modifiers between a canonical actor and predicate.
-
-    This adapter runs before the frozen core's CJK typography gate. It is bounded
-    to canonical terms from the character table and the same positive modifier
-    grammar used by the safety facade. Any unknown tail is left untouched.
-    """
-
+    """Strip only validated modifiers between a canonical actor and predicate."""
     if not text:
         return text, False
     actions = tuple(sorted(set(_ALL_ACTOR_PREDICATE_ACTIONS), key=len, reverse=True))
     changed_any = False
     result = text
-
-    # Longest canonical terms first prevents a shorter alias from pre-empting a
-    # longer formal name. The final facade still revalidates the original text.
     for term in sorted(canonical_identity_map, key=len, reverse=True):
         search_from = 0
         while True:
@@ -260,6 +251,43 @@ def _normalize_canonical_actor_modifiers_for_core(
     return result, changed_any
 
 
+def _normalize_explicit_subject_coordination_for_core(
+    text: str,
+    *,
+    canonical_terms: tuple[str, ...],
+) -> tuple[str, bool]:
+    """Split bounded coordinated next subjects for the punctuation-based frozen core.
+
+    Only an explicit actor token immediately followed by a known predicate can
+    trigger the split. Original text remains untouched for the final safety
+    facade, so this adapter cannot mint actor authority.
+    """
+    actor_terms = tuple(
+        sorted(
+            set(canonical_terms)
+            | set(HUMAN_ROLE_HEADS)
+            | set(PRONOUN_AGENT_TERMS)
+            | {"群众", "人群", "百姓", "信徒", "民众", "居民", "人物", "角色"},
+            key=len,
+            reverse=True,
+        )
+    )
+    actions = tuple(sorted(set(_ALL_ACTOR_PREDICATE_ACTIONS), key=len, reverse=True))
+    if not text or not actor_terms or not actions:
+        return text, False
+    glue_alt = "|".join(re.escape(x) for x in sorted(_CORE_COORDINATION_TERMS, key=len, reverse=True))
+    actor_alt = "|".join(re.escape(x) for x in actor_terms)
+    action_alt = "|".join(re.escape(x) for x in actions)
+    pattern = re.compile(
+        rf"(?P<glue>{glue_alt})(?P<actor>{actor_alt})(?P<action>{action_alt})"
+    )
+    normalized, count = pattern.subn(
+        lambda m: f"，{m.group('actor')}{m.group('action')}",
+        text,
+    )
+    return normalized, bool(count)
+
+
 def _core_input_projection(
     text: str,
     *,
@@ -270,28 +298,30 @@ def _core_input_projection(
         text,
         canonical_identity_map=canonical_identity_map,
     )
-    target_normalized, target_changed = normalize_post_action_target_prefixes(
+    subject_normalized, subject_changed = _normalize_explicit_subject_coordination_for_core(
         actor_normalized,
+        canonical_terms=canonical_terms,
+    )
+    target_normalized, target_changed = normalize_post_action_target_prefixes(
+        subject_normalized,
         action_terms=_FACING_ACTIONS,
         target_terms=_V4_TARGET_TERMS(canonical_terms),
     )
     return target_normalized, {
         "canonical_actor_modifier_normalized": actor_changed,
+        "explicit_subject_coordination_segmented": subject_changed,
         "shared_target_prefix_normalized": target_changed,
     }
 
 
-# The private v4 scanner resolves its callbacks from its own module globals at
-# call time. Install v5 callbacks there so all old event/carry logic is preserved
-# while the corrected identity and target grammar are used.
+# The private v4 scanner resolves these callbacks from its own globals at call
+# time. Install v5 callbacks there so old event/carry logic remains intact.
 _legacy._TARGET_PREFIX_MODIFIERS = TARGET_PREFIX_TOKENS
 _legacy._base_actor_identity_key = _base_actor_identity_key_v5
 _legacy._classify_explicit_leader = _classify_explicit_leader_v5
 _legacy._actor_identity_key = _actor_identity_key_v5
 _legacy._direct_target_in_event_tail = _direct_target_in_event_tail_v5
 
-# Re-export selected internal helpers for existing focused regression tests and
-# diagnostics. They delegate to the frozen v4 implementation with v5 callbacks.
 _sanitize_actor_target_relations = _legacy._sanitize_actor_target_relations
 _scan_actor_event_support = _legacy._scan_actor_event_support
 _target_terms = _legacy._target_terms
@@ -302,7 +332,6 @@ _strip_leading_glue = _legacy._strip_leading_glue
 def compile_director_features(task: str, *, strict: bool = True) -> DirectorFeatures:
     if not isinstance(task, str) or not task.strip():
         raise FeatureCompilationError("EMPTY_DIRECTOR_TASK")
-
     canonical_identity_map, canonical_terms = _canonical_actor_authority()
     core_text, _ = _core_input_projection(
         task,
@@ -335,7 +364,6 @@ def compile_retrieval_task(
 ) -> dict[str, Any]:
     if not isinstance(description, str) or not description.strip():
         raise FeatureCompilationError("EMPTY_DIRECTOR_TASK")
-
     canonical_identity_map, canonical_terms = _canonical_actor_authority()
     core_text, normalization = _core_input_projection(
         description,
@@ -380,11 +408,14 @@ def compile_retrieval_task(
         "actor_terms_source": "PROJECT_INDEX.canonical.character_db",
         "actor_identity_authority": "canonical_character_row_v1",
         "caller_actor_terms_supported": False,
-        "actor_subject_binding": "per_target_event_actor_identity_v4",
-        "event_target_segmentation": "predicate_local_subject_boundary_v2",
+        "actor_subject_binding": "per_target_event_actor_identity_v3",
+        "event_target_segmentation": "predicate_local_subject_boundary_v1",
         "shared_target_grammar": "predicate_semantics_v1",
         "canonical_actor_modifier_normalized_for_core": normalization[
             "canonical_actor_modifier_normalized"
+        ],
+        "explicit_subject_coordination_segmented_for_core": normalization[
+            "explicit_subject_coordination_segmented"
         ],
         "shared_target_prefix_normalized_for_core": normalization[
             "shared_target_prefix_normalized"
@@ -400,5 +431,4 @@ def compile_retrieval_task(
 
 
 def __getattr__(name: str) -> Any:
-    """Compatibility delegation for non-public diagnostic helpers in old tests."""
     return getattr(_legacy, name)
