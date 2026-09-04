@@ -1,4 +1,4 @@
-suite_id: POST_FINAL_DELTA_VALIDATION_REGRESSION_V2_ARTIFACT_GATED
+suite_id: POST_FINAL_DELTA_VALIDATION_REGRESSION_V3_ELIGIBLE_COHORT_GATED
 status: candidate_stacked
 policy_authority: 10_运行时/post_final_delta_validation_policy.yaml
 maturity_authority: 10_运行时/maturity_model.yaml
@@ -18,6 +18,10 @@ policy:
   regression_proposal_write_forbidden: true
   maturity_promotion_forbidden: true
   artifact_gate_propagation_required: true
+  artifact_verification_independent_of_comparison_status: true
+  supporting_requires_formal_resolved_transition: true
+  supporting_requires_upstream_regression_eligibility: true
+  maturity_exact_cohort_scope_required: true
   unattributed_transition_candidates_are_diagnostic_only: true
   downstream_attribution_restoration_forbidden: true
 
@@ -33,13 +37,56 @@ cases:
     expected_regression_proposals: 0
     diagnostic_transition_must_not_be_promoted: true
 
+  - id: PFD-COMPARABLE-ARTIFACT-UNVERIFIED-DRIFT-001
+    upstream_comparison_status: COMPARABLE
+    upstream_artifact_provenance_verified: false
+    expected_error_code: POST_FD_AUTHORITY_VIOLATION
+    private_projection_must_not_run: true
+
+  - id: PFD-RESOLVED-INELIGIBLE-SUPPORT-DOWNGRADE-001
+    upstream_comparison_status: COMPARABLE
+    upstream_artifact_provenance_verified: true
+    resolved_fields: [attention_handoff]
+    formal_resolved_transitions: [attention_handoff]
+    upstream_regression_candidate_eligible: false
+    expected_internal_support_projection: INCONCLUSIVE
+    expected_regression_proposals: 0
+    downstream_must_not_mint_eligibility: true
+
+  - id: PFD-RESOLVED-WITHOUT-FORMAL-TRANSITION-001
+    upstream_comparison_status: COMPARABLE
+    upstream_artifact_provenance_verified: true
+    resolved_fields: [attention_handoff]
+    formal_resolved_transitions: []
+    upstream_regression_candidate_eligible: true
+    expected_error_code: POST_FD_INVALID_FINAL_DELTA
+
   - id: PFD-ARTIFACT-UNVERIFIED-SCENE-VERIFIED-001
     upstream_comparison_status: NOT_COMPARABLE
     upstream_artifact_provenance_verified: false
     requested_maturity: scene_verified
+    evidence_cohort_count: 1
     expected_supporting_evidence_present: false
     expected_route: INSUFFICIENT_SUPPORT_FOR_SCENE_VERIFICATION
     expected_promotion_authorized: false
+
+  - id: PFD-MULTI-COHORT-MATURITY-TARGET-REQUIRED-001
+    requested_maturity: scene_verified
+    evidence_cohorts:
+      - [C-DANCE, "2.5", lesson_A]
+      - [C-DANCE, "2.6", lesson_A]
+    maturity_target: absent
+    expected_error_code: POST_FD_MATURITY_TARGET_REQUIRED
+    cross_cohort_support_pooling_forbidden: true
+
+  - id: PFD-EXACT-MATURITY-COHORT-001
+    requested_maturity: scene_verified
+    evidence_cohorts:
+      - [C-DANCE, "2.5", lesson_A]
+      - [C-DANCE, "2.6", lesson_A]
+    maturity_target: [C-DANCE, "2.5", lesson_A]
+    expected_maturity_evidence_cohort: [C-DANCE, "2.5", lesson_A]
+    other_cohort_contribution_to_maturity: forbidden
 
   - id: PFD-SAME-VERSION-SUPPORT-COHORT-001
     internal_structural_validator_only: true
@@ -113,6 +160,10 @@ structural_gate_cases:
     expected_error_code: POST_FD_INVALID_FINAL_DELTA
     expected_behavior: downstream_cannot_restore_attribution_by_misfiling_diagnostics
 
+  - id: PFD-MATURITY-TARGET-NOT-FOUND-001
+    mutation: request_exact_maturity_target_absent_from_evidence
+    expected_error_code: POST_FD_MATURITY_TARGET_NOT_FOUND
+
   - id: PFD-MISSING-HYPOTHESIS-ID-001
     mutation: remove_hypothesis_id
     expected_error_code: POST_FD_INVALID_SHAPE
@@ -140,11 +191,17 @@ structural_gate_cases:
 gates:
   public_source_packages_are_reexecuted: true
   serialized_final_delta_never_authoritative: true
-  artifact_unverified_is_inconclusive: true
+  artifact_verification_checked_independently: true
+  artifact_unverified_is_inconclusive_or_rejected_on_drift: true
   unattributed_diagnostic_resolved_never_supporting: true
   unattributed_diagnostic_resolved_never_regression_proposal: true
+  formal_resolved_transition_required_for_support: true
+  upstream_regression_eligibility_required_for_support: true
+  downstream_cannot_mint_support_eligibility: true
   not_comparable_cannot_carry_attributed_field_transitions: true
   evidence_is_partitioned_before_summary: true
+  maturity_uses_selected_exact_cohort_only: true
+  multi_cohort_maturity_requires_exact_target: true
   no_semantic_auto_clustering: true
   no_cross_model_version_pooling: true
   conflict_cannot_be_silently_resolved: true
