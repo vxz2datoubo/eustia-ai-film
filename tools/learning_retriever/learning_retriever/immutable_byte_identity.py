@@ -39,7 +39,7 @@ class ImmutableByteObservation:
     content_sha256: str
     byte_length: int
     observation_state: str = "IMMUTABLE_BYTES_OBSERVED"
-    input_contract: str = "EXACT_BUILTIN_PYTHON_BYTES_ONLY"
+    input_contract: str = "PYTHON_BYTES_ONLY"
     source_artifact_binding_state: str = "UNVERIFIED"
     generation_binding_state: str = "UNVERIFIED"
     formal_asset_binding_state: str = "UNVERIFIED"
@@ -104,7 +104,7 @@ def _require_immutable_bytes(value: Any, *, label: str) -> bytes:
     """Accept exact built-in bytes only; invoke no caller-defined bytes hooks."""
     if type(value) is not bytes:
         raise ByteIdentityError(
-            "BYTE_INPUT_NOT_EXACT_BUILTIN_BYTES",
+            "BYTE_INPUT_NOT_IMMUTABLE_BYTES",
             f"{label} must be an exact built-in Python bytes value",
         )
     return value
