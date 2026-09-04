@@ -1,19 +1,20 @@
 """Pure immutable-byte identity primitive for the EUSTIA AI-film runtime.
 
 This candidate deliberately proves less than an artifact verifier.
-It accepts only already-materialized immutable Python ``bytes`` and computes a
+It accepts only already-materialized exact built-in Python ``bytes`` and computes
 stable content identity from that exact value. It performs no filesystem,
 locator, network, generation, asset, media, or semantic resolution.
 
 The separation is intentional:
 
-    governed artifact resolver (future) -> immutable bytes -> this primitive
+    governed artifact resolver (future) -> exact built-in bytes -> this primitive
         -> generation provenance binding (future)
 
 A caller may supply arbitrary bytes, so the resulting identity is evidence only
 about the byte value supplied to this invocation. It is never evidence that the
 bytes came from a named file, File Library object, formal asset, model job, or
-specific generation event.
+specific generation event. ``bytes`` subclasses are rejected before any caller-
+defined special method can run inside the primitive.
 """
 from __future__ import annotations
 
@@ -33,12 +34,12 @@ class ByteIdentityError(ValueError):
 
 @dataclass(frozen=True, slots=True)
 class ImmutableByteObservation:
-    """Invocation-local identity of one immutable byte value."""
+    """Invocation-local identity of one exact built-in byte value."""
 
     content_sha256: str
     byte_length: int
     observation_state: str = "IMMUTABLE_BYTES_OBSERVED"
-    input_contract: str = "PYTHON_BYTES_ONLY"
+    input_contract: str = "EXACT_BUILTIN_PYTHON_BYTES_ONLY"
     source_artifact_binding_state: str = "UNVERIFIED"
     generation_binding_state: str = "UNVERIFIED"
     formal_asset_binding_state: str = "UNVERIFIED"
@@ -69,7 +70,7 @@ class ImmutableByteObservation:
 
 @dataclass(frozen=True, slots=True)
 class ImmutableBytePairEvidence:
-    """Comparison of two invocation-local immutable byte values."""
+    """Comparison of two invocation-local exact built-in byte values."""
 
     before: ImmutableByteObservation
     after: ImmutableByteObservation
@@ -100,17 +101,17 @@ class ImmutableBytePairEvidence:
 
 
 def _require_immutable_bytes(value: Any, *, label: str) -> bytes:
-    """Accept immutable bytes only; never coerce paths, strings, or mutable buffers."""
-    if not isinstance(value, bytes):
+    """Accept exact built-in bytes only; invoke no caller-defined bytes hooks."""
+    if type(value) is not bytes:
         raise ByteIdentityError(
-            "BYTE_INPUT_NOT_IMMUTABLE_BYTES",
-            f"{label} must be an already-materialized immutable Python bytes value",
+            "BYTE_INPUT_NOT_EXACT_BUILTIN_BYTES",
+            f"{label} must be an exact built-in Python bytes value",
         )
     return value
 
 
 def observe_immutable_bytes(payload: bytes) -> ImmutableByteObservation:
-    """Compute identity for exactly the immutable byte value supplied by the caller."""
+    """Compute identity for exactly the built-in byte value supplied by the caller."""
     value = _require_immutable_bytes(payload, label="payload")
     return ImmutableByteObservation(
         content_sha256=hashlib.sha256(value).hexdigest(),
@@ -119,7 +120,7 @@ def observe_immutable_bytes(payload: bytes) -> ImmutableByteObservation:
 
 
 def compare_immutable_byte_pair(before: bytes, after: bytes) -> ImmutableBytePairEvidence:
-    """Compare two immutable byte values without asserting their provenance."""
+    """Compare two exact built-in byte values without asserting their provenance."""
     before_value = _require_immutable_bytes(before, label="before")
     after_value = _require_immutable_bytes(after, label="after")
     before_observation = observe_immutable_bytes(before_value)
