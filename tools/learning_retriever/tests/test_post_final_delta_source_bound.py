@@ -53,19 +53,21 @@ class PostFinalDeltaSourceBindingTests(unittest.TestCase):
                     "assessment_id": "A",
                     "hypothesis_id": "H",
                     "final_delta_inputs": [{"source": "a"}, {"source": "b"}],
-                    "requested_maturity": "candidate",
                 },
                 project_root=REPO_ROOT,
             )
         self.assertEqual(compile_mock.call_count, 2)
+        self.assertEqual(assess_mock.call_count, 1)
         internal = assess_mock.call_args.args[0]
         self.assertEqual(internal["final_deltas"], [compiled_a, compiled_b])
-        self.assertEqual(internal["requested_maturity"], "candidate")
+        self.assertNotIn("requested_maturity", internal)
         self.assertEqual(result["source_binding"]["mode"], "canonical_final_delta_reexecution")
         self.assertFalse(result["source_binding"]["serialized_final_deltas_accepted"])
         self.assertEqual(result["source_binding"]["compiled_source_count"], 2)
         self.assertEqual(result["source_binding"]["structural_projection_visibility"], "private_internal_only")
         self.assertTrue(result["source_binding"]["upstream_attribution_gate_preserved"])
+        self.assertTrue(result["source_binding"]["upstream_artifact_gate_checked_independently"])
+        self.assertTrue(result["source_binding"]["maturity_is_cohort_scoped"])
         self.assertFalse(result["source_binding"]["unattributed_transition_candidates_consumed_as_attributed"])
 
     def test_empty_source_list_fails_closed(self):
