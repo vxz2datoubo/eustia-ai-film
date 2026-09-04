@@ -169,8 +169,6 @@ class PostFinalDeltaValidationTests(unittest.TestCase):
         self.assertTrue(principles["contradictions_must_remain_visible"])
         self.assertTrue(principles["maturity_promotion_forbidden"])
         self.assertTrue(principles["regression_proposal_is_not_regression_write"])
-        self.assertTrue(principles["final_delta_artifact_gate_cannot_be_relaxed_downstream"])
-        self.assertTrue(principles["diagnostic_transition_is_not_attributed_repair"])
 
     def test_same_version_same_exact_lesson_forms_one_supporting_cohort(self):
         result = _assess(
@@ -350,13 +348,22 @@ class PostFinalDeltaValidationTests(unittest.TestCase):
         self.assertEqual(ctx.exception.code, "POST_FD_INVALID_SHAPE")
 
     def test_regression_registry_keeps_all_governance_gates(self):
-        self.assertEqual(REGRESSION["suite_id"], "POST_FINAL_DELTA_VALIDATION_REGRESSION_V2_ARTIFACT_GATED")
+        self.assertEqual(
+            REGRESSION["suite_id"],
+            "POST_FINAL_DELTA_VALIDATION_REGRESSION_V3_ELIGIBLE_COHORT_GATED",
+        )
         gates = REGRESSION["gates"]
         self.assertTrue(gates["public_source_packages_are_reexecuted"])
         self.assertTrue(gates["serialized_final_delta_never_authoritative"])
-        self.assertTrue(gates["artifact_unverified_is_inconclusive"])
+        self.assertTrue(gates["artifact_verification_checked_independently"])
+        self.assertTrue(gates["artifact_unverified_is_inconclusive_or_rejected_on_drift"])
         self.assertTrue(gates["unattributed_diagnostic_resolved_never_supporting"])
         self.assertTrue(gates["unattributed_diagnostic_resolved_never_regression_proposal"])
+        self.assertTrue(gates["formal_resolved_transition_required_for_support"])
+        self.assertTrue(gates["upstream_regression_eligibility_required_for_support"])
+        self.assertTrue(gates["downstream_cannot_mint_support_eligibility"])
+        self.assertTrue(gates["maturity_uses_selected_exact_cohort_only"])
+        self.assertTrue(gates["multi_cohort_maturity_requires_exact_target"])
         self.assertTrue(gates["no_semantic_auto_clustering"])
         self.assertTrue(gates["no_cross_model_version_pooling"])
         self.assertTrue(gates["conflict_cannot_be_silently_resolved"])
