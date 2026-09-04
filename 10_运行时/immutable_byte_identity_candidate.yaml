@@ -1,11 +1,11 @@
-schema_version: "1.0"
+schema_version: "1.1"
 component_id: IMMUTABLE_BYTE_IDENTITY_PRIMITIVE
 status: candidate
 source_issue: 107
 activation: absent_until_independent_accept_and_separate_registration
 
 purpose:
-  - 对已经进入受信调用链的 immutable Python bytes 做确定性的内容身份计算
+  - 对已经进入受信调用链的 exact built-in immutable Python bytes 做确定性的内容身份计算
   - 为 before/after 两段内存字节提供 same-content / distinct-content 事实
   - 作为未来 governed artifact resolver 与 generation provenance adapter 之间的最小纯函数层
 
@@ -26,7 +26,7 @@ canonical_relationship:
 
 truth_layers:
   IMMUTABLE_BYTES_OBSERVED:
-    meaning: 本次调用对调用方实际传入的 Python bytes 值计算 SHA-256 与 byte length
+    meaning: 本次调用对调用方实际传入的 exact built-in Python bytes 值计算 SHA-256 与 byte length
   SOURCE_ARTIFACT_BINDING_UNVERIFIED:
     meaning: 不证明该 bytes 来自哪个路径、File ID、Library 对象、正式资产或媒体版本
   GENERATION_BINDING_UNVERIFIED:
@@ -36,6 +36,9 @@ truth_layers:
 
 hard_invariants:
   python_bytes_only: true
+  exact_builtin_bytes_type_required: true
+  bytes_subclass_input_forbidden: true
+  caller_defined_bytes_hooks_forbidden: true
   mutable_buffer_input_forbidden: true
   string_or_path_locator_input_forbidden: true
   mapping_or_serialized_receipt_input_forbidden: true
@@ -59,8 +62,10 @@ hard_invariants:
 
 input_contract:
   accepted_value_input:
-    - immutable_python_bytes_already_materialized_by_upstream_caller
+    - exact_builtin_python_bytes_already_materialized_by_upstream_caller
+  type_check: type_value_is_bytes_exactly
   rejected_as_identity_input:
+    - bytes_subclass
     - str
     - pathlib_Path_or_other_PathLike
     - bytearray
@@ -76,12 +81,13 @@ input_contract:
     - generation_id_string
     - filename_or_extension
   coercion_policy: forbidden
-  reason: coercion_would_reintroduce_source_locator_or_mutability_authority
+  reason: coercion_or_subclass_dispatch_would_reintroduce_caller_code_locator_or_mutability_authority
 
 single_value_observation:
   public_api: observe_immutable_bytes
   algorithm: sha256
   input_copy_performed: false
+  caller_defined_special_method_dispatch_before_rejection: false
   filesystem_access: false
   network_access: false
   receipt_fields:
@@ -103,7 +109,8 @@ single_value_observation:
 
 pair_comparison:
   public_api: compare_immutable_byte_pair
-  public_value_input: two_immutable_python_bytes_values
+  public_value_input: two_exact_builtin_python_bytes_values
+  bytes_subclass_pair_input: forbidden
   serialized_receipt_pair_input: forbidden
   same_content_when:
     - same_content_sha256
@@ -116,7 +123,7 @@ pair_comparison:
   formal_asset_distinct_claim: forbidden
 
 failure_codes:
-  BYTE_INPUT_NOT_IMMUTABLE_BYTES: input is not already-materialized Python bytes
+  BYTE_INPUT_NOT_IMMUTABLE_BYTES: input is not exact built-in Python bytes
 
 candidate_isolation:
   project_index_registration: forbidden
@@ -137,13 +144,16 @@ reviewer_attack_retirement:
     reason: runtime_never_opens_or_stats_files
   ctime_mtime_change_version_attacks:
     state: structurally_removed
-    reason: runtime_observes_one_already_materialized_immutable_bytes_value
+    reason: runtime_observes_one_already_materialized_exact_builtin_bytes_value
   windows_reparse_unc_device_attacks:
     state: structurally_removed
     reason: runtime_accepts_no_locator_or_path_input
+  bytes_subclass_hook_attack:
+    state: fail_closed_at_type_gate
+    reason: exact_builtin_type_check_occurs_before_len_hash_or_other_identity_operation
 
 future_binding_requirements:
-  - separate governed artifact resolver must produce bytes and separately bind their source artifact identity
+  - separate governed artifact resolver must produce exact built-in bytes and separately bind their source artifact identity
   - source resolver must own filesystem/network/Library/media locator security; this primitive must not reacquire that responsibility
   - separate generation provenance adapter must prove exact byte identity corresponds to exact generation provenance
   - generation binding must not trust caller generation_id alone
