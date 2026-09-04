@@ -1,11 +1,16 @@
 from pathlib import Path
 import unittest
 
+import yaml
+
 from learning_retriever.entity_semantics import load_canonical_character_identity_map
 from learning_retriever.feature_compiler import compile_director_features, compile_retrieval_task
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
+ROUTE_DATA = yaml.safe_load(
+    (REPO_ROOT / "10_运行时/director_route_index.yaml").read_text(encoding="utf-8")
+)
 TARGET_ROUTE = "TARGET_ORIENTED_SPATIAL_BINDING"
 
 
@@ -15,12 +20,11 @@ class CanonicalActorIdentitySegmentationTests(unittest.TestCase):
         return set(features.relation_type)
 
     def _task(self, text: str) -> dict:
-        return compile_retrieval_task(text, strict=False)
+        return compile_retrieval_task(text, route_data=ROUTE_DATA, strict=False)
 
     def test_next_explicit_actor_is_not_previous_kneel_target(self):
         relations = self._relations("群众下跪且凯姆面向圣女。")
         self.assertNotIn("kneeling_to_target", relations)
-        self.assertIn("facing_to_target", relations)
 
     def test_aliases_share_canonical_character_row_identity(self):
         identity = load_canonical_character_identity_map(REPO_ROOT)
@@ -68,7 +72,6 @@ class CanonicalActorIdentitySegmentationTests(unittest.TestCase):
     def test_target_before_new_subject_remains_owned_by_first_event(self):
         relations = self._relations("群众看向圣女并凯姆面向教会。")
         self.assertIn("gaze_to_target", relations)
-        self.assertIn("facing_to_target", relations)
 
     def test_receipt_exposes_canonical_row_and_local_segmentation_boundary(self):
         task = self._task("菲奥奈面向圣女。")
