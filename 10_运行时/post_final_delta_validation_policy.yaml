@@ -1,0 +1,143 @@
+policy_id: EUSTIA_POST_FINAL_DELTA_VALIDATION_V4_ELIGIBLE_COHORT_GATED
+status: candidate_stacked
+scope: final_delta_source_packages_to_evidence_cohort_regression_proposal_maturity_assessment
+
+canonical_authority:
+  feedback_learning: 08_系统学习/反馈反推与系统反哺引擎.md
+  maturity_model: 10_运行时/maturity_model.yaml
+  learning_application_gate: 10_运行时/learning_application_gate.yaml
+  final_delta_policy: 10_运行时/final_delta_learning_policy.yaml
+  final_delta_runtime: tools/learning_retriever/learning_retriever/final_delta.py
+
+source_binding:
+  public_input: final_delta_inputs
+  serialized_final_deltas_accepted: false
+  canonical_final_delta_reexecution_required: true
+  source_bound_wrapper: tools/learning_retriever/learning_retriever/post_final_delta_source_bound.py
+  legacy_structural_validator_role: private_internal_projection_only
+  caller_consistent_serialized_artifacts_are_not_source_truth: true
+  accepted_upstream_candidate: PR_104_ae224fb551231da4db9c9190f1d7faec5b88ecdc
+  upstream_artifact_provenance_gate_must_be_preserved: true
+
+artifact_gate_propagation:
+  artifact_binding_checked_independently_of_comparison_status: true
+  comparable_without_verified_artifact_provenance: reject_authority_violation
+  final_delta_not_comparable_is_inconclusive: true
+  unattributed_transition_candidates_are_diagnostic_only: true
+  unattributed_transition_candidates_cannot_become_field_transitions: true
+  unattributed_resolved_candidate_cannot_become_supporting_evidence: true
+  artifact_provenance_unverified_cannot_emit_regression_proposal: true
+  artifact_provenance_unverified_cannot_support_maturity_promotion: true
+  downstream_cannot_restore_final_delta_attribution: true
+  downstream_cannot_infer_generation_event_identity: true
+  byte_content_distinction_alone_is_insufficient_generation_provenance: true
+
+support_eligibility_gate:
+  comparable_status_required: true
+  verified_artifact_provenance_required: true
+  nonempty_resolved_fields_alone_is_insufficient: true
+  each_resolved_field_requires_formal_RESOLVED_transition: true
+  upstream_regression_candidate_eligible_required: true
+  resolved_without_upstream_eligibility_behavior: downgrade_to_inconclusive_internal_projection
+  resolved_without_matching_formal_transition_behavior: reject_invalid_final_delta
+  downstream_cannot_mint_upstream_eligibility: true
+
+cohort_partitioning:
+  keys:
+    - model
+    - model_version
+    - exact_candidate_lesson_payload
+  semantic_auto_clustering_forbidden: true
+  cross_cohort_maturity_pooling_forbidden: true
+  requested_maturity_single_cohort_default: exact_only_cohort
+  requested_maturity_multiple_cohorts_requires_exact_target: true
+  maturity_target_keys:
+    - model
+    - model_version
+    - exact_candidate_lesson_payload
+  maturity_target_not_found_behavior: reject
+  overall_conflict_summary_may_span_cohorts: true
+  maturity_evidence_must_use_selected_exact_cohort_only: true
+
+principles:
+  explicit_hypothesis_id_required: true
+  semantic_auto_clustering_forbidden: true
+  exact_candidate_lesson_payload_partitioning: true
+  model_version_evidence_partitioning_required: true
+  latest_wins_conflict_resolution_forbidden: true
+  contradictions_must_remain_visible: true
+  regression_proposal_is_not_regression_write: true
+  maturity_assessment_is_not_maturity_promotion: true
+  scene_verified_requires_trusted_user_or_canonical_confirmation_binding: true
+  project_verified_requires_governed_high_impact_gate: true
+  general_stable_requires_governed_high_impact_gate: true
+  prompt_mutation_forbidden: true
+  generation_trigger_forbidden: true
+  camera_authority_mutation_forbidden: true
+  canonical_writeback_forbidden: true
+  learning_writeback_forbidden: true
+  maturity_promotion_forbidden: true
+  automatic_causal_claim_forbidden: true
+  final_delta_artifact_gate_cannot_be_relaxed_downstream: true
+  diagnostic_transition_is_not_attributed_repair: true
+  maturity_cannot_recombine_partitioned_cohorts: true
+
+evidence_classification:
+  SUPPORTING:
+    requires:
+      - comparable_final_delta
+      - verified_artifact_provenance
+      - at_least_one_attributed_resolved_repair_field
+      - matching_formal_RESOLVED_transition_for_each_resolved_field
+      - no_regressed_pass_field
+      - no_persistent_failure_field
+      - upstream_regression_candidate_eligible
+  CONTRADICTORY:
+    any_of:
+      - regressed_pass_field
+      - persistent_failure_field
+  INCONCLUSIVE:
+    any_of:
+      - final_delta_not_comparable
+      - artifact_provenance_unverified
+      - resolved_but_upstream_regression_ineligible
+      - no_resolved_or_contradictory_signal
+      - unresolved_evidence_only
+      - diagnostic_unattributed_transition_only
+
+regression_proposal_contract:
+  source_requires_regression_candidate_eligible: true
+  source_requires_supporting_classification: true
+  source_requires_comparable_attributed_final_delta: true
+  source_requires_verified_artifact_provenance: true
+  source_requires_matching_formal_resolved_transitions: true
+  diagnostic_unattributed_transition_is_insufficient: true
+  status: candidate
+  canonical_write_target: null
+  write_authorized: false
+  promotion_authorized: false
+  human_or_governed_review_required: true
+
+maturity_routes:
+  candidate: REGISTRATION_ONLY_NO_PROMOTION
+  scene_verified: TRUSTED_USER_OR_CANONICAL_CONFIRMATION_BINDING_REQUIRED
+  project_verified: HIGH_IMPACT_GOVERNED_PROMOTION_GATE_REQUIRED
+  general_stable: HIGH_IMPACT_GOVERNED_PROMOTION_GATE_REQUIRED
+  conflicted: SPECIAL_STATE_GOVERNED_DECISION_REQUIRED
+  needs_revalidation: SPECIAL_STATE_GOVERNED_DECISION_REQUIRED
+  deprecated: SPECIAL_STATE_GOVERNED_DECISION_REQUIRED
+
+output_contract:
+  evidence_cohorts_are_ephemeral: true
+  regression_proposals_are_ephemeral: true
+  maturity_assessment_is_advisory_evidence_only: true
+  diagnostic_unattributed_transitions_are_not_regression_evidence: true
+  maturity_assessment_must_record_selected_exact_cohort: true
+  prompt_mutation_authorized: false
+  generation_authorized: false
+  camera_authority_mutation_authorized: false
+  canonical_mutation_authorized: false
+  learning_writeback_authorized: false
+  regression_write_authorized: false
+  maturity_promotion_authorized: false
+  causal_claim_authorized: false
