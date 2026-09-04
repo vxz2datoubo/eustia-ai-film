@@ -12,6 +12,25 @@ from learning_retriever.post_final_delta_source_bound import assess_source_bound
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
+def _minimal_compiled_delta(delta_id: str, lesson: str) -> dict:
+    """Return the smallest valid cohort-partitioned projection for facade plumbing tests."""
+    return {
+        "final_delta_id": delta_id,
+        "comparison_status": "NOT_COMPARABLE",
+        "artifact_provenance_binding": {"verified": False},
+        "field_transitions": [],
+        "repair_outcome": {
+            "resolved_fields": [],
+            "persistent_failure_fields": [],
+            "regressed_fields": [],
+        },
+        "regression_candidate_handoff": {"eligible": False},
+        "candidate_learning_evidence": {"candidate_lesson": lesson},
+        "model": "C-DANCE",
+        "model_version": "2.5",
+    }
+
+
 class PostFinalDeltaSourceBindingTests(unittest.TestCase):
     def test_serialized_final_deltas_have_no_source_bound_input_port(self):
         with self.assertRaises(PostFinalDeltaValidationError) as ctx:
@@ -38,8 +57,8 @@ class PostFinalDeltaSourceBindingTests(unittest.TestCase):
         self.assertEqual(ctx.exception.code, "POST_FD_AUTHORITY_VIOLATION")
 
     def test_each_source_package_is_reexecuted_before_private_projection(self):
-        compiled_a = {"final_delta_id": "FD-A"}
-        compiled_b = {"final_delta_id": "FD-B"}
+        compiled_a = _minimal_compiled_delta("FD-A", "lesson-A")
+        compiled_b = _minimal_compiled_delta("FD-B", "lesson-B")
         projected = {"assessment_id": "A", "cohorts": []}
         with patch(
             "learning_retriever.post_final_delta_source_bound.compile_final_delta_learning_evidence",
