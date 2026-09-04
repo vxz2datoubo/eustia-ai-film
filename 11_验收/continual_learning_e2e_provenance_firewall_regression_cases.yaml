@@ -20,15 +20,20 @@ stack_under_test:
 purpose:
   - prove candidate composition remains fail_closed_without_real_host_generation_attestation
   - prove diagnostic improvement cannot become attributed learning through downstream composition
+  - prove byte identity, caller labels, media references and outcome quality remain separate evidence axes
   - prove integration topology itself creates no activation or write authority
 
 hard_invariants:
   byte_content_difference_may_be_observed: true
   byte_content_difference_does_not_prove_distinct_generation_events: true
+  generation_label_difference_does_not_prove_distinct_generation_events: true
+  same_generation_label_cannot_bind_distinct_content_to_one_verified_artifact: true
+  media_ref_labels_do_not_prove_source_artifact_or_generation_identity: true
   repo_only_generation_provenance_remains_unverified: true
   final_delta_artifact_provenance_remains_unverified: true
   final_delta_formal_field_transitions_remain_empty: true
   final_delta_unattributed_diagnostics_may_survive: true
+  preserved_pass_regression_blocks_candidate_even_when_target_improves: true
   post_final_delta_must_not_consume_unattributed_diagnostics_as_attributed: true
   post_final_delta_supporting_count_must_remain_zero: true
   regression_proposal_must_remain_absent: true
@@ -56,6 +61,53 @@ cases:
     expected_regression_proposals: []
     requested_maturity: scene_verified
     expected_maturity_route: INSUFFICIENT_SUPPORT_FOR_SCENE_VERIFICATION
+    expected_promotion_authorized: false
+
+  - id: CL-E2E-PROV-DISTINCT-BYTES-SAME-GENERATION-LABEL-001
+    byte_before: before-A
+    byte_after: after-B
+    generation_label_relation: same
+    expected_byte_distinct_content: true
+    expected_distinct_generation_events_verified: false
+    expected_final_delta_comparison_status: NOT_COMPARABLE
+    expected_reason: SOURCE_ARTIFACT_IDENTITY_COLLISION
+    expected_source_pair_identity_matched: false
+    expected_formal_field_transitions: []
+
+  - id: CL-E2E-PROV-SAME-BYTES-DISTINCT-GENERATION-LABELS-001
+    byte_before: identical-output
+    byte_after: identical-output
+    generation_label_relation: distinct
+    expected_same_content: true
+    expected_distinct_generation_events_verified: false
+    expected_source_pair_identity_matched: true
+    expected_artifact_provenance_verified: false
+    expected_final_delta_comparison_status: NOT_COMPARABLE
+    expected_reason: ARTIFACT_PROVENANCE_REQUIRED
+
+  - id: CL-E2E-PROV-MEDIA-REF-LABELS-NOT-PROOF-001
+    attack: caller_supplies_distinct_trusted_looking_media_ref_labels
+    expected_source_artifact_binding_verified: false
+    expected_generation_event_binding_verified: false
+    expected_final_delta_comparison_status: NOT_COMPARABLE
+    expected_reason: ARTIFACT_PROVENANCE_UNVERIFIED
+    expected_regression_candidate_eligible: false
+
+  - id: CL-E2E-PROV-IMPROVEMENT-PLUS-PRESERVED-PASS-REGRESSION-001
+    before:
+      visual_density: FAIL
+      composition: PASS
+    after:
+      visual_density: PASS
+      composition: FAIL
+    expected_diagnostic_transitions:
+      visual_density: RESOLVED
+      composition: REGRESSED
+    expected_preserved_pass_gate: false
+    expected_formal_field_transitions: []
+    expected_supporting_count: 0
+    expected_regression_proposals: []
+    requested_maturity: scene_verified
     expected_promotion_authorized: false
 
   - id: CL-E2E-PROV-HOST-ATTESTATION-KWARG-REJECT-001
