@@ -1,6 +1,7 @@
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import os
+import stat
 import unittest
 from unittest import mock
 
@@ -36,22 +37,24 @@ class BinaryArtifactEvidenceBridgeTOCTOUTests(unittest.TestCase):
             path = Path(tmp) / "mutable.bin"
             path.write_bytes(b"abcdef")
             real_fstat = os.fstat
-            calls = {"count": 0}
+            regular_calls = {"count": 0}
 
             def changing_fstat(fd):
                 st = real_fstat(fd)
-                calls["count"] += 1
-                if calls["count"] >= 2:
-                    values = list(st)
-                    class Changed:
-                        st_dev = st.st_dev
-                        st_ino = st.st_ino
-                        st_mode = st.st_mode
-                        st_size = st.st_size + 1
-                        st_mtime_ns = st.st_mtime_ns + 1
-                        st_ctime_ns = st.st_ctime_ns
-                        st_nlink = st.st_nlink
-                    return Changed()
+                if stat.S_ISREG(st.st_mode):
+                    regular_calls["count"] += 1
+                    # regular #1 = secure-open postcheck; #2 = read-before;
+                    # regular #3 = read-after, where mutation must be detected.
+                    if regular_calls["count"] >= 3:
+                        class Changed:
+                            st_dev = st.st_dev
+                            st_ino = st.st_ino
+                            st_mode = st.st_mode
+                            st_size = st.st_size + 1
+                            st_mtime_ns = st.st_mtime_ns + 1
+                            st_ctime_ns = st.st_ctime_ns
+                            st_nlink = st.st_nlink
+                        return Changed()
                 return st
 
             with mock.patch(
@@ -68,21 +71,22 @@ class BinaryArtifactEvidenceBridgeTOCTOUTests(unittest.TestCase):
             path = Path(tmp) / "ctime-only.bin"
             path.write_bytes(b"abcdef")
             real_fstat = os.fstat
-            calls = {"count": 0}
+            regular_calls = {"count": 0}
 
             def ctime_only_change(fd):
                 st = real_fstat(fd)
-                calls["count"] += 1
-                if calls["count"] >= 2:
-                    class Changed:
-                        st_dev = st.st_dev
-                        st_ino = st.st_ino
-                        st_mode = st.st_mode
-                        st_size = st.st_size
-                        st_mtime_ns = st.st_mtime_ns
-                        st_ctime_ns = st.st_ctime_ns + 1
-                        st_nlink = st.st_nlink
-                    return Changed()
+                if stat.S_ISREG(st.st_mode):
+                    regular_calls["count"] += 1
+                    if regular_calls["count"] >= 3:
+                        class Changed:
+                            st_dev = st.st_dev
+                            st_ino = st.st_ino
+                            st_mode = st.st_mode
+                            st_size = st.st_size
+                            st_mtime_ns = st.st_mtime_ns
+                            st_ctime_ns = st.st_ctime_ns + 1
+                            st_nlink = st.st_nlink
+                        return Changed()
                 return st
 
             with mock.patch(
