@@ -1,0 +1,138 @@
+suite_id: IMMUTABLE_BYTE_IDENTITY_PRIMITIVE_V1
+status: candidate
+source_issue: 107
+runtime: tools/learning_retriever/learning_retriever/immutable_byte_identity.py
+policy: 10_运行时/immutable_byte_identity_candidate.yaml
+
+invariants:
+  python_bytes_only: true
+  exact_builtin_bytes_type_required: true
+  bytes_subclass_input_forbidden: true
+  caller_defined_bytes_hooks_never_run_before_rejection: true
+  mutable_buffer_input_forbidden: true
+  path_or_locator_input_forbidden: true
+  caller_digest_never_authoritative: true
+  serialized_receipt_never_identity_input: true
+  filesystem_io_surface_absent: true
+  network_io_surface_absent: true
+  same_bytes_are_same_content: true
+  distinct_bytes_only_prove_distinct_in_memory_content: true
+  distinct_content_does_not_prove_distinct_source_artifacts: true
+  distinct_content_does_not_prove_distinct_generation_event: true
+  receipt_does_not_register_formal_asset: true
+  receipt_does_not_prove_pixels_or_audio_semantics: true
+  runtime_has_no_write_authority: true
+  candidate_is_unregistered_unactivated: true
+
+cases:
+  - id: IBI-SINGLE-BYTES-001
+    input_type: exact_builtin_bytes
+    bytes: actual-media-bytes
+    expected_observation_state: IMMUTABLE_BYTES_OBSERVED
+    expected_hash_source: exact_supplied_bytes
+    expected_source_artifact_binding_state: UNVERIFIED
+    expected_generation_binding_state: UNVERIFIED
+    expected_formal_asset_binding_state: UNVERIFIED
+
+  - id: IBI-SAME-BYTES-001
+    before_bytes: same-real-bytes
+    after_bytes: same-real-bytes
+    expected_same_content: true
+    expected_distinct_content_observed: false
+
+  - id: IBI-ONE-BYTE-DIFFERENCE-001
+    before_bytes: abcdef
+    after_bytes: abcdeg
+    expected_same_content: false
+    expected_distinct_content_observed: true
+    expected_claim_scope: IN_MEMORY_BYTE_CONTENT_IDENTITY_ONLY
+    expected_distinct_source_artifacts_verified: false
+    expected_distinct_generation_events_verified: false
+
+  - id: IBI-EMPTY-BYTES-001
+    bytes: empty
+    expected_byte_length: 0
+    expected_sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+
+  - id: IBI-BYTES-SUBCLASS-HOOK-REJECT-001
+    input_type: bytes_subclass
+    hostile_overrides: [__len__]
+    expected_error_code: BYTE_INPUT_NOT_IMMUTABLE_BYTES
+    hostile_hook_calls_expected: 0
+    expected_behavior: fail_exact_type_check_before_any_identity_operation
+
+  - id: IBI-BYTES-SUBCLASS-PAIR-REJECT-001
+    before_or_after_type: bytes_subclass
+    expected_error_code: BYTE_INPUT_NOT_IMMUTABLE_BYTES
+    hostile_hook_calls_expected: 0
+    pair_observation_started: false
+
+  - id: IBI-MUTABLE-BYTEARRAY-REJECT-001
+    input_type: bytearray
+    expected_error_code: BYTE_INPUT_NOT_IMMUTABLE_BYTES
+
+  - id: IBI-MEMORYVIEW-REJECT-001
+    input_type: memoryview
+    expected_error_code: BYTE_INPUT_NOT_IMMUTABLE_BYTES
+
+  - id: IBI-PATH-STRING-REJECT-001
+    input_type: str
+    input_example: /tmp/artifact.bin
+    expected_error_code: BYTE_INPUT_NOT_IMMUTABLE_BYTES
+    filesystem_io_expected: false
+
+  - id: IBI-PATHLIKE-REJECT-001
+    input_type: pathlib_Path
+    expected_error_code: BYTE_INPUT_NOT_IMMUTABLE_BYTES
+    filesystem_io_expected: false
+
+  - id: IBI-SERIALIZED-RECEIPT-REPLAY-REJECT-001
+    input_type: mapping
+    expected_error_code: BYTE_INPUT_NOT_IMMUTABLE_BYTES
+
+  - id: IBI-OBSERVATION-REPLAY-REJECT-001
+    input_type: ImmutableByteObservation
+    expected_error_code: BYTE_INPUT_NOT_IMMUTABLE_BYTES
+
+  - id: IBI-FORGED-DIGEST-NO-SURFACE-001
+    caller_attempts:
+      - sha256
+      - byte_length
+      - verified_boolean
+      - generation_id
+      - source_path
+    expected_public_single_parameters: [payload]
+    expected_public_pair_parameters: [before, after]
+    expected_behavior: no_metadata_or_provenance_authority_surface
+
+  - id: IBI-NFS-CIFS-FUSE-ATTACK-REMOVED-001
+    attack: path_points_to_remote_or_automounted_filesystem
+    expected_behavior: impossible_through_public_runtime_input
+    reason: no_path_or_filesystem_input_surface
+
+  - id: IBI-SYMLINK-TOCTOU-ATTACK-REMOVED-001
+    attack: locator_component_or_file_swap
+    expected_behavior: impossible_through_public_runtime_input
+    reason: no_locator_open_stat_or_read_surface
+
+  - id: IBI-CTIME-MTIME-SEMANTICS-ATTACK-REMOVED-001
+    attack: coarse_or_restored_filesystem_timestamps
+    expected_behavior: irrelevant_to_primitive
+    reason: one_already_materialized_exact_builtin_bytes_value_is_observed
+
+  - id: IBI-DISTINCT-BYTES-NOT-PROVENANCE-001
+    before_after_distinct_content: true
+    expected_distinct_content_observed: true
+    expected_source_artifacts_verified: false
+    expected_distinct_generation_events_verified: false
+    final_delta_attribution_authorized: false
+
+isolation_gates:
+  project_index_must_not_register_component: true
+  read_sets_must_not_activate_component: true
+  write_routes_must_not_contain_component: true
+  asset_registry_must_not_be_modified_by_runtime: true
+  continuity_must_not_be_modified_by_runtime: true
+  final_delta_must_not_import_or_activate_candidate_in_this_slice: true
+  runtime_source_must_not_import_os_pathlib_socket_subprocess_requests_urllib: true
+  runtime_source_must_not_call_open_read_stat_or_filesystem_methods: true
