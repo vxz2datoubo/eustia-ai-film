@@ -24,15 +24,17 @@ output_evidence:
   archive_size_bytes: 52870454
   archive_listing_jpg_count: 141
   observed_timeline_duration_s: 28.032
-  nominal_sample_interval_s: 0.20
-  visual_review_mode: contact_sheet_temporal_sampling
-  reviewed_contact_sheet_samples: 29
+  nominal_source_frame_interval_s: 0.20
+  visual_review_mode: full_span_contact_sheet_temporal_sampling
+  reviewed_contact_sheet_samples: 30
   reviewed_time_span_s: 0.0_to_28.0
   representative_frame_dimensions: [1920, 1440]
   audio_verified: false
-  note: 原RAR目录可确认141张连续JPG与约28.032秒时序；本轮对实际像素的导演观察基于覆盖全片的29点时间接触表/关键帧采样，不声称逐张审阅全部141帧，也未验收原音轨。
+  reference_pixels_verified: false
+  note: 原RAR目录可确认141张连续JPG与约28.032秒时序；本轮对实际像素的导演观察基于覆盖全片的30点时间接触表/关键帧采样，不声称逐张审阅全部141帧，也未验收原音轨或Prompt所引用的6张参考图像素。
 
 reference_role_mapping_from_source_prompt:
+  evidence_plane: prompt_intent_only_reference_pixels_not_verified
   image_1: Mina healthy identity/state
   image_2: Mina infected identity/state
   image_3: Snow healthy identity/state
@@ -46,18 +48,24 @@ user_named_strengths:
 
 system_observed_strengths:
   - reality_memory_reality_state_partition_is_visually_legible
-  - multi_reference_responsibility_mapping_is_consistent_with_observed_state_changes
+  - prompt_declared_state_partition_is_consistent_with_observed_output_state_changes
   - non_uniform_model_managed_shot_pacing_is_observable
   - emotional_relationship_beats_receive_longer_holds_than_simple_establishing_information
   - observable_physical_grief_cues_are_more_screen_actionable_than_abstract_emotion_labels
   - companion_animal_functions_as_relationship_actor_not_background_prop
   - final_static_extreme_wide_aftermath_creates_emotional_aftershock
   - cold_desaturated_reality_vs_warm_sunlit_memory_contrast_is_clear
-  - subtle_handheld_raw_documentary_look_supports_reality_section
+  - raw_documentary_visual_character_supports_reality_section
   - sparse_negative_constraints_keep_execution_target_clear
 
+system_unverified_or_inference_only:
+  - exact_reference_identity_match_to_image_1_through_image_6
+  - exact_reference_style_match_to_image_1_through_image_6
+  - subtle_organic_handheld_motion_as_observed_continuous_camera_behavior_at_current_sampling_density
+  - diegetic_audio_execution
+
 normalized_summary: >-
-  约28秒、13个编号shot的悲剧羁绊连续剧情。提示词先建立GLOBAL故事合同，再按现实/回忆两个状态域绑定人物、动物和环境参考图，逐shot给景别、机位、可观察表演动作和关系变化，不逐shot写死秒数。实际输出呈现明显非均匀自动节奏：简单建立镜头较短，识别、伸手、温暖回忆与终局余震获得更长停留；现实冷绿去饱和与回忆暖阳形成清楚对照，最后静态远景回到死亡现实。
+  约28秒、13个编号shot的悲剧羁绊连续剧情。提示词先建立GLOBAL故事合同，再按现实/回忆两个状态域声明人物、动物和环境参考图职责，逐shot给景别、机位、可观察表演动作和关系变化，不逐shot写死秒数。实际输出采样呈现明显非均匀自动节奏：简单建立镜头较短，识别、伸手、温暖回忆与终局余震获得更长停留；现实冷绿去饱和与回忆暖阳形成清楚对照，最后静态远景回到死亡现实。参考图本体未提供给当前审片，因此只验证输出状态变化与Prompt意图的一致性，不声称参考像素身份匹配已验证。
 
 prompt_control_fingerprint:
   structure:
@@ -82,7 +90,7 @@ prompt_control_fingerprint:
     - reality snapback
     - hold frame
   weighting_boundary: >-
-    这些词不是独立“万能画质词”。只有当当前任务需要纪实现实感、病态冷色现实、温暖回忆对照、克制手持、身体化悲伤、无配乐现实声音或静态余震结尾时才提高权重；不应机械复制到动作片、喜剧、商业广告或非回忆结构。
+    这些词不是独立“万能画质词”。只有当当前任务需要纪实现实感、病态冷色现实、温暖回忆对照、克制手持、身体化悲伤、无配乐现实声音或静态余震结尾时才提高权重；不应机械复制到动作片、喜剧、商业广告或非回忆结构。其中 subtle organic handheld motion 与 diegetic sound only 当前只属于Prompt意图/候选机制，前者缺少足够密时序运动验收，后者没有音轨验收。
 
 edcm:
   k0:
@@ -103,6 +111,7 @@ edcm:
     - aftermath_hold
   k3:
     - 未验证原视频音轨，因此diegetic_only音频策略的实际执行质量未知。
+    - 未打开源Prompt引用的6张参考图，因此不能验证reference identity/style match。
     - 未做跨场景复现，不能证明不写逐镜时长在所有Seedance 2.5任务中优于时间码。
     - 未掌握生成端完整provider task/provenance与参数，不能做单句prompt到单一画面效果的强因果归因。
 
@@ -144,6 +153,7 @@ failure_boundaries:
   - 回忆段若包含多个子环境，应显式分区，避免把单一环境参考误当所有回忆空间。
   - 质量/风格词必须绑定剧情功能，禁止脱离功能单独堆叠。
   - 单次优秀组合只能证明组合方案在当前案例成立，不能把其中某个词单独宣称为因果主因。
+  - 未打开参考图像素时，reference responsibility是Prompt结构证据，不是reference match验收证据。
 
 maturity:
   case_output: scene_verified
@@ -157,12 +167,14 @@ revalidation_triggers:
   - multi_shot_story_editing_behavior_change
   - user_reports_auto_pacing_failure
   - new_cross_scene_transfer_evidence
+  - reference_pixels_become_available_for_match_validation
 
 provenance:
   prompt: user_supplied_verbatim
   output: user_supplied_image_sequence_archive
-  pixel_observation: sampled_contact_sheet_verified_in_current_conversation
+  pixel_observation: full_span_contact_sheet_30_samples_verified_in_current_conversation
   audio: not_verified
+  reference_pixels: not_verified
   formal_asset: false
   generation_event_binding: unverified
   prompt_output_pair_strength: M2_prompt_output_pair_with_visual_temporal_distillation
