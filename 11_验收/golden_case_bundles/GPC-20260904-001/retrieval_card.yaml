@@ -6,6 +6,13 @@ model_scope:
   version: "2.5"
   aliases: [C-DANCE 2.5, Seedance 2.5, 即梦Seedance2.5]
 
+evidence_scope:
+  source_prompt_verbatim: verified
+  output_pixels: full_span_contact_sheet_30_samples
+  audio: unverified
+  prompt_reference_pixels: unverified
+  generation_event_binding: unverified
+
 high_relevance_when:
   dramatic_functions:
     - tragic_bond
@@ -36,7 +43,8 @@ transferable_mechanisms_ranked:
     mechanism: SEGMENTED_STATE_AND_REFERENCE_RESPONSIBILITY_MAP
     transfer: >-
       先在GLOBAL层按时间/叙事段落声明每张参考图只负责哪个角色状态或环境状态，再进入局部shot，避免所有参考同时争夺身份、妆造和空间。
-    evidence_strength: HIGH_case_observation
+    evidence_strength: MEDIUM_HIGH_prompt_structure_plus_observed_output_state_partition_reference_pixels_unverified
+    boundary: 当前案例没有提供6张源参考图像素给系统验收，因此不能把“参考身份匹配成功”作为已观察事实；这里学习的是职责结构与输出状态分区的一致性。
   - rank: 2
     mechanism: FUNCTION_FIRST_NUMBERED_SHOTS_WITH_MODEL_MANAGED_DURATION
     transfer: >-
@@ -77,6 +85,9 @@ prompt_vocabulary_clusters:
     avoid_when:
       - polished_commercial
       - elegant_stable_tableau
+    evidence_notes:
+      documentary_raw_visual_character: observed_in_output_sampling
+      subtle_organic_handheld_motion: prompt_intent_only_until_denser_motion_review
   warm_memory_cluster:
     phrases:
       - warm sunlit saturation
@@ -147,6 +158,7 @@ mandatory_scans_on_recall:
   - memory_transition_trigger
   - final_aftermath_need
   - audio_evidence_available
+  - reference_pixels_available_if_match_claim_is_needed
 
 reuse_contract:
   copy_entire_prompt_by_default: false
@@ -154,3 +166,4 @@ reuse_contract:
   preserve_current_story_character_scene_asset_authority: true
   suggest_case_to_user_when_high_relevance: true
   model_version_change_requires_revalidation: true
+  unverified_reference_or_audio_planes_cannot_be_upgraded_during_recall: true
