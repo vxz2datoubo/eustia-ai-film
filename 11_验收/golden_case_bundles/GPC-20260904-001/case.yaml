@@ -1,0 +1,168 @@
+case_id: GPC-20260904-001
+created_at: 2026-09-04
+source_type: user_supplied_external_prompt_output_pair
+case_title: THE LAST BOND CONTINUOUS DRAMA
+user_verdict: excellent_output_reference
+verdict_scope: output_verified
+verdict_basis: both
+case_status: golden_output_verified
+model: Seedance 2.5
+model_alias: C-DANCE 2.5
+generation_mode: multimodal_multi_reference_continuous_multishot_story
+source_rights_status: user_supplied_external_online_case_rights_not_verified
+
+source_prompt:
+  kind: source_prompt_verbatim
+  path: 11_验收/golden_case_bundles/GPC-20260904-001/source_prompt.txt
+  provenance: user_current_explicit_submission
+
+output_evidence:
+  source_kind: image_sequence_archive
+  current_conversation_file_id: file_0000000074e481fdac861d42f73bb2b9
+  archive_title: 连续截图(2).rar
+  archive_sha256: a56ae392f850903fdca73d96e107822061f9b379dd8c60fd8343ab55bce07aec
+  archive_size_bytes: 52870454
+  archive_listing_jpg_count: 141
+  observed_timeline_duration_s: 28.032
+  nominal_sample_interval_s: 0.20
+  visual_review_mode: contact_sheet_temporal_sampling
+  reviewed_contact_sheet_samples: 29
+  reviewed_time_span_s: 0.0_to_28.0
+  representative_frame_dimensions: [1920, 1440]
+  audio_verified: false
+  note: 原RAR目录可确认141张连续JPG与约28.032秒时序；本轮对实际像素的导演观察基于覆盖全片的29点时间接触表/关键帧采样，不声称逐张审阅全部141帧，也未验收原音轨。
+
+reference_role_mapping_from_source_prompt:
+  image_1: Mina healthy identity/state
+  image_2: Mina infected identity/state
+  image_3: Snow healthy identity/state
+  image_4: Snow infected identity/state
+  image_5: ruined green hall reality environment
+  image_6: warm memory environment
+
+user_named_strengths:
+  - 用户明确认为实际效果比较好看，并要求深度学习后融入AI导演系统、以后类似需求提高召回与提示结构权重。
+  - 用户明确纠正“没有逐shot时长是缺点”的判断：对当前Seedance 2.5，此案例中让模型自动安排各镜时长是值得推荐的能力。
+
+system_observed_strengths:
+  - reality_memory_reality_state_partition_is_visually_legible
+  - multi_reference_responsibility_mapping_is_consistent_with_observed_state_changes
+  - non_uniform_model_managed_shot_pacing_is_observable
+  - emotional_relationship_beats_receive_longer_holds_than_simple_establishing_information
+  - observable_physical_grief_cues_are_more_screen_actionable_than_abstract_emotion_labels
+  - companion_animal_functions_as_relationship_actor_not_background_prop
+  - final_static_extreme_wide_aftermath_creates_emotional_aftershock
+  - cold_desaturated_reality_vs_warm_sunlit_memory_contrast_is_clear
+  - subtle_handheld_raw_documentary_look_supports_reality_section
+  - sparse_negative_constraints_keep_execution_target_clear
+
+normalized_summary: >-
+  约28秒、13个编号shot的悲剧羁绊连续剧情。提示词先建立GLOBAL故事合同，再按现实/回忆两个状态域绑定人物、动物和环境参考图，逐shot给景别、机位、可观察表演动作和关系变化，不逐shot写死秒数。实际输出呈现明显非均匀自动节奏：简单建立镜头较短，识别、伸手、温暖回忆与终局余震获得更长停留；现实冷绿去饱和与回忆暖阳形成清楚对照，最后静态远景回到死亡现实。
+
+prompt_control_fingerprint:
+  structure:
+    - global_story_contract_before_shots
+    - numbered_shots_in_story_order
+    - state_partition_before_local_shot_instructions
+    - reference_responsibility_mapping
+    - global_continuity_and_negative_constraints
+    - per_shot_camera_plus_observable_action
+    - final_state_hold
+  quality_and_style_phrases_to_raise_when_function_matches:
+    - documentary raw look
+    - real unedited camera footage
+    - desaturated cold green tones
+    - warm sunlit saturation
+    - subtle organic handheld motion
+    - genuine tears
+    - trembling breath
+    - physical grief
+    - animal instincts
+    - diegetic sound only
+    - reality snapback
+    - hold frame
+  weighting_boundary: >-
+    这些词不是独立“万能画质词”。只有当当前任务需要纪实现实感、病态冷色现实、温暖回忆对照、克制手持、身体化悲伤、无配乐现实声音或静态余震结尾时才提高权重；不应机械复制到动作片、喜剧、商业广告或非回忆结构。
+
+edcm:
+  k0:
+    - 用户提供完整源提示词。
+    - 用户提供实际连续帧压缩包并明确评价输出较好看。
+    - 实际视觉证据覆盖冷绿现实、感染犬、Mina伸手、暖色回忆、森林奔跑、室内小狗互动与终局死亡远景。
+    - 用户明确要求把消化后的知识写入GitHub AI导演系统并支持未来智能召回。
+  k1:
+    - 用户偏好在Seedance 2.5已经具备较强自动节奏能力时，不为形式完整而机械铺满逐镜时间码。
+    - 用户希望优秀案例影响未来提示结构和词汇选择，但不是整段照抄。
+  k2:
+    - segmented_state_mapping
+    - reference_responsibility_map
+    - model_managed_pacing
+    - contrast_grief_architecture
+    - relationship_actor_blocking
+    - observable_physical_emotion
+    - aftermath_hold
+  k3:
+    - 未验证原视频音轨，因此diegetic_only音频策略的实际执行质量未知。
+    - 未做跨场景复现，不能证明不写逐镜时长在所有Seedance 2.5任务中优于时间码。
+    - 未掌握生成端完整provider task/provenance与参数，不能做单句prompt到单一画面效果的强因果归因。
+
+lesson_links:
+  supports_existing:
+    - AI电影系统#8.4参考职责
+    - AI电影系统#1.2行动优先于解释
+    - AI电影系统#5.6表演不写结果写任务
+    - AI电影系统#模型自主权合同
+  refines_existing:
+    - AI电影系统#8.3_20至30秒事件调度器
+  new_candidate_mechanisms:
+    - REALITY_MEMORY_REALITY_REBOUND
+    - RELATIONSHIP_BEAT_AUTO_PACING
+    - HUMAN_ANIMAL_RELATIONSHIP_ACTOR_ARC
+
+applicable_context:
+  - tragic_bond_scene
+  - human_animal_or_companion_relationship
+  - reality_memory_contrast
+  - same_character_multi_state_sequence
+  - low_motion_high_emotional_information
+  - continuous_multishot_drama
+  - seedance_2_5_narrative_sequence
+  - final_static_aftermath
+
+non_applicable_context:
+  - precision_music_sync
+  - hard_lip_sync_timing
+  - dialogue_dense_exposition_with_fixed_delivery_length
+  - action_heavy_choreography_requiring_exact_event_windows
+  - comedy_without_grief_contrast
+  - graphic_commercial_where_documentary_raw_look_conflicts_with_goal
+
+failure_boundaries:
+  - 不把“不写逐shot时长”升级为跨模型通用规则；这是当前Seedance 2.5真实案例支持的版本绑定策略。
+  - 当音乐卡点、对白同步、精确动作窗口或模型节奏失控时，应重新引入时间码或时长预算。
+  - 状态映射必须先把角色/陪体/环境职责分开；参考图职责混乱时，双状态切换仍可能身份漂移。
+  - 回忆段若包含多个子环境，应显式分区，避免把单一环境参考误当所有回忆空间。
+  - 质量/风格词必须绑定剧情功能，禁止脱离功能单独堆叠。
+  - 单次优秀组合只能证明组合方案在当前案例成立，不能把其中某个词单独宣称为因果主因。
+
+maturity:
+  case_output: scene_verified
+  prompt_output_combination: scene_verified
+  transferable_director_mechanisms: candidate
+  seedance_2_5_auto_pacing_behavior: candidate
+
+revalidation_triggers:
+  - seedance_model_version_change
+  - platform_generation_behavior_change
+  - multi_shot_story_editing_behavior_change
+  - user_reports_auto_pacing_failure
+  - new_cross_scene_transfer_evidence
+
+provenance:
+  prompt: user_supplied_verbatim
+  output: user_supplied_image_sequence_archive
+  pixel_observation: sampled_contact_sheet_verified_in_current_conversation
+  audio: not_verified
+  formal_asset: false
+  generation_event_binding: unverified
+  prompt_output_pair_strength: M2_prompt_output_pair_with_visual_temporal_distillation
