@@ -3,7 +3,7 @@
 - pull_mode: `hybrid_pull`
 - source_prompt: `source_prompt.txt`
 - output_evidence: 用户提供 `连续截图(2).rar`
-- evidence_scope: RAR目录可确认约141张连续JPG、约28.032秒；当前导演观察基于覆盖0–28秒的29点接触表/关键帧采样，不声称逐张审阅全部141帧；未验原音轨。
+- evidence_scope: RAR目录可确认约141张连续JPG、约28.032秒；当前导演观察基于覆盖0–28秒的30点接触表/关键帧采样，不声称逐张审阅全部141帧；未验原音轨；未打开Prompt引用的6张原参考图像素。
 - user_verdict: 实际效果比较好看，要求深度学习并进入AI导演智能召回。
 
 ## 1. Context / Trigger
@@ -56,7 +56,7 @@ Mina受伤、流泪；Snow感染态、白眼、脏毛、攻击姿态。情绪信
 先给两者空间关系，再回Snow近景。Snow的攻击性读感减弱并进入较长停留。这个hold让“是否认出她”成为观众主动解释，而不是用字幕说明。
 
 ### Beat C｜Reach / Threshold｜约10–15秒
-Mina侧脸后，手部伸出获得明显较长时长。动作本身极简单，但它承担“是否重新建立接触”的阈值，所以模型给予更长停留反而有效。
+Mina侧脸后，手部伸出获得明显较长时长。动作本身极简单，但它承担“是否重新建立接触”的阈值，所以更长停留在当前成片里形成有效的情绪等待。
 
 ### Beat D｜Memory Release｜约15–25秒
 手抚健康Snow → 森林共同奔跑 → 室内与小狗玩耍 → 舔脸笑。动作更自由、光线更暖，关系从紧张阈值释放到亲密记忆。
@@ -82,7 +82,7 @@ Prompt的强处不是堆摄影词，而是每个shot都有清楚职责：
 - memory wide让亲密关系从局部触碰扩成共同生活；
 - final extreme wide从人物主观痛苦退出到残酷事实。
 
-“subtle organic handheld motion”在现实段与`documentary raw look / real unedited camera footage`形成一致介质语义；最后static extreme wide则主动撤掉手持参与感，形成终局客观性。
+实际采样支持现实段具有偏纪实、未经高度精修的视觉读感，并支持最后static extreme wide的空间/静止终局。源Prompt写有 `subtle organic handheld motion`，但当前约1秒级稀疏接触表不足以强确认细微连续手持轨迹，因此这部分保留为Prompt意图/待加密运动验收，不写成已观察摄影机事实。
 
 ## 8. Editing / Rhythm
 
@@ -110,28 +110,32 @@ Prompt意图非常清楚：`NO background music — diegetic sound only`，并�
 
 高置信对齐：
 - reality / memory / reality的状态分区；
-- 感染态与健康态人物/犬切换；
+- 输出画面中感染态与健康态人物/犬切换；
 - ruined green hall 与暖亮回忆空间对照；
 - Mina手部伸出 → 健康Snow被抚摸的关系形状转场；
 - puppy lick / genuine smile；
 - final reality snapback + static aftermath hold。
 
+这里的“对齐”只表示源Prompt意图与输出像素的可见状态相符。**由于源Prompt引用的@image 1–6没有在本轮提供给系统打开，不能进一步声称角色/犬/环境与这些参考图本身完成了identity/style match。**
+
 部分实现/需要谨慎：
 - `dark veins`不是所有采样画面里都成为强主导特征，擦伤/泪痕/污损更稳定；
-- GLOBAL把memory描述为forest，但Shot 11–12明确进入室内木地板子空间，实际也生成了室内段。这说明局部shot指令可覆盖GLOBAL粗粒度环境描述，但正式生产更应把memory子空间显式分区，避免作用域冲突。
+- GLOBAL把memory描述为forest，但Shot 11–12明确进入室内木地板子空间，实际也生成了室内段。这说明局部shot指令在本案例中形成了可读的室内回忆子段，但不能据单案宣称“局部指令总会稳定覆盖GLOBAL冲突”。
 
 未知：
 - diegetic-only声音是否真正执行；
 - 精确声音事件与动作同步；
+- subtle organic handheld motion的连续运动是否精确执行；
+- @image 1–6参考像素身份/风格匹配；
 - provider生成参数与generation event provenance。
 
 ## 11. Why It Works
 
 ### 11.1 先做状态架构，再写局部镜头
-不是把6张图一股脑交给模型，而是明确每张图负责哪个角色状态/环境状态。这个方法与项目现有“参考职责分通道”规则一致，本案例提供了实际成功证据。
+源Prompt不是把6张图无差别列出来，而是明确每张图负责哪个角色状态/环境状态；输出画面也形成了清楚的现实/回忆、感染/健康状态分区。这个案例因此支持“reference responsibility map”作为结构机制，但由于原参考图像素未验收，**当前证据支持职责结构与状态分区，不支持reference match本身已经验证。**
 
 ### 11.2 情绪被编译成身体动作
-`genuine tears / trembling breath / jaw trembling / fingers trembling / reaching hand`让模型有可拍的表演，而不是只收到“悲伤”。
+`genuine tears / trembling breath / jaw trembling / fingers trembling / reaching hand`让模型有可拍的表演，而不是只收到“悲伤”。其中泪、脸部痛苦、伸手等在采样画面中可观察；呼吸等若需要精确验证仍需音视频证据。
 
 ### 11.3 回忆不是插图，而是结构性反衬
 现实压力达到阈值后才进入暖色记忆，最后强回弹到现实。记忆的功能是让观众知道“失去的具体是什么”。
@@ -178,22 +182,23 @@ Do not recall as primary precedent when：
 - real unedited camera footage
 - desaturated cold green tones
 - warm sunlit saturation
-- subtle organic handheld motion
+- subtle organic handheld motion（当前为Prompt意图，连续运动未充分验收）
 - genuine tears
-- trembling breath
+- trembling breath（身体/音频精确执行未完全验收）
 - physical grief
-- diegetic sound only
+- diegetic sound only（音频未验证）
 - reality snapback
 - hold frame
 
 ## 14. Maturity
 
 - case output: `scene_verified`
-- exact prompt-output combination: `scene_verified`
-- reference responsibility mechanism: `candidate`，同时SUPPORTS现有AI电影系统规则
+- exact prompt-output visual combination: `scene_verified`
+- reference responsibility mechanism: `candidate`，同时SUPPORTS现有AI电影系统规则；reference pixels match未验证
 - Seedance 2.5 model-managed pacing: `candidate`，有单一真实优秀案例支持
 - reality-memory-reality rebound: `candidate`
 - companion-as-relationship-actor: `candidate`
+- subtle organic handheld execution: `candidate / motion_density_insufficient`
 - diegetic-only sound effectiveness: `candidate / audio_unverified`
 
 下一步 targeted eval：在不同剧情内容、同样Seedance 2.5条件下，比较“有序shot但不写逐shot时长”与“硬时间码版本”，同时验收剧情完成度、镜头节奏自然度、情绪停留、动作完整和总时长稳定性。只有跨场景复现后才考虑把auto-pacing规则提升到`project_verified`。
