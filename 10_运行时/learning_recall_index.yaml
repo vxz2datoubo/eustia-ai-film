@@ -409,3 +409,60 @@ entries:
       model_behavior: unknown
     mandatory_scans: [motivated_light_source, topology_readability, face_readability, continuity_light_compatibility]
     conflict_refs: []
+
+  - case_id: GPC-20260904-001
+    source_kind: golden_prompt_case
+    authority_ref: 11_验收/golden_prompt_cases.yaml#GPC-20260904-001
+    learning_layers: [L0_observation, L2_director_intent, L3_causal_mechanism, L4_contextual_policy]
+    application_roles: [golden_precedent, director_intents, contextual_policies, model_version_lessons, open_hypotheses_and_optional_ab_opportunities]
+    hard_routes: []
+    recall_signature:
+      dramatic_function: [tragic_bond, grief_amplification, relationship_recognition, reality_memory_reality_rebound, continuous_multishot_drama, final_aftermath]
+      failure_mechanism: [reference_state_role_ambiguity, state_cross_leakage, emotional_pacing_flattening, over_timed_rigid_pacing, memory_rebound_weak, companion_reduced_to_prop]
+      relation_type: [human_to_companion, threat_to_recognition, touch_to_memory_trigger, present_to_memory, memory_to_irreversible_reality, character_state_to_reference]
+      spatial_action_features: [recognition_hold, reaching_hand, touch_transition, healthy_infected_state_switch, wide_relationship_space, static_extreme_wide_aftermath]
+      scene_context: [tragic_relationship, flashback, ruined_reality, warm_memory, multi_shot_sequence, post_apocalyptic_or_loss_context]
+      character_context: [same_character_dual_state, companion_animal_actor, grief_containment, relationship_memory]
+      model_version:
+        families: [seedance]
+        versions: ["2.5"]
+        aliases: [C-DANCE 2.5, Seedance 2.5, 即梦Seedance2.5]
+        exclusive: false
+      aliases: [the_last_bond, 悲剧羁绊回忆反衬, 现实回忆现实回弹, 多状态参考职责, Seedance2.5自动节奏, 不逐shot写死时长]
+      camera_performance_sound: [documentary_raw_look, organic_handheld, observable_physical_grief, model_managed_non_uniform_pacing, diegetic_only_candidate, cold_reality_warm_memory_color_script, static_extreme_wide_hold]
+      surface_similarity: [悲剧, 羁绊, 狗, 陪体, 感染, 回忆, 伸手, 认出, 冷绿, 暖阳, 手持, 无BGM, 终局, 血泊]
+      negative_retrieval_examples:
+        - id: NEG-LAST-BOND-001
+          when_all: [precision_music_sync, hard_beat_edit]
+          reason: model-managed pacing without per-shot timing may conflict with exact synchronization
+        - id: NEG-LAST-BOND-002
+          when_all: [action_heavy_contact_chain, strict_event_windows]
+          reason: complex contact choreography may require explicit timing or shorter controlled generations
+        - id: NEG-LAST-BOND-003
+          when_all: [lighthearted_pet_scene, no_loss_or_memory_contrast]
+          reason: tragic rebound and physical-grief mechanisms would be negative transfer
+        - id: NEG-LAST-BOND-004
+          when_all: [commercial_graphic_task]
+          reason: documentary raw look and grief pacing are functionally mismatched
+    scope:
+      classes: [TRANSFERABLE_METHOD, MODEL_VERSION_BOUND, GOLDEN_PRECEDENT]
+      work_items: []
+      scenes: []
+      expiration_condition: revalidate_seedance_specific_pacing_on_model_version_change
+    maturity:
+      observation: scene_verified
+      transferable: candidate
+      model_behavior: candidate
+    mandatory_scans:
+      - dramatic_function_match
+      - relationship_mechanism_match
+      - state_partition_need
+      - reference_responsibility_conflict
+      - exact_timing_requirement
+      - model_version_match
+      - observable_emotion_task
+      - memory_transition_trigger
+      - final_aftermath_need
+      - audio_evidence_available
+    conflict_refs:
+      - REFINES_AI电影系统#8.3_20至30秒事件调度器_for_Seedance_2_5_auto_pacing_when_no_exact_sync
