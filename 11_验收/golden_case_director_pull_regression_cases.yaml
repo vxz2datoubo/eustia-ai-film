@@ -2,6 +2,7 @@ suite:
   id: GOLDEN_CASE_DIRECTOR_PULL_REGRESSION
   status: active
   created_at: 2026-08-15
+  last_updated: 2026-09-04
   schema: 10_运行时/golden_case_director_pull_schema.yaml
   template: 11_验收/golden_case_templates/导演级拉片模板.md
 
@@ -39,6 +40,28 @@ cases:
       - clause_to_timeline_alignment
       - model_interpretation_or_omission_notes
       - candidate_AB_variables
+
+  - id: REG-GCDP-MEDIA-ACCESS-001
+    title: Hybrid observed director pull 必须建立在实际像素或音频访问之上
+    input_condition: 用户同时提供源Prompt和输出媒体，但系统当前只成功读取压缩包目录/元数据而未打开实际像素
+    must_preserve:
+      - hybrid_pull_forbidden_until_actual_media_inspection
+      - prompt_prospective_mode_allowed
+      - media_pending_explicit
+      - archive_metadata_not_observation
+      - no_observed_performance_camera_edit_claim
+      - output_verified_forbidden
+      - automatic_resume_to_hybrid_after_media_access
+
+  - id: REG-GCDP-REFERENCE-PIXEL-001
+    title: Prompt中的参考职责不等于参考像素匹配已验证
+    input_condition: 源Prompt写明@image1负责健康态、@image2负责感染态等职责，但实际参考图未被提供或未被系统打开
+    must_preserve:
+      - intended_reference_role_mapping_may_be_recorded
+      - observed_output_state_may_be_recorded_if_output_pixels_seen
+      - reference_identity_match_unverified
+      - reference_style_match_unverified
+      - no_claim_of_reference_consistency_without_reference_pixels
 
   - id: REG-GCDP-STILLNESS-001
     title: 长时间静止不得默认判为无信息或冗余
