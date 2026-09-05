@@ -4,7 +4,9 @@ status: candidate
 method_authority: 01_AI电影系统/AI电影系统.md
 runtime_ir: 10_运行时/screen_observable_audible_ir_schema.yaml#CinematicIntentIR
 route_authority: 10_运行时/director_route_index.yaml#CINEMATIC_VISUAL_GRAMMAR
-research_evidence: 09_资料证据/Cinematic Visual Grammar外部研究与融合证据.md
+research_evidence:
+  - 09_资料证据/Cinematic Visual Grammar外部研究与融合证据.md
+  - 09_资料证据/万物生提示词组织经验与融合证据.md
 maturity_rule: external_research_and_static_regression_cannot_promote_beyond_candidate
 
 static_runtime_cases:
@@ -224,7 +226,7 @@ candidate_skill_cases:
 
   - id: REG-CAPTURE-REGIME-FEATUREIZATION-001
     skill: CAPTURE-REGIME-FEATUREIZATION-CANDIDATE
-    source_evidence: "user-supplied practitioner synthesis of 万物生 public prompt canvas + sampled raw-prompt corroboration"
+    source_evidence: 09_资料证据/万物生提示词组织经验与融合证据.md#4.1
     method: controlled_A_B
     A: "只写抽象媒介标签：手机感、纪录片感、电影感。"
     B: "在导演目的已确定后，把必要媒介感拆成少量可观察成像/收音特征；例如手机花絮可按需选择握持微晃、步行颠簸、自动曝光变化、短暂自动对焦漂移、滚动快门/广角边缘变形、手机收音压缩中的相关子集。"
@@ -239,7 +241,7 @@ candidate_skill_cases:
 
   - id: REG-REFERENCE-PERMISSION-BOUNDARY-001
     skill: REFERENCE-PERMISSION-BOUNDARY-CANDIDATE
-    source_evidence: "user-supplied practitioner synthesis of 万物生 public prompt canvas"
+    source_evidence: 09_资料证据/万物生提示词组织经验与融合证据.md#4.2
     method: controlled_A_B
     A: "只声明参考图负责什么。"
     B: "同时声明 controls / must_preserve / must_not_control / tolerated_variation，例如姿势参考只控制姿势与构图，不改变身份、服装和场景。"
@@ -254,7 +256,7 @@ candidate_skill_cases:
 
   - id: REG-MULTIMODAL-CONTROL-OWNERSHIP-001
     skill: MULTIMODAL-CONTROL-OWNERSHIP-CANDIDATE
-    source_evidence: "user-supplied practitioner synthesis of 万物生 public prompt canvas"
+    source_evidence: 09_资料证据/万物生提示词组织经验与融合证据.md#4.3
     method: controlled_A_B
     A: "把人物、场景、构图、动作、风格、声音等已由参考图/故事板/视频/音频明确的信息再次完整复述进文本。"
     B: "先为每个信息维度指定最适合的 authority modality：text / identity ref / scene ref / storyboard / action video / camera reference / audio / geometry；文本只补绑定关系、未表达控制缺口和关键不变量。"
@@ -270,7 +272,7 @@ candidate_skill_cases:
 
   - id: REG-EXECUTION-PACKET-SERIALIZATION-001
     skill: EXECUTION-PACKET-SERIALIZATION-CANDIDATE
-    source_evidence: "user-supplied six-part synthesis; actual sampled 万物生 prompts show variable field order"
+    source_evidence: 09_资料证据/万物生提示词组织经验与融合证据.md#4.4
     method: cross_prompt_and_controlled_AB
     candidate_serialization:
       - global_capture_or_look_contract
