@@ -33,6 +33,9 @@ core_principles:
   proxy_model_pass_equals_target_model_pass: false
   pre_output_gate_failure_requires_self_revision: true
   media_claim_without_actual_media_inspection_forbidden: true
+  explicit_golden_case_trigger_cannot_be_downgraded_to_ad_hoc_analysis: true
+  archive_listing_or_metadata_is_not_media_inspection: true
+  later_matching_media_does_not_retroactively_validate_ungrounded_claim: true
   compact_index_before_full_learning_library: true
   embedding_candidate_expansion_cannot_bypass_gates: true
   mandatory_route_recall_missing_is_gate_failure: true
@@ -150,6 +153,97 @@ active_validation:
     - "不得静默触发高成本生成；应把 A/B 作为自然可选方案告诉用户"
     - "A/B 两版尽量都保持可用的生产价值，避免为了实验制造无意义版本"
 
+golden_case_ingestion_preflight:
+  id: GOLDEN-CASE-INGESTION-PREFLIGHT-001
+  trigger:
+    semantic_any:
+      - "用户明确称某提示词、视频、序列帧或输出为优秀案例/优秀提示词/以后参考范例"
+      - "用户要求深度学习某优秀案例并融入AI导演系统、提高以后类似任务召回或提示结构权重"
+    no_fixed_phrase_required: true
+  mandatory_route_before_substantive_analysis:
+    - PROJECT_INDEX
+    - golden_prompt_learning_protocol
+    - media_evidence_analysis_gate_when_media_declared
+    - golden_case_director_pull_schema
+    - feedback_engine
+    - maturity_model
+  evidence_state_machine:
+    PROMPT_ONLY:
+      allowed:
+        - prompt_prospective_analysis
+        - prompt_approved_case_registration
+      forbidden:
+        - output_verified
+        - observed_visual_claim
+        - hybrid_observed_pull
+    MEDIA_METADATA_ONLY:
+      examples: [archive_listing, filenames, frame_count, duration_from_filenames, container_metadata, hash]
+      allowed:
+        - source_inventory
+        - media_pending_registration
+      forbidden:
+        - pixel_observation_claim
+        - output_verified
+        - scene_verified_from_media
+    PIXELS_SAMPLED:
+      allowed:
+        - sampled_visual_observation
+        - bounded_prompt_output_alignment
+      requires:
+        - actual_pixels_opened
+        - sample_scope_recorded
+      forbidden:
+        - frame_by_frame_claim_without_frame_by_frame_review
+        - fine_camera_motion_claim_without_temporal_density
+    TEMPORAL_REVIEWED:
+      allowed:
+        - full_span_visual_timeline_claim
+        - duration_and_hold_analysis
+      requires:
+        - actual_pixels_opened_across_full_span
+        - sampling_strategy_recorded
+        - key_windows_dense_when_material
+    AUDIO_VERIFIED:
+      allowed:
+        - observed_audio_claim
+      requires:
+        - actual_audio_track_inspected
+    REFERENCE_PIXELS_VERIFIED:
+      allowed:
+        - reference_identity_or_style_match_claim
+      requires:
+        - actual_reference_media_opened
+  hard_rules:
+    - "archive listing / file names / timestamps / hash / frame count are metadata evidence only and never satisfy pixel inspection"
+    - "if media decoding or extraction fails, do not continue as though output evidence was inspected; either find a safe alternative access path or downgrade to prompt_only/media_pending"
+    - "when prompt and media both exist but media is not inspected, director pull mode stays prospective; hybrid_pull requires actual media inspection"
+    - "later media agreement with an earlier inference does not retroactively convert the earlier inference into an observation; retain correction/audit distinction"
+    - "prompt-declared @image roles may be recorded as intended reference responsibilities; reference match itself requires actual reference pixels"
+    - "the user must not need to repeat the golden-case request after an access failure; the ingestion transaction stays logically open until completed or explicitly reported pending"
+  completion_receipt:
+    required_fields:
+      - golden_trigger_detected
+      - source_prompt_locked
+      - evidence_state
+      - media_access_verified
+      - pixel_inspection_scope
+      - audio_inspection_scope
+      - reference_media_inspection_scope
+      - director_pull_mode
+      - atomic_lessons_distilled
+      - case_registered
+      - recall_index_updated_if_reusable
+      - regression_updated_if_needed
+      - canonical_write_verified
+      - unverified_claims
+  fail_closed_when:
+    - explicit_golden_trigger_bypassed
+    - output_claim_requested_but_media_not_inspected
+    - archive_metadata_misreported_as_pixel_review
+    - hybrid_pull_selected_without_actual_media_inspection
+    - reference_match_claimed_without_reference_pixels
+    - ingestion_reported_complete_without_verified_writeback
+
 media_evidence_analysis_gate:
   id: MEDIA-EVIDENCE-ANALYSIS-GATE-001
   trigger:
@@ -262,6 +356,7 @@ pre_output_gate:
     - "是否误用其他模型或旧版本经验"
     - "是否存在已召回但被忽略且足以改变结果的高置信经验"
     - "若结论依赖用户提供的真实媒体，media_evidence_analysis_gate 是否已经满足"
+    - "若用户明确触发Golden Case，golden_case_ingestion_preflight 是否已经满足且证据状态与director pull模式一致"
     - "自然语言导演任务是否存在 Director Feature Compiler receipt，且 Learning Smart Recall retrieval receipt 完整、所有 hard-route mandatory recall 均已命中并展开所需 canonical case"
   on_fail:
     - "在发送给用户前自行修订并重新检查"
@@ -278,6 +373,7 @@ pre_output_gate:
       - user_question_if_any
       - validation_opportunity
       - media_evidence_receipt_when_used
+      - golden_case_ingestion_receipt_when_triggered
       - pre_output_status
     user_visibility: "默认不把内部清单堆给用户；只有存在冲突、风险、验证机会或用户要求审计时才说明"
 
