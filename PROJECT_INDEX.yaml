@@ -20,6 +20,10 @@ policy:
   golden_case_reconstructed_prompt_must_preserve_inference_provenance: true
   golden_case_director_pull_required: true
   golden_case_low_motion_high_information_must_preserve_duration_evidence: true
+  golden_case_explicit_trigger_must_route_before_ad_hoc_analysis: true
+  golden_case_media_output_claim_requires_actual_media_inspection: true
+  golden_case_archive_listing_or_metadata_never_equals_pixel_inspection: true
+  golden_case_failed_media_access_must_downgrade_to_prompt_only_or_media_pending: true
   old_file_search_rank_can_define_authority: false
   director_task_must_read_project_index_first: true
   active_work_item_resolution_required_for_continuation_directing: true
