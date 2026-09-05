@@ -2,12 +2,15 @@ case_id: GPC-20260904-001
 time_unit: seconds
 evidence_mode: sampled_contact_sheet_from_user_supplied_141_frame_sequence
 source_duration_s: 28.032
-reviewed_samples: 29
+reviewed_samples: 30
 audio_track_verified: false
+reference_pixels_verified: false
 observation_policy:
   - 仅记录接触表可见事实与有边界的导演推断。
   - 时间边界为采样近似，不冒充逐帧精确cut detection。
   - prompt shot编号用于意图对齐，不代表已证明模型内部如何切镜。
+  - 当前稀疏全时长contact sheet不足以强确认细微连续手持轨迹；摄影机运动若成为学习核心需加密时序检查。
+  - Prompt中的@image职责属于源Prompt意图；未打开参考图像素时不能声称reference identity/style match已验证。
 
 segments:
   - segment_id: S01_MINA_REALITY_ESTABLISH
@@ -173,15 +176,17 @@ pacing_observation:
 prompt_effect_alignment:
   high_confidence:
     - reality_vs_memory_palette_partition
-    - infected_vs_healthy_character_state_partition
+    - infected_vs_healthy_output_state_partition
     - ruined_hall_vs_warm_memory_environment_change
     - hand_reach_to_flashback_touch_transition
     - final_reality_snapback_and_hold
     - physical_grief_and_relationship_actions
   medium_confidence:
-    - subtle_organic_handheld_as_primary_cause_of_raw_feel
+    - raw_documentary_visual_character
     - exact_per_shot_camera_angle_compliance
   unverified:
+    - exact_reference_identity_or_style_match_to_prompt_images
+    - subtle_organic_handheld_motion_as_continuous_camera_behavior
     - diegetic_audio_execution
     - no_background_music_execution
     - exact_growl_breath_footstep_rustle_bark_rain_wind_mix
