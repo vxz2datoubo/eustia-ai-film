@@ -1,0 +1,187 @@
+case_id: GPC-20260904-001
+time_unit: seconds
+evidence_mode: sampled_contact_sheet_from_user_supplied_141_frame_sequence
+source_duration_s: 28.032
+reviewed_samples: 29
+audio_track_verified: false
+observation_policy:
+  - 仅记录接触表可见事实与有边界的导演推断。
+  - 时间边界为采样近似，不冒充逐帧精确cut detection。
+  - prompt shot编号用于意图对齐，不代表已证明模型内部如何切镜。
+
+segments:
+  - segment_id: S01_MINA_REALITY_ESTABLISH
+    approx_start_s: 0.0
+    approx_end_s: 1.5
+    intended_prompt_shot: 1
+    observed:
+      shot_size: close_up
+      subject: Mina infected-state appearance
+      expression: tearful restrained distress
+      lighting_color: cold desaturated green-gray reality look
+      continuity: facial scratches/dirt/tear streaks visible
+    prompt_alignment: strong
+    note: 前景可见深色物体但采样证据不足以强确认每一时刻均清楚读取为assault rifle。
+
+  - segment_id: S02_SNOW_THREAT
+    approx_start_s: 1.5
+    approx_end_s: 3.2
+    intended_prompt_shot: 2
+    observed:
+      shot_size: close_up
+      subject: infected white dog
+      state: dirty/matted white fur, milky-white eyes, aggressive mouth posture
+      dramatic_function: threat_and_alienation
+    prompt_alignment: strong
+
+  - segment_id: S03_MINA_WIPE_REACTION
+    approx_start_s: 3.2
+    approx_end_s: 4.4
+    intended_prompt_shot: 3
+    observed:
+      shot_size: close_up
+      action: Mina raises gloved hand across face/eye area
+      emotional_read: grief_containment
+    prompt_alignment: strong
+
+  - segment_id: S04_SNOW_SEARCH_MOVEMENT
+    approx_start_s: 4.4
+    approx_end_s: 6.4
+    intended_prompt_shot: 4
+    observed:
+      subject: infected dog
+      action: forward/lateral searching movement across ruined floor
+      environment: debris-strewn green ruined hall
+    prompt_alignment: strong
+
+  - segment_id: S05_RELATIONSHIP_SPACE_ESTABLISH
+    approx_start_s: 6.4
+    approx_end_s: 7.3
+    intended_prompt_shot: 5
+    observed:
+      shot_size: wide
+      composition: Mina and Snow separated inside large ruined hall
+      dramatic_function: spatialize_distance_between_bonded_characters
+    prompt_alignment: strong
+
+  - segment_id: S06_SNOW_RECOGNITION_HOLD
+    approx_start_s: 7.3
+    approx_end_s: 10.0
+    intended_prompt_shot: 6
+    observed:
+      shot_size: close_up
+      subject: infected dog face
+      state_change: aggression/searching settles into a quieter attentive hold
+      duration_function: longer_hold_supports_recognition_read
+    interpretation:
+      hypothesis: faint_recognition_or_relationship_memory
+      confidence: MEDIUM_HIGH
+    prompt_alignment: strong
+
+  - segment_id: S07_MINA_PROFILE_GRIEF
+    approx_start_s: 10.0
+    approx_end_s: 11.2
+    intended_prompt_shot: 7
+    observed:
+      shot_size: close_up_profile
+      expression: tearful exhausted grief
+      color: cold reality palette maintained
+    prompt_alignment: strong
+
+  - segment_id: S08_REACHING_HAND_LATENCY
+    approx_start_s: 11.2
+    approx_end_s: 15.0
+    intended_prompt_shot: 8
+    observed:
+      shot_size: hand/torso close_up
+      action: fingerless-gloved hand extends slowly through empty space
+      duration_function: one_of_the_longest_single_relationship_actions_in_reality_section
+      dramatic_function: contact_attempt_and_memory_trigger
+    prompt_alignment: strong
+
+  - segment_id: S09_FLASHBACK_TOUCH
+    approx_start_s: 15.0
+    approx_end_s: 16.8
+    intended_prompt_shot: 9
+    observed:
+      state_transition: reality_to_memory
+      action: bare hand gently strokes healthy white dog
+      look: brighter warm natural light
+      identity_state: dog healthy, no milky infected-eye read
+    prompt_alignment: strong
+
+  - segment_id: S10_FOREST_PLAY
+    approx_start_s: 16.8
+    approx_end_s: 19.8
+    intended_prompt_shot: 10
+    observed:
+      shot_size: wide
+      environment: lush sunlit forest path
+      action: Mina and healthy white dog move/play together
+      emotional_function: embodied_positive_relationship_memory
+    prompt_alignment: strong
+
+  - segment_id: S11_INDOOR_PUPPY_PLAY
+    approx_start_s: 19.8
+    approx_end_s: 21.6
+    intended_prompt_shot: 11
+    observed:
+      camera_angle: high/top-down-like close relation
+      environment: bright indoor wooden floor with window sunlight
+      action: Mina lies down while puppy moves nearby/overhead
+      note: 该回忆子空间不是森林，说明源提示词GLOBAL“sunlit forest setting”与Shot 11-12室内子环境存在内部作用域差异，但模型输出仍形成可读的温暖记忆段。
+    prompt_alignment: strong_to_local_shot_instruction
+
+  - segment_id: S12_PUPPY_LICK_SMILE
+    approx_start_s: 21.6
+    approx_end_s: 24.8
+    intended_prompt_shot: 12
+    observed:
+      shot_size: close_up
+      action: puppy licks Mina face
+      expression: broad genuine smile/laughter
+      look: warm bright sunlight
+      duration_function: extended_positive_relationship_peak
+    prompt_alignment: strong
+
+  - segment_id: S13_REALITY_SNAPBACK_AFTERMATH
+    approx_start_s: 24.8
+    approx_end_s: 28.032
+    intended_prompt_shot: 13
+    observed:
+      shot_size: extreme_wide
+      camera_motion: visually_static_across_samples
+      environment: ruined green hall restored
+      Mina_state: motionless_on_floor
+      blood_state: dark red pooled stain visible
+      Snow_state: infected white dog remains beside/over body
+      duration_function: sustained_aftermath_hold
+      dramatic_function: memory_contrast_collapses_back_into_irreversible_reality
+    prompt_alignment: strong
+
+pacing_observation:
+  equal_per_shot_duration_observed: false
+  model_managed_non_uniform_duration_observed: true
+  longer_holds_cluster_around:
+    - recognition
+    - reaching_for_contact
+    - positive_memory_contact
+    - final_aftermath
+  implication: >-
+    本案例支持“Seedance 2.5叙事型多shot在顺序、状态与动作功能清楚时可让模型自行分配镜头停留”的版本绑定候选；不证明所有任务都应移除时间码。
+
+prompt_effect_alignment:
+  high_confidence:
+    - reality_vs_memory_palette_partition
+    - infected_vs_healthy_character_state_partition
+    - ruined_hall_vs_warm_memory_environment_change
+    - hand_reach_to_flashback_touch_transition
+    - final_reality_snapback_and_hold
+    - physical_grief_and_relationship_actions
+  medium_confidence:
+    - subtle_organic_handheld_as_primary_cause_of_raw_feel
+    - exact_per_shot_camera_angle_compliance
+  unverified:
+    - diegetic_audio_execution
+    - no_background_music_execution
+    - exact_growl_breath_footstep_rustle_bark_rain_wind_mix
