@@ -2,7 +2,7 @@ registry:
   id: EUSTIA_GOLDEN_PROMPT_CASES
   title: 优秀提示词案例库
   status: active
-  last_updated: 2026-08-13
+  last_updated: 2026-09-04
   authority: user_explicit_golden_case_verdict
   protocol: 08_系统学习/优秀提示词案例学习协议.md
   learning_engine: 08_系统学习/反馈反推与系统反哺引擎.md
@@ -404,3 +404,131 @@ cases:
     targeted_eval:
       status: not_required_yet
       reason: 当前仅为提示词认可，待首次真实生成或跨场景迁移后再建立兄弟案例/对照案例与回归验证
+
+  - case_id: GPC-20260904-001
+    created_at: 2026-09-04
+    source_type: user_supplied_external_prompt_output_pair
+    user_verdict: excellent_output_reference
+    verdict_scope: output_verified
+    verdict_basis: both
+    task_class: tragic_bond_continuous_multishot_reality_memory_rebound
+    case_status: golden_output_verified
+    provenance: user_current_explicit_submission_plus_sampled_visual_output_review
+    model: Seedance
+    model_version: "2.5"
+    generation_mode: multimodal_multi_reference_continuous_multishot_story
+    source_prompt_verbatim: |
+      [GEN 1 — THE LAST BOND CONTINUOUS DRAMA] [GLOBAL] A single continuous story told across 13 numbered shots in real-time order. Attach @image 1, @image 2, @image 3, @image 4, @image 5, @image 6. Documentary raw look — real unedited camera footage, desaturated cold green tones for reality shots (Shots 1-8, Shot 13), shifting to warm sunlit saturation for memory flashback shots (Shots 9-12). CAMERA MOVEMENT: Subtle organic handheld motion throughout. CHARACTERS & ENVIRONMENT MAPPING: For reality shots (Shots 1-8, 13), maintain Mina in infected wasteland state (match @image 2) and Snow in infected state (match @image 4) inside the ruined green hall (match @image 5). For memory flashback shots (Shots 9-12), maintain Mina in normal healthy state (match @image 1) and Snow in normal healthy state (match @image 3) inside the sunlit forest setting (match @image 6). ACTING: Tragic emotional depth — genuine tears, trembling breath, physical grief, animal instincts. WARDROBE/DAMAGE CONTINUITY: Scratched pale face, dark veins, tear streaks, fingerless gloves in Shots 1-8; in Shot 13, Mina lies motionless on the floor in a dark red pool of blood. No on-screen text, no burn-in subtitles, no logos. NO background music — diegetic sound only: low dog growls, heavy ragged breathing, footsteps, rustling leaves, dog barks, and rain/wind hum. No cuts within a shot.
+
+      Shot 1: close-up, eye-level camera handheld in front of her. Mina in her infected wasteland state holds an assault rifle in her trembling hands, her pale face covered in dark veins, scratches, and tears streaming down her cheeks against the dim green ruined hall background.
+
+      Shot 2: close-up, low angle camera placed on the ruined floor looking up. Snow the dog in its infected state snarls viciously with blind milky-white eyes and bared fangs, its matted white fur dirty, growling menacingly.
+
+      Shot 3: close-up, eye-level camera positioned tight on her face. Mina raises her arm wrapped in a fingerless gloved sleeve, wiping tears frantically from her scratched cheek, letting out a trembling breath.
+
+      Shot 4: medium shot, low angle camera moving forward slightly on the floor. The infected white dog paces back and forth across the trash-littered concrete floor, milky eyes unseeing, sniffing the air with low growls.
+
+      Shot 5: wide shot, eye-level camera stationed in the rear corner of the cavernous green ruined hall. Mina sits crouched against a wooden table on the left holding her rifle, while the infected white dog stands alone in the vast empty center of the room.
+
+      Shot 6: close-up, eye-level camera directly facing the dog's head. The infected white dog stops snarling, its milky-white eyes shifting slightly upward, its head tilting in faint recognition as its ears twitch.
+
+      Shot 7: close-up, eye-level camera angled at a 30-degree profile. Mina exhales a long ragged breath, her jaw trembling as tears spill continuously over her bruised face.
+
+      Shot 8: close-up, eye-level camera positioned near her torso, slowly pushing forward. Mina's hand in a dark fingerless glove slowly reaches out into the empty air toward the dog, fingers trembling uncontrollably.
+
+      Shot 9: close-up, eye-level camera in a sunlit setting. FLASHBACK TRANSITION: A gentle bare hand lovingly strokes the head of Snow the dog in its normal healthy state under warm golden sunlight in a lush green forest, the dog happily squinting its bright brown eyes.
+
+      Shot 10: wide shot, eye-level camera tracking laterally along a sunny forest path. FLASHBACK: Mina in her normal healthy state wearing clean casual black clothing runs happily down the dirt trail under giant mossy trees, tossing a ball while the healthy white dog leaps and barks joyfully at her side.
+
+      Shot 11: close-up, high angle camera looking straight down at the wooden floor indoors. FLASHBACK: Mina lies on her back in bright window sunlight laughing with eyes closed, as a fluffy white puppy scampers excitedly past her head.
+
+      Shot 12: close-up, high angle camera close above her face. FLASHBACK: The white puppy licks Mina's cheek playfully, making her burst into a radiant, genuine smile in warm sunlight.
+
+      Shot 13: extreme wide shot, eye-level static camera positioned in the ruined hall. REALITY SNAPBACK: The cavernous green hall sits silent. Mina lies motionless on the concrete floor in a wide pooling stain of dark red blood, while the infected white dog stands over her body, gently nudging her motionless arm. Hold frame. End.
+    normalized_summary: 约28秒13-shot悲剧羁绊连续剧情；GLOBAL层先分现实/回忆状态与参考职责，shot层再给景别、机位、可观察表演和关系动作；不逐shot写固定时长。实际采样结果呈现非均匀自动节奏、现实冷绿与回忆暖阳对照、伸手触发记忆以及最终静态远景现实回弹。
+    output_evidence:
+      bundle: 11_验收/golden_case_bundles/GPC-20260904-001/
+      current_conversation_file_id: file_0000000074e481fdac861d42f73bb2b9
+      archive_title: 连续截图(2).rar
+      archive_sha256: a56ae392f850903fdca73d96e107822061f9b379dd8c60fd8343ab55bce07aec
+      archive_listing_jpg_count: 141
+      duration_s: 28.032
+      visual_review: 29-point full-span contact-sheet sampling
+      audio_verified: false
+    user_named_strengths:
+      - 用户认为实际效果比较好看，要求作为以后类似需求的高权重参考。
+      - 用户明确认为Seedance 2.5在此类多shot叙事中自动安排时长是优点，不应机械要求逐shot固定秒数。
+    system_observed_strengths:
+      - segmented_state_mapping
+      - reference_responsibility_map
+      - model_managed_non_uniform_pacing
+      - observable_physical_grief
+      - companion_as_relationship_actor
+      - reality_memory_reality_rebound
+      - cold_reality_warm_memory_color_script
+      - final_static_extreme_wide_aftermath
+      - concise_function_bound_quality_vocabulary
+    extracted_lesson_refs:
+      - GPC-20260904-001#SEGMENTED_STATE_AND_REFERENCE_RESPONSIBILITY_MAP
+      - GPC-20260904-001#FUNCTION_FIRST_NUMBERED_SHOTS_WITH_MODEL_MANAGED_DURATION
+      - GPC-20260904-001#OBSERVABLE_PHYSICAL_GRIEF
+      - GPC-20260904-001#REALITY_MEMORY_REALITY_REBOUND
+      - GPC-20260904-001#COMPANION_AS_RELATIONSHIP_ACTOR
+      - GPC-20260904-001#FINAL_STATIC_EXTREME_WIDE_AFTERMATH
+    related_skill_refs:
+      - AI电影系统#8.4参考职责
+      - AI电影系统#1.2行动优先于解释
+      - AI电影系统#5.6表演不写结果写任务
+      - AI电影系统#模型自主权合同
+      - AI电影系统#8.3_20至30秒事件调度器_REFINES_FOR_SEEDANCE_2_5
+    applicable_context:
+      - tragic_bond_scene
+      - human_animal_or_companion_relationship
+      - reality_memory_contrast
+      - same_character_multi_state_sequence
+      - low_motion_high_emotional_information
+      - continuous_multishot_drama
+      - seedance_2_5_narrative_sequence
+      - final_static_aftermath
+    non_applicable_context:
+      - precision_music_sync
+      - hard_lip_sync_timing
+      - action_heavy_choreography_requiring_exact_event_windows
+      - comedy_without_grief_contrast
+      - commercial_graphic_task
+    failure_boundaries:
+      - 不把“不写逐shot时长”升级为跨模型通用规则；当前只作为Seedance 2.5版本绑定candidate。
+      - 精确卡点、口型/对白硬同步、严格动作窗口或实测节奏失控时重新引入时间码。
+      - 质量词必须绑定剧情功能，禁止把documentary raw look、cold green、warm sunlight等机械复制到不匹配任务。
+      - 音频未验证，因此diegetic-only的实际声音效果不能标为output_verified。
+      - 单次优秀组合不能证明某一个词是独立因果主因。
+    model_or_tool_dependency:
+      family: seedance
+      version: "2.5"
+      revalidate_on_version_change: true
+    revalidation_triggers:
+      - seedance_model_version_change
+      - auto_pacing_failure
+      - cross_scene_transfer_attempt
+      - audio_evidence_becomes_available
+    targeted_eval:
+      path: 11_验收/golden_case_bundles/GPC-20260904-001/experiments.yaml
+      priority: high
+    fingerprint:
+      prompt_structure: [global_story_contract, numbered_shots, state_partition, reference_responsibility_map, observable_performance, final_hold]
+      quality_vocabulary: [documentary_raw_look, real_unedited_camera_footage, desaturated_cold_green_tones, warm_sunlit_saturation, subtle_organic_handheld_motion, genuine_tears, trembling_breath, physical_grief, diegetic_sound_only, reality_snapback, hold_frame]
+      retrieval_card: 11_验收/golden_case_bundles/GPC-20260904-001/retrieval_card.yaml
+      director_pull: 11_验收/golden_case_bundles/GPC-20260904-001/director_pull.md
+    edcm:
+      k0:
+        - 源Prompt、用户正向评价、Seedance 2.5版本、实际连续帧证据与视觉状态切换均已记录。
+      k1:
+        - 用户偏好让Seedance 2.5在无精确同步需求时保留自动节奏自由度。
+      k2:
+        - segmented_state_mapping
+        - model_managed_pacing
+        - contrast_grief_architecture
+        - relationship_actor_blocking
+      k3:
+        - 原音轨执行未知。
+        - 跨场景自动节奏迁移尚待A/B与sibling case验证。
