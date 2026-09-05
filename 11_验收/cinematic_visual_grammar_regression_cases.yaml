@@ -222,6 +222,71 @@ candidate_skill_cases:
     compare: [story_function, style_fit, visual_contamination, template_feel]
     promotion_gate: real_project_generation_required
 
+  - id: REG-CAPTURE-REGIME-FEATUREIZATION-001
+    skill: CAPTURE-REGIME-FEATUREIZATION-CANDIDATE
+    source_evidence: "user-supplied practitioner synthesis of 万物生 public prompt canvas + sampled raw-prompt corroboration"
+    method: controlled_A_B
+    A: "只写抽象媒介标签：手机感、纪录片感、电影感。"
+    B: "在导演目的已确定后，把必要媒介感拆成少量可观察成像/收音特征；例如手机花絮可按需选择握持微晃、步行颠簸、自动曝光变化、短暂自动对焦漂移、滚动快门/广角边缘变形、手机收音压缩中的相关子集。"
+    controls: [same_story, same_subject, same_blocking, same_model_version, same_duration, same_reference_assets]
+    compare: [capture_readability, unwanted_style_drift, realism, prompt_load, over_effecting, story_fit]
+    must_preserve:
+      - abstract_style_not_enough_when_capture_traits_are_delivery_critical
+      - select_only_functionally_relevant_traits
+      - do_not_stack_all_imperfections
+      - upstream_story_and_blocking_authority_unchanged
+    promotion_gate: real_project_generation_required
+
+  - id: REG-REFERENCE-PERMISSION-BOUNDARY-001
+    skill: REFERENCE-PERMISSION-BOUNDARY-CANDIDATE
+    source_evidence: "user-supplied practitioner synthesis of 万物生 public prompt canvas"
+    method: controlled_A_B
+    A: "只声明参考图负责什么。"
+    B: "同时声明 controls / must_preserve / must_not_control / tolerated_variation，例如姿势参考只控制姿势与构图，不改变身份、服装和场景。"
+    controls: [same_prompt_goal, same_reference_assets, same_model_version, same_generation_settings_when_available]
+    compare: [identity_fidelity, pose_fidelity, wardrobe_fidelity, scene_fidelity, cross_reference_contamination, prompt_complexity]
+    must_preserve:
+      - natural_language_permission_is_not_magic_enforcement
+      - strong_wrong_pixels_may_still_require_reference_signal_cleaning
+      - canonical_identity_geometry_and_asset_authority_unchanged
+    relation_to_existing: REFINES_REFERENCE-SIGNAL-DECOUPLING-002
+    promotion_gate: real_project_generation_required
+
+  - id: REG-MULTIMODAL-CONTROL-OWNERSHIP-001
+    skill: MULTIMODAL-CONTROL-OWNERSHIP-CANDIDATE
+    source_evidence: "user-supplied practitioner synthesis of 万物生 public prompt canvas"
+    method: controlled_A_B
+    A: "把人物、场景、构图、动作、风格、声音等已由参考图/故事板/视频/音频明确的信息再次完整复述进文本。"
+    B: "先为每个信息维度指定最适合的 authority modality：text / identity ref / scene ref / storyboard / action video / camera reference / audio / geometry；文本只补绑定关系、未表达控制缺口和关键不变量。"
+    controls: [same_story, same_assets, same_model_version, same_generation_mode, same_core_director_intent]
+    compare: [instruction_following, cross_modal_conflict, prompt_load, omitted_critical_information, identity_space_action_sound_fidelity]
+    must_preserve:
+      - prompt_length_follows_unresolved_information_not_fixed_ideal_length
+      - delegation_does_not_mean_unimportant
+      - critical_invariants_may_be_repeated_when_channel_reliability_requires
+      - minimum_sufficient_execution_contract
+    relation_to_existing: [SCREEN-EVIDENCE-001, SOAC-001, reference_responsibility_channels]
+    promotion_gate: real_project_generation_required
+
+  - id: REG-EXECUTION-PACKET-SERIALIZATION-001
+    skill: EXECUTION-PACKET-SERIALIZATION-CANDIDATE
+    source_evidence: "user-supplied six-part synthesis; actual sampled 万物生 prompts show variable field order"
+    method: cross_prompt_and_controlled_AB
+    candidate_serialization:
+      - global_capture_or_look_contract
+      - global_camera_or_movement_contract
+      - reference_responsibility_and_permission_boundaries
+      - sound_regime
+      - shot_or_event_blocks
+      - final_state_transition_and_hard_constraints
+    authority_boundary:
+      upstream_directing_order_remains: [dramatic_purpose, audience_cognition, character_goal, space_and_blocking, performance, sound_and_edit, camera, model_execution]
+      serialization_is_not_directing_reasoning_order: true
+      exact_field_order_may_vary_by_task_and_model: true
+    compare: [prompt_comprehensibility, instruction_following, shot_scope, cross_modal_conflict, final_state_fidelity, unnecessary_prompt_length]
+    negative_case: "若风格/摄影模板先行迫使人物和Blocking迁就漂亮镜头，则判失败。"
+    promotion_gate: real_project_generation_and_cross_prompt_validation_required
+
 pre_output_checks:
   warnings:
     - COMPOSITION_MISSING_DRAMATIC_REASON
@@ -232,6 +297,10 @@ pre_output_checks:
     - REFERENCE_APPEARANCE_LEAK_RISK
     - TEMPLATE_COMPOSITION_REPETITION
     - CAPTURE_SUBSTRATE_UNMOTIVATED
+    - ABSTRACT_CAPTURE_STYLE_UNDERDESCRIBED
+    - REFERENCE_PERMISSION_BOUNDARY_MISSING
+    - MULTIMODAL_CONTROL_OWNERSHIP_CONFLICT
+    - EXECUTION_SERIALIZATION_OVERRIDES_DIRECTING_ORDER
   severity_rule: aesthetic_warning_must_not_become_error_unless_story_causality_key_reveal_identity_or_locked_camera_contract_is_materially_broken
 
 gates:
