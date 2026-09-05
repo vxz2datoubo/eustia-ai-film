@@ -1,0 +1,52 @@
+case_id: GPC-20260904-001
+status: candidate_targeted_eval
+purpose: 验证从本案例抽出的Seedance 2.5自动节奏与状态分区机制能否跨内容迁移，而不是只会复刻原案例。
+
+experiments:
+  - eval_id: GPC-20260904-001-AUTO-PACING-SIBLING
+    type: sibling_transfer_case
+    target_model: Seedance 2.5
+    hypothesis: >-
+      在新的悲剧关系剧情中，只要shot顺序、状态分区、动作完成条件和结尾状态清楚，不逐shot硬写固定秒数可让模型产生更自然的非均匀节奏，并保留关键情绪动作停留。
+    A:
+      prompt_strategy: ordered_numbered_shots_without_per_shot_duration
+    B:
+      prompt_strategy: same_story_same_shots_with_fixed_per_shot_durations
+    controls:
+      - same_story_content
+      - same_reference_assets
+      - same_generation_mode
+      - same_total_requested_duration_when_interface_requires_total_duration
+      - same_quality_and_style_vocabulary
+      - same_final_state
+    compare:
+      - instruction_following
+      - shot_completion
+      - emotional_hold_quality
+      - pacing_naturalness
+      - event_truncation
+      - unnecessary_dead_time
+      - continuity
+      - user_aesthetic_verdict
+    promotion_boundary: 单一新场景成功只增加transfer evidence；跨多个不同场景重复后才考虑project_verified。
+
+  - eval_id: GPC-20260904-001-REFERENCE-PARTITION-CONTRAST
+    type: contrast_case
+    hypothesis: >-
+      同一角色/陪体存在健康态与损伤态时，明确每张参考图的状态职责比无职责地同时提供全部参考更能降低状态串台。
+    A:
+      prompt_strategy: explicit_state_partition_and_reference_responsibility_map
+    B:
+      prompt_strategy: same_references_without_state_responsibility_mapping
+    compare:
+      - identity_consistency
+      - state_consistency
+      - wardrobe_damage_continuity
+      - environment_state_consistency
+      - cross_segment_leakage
+
+  - eval_id: GPC-20260904-001-HOLDOUT-NONTRAGIC
+    type: holdout_negative_transfer
+    task: lighthearted_pet_scene_without_loss_or_flashback
+    expected: >-
+      不应召回reality-memory-reality悲剧回弹、physical grief或final aftermath hold作为主机制；最多可借reference responsibility map。
