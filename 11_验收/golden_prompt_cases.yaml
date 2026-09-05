@@ -413,7 +413,7 @@ cases:
     verdict_basis: both
     task_class: tragic_bond_continuous_multishot_reality_memory_rebound
     case_status: golden_output_verified
-    provenance: user_current_explicit_submission_plus_sampled_visual_output_review
+    provenance: user_current_explicit_submission_plus_full_span_30_sample_visual_output_review
     model: Seedance
     model_version: "2.5"
     generation_mode: multimodal_multi_reference_continuous_multishot_story
@@ -445,7 +445,7 @@ cases:
       Shot 12: close-up, high angle camera close above her face. FLASHBACK: The white puppy licks Mina's cheek playfully, making her burst into a radiant, genuine smile in warm sunlight.
 
       Shot 13: extreme wide shot, eye-level static camera positioned in the ruined hall. REALITY SNAPBACK: The cavernous green hall sits silent. Mina lies motionless on the concrete floor in a wide pooling stain of dark red blood, while the infected white dog stands over her body, gently nudging her motionless arm. Hold frame. End.
-    normalized_summary: 约28秒13-shot悲剧羁绊连续剧情；GLOBAL层先分现实/回忆状态与参考职责，shot层再给景别、机位、可观察表演和关系动作；不逐shot写固定时长。实际采样结果呈现非均匀自动节奏、现实冷绿与回忆暖阳对照、伸手触发记忆以及最终静态远景现实回弹。
+    normalized_summary: 约28秒13-shot悲剧羁绊连续剧情；GLOBAL层先分现实/回忆状态与参考职责，shot层再给景别、机位、可观察表演和关系动作；不逐shot写固定时长。实际30点全时长采样结果呈现非均匀自动节奏、现实冷绿与回忆暖阳对照、伸手触发记忆以及最终静态远景现实回弹。源Prompt引用的6张参考图未在本轮提供给系统打开，因此只验证输出状态与Prompt职责意图相符，不声称reference identity/style match已验证。
     output_evidence:
       bundle: 11_验收/golden_case_bundles/GPC-20260904-001/
       current_conversation_file_id: file_0000000074e481fdac861d42f73bb2b9
@@ -453,14 +453,14 @@ cases:
       archive_sha256: a56ae392f850903fdca73d96e107822061f9b379dd8c60fd8343ab55bce07aec
       archive_listing_jpg_count: 141
       duration_s: 28.032
-      visual_review: 29-point full-span contact-sheet sampling
+      visual_review: 30-point full-span contact-sheet sampling
       audio_verified: false
+      reference_pixels_verified: false
     user_named_strengths:
       - 用户认为实际效果比较好看，要求作为以后类似需求的高权重参考。
       - 用户明确认为Seedance 2.5在此类多shot叙事中自动安排时长是优点，不应机械要求逐shot固定秒数。
     system_observed_strengths:
-      - segmented_state_mapping
-      - reference_responsibility_map
+      - segmented_output_state_mapping
       - model_managed_non_uniform_pacing
       - observable_physical_grief
       - companion_as_relationship_actor
@@ -468,6 +468,14 @@ cases:
       - cold_reality_warm_memory_color_script
       - final_static_extreme_wide_aftermath
       - concise_function_bound_quality_vocabulary
+    system_prompt_structure_strengths:
+      - reference_responsibility_map
+      - global_story_contract
+      - numbered_shots_with_local_camera_and_action
+    system_unverified_or_inference_only:
+      - exact_reference_identity_or_style_match_to_image_1_through_image_6
+      - subtle_organic_handheld_motion_as_continuous_camera_behavior_at_current_sampling_density
+      - diegetic_audio_execution
     extracted_lesson_refs:
       - GPC-20260904-001#SEGMENTED_STATE_AND_REFERENCE_RESPONSIBILITY_MAP
       - GPC-20260904-001#FUNCTION_FIRST_NUMBERED_SHOTS_WITH_MODEL_MANAGED_DURATION
@@ -501,6 +509,7 @@ cases:
       - 精确卡点、口型/对白硬同步、严格动作窗口或实测节奏失控时重新引入时间码。
       - 质量词必须绑定剧情功能，禁止把documentary raw look、cold green、warm sunlight等机械复制到不匹配任务。
       - 音频未验证，因此diegetic-only的实际声音效果不能标为output_verified。
+      - 源参考图像素未验证，因此不能把reference role mapping误报为reference identity/style match已验证。
       - 单次优秀组合不能证明某一个词是独立因果主因。
     model_or_tool_dependency:
       family: seedance
@@ -511,6 +520,7 @@ cases:
       - auto_pacing_failure
       - cross_scene_transfer_attempt
       - audio_evidence_becomes_available
+      - reference_pixels_become_available
     targeted_eval:
       path: 11_验收/golden_case_bundles/GPC-20260904-001/experiments.yaml
       priority: high
@@ -531,4 +541,5 @@ cases:
         - relationship_actor_blocking
       k3:
         - 原音轨执行未知。
+        - 源Prompt引用的6张参考图像素未验收。
         - 跨场景自动节奏迁移尚待A/B与sibling case验证。
