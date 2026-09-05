@@ -1,0 +1,156 @@
+case_id: GPC-20260904-001
+retrieval_role: golden_precedent_and_bounded_transfer_candidate
+source_case_status: golden_output_verified
+model_scope:
+  family: seedance
+  version: "2.5"
+  aliases: [C-DANCE 2.5, Seedance 2.5, 即梦Seedance2.5]
+
+high_relevance_when:
+  dramatic_functions:
+    - tragic_bond
+    - grief_amplification
+    - reality_memory_reality_rebound
+    - relationship_recognition
+    - final_aftermath
+    - continuous_multishot_drama
+  relationship_types:
+    - human_animal_bond
+    - human_companion_bond
+    - former_bond_under_corrupted_state
+    - recognition_after_alienation
+  scene_structures:
+    - same_character_multi_state
+    - same_companion_multi_state
+    - present_vs_memory_contrast
+    - multi_reference_state_partition
+    - low_motion_high_emotional_information
+  generation_goals:
+    - allow_model_managed_pacing
+    - keep_state_continuity_across_many_shots
+    - use_observable_physical_emotion
+    - create_emotional_aftershock_with_static_final_wide
+
+transferable_mechanisms_ranked:
+  - rank: 1
+    mechanism: SEGMENTED_STATE_AND_REFERENCE_RESPONSIBILITY_MAP
+    transfer: >-
+      先在GLOBAL层按时间/叙事段落声明每张参考图只负责哪个角色状态或环境状态，再进入局部shot，避免所有参考同时争夺身份、妆造和空间。
+    evidence_strength: HIGH_case_observation
+  - rank: 2
+    mechanism: FUNCTION_FIRST_NUMBERED_SHOTS_WITH_MODEL_MANAGED_DURATION
+    transfer: >-
+      对Seedance 2.5连续剧情，先给有序shot功能、状态和动作完成条件；若无精确同步需求，不必为每个shot强写固定秒数，给模型保留节奏自由度。
+    evidence_strength: MEDIUM_HIGH_single_verified_case
+  - rank: 3
+    mechanism: OBSERVABLE_PHYSICAL_GRIEF
+    transfer: >-
+      把“悲伤/崩溃”翻译成泪、呼吸、下颌、手指、迟疑、伸手、接触等屏幕可见行为，让情绪成为表演任务而非抽象形容。
+    evidence_strength: HIGH_supports_existing_method
+  - rank: 4
+    mechanism: REALITY_MEMORY_REALITY_REBOUND
+    transfer: >-
+      先让现实关系压力达到阈值，再用触碰/物件/动作作为记忆触发器进入暖色关系记忆，最后用视觉和空间强回弹返回不可逆现实。
+    evidence_strength: MEDIUM_single_case_candidate
+  - rank: 5
+    mechanism: COMPANION_AS_RELATIONSHIP_ACTOR
+    transfer: >-
+      陪体/动物要有自己的威胁、搜索、识别、接近或余震动作，不只是背景道具；最后一个轻微关系动作可承担强余韵。
+    evidence_strength: MEDIUM_single_case_candidate
+  - rank: 6
+    mechanism: FINAL_STATIC_EXTREME_WIDE_AFTERMATH
+    transfer: >-
+      当高潮已完成且需要让事实落地时，远景静止和持续hold可从主观情绪退到残酷客观，避免结尾继续用特写解释情绪。
+    evidence_strength: MEDIUM_single_case_candidate
+
+prompt_vocabulary_clusters:
+  raw_reality_cluster:
+    phrases:
+      - documentary raw look
+      - real unedited camera footage
+      - desaturated cold green tones
+      - subtle organic handheld motion
+    raise_when:
+      - distressed_reality
+      - documentary_immediacy
+      - contaminated_or_pathological_environment
+    avoid_when:
+      - polished_commercial
+      - elegant_stable_tableau
+  warm_memory_cluster:
+    phrases:
+      - warm sunlit saturation
+      - warm golden sunlight
+      - lush green forest
+      - radiant genuine smile
+    raise_when:
+      - positive_memory
+      - lost_bond
+      - emotional_contrast
+    avoid_when:
+      - memory_should_remain_ambiguous_or_unreliable
+  physical_grief_cluster:
+    phrases:
+      - genuine tears
+      - trembling breath
+      - physical grief
+      - jaw trembling
+      - fingers trembling uncontrollably
+      - long ragged breath
+    raise_when:
+      - restrained_grief
+      - relationship_loss
+      - low_motion_high_information
+    avoid_when:
+      - stoic_character_would_not_externalize_this_much
+  sound_reality_cluster:
+    phrases:
+      - diegetic sound only
+      - no background music
+      - low dog growls
+      - heavy ragged breathing
+      - footsteps
+      - rustling leaves
+      - rain/wind hum
+    status: prompt_intent_only_audio_unverified
+  ending_cluster:
+    phrases:
+      - reality snapback
+      - extreme wide shot
+      - static camera
+      - hold frame
+    raise_when:
+      - tragic_finality
+      - aftermath
+      - emotional_aftershock
+
+negative_retrieval_examples:
+  - when: precision_music_video_or_hard_beat_edit
+    reason: auto_pacing_without_per_shot_duration_may_conflict_with_exact_sync
+  - when: complex_combat_or_contact_chain_with_strict_event_windows
+    reason: exact event timing and contact order may require time budgets or shorter controlled generations
+  - when: comedy_or_lighthearted_pet_scene_without_loss_structure
+    reason: tragic rebound and physical grief mechanisms would be negative transfer
+  - when: commercial_graphic_task
+    reason: documentary raw look and relationship-drama pacing are functionally mismatched
+  - when: one_state_single_shot_portrait
+    reason: state partition/reference responsibility machinery is unnecessary overhead
+
+mandatory_scans_on_recall:
+  - dramatic_function_match
+  - relationship_mechanism_match
+  - state_partition_need
+  - reference_responsibility_conflict
+  - exact_timing_requirement
+  - model_version_match
+  - observable_emotion_task
+  - memory_transition_trigger
+  - final_aftermath_need
+  - audio_evidence_available
+
+reuse_contract:
+  copy_entire_prompt_by_default: false
+  prefer_transfer_mechanisms: true
+  preserve_current_story_character_scene_asset_authority: true
+  suggest_case_to_user_when_high_relevance: true
+  model_version_change_requires_revalidation: true
