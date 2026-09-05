@@ -1,7 +1,7 @@
 suite:
   id: GOLDEN_PROMPT_INGESTION_REGRESSION
   status: active
-  last_updated: 2026-08-15
+  last_updated: 2026-09-04
   protocol: 08_系统学习/优秀提示词案例学习协议.md
   media_evidence_schema: 10_运行时/golden_media_evidence_schema.yaml
 
@@ -14,6 +14,19 @@ cases:
       - execute_register_step
       - no_extra_user_database_work
       - report_verified_write_status_only
+
+  - id: REG-GPCL-STRONG-TRIGGER-AUTONOMY-002
+    title: “优秀案例+深度学习+以后召回”必须直接进入Golden ingestion而不是普通点评
+    input_condition: 用户说“我给一个网上优秀案例你深度学习分析”或同义表达，并提供Prompt或媒体，希望以后类似需求能被系统学习/召回
+    must_preserve:
+      - golden_trigger_detected_before_substantive_analysis
+      - project_index_and_gpcl_route_loaded
+      - source_lock_before_summary
+      - atomic_skill_distillation_runs_automatically
+      - case_registration_runs_automatically
+      - smart_recall_update_when_reusable
+      - no_offer_of_A_B_C_manual_database_steps_as_substitute_for_ingestion
+      - user_does_not_need_to_repeat_learning_request
 
   - id: REG-GPCL-VERBATIM-001
     title: Golden Case 必须保存真实原提示词原文
@@ -118,6 +131,41 @@ cases:
       - source_video_default_not_retained
       - irreducible_motion_or_sound_evidence_may_trigger_exception
       - no_formal_asset_registration_without_explicit_asset_intent
+
+  - id: REG-GPCL-MEDIA-ACCESS-FAIL-CLOSED-001
+    title: 只能读取RAR/ZIP目录或媒体元数据时不得冒充已看过实际画面
+    input_condition: 用户提供优秀案例媒体压缩包；系统可以列出JPG文件名、计算帧数/时长/hash，但当前尚未成功解包或打开任何实际像素
+    must_preserve:
+      - evidence_state_is_MEDIA_METADATA_ONLY
+      - archive_listing_not_pixel_inspection
+      - no_output_verified_status
+      - no_observed_visual_strengths
+      - no_hybrid_observed_director_pull
+      - prompt_prospective_analysis_may_continue_only_if_labeled
+      - media_pending_remains_open_without_user_retrigger
+      - attempt_safe_alternative_media_access_before_giving_up
+
+  - id: REG-GPCL-EVIDENCE-STATE-SEPARATION-001
+    title: Prompt意图、媒体元数据、实际像素、音频与参考图像素必须分层
+    input_condition: Golden案例同时包含源Prompt、输出压缩包、Prompt中的@image引用，但系统实际只打开了输出contact sheet且未打开原参考图或音轨
+    must_preserve:
+      - prompt_intent_claims_allowed
+      - sampled_output_visual_claims_bounded_to_opened_pixels
+      - audio_claims_remain_unverified
+      - reference_role_mapping_may_come_from_prompt
+      - reference_identity_or_style_match_forbidden_without_reference_pixels
+      - camera_motion_claim_requires_sufficient_temporal_density
+      - no_cross_plane_evidence_promotion
+
+  - id: REG-GPCL-NO-RETROACTIVE-VALIDATION-001
+    title: 后来媒体恰好支持旧推断也不能追溯性洗白此前未观测陈述
+    input_condition: 系统在尚未打开媒体时先推测某画面机制，之后真正打开媒体发现结果与推测一致
+    must_preserve:
+      - earlier_statement_remains_inference_at_time_of_statement
+      - later_media_creates_new_observation
+      - audit_distinguishes_correction_from_original_grounding
+      - no_claim_that_prior_uninspected_analysis_was_media_verified
+      - future_learning_uses_actual_observation_not_lucky_guess
 
   - id: REG-GPCL-MEDIA-RECONSTRUCTION-001
     title: 只有视频时允许反推 Prompt 但绝不能冒充真实原 Prompt
